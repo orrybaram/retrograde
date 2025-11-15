@@ -1,0 +1,39 @@
+[gd_scene load_steps=8 format=3 uid="uid://dyj33wc7mamja"]
+
+[ext_resource type="Script" uid="uid://8wr4akmb6hn6" path="res://scripts/Planet.gd" id="1"]
+[ext_resource type="Script" uid="uid://ynuit7qp4ij" path="res://scenes/circle.gd" id="2_wsaxd"]
+[ext_resource type="Script" uid="uid://xfcikxm6fdhl" path="res://scenes/planet_gravity_field.gd" id="3_744xv"]
+[ext_resource type="Script" uid="uid://34c4oelthpy5" path="res://scenes/planet_collision.gd" id="4_2ucv6"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_xv80x"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_sskfm"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2ucv6"]
+
+[node name="Planet" type="RigidBody2D"]
+gravity_scale = 0.0
+script = ExtResource("1")
+radius = 100.0
+
+[node name="Circle" type="Node2D" parent="."]
+material = SubResource("CanvasItemMaterial_xv80x")
+script = ExtResource("2_wsaxd")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_sskfm")
+debug_color = Color(0.96895283, 0.094724365, 0.3841226, 0.41960785)
+script = ExtResource("4_2ucv6")
+
+[node name="GravityField" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="GravityField"]
+shape = SubResource("CircleShape2D_2ucv6")
+script = ExtResource("3_744xv")
+
+[node name="Circle" type="Node2D" parent="GravityField/CollisionShape2D"]
+material = SubResource("CanvasItemMaterial_xv80x")
+script = ExtResource("2_wsaxd")
+base_color = Color(0.14901961, 0.6, 0.9019608, 0)
+outline_width = 1.0
+outline_color = Color(1, 1, 1, 0.6901961)
