@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://btfs0vii8ixiq"]
 
-[ext_resource type="Script" uid="uid://lwtmx108rwd6" path="res://scripts/HUD.gd" id="1"]
+[ext_resource type="Script" uid="uid://lwtmx108rwd6" path="res://ui/HUD.gd" id="1"]
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -29,6 +29,18 @@ text = "Fuel: 0 / 0"
 [node name="CargoLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Cargo: -"
+
+[node name="PositionLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Position: (0, 0)"
+
+[node name="VelocityLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Velocity: 0.0 m/s"
+
+[node name="HullLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Hull: 100 / 100"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
