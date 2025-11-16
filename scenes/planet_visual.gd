@@ -1,3 +1,4 @@
+@tool 
 extends Node2D
 class_name PlanetVisual
 
@@ -12,11 +13,10 @@ var planet: Planet = null
 @export var shadow_offset_scale: float = 0.02 : set = _set_shadow_offset_scale  # 0..1
 
 func _ready() -> void:
-	planet = get_parent() as Planet
+	planet = NodeUtils.find_parent_of_type(self, Planet)
 	if planet:
-		# Connect to property changes if needed, or just redraw periodically
-		# For now, we'll get radius dynamically in _draw()
-		pass
+		# Use planet's color if available
+		base_color = planet.color
 
 func _get_radius() -> float:
 	if planet:
@@ -42,13 +42,14 @@ func _set_light_dir(v: Vector2) -> void:
 func _set_shadow_strength(v: float) -> void:
 	shadow_strength = clampf(v, 0.0, 1.0)
 	queue_redraw()
-
+ 
 func _set_shadow_offset_scale(v: float) -> void:
 	shadow_offset_scale = clampf(v, 0.0, 1.0)
 	queue_redraw()
 
 func _draw() -> void:
 	var radius = _get_radius()
+	 
 	# Fill
 	draw_circle(Vector2.ZERO, radius, base_color)
 
@@ -62,3 +63,4 @@ func _draw() -> void:
 	if outline_width > 0.0:
 		# 96 segments ~ smooth ring; adjust for perf if needed
 		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 96, outline_color, outline_width)
+		

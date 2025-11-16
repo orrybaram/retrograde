@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3 uid="uid://dyj33wc7mamja"]
+[gd_scene load_steps=9 format=3 uid="uid://dyj33wc7mamja"]
 
 [ext_resource type="Script" uid="uid://8wr4akmb6hn6" path="res://scripts/Planet.gd" id="1"]
-[ext_resource type="Script" uid="uid://ynuit7qp4ij" path="res://scenes/circle.gd" id="2_wsaxd"]
+[ext_resource type="Script" uid="uid://ynuit7qp4ij" path="res://scenes/planet_visual.gd" id="2_wsaxd"]
 [ext_resource type="Script" uid="uid://xfcikxm6fdhl" path="res://scenes/planet_gravity_field.gd" id="3_744xv"]
 [ext_resource type="Script" uid="uid://34c4oelthpy5" path="res://scenes/planet_collision.gd" id="4_2ucv6"]
+[ext_resource type="Script" uid="uid://47c5yohm8reo" path="res://scenes/gravity_field_visual.gd" id="5_sskfm"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_xv80x"]
 
@@ -12,11 +13,12 @@
 [sub_resource type="CircleShape2D" id="CircleShape2D_2ucv6"]
 
 [node name="Planet" type="RigidBody2D"]
+mass = 100000.0
 gravity_scale = 0.0
 script = ExtResource("1")
 radius = 100.0
 
-[node name="Circle" type="Node2D" parent="."]
+[node name="PlanetVisual" type="Node2D" parent="."]
 material = SubResource("CanvasItemMaterial_xv80x")
 script = ExtResource("2_wsaxd")
 
@@ -31,9 +33,7 @@ script = ExtResource("4_2ucv6")
 shape = SubResource("CircleShape2D_2ucv6")
 script = ExtResource("3_744xv")
 
-[node name="Circle" type="Node2D" parent="GravityField/CollisionShape2D"]
+[node name="GravityFieldVisual" type="Node2D" parent="GravityField/CollisionShape2D"]
 material = SubResource("CanvasItemMaterial_xv80x")
-script = ExtResource("2_wsaxd")
-base_color = Color(0.14901961, 0.6, 0.9019608, 0)
-outline_width = 1.0
-outline_color = Color(1, 1, 1, 0.6901961)
+script = ExtResource("5_sskfm")
+outline_color = Color(0.88, 0.070399985, 0.070399985, 0.31764707)

@@ -3,7 +3,7 @@ class_name Ship
 
 @export var thrust_power: float = 500.0
 @export var turn_speed: float = 5
-@export var fuel_consumption_rate: float = 10.0  # Fuel consumed per second when thrusting
+@export var fuel_consumption_rate: float = 1.0  # Fuel consumed per second when thrusting
 
 var want_turn_left := false
 var want_turn_right := false
@@ -32,9 +32,12 @@ func _physics_process(_dt: float) -> void:
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	# Use cached inputs to modify physics state
 	if want_turn_left:
-		rotation -= turn_speed * state.step
-	if want_turn_right:
-		rotation += turn_speed * state.step
+		state.angular_velocity = -turn_speed
+	elif want_turn_right:
+		state.angular_velocity = turn_speed
+	else:
+		state.angular_velocity = 0.0  # Stop rotation when no input
+		pass
 
 	if want_thrust and gs:
 		# Try to consume fuel - only thrust if we have fuel
