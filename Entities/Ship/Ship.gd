@@ -4,11 +4,14 @@ class_name Ship
 @export var thrust_power: float = 500.0
 @export var turn_speed: float = 5
 @export var fuel_consumption_rate: float = 1.0  # Fuel consumed per second when thrusting
+@export var boost_power_multiplier: float = 2.0  # Multiplier for boost thrust power
+@export var boost_fuel_multiplier: float = 3.0  # Multiplier for boost fuel consumption
 
 var want_turn_left := false
 var want_turn_right := false
 var want_thrust := false
 var want_reverse_thrust := false
+var want_boost := false
 var gs: GameState = null
 
 func _ready() -> void:
@@ -24,9 +27,10 @@ func _physics_process(_dt: float) -> void:
 	want_turn_right = Input.is_action_pressed("turn_right")
 	want_thrust = Input.is_action_pressed("thrust")
 	want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
+	want_boost = Input.is_action_pressed("boost")
 	
 	# If any input, ensure the body is awake
-	if want_turn_left or want_turn_right or want_thrust or want_reverse_thrust:
+	if want_turn_left or want_turn_right or want_thrust or want_reverse_thrust or want_boost:
 		sleeping = false
 
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
@@ -40,13 +44,33 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		pass
 
 	if want_thrust and gs:
+		# Calculate fuel consumption (boost consumes more)
+		var fuel_rate = fuel_consumption_rate
+		if want_boost:
+			fuel_rate *= boost_fuel_multiplier
+		
 		# Try to consume fuel - only thrust if we have fuel
-		if gs.consume_fuel(fuel_consumption_rate * state.step):
-			var force = Vector2.RIGHT.rotated(rotation) * thrust_power
+		if gs.consume_fuel(fuel_rate * state.step):
+			# Calculate thrust power (boost adds extra power)
+			var power = thrust_power
+			if want_boost:
+				power *= boost_power_multiplier
+			
+			var force = Vector2.RIGHT.rotated(rotation) * power
 			state.apply_central_force(force)
 	if want_reverse_thrust and gs:
+		# Calculate fuel consumption (boost consumes more)
+		var fuel_rate = fuel_consumption_rate
+		if want_boost:
+			fuel_rate *= boost_fuel_multiplier
+		
 		# Try to consume fuel - only thrust if we have fuel
-		if gs.consume_fuel(fuel_consumption_rate * state.step):
-			var force = Vector2.LEFT.rotated(rotation) * thrust_power
+		if gs.consume_fuel(fuel_rate * state.step):
+			# Calculate thrust power (boost adds extra power)
+			var power = thrust_power
+			if want_boost:
+				power *= boost_power_multiplier
+			
+			var force = Vector2.LEFT.rotated(rotation) * power
 			state.apply_central_force(force)
 	
