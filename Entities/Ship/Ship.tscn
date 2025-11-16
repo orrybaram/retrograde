@@ -1,6 +1,56 @@
-[gd_scene load_steps=2 format=3 uid="uid://b051ln2ytsesm"]
+[gd_scene load_steps=9 format=3 uid="uid://b051ln2ytsesm"]
 
 [ext_resource type="Script" uid="uid://cx5ba1vmbwqiy" path="res://Entities/Ship/Ship.gd" id="1"]
+
+[sub_resource type="Gradient" id="Gradient_1"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_1"]
+gradient = SubResource("Gradient_1")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_1"]
+direction = Vector3(-1, 0, 0)
+spread = 15.0
+initial_velocity_min = 50.0
+initial_velocity_max = 150.0
+gravity = Vector3(0, 0, 0)
+scale_min = 2.0
+scale_max = 5.0
+color = Color(0.8, 0.8, 0.8, 1)
+color_ramp = SubResource("GradientTexture1D_1")
+collision_mode = 1
+collision_friction = 0.5
+collision_bounce = 0.0
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_2"]
+direction = Vector3(-1, 0, 0)
+spread = 20.0
+initial_velocity_min = 100.0
+initial_velocity_max = 250.0
+gravity = Vector3(0, 0, 0)
+scale_min = 5.0
+scale_max = 10.0
+color = Color(0.71, 0.71, 0.71, 0.5568628)
+collision_mode = 1
+collision_friction = 0.5
+collision_bounce = 0.0
+
+[sub_resource type="Gradient" id="Gradient_3"]
+colors = PackedColorArray(0.6, 0.6, 0.8, 1, 0.6, 0.6, 0.8, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_3"]
+gradient = SubResource("Gradient_3")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_3"]
+direction = Vector3(0, 1, 0)
+spread = 10.0
+initial_velocity_min = 40.0
+initial_velocity_max = 100.0
+gravity = Vector3(0, 0, 0)
+scale_min = 4.0
+scale_max = 8.0
+color = Color(0.7, 0.7, 0.9, 1)
+color_ramp = SubResource("GradientTexture1D_3")
 
 [node name="Ship" type="RigidBody2D"]
 mass = 10.0
@@ -18,3 +68,22 @@ polygon = PackedVector2Array(15, 0, -10, -7, -10, 7)
 [node name="Polygon2D" type="Polygon2D" parent="."]
 scale = Vector2(1.0416666, 1)
 polygon = PackedVector2Array(14, 0, -10, 7, -10, -7)
+
+[node name="ThrusterParticles" type="GPUParticles2D" parent="."]
+position = Vector2(-10, 0)
+emitting = false
+amount = 50
+lifetime = 1.5
+process_material = SubResource("ParticleProcessMaterial_1")
+
+[node name="BoostParticles" type="GPUParticles2D" parent="."]
+position = Vector2(-10, 0)
+emitting = false
+amount = 100
+lifetime = 1.5
+process_material = SubResource("ParticleProcessMaterial_2")
+
+[node name="SideThrusterParticles" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 10
+process_material = SubResource("ParticleProcessMaterial_3")
