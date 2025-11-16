@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://b051ln2ytsesm"]
 
-[ext_resource type="Script" uid="uid://cx5ba1vmbwqiy" path="res://scripts/Ship.gd" id="1"]
+[ext_resource type="Script" uid="uid://cx5ba1vmbwqiy" path="res://Entities/Ship/Ship.gd" id="1"]
 
 [node name="Ship" type="RigidBody2D"]
 mass = 10.0

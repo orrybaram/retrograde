@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
 [ext_resource type="Script" uid="uid://crtq45kcwhvve" path="res://scripts/Economy.gd" id="3"]
 [ext_resource type="Script" uid="uid://1e0civ546gdp" path="res://scripts/Backend.gd" id="4"]
-[ext_resource type="PackedScene" uid="uid://b051ln2ytsesm" path="res://scenes/Ship.tscn" id="5"]
+[ext_resource type="PackedScene" uid="uid://b051ln2ytsesm" path="res://Entities/Ship/Ship.tscn" id="5"]
 [ext_resource type="PackedScene" uid="uid://dyj33wc7mamja" path="res://Entities/Planet/Planet.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/ResourceNode.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://btfs0vii8ixiq" path="res://ui/HUD.tscn" id="8"]
