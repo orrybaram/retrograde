@@ -1,7 +1,0 @@
-res://scenes/Planet.tscn
-res://scripts/Planet.gd
-res://scenes/PlanetVisual.gd
-res://scenes/Main.tscn
-res://Entities/Planet/Planet.tscn
-res://Entities/Planet/Planet.gd
-res://Entities/Ship/Ship.tscn
