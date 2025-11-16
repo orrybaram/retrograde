@@ -4,10 +4,10 @@ class_name Planet
 @export var radius: float = 160.0
 @export var gravitational_constant: float = 4.0  # G constant for scaling
 @export var color: Color = Color(0.15, 0.6, 0.9) : set = _set_color
- 
+
 @onready var gravity_field: Area2D = $"GravityField"
 
-func _set_color(c: Color) -> void:
+func _set_color(c: Color) -> void: 
 	color = c
 	# Update the visual if it exists
 	var visual = get_node_or_null("Circle") as PlanetVisual

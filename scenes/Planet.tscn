@@ -1,10 +1,10 @@
 [gd_scene load_steps=9 format=3 uid="uid://dyj33wc7mamja"]
 
 [ext_resource type="Script" uid="uid://8wr4akmb6hn6" path="res://scripts/Planet.gd" id="1"]
-[ext_resource type="Script" uid="uid://ynuit7qp4ij" path="res://scenes/planet_visual.gd" id="2_wsaxd"]
-[ext_resource type="Script" uid="uid://xfcikxm6fdhl" path="res://scenes/planet_gravity_field.gd" id="3_744xv"]
-[ext_resource type="Script" uid="uid://34c4oelthpy5" path="res://scenes/planet_collision.gd" id="4_2ucv6"]
-[ext_resource type="Script" uid="uid://47c5yohm8reo" path="res://scenes/gravity_field_visual.gd" id="5_sskfm"]
+[ext_resource type="Script" uid="uid://ynuit7qp4ij" path="res://scenes/PlanetVisual.gd" id="2_wsaxd"]
+[ext_resource type="Script" uid="uid://xfcikxm6fdhl" path="res://scenes/PlanetGravityField.gd" id="3_744xv"]
+[ext_resource type="Script" uid="uid://34c4oelthpy5" path="res://scenes/PlanetCollision.gd" id="4_2ucv6"]
+[ext_resource type="Script" uid="uid://47c5yohm8reo" path="res://scenes/GravityFieldVisual.gd" id="5_sskfm"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_xv80x"]
 

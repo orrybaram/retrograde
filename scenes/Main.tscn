@@ -22,7 +22,7 @@ script = ExtResource("3")
 script = ExtResource("4")
 
 [node name="Ship" parent="." instance=ExtResource("5")]
-position = Vector2(-643, -889)
+position = Vector2(-643, -808)
 rotation = -1.5707964
 mass = 3.0
 angular_damp_mode = 1
@@ -38,7 +38,7 @@ color = Color(0.88400614, 0.9361036, 0.9804601, 1)
 position = Vector2(-648, 9)
 mass = 80000000.0
 radius = 800.0
-color = Color(0.23558363, 0.55804646, 0.34699067, 1)
+color = Color(0.2795402, 0.48597795, 0.7557118, 1)
 
 [node name="ResourceNode" parent="." instance=ExtResource("7")]
 position = Vector2(600, -140)
