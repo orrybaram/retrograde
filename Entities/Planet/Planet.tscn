@@ -17,6 +17,7 @@ mass = 100000.0
 gravity_scale = 0.0
 script = ExtResource("1")
 radius = 100.0
+orbital_distance = 3000.0
 
 [node name="PlanetVisual" type="Node2D" parent="."]
 material = SubResource("CanvasItemMaterial_xv80x")
