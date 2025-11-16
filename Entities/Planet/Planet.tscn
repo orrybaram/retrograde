@@ -40,6 +40,8 @@ script = ExtResource("3_744xv")
 material = SubResource("CanvasItemMaterial_xv80x")
 script = ExtResource("5_sskfm")
 outline_color = Color(0.88, 0.070399985, 0.070399985, 0.31764707)
+ring_count = 5
+max_radius_multiplier = 5.0
 
 [node name="OrbitVisual" type="Node2D" parent="."]
 script = ExtResource("6")

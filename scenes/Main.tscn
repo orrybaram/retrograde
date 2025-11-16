@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=10 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -8,9 +8,14 @@
 [ext_resource type="PackedScene" uid="uid://dyj33wc7mamja" path="res://Entities/Planet/Planet.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/ResourceNode.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://btfs0vii8ixiq" path="res://ui/HUD.tscn" id="8"]
+[ext_resource type="Script" path="res://scenes/StarField.gd" id="9"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
+
+[node name="StarField" type="Node2D" parent="."]
+z_index = -10
+script = ExtResource("9")
 
 [node name="GameState" type="Node" parent="."]
 script = ExtResource("2")
@@ -30,7 +35,7 @@ fuel_consumption_rate = 2.0
 
 [node name="Earth" parent="." instance=ExtResource("6")]
 position = Vector2(-648, 9)
-mass = 80000000.0
+mass = 150000000.0
 radius = 800.0
 color = Color(0.2795402, 0.48597795, 0.7557118, 1)
 enable_orbiting = false
