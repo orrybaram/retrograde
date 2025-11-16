@@ -11,8 +11,10 @@ class_name Planet
 @export var initial_angle: float = 0.0  # Starting angle in radians
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting
+@export var show_orbit_path: bool = true : set = _set_show_orbit_path  # Toggle to show/hide orbit visualization
 
 @onready var gravity_field: Area2D = $"GravityField"
+@onready var orbit_visual: OrbitVisual = $"OrbitVisual"
 
 var parent_planet: Planet = null
 var orbital_angle: float = 0.0
@@ -23,6 +25,11 @@ func _set_color(c: Color) -> void:
 	var visual = get_node_or_null("Circle") as PlanetVisual
 	if visual:
 		visual.base_color = c
+
+func _set_show_orbit_path(v: bool) -> void:
+	show_orbit_path = v
+	if orbit_visual:
+		orbit_visual.show_orbit = v
 
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
@@ -41,6 +48,9 @@ func _ready() -> void:
 		orbital_angle = initial_angle
 		# Lock rotation for orbiting planets to prevent physics rotation
 		lock_rotation = true
+		# Update orbit visual if it exists
+		if orbit_visual:
+			orbit_visual.show_orbit = show_orbit_path
 
 func _physics_process(_dt: float) -> void:
 	# Handle orbital mechanics if this planet has a parent planet
