@@ -8,7 +8,7 @@ class_name Ship
 @export var boost_fuel_multiplier: float = 3.0  # Multiplier for boost fuel consumption
 
 @export var max_hull: float = 100.0
-@export var crash_damage_multiplier: float = 0.1  # Damage per unit of collision velocity
+@export var crash_damage_multiplier: float = 0.5  # Damage per unit of collision velocity
 
 var want_turn_left := false
 var want_turn_right := false
@@ -86,14 +86,12 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 				if not (collider is RigidBody2D):
 					continue
 
-				# Impulse applied at this contact in this step
-				var impulse: Vector2 = state.get_contact_impulse(i)
-				var impact_strength := impulse.length()
-
-				# Tune this to whatever feels right
-				var damage_threshold := 50.0
-				if impact_strength > damage_threshold:
-					var damage := (impact_strength - damage_threshold) * crash_damage_multiplier
+				var ship_speed = state.get_contact_local_velocity_at_position(i).length();
+				
+				var diff: float = ship_speed;
+				var damage_threshold := 80
+				if diff > damage_threshold:
+					var damage := (diff - damage_threshold) * crash_damage_multiplier
 					take_damage(damage)
 					last_damage_time = current_time
 					break

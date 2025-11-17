@@ -39,6 +39,7 @@ mass = 100000000.0
 radius = 800.0
 color = Color(0.2795402, 0.48597795, 0.7557118, 1)
 enable_orbiting = false
+show_orbit_path = false
 
 [node name="Moon" parent="Earth" instance=ExtResource("6")]
 position = Vector2(4856, -3840)
