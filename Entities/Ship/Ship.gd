@@ -21,6 +21,12 @@ var is_destroyed: bool = false
 var last_damage_time: float = 0.0
 var damage_cooldown: float = 0.1  # Minimum time between damage applications (seconds)
 
+# Landing lock system
+var is_locked_to_planet: bool = false
+var locked_planet: Planet = null
+var landing_lock_distance: float = 10.0  # Distance threshold for landing lock (pixels above surface)
+var locked_offset_from_planet: Vector2 = Vector2.ZERO  # Offset from planet center when locked
+
 @onready var thruster_particles: GPUParticles2D = $"ThrusterParticles"
 @onready var boost_particles: GPUParticles2D = $"BoostParticles"
 @onready var side_thruster_particles: GPUParticles2D = $"SideThrusterParticles"
@@ -64,6 +70,12 @@ func _physics_process(_dt: float) -> void:
 	want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
 	want_boost = Input.is_action_pressed("boost")
 	
+	# Release lock if thrusting
+	if (want_thrust or want_reverse_thrust) and is_locked_to_planet:
+		is_locked_to_planet = false
+		locked_planet = null
+		locked_offset_from_planet = Vector2.ZERO
+	
 	# If any input, ensure the body is awake
 	if want_turn_left or want_turn_right or want_thrust or want_reverse_thrust or want_boost:
 		sleeping = false
@@ -73,25 +85,52 @@ func _physics_process(_dt: float) -> void:
 	
 	# Update camera shake
 	_update_camera_shake(_dt)
+	
+	# Check for landing lock
+	_check_landing_lock()
 
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	# Handle landing lock - keep ship position and velocity locked to planet
+	if is_locked_to_planet and locked_planet and is_instance_valid(locked_planet):
+		var planet_pos = locked_planet.global_position
+		var planet_vel = locked_planet.linear_velocity
+		
+		# If we just locked, calculate the offset from current state position
+		if locked_offset_from_planet == Vector2.ZERO:
+			locked_offset_from_planet = state.transform.origin - planet_pos
+		
+		# Maintain the offset and update position to follow planet
+		var desired_pos = planet_pos + locked_offset_from_planet
+		
+		# Set position and velocity to match planet
+		state.transform.origin = desired_pos
+		state.linear_velocity = planet_vel
+		state.angular_velocity = 0.0
+		return
+	
 	if not is_destroyed and state.get_contact_count() > 0:
 		var current_time = Time.get_ticks_msec() / 1000.0
 		
 		if current_time - last_damage_time >= damage_cooldown:
 			for i in state.get_contact_count():
 				var collider := state.get_contact_collider_object(i)
+				var collision_normal = state.get_contact_local_normal(i)
+				
 				if collider == null or collider == self:
 					continue
 				if not (collider is RigidBody2D):
 					continue
 
-				var ship_speed = state.get_contact_local_velocity_at_position(i).length();
+				var ship_speed = state.get_contact_local_velocity_at_position(i)
 				
-				var diff: float = ship_speed;
+				var collider_speed = collider.linear_velocity
+				var relative_velocity = ship_speed - collider_speed;
+				var speed_along_normal = relative_velocity.dot(collision_normal)
+				var impact_speed: int = abs(speed_along_normal);
+				
 				var damage_threshold := 80
-				if diff > damage_threshold:
-					var damage := (diff - damage_threshold) * crash_damage_multiplier
+				if impact_speed > damage_threshold:
+					var damage := (impact_speed - damage_threshold) * crash_damage_multiplier
 					take_damage(damage)
 					last_damage_time = current_time
 					break
@@ -195,6 +234,44 @@ func _update_particles() -> void:
 					# Position on LEFT side of ship (Y=-7) - particles go 90° right of ship (DOWN)
 					side_thruster_particles.position = Vector2(0, 7)
 					material.direction = Vector3(0, -1, 0)
+
+func _check_landing_lock() -> void:
+	# Don't lock if already locked or if thrusting
+	if is_locked_to_planet or want_thrust or want_reverse_thrust:
+		return
+	
+	# Find closest planet
+	var planets = get_tree().get_nodes_in_group("planets")
+	if planets.is_empty():
+		return
+	
+	var closest_planet: Planet = null
+	var closest_distance: float = INF
+	var ship_pos = global_position
+	
+	for node in planets:
+		if not is_instance_valid(node):
+			continue
+		var planet = node as Planet
+		if not planet:
+			continue
+		
+		var dist = ship_pos.distance_to(planet.global_position)
+		if dist < closest_distance:
+			closest_distance = dist
+			closest_planet = planet
+	
+	# Check if ship is close enough to surface to lock
+	if closest_planet and is_instance_valid(closest_planet):
+		var distance_to_surface = closest_distance - closest_planet.radius
+		if distance_to_surface <= landing_lock_distance and distance_to_surface >= 0:
+			# Also check if ship is moving slowly relative to planet
+			var relative_velocity = linear_velocity - closest_planet.linear_velocity
+			if relative_velocity.length() < 50.0:  # Threshold for "landed" speed
+				is_locked_to_planet = true
+				locked_planet = closest_planet
+				# Reset offset - will be calculated on first lock frame
+				locked_offset_from_planet = Vector2.ZERO
 
 func _update_camera_shake(dt: float) -> void:
 	if not camera:
