@@ -22,27 +22,29 @@ offset_bottom = 196.0
 layout_mode = 2
 theme_override_constants/separation = 6
 
+[node name="HullLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Hull: 100 / 100"
+
 [node name="FuelLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Fuel: 0 / 0"
-
-[node name="CargoLabel" type="Label" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Cargo: -"
-
-[node name="PositionLabel" type="Label" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Position: (0, 0)"
 
 [node name="VelocityLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Velocity: 0.0 m/s"
 
-[node name="HullLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="PositionLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Hull: 100 / 100"
+text = "Position: (0, 0)"
+
+[node name="CargoLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+text = "Cargo: -"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
 

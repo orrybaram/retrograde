@@ -35,25 +35,34 @@ fuel_consumption_rate = 2.0
 
 [node name="Sun" parent="." instance=ExtResource("6")]
 position = Vector2(-648, 9)
-mass = 200000000.0
 radius = 1600.0
 color = Color(0.9577778, 0.8865211, 0.5121605, 1)
+massMultiplier = 800.0
 enable_orbiting = false
 show_orbit_path = false
 
+[node name="SunStation" parent="Sun" instance=ExtResource("6")]
+position = Vector2(0, 1893)
+radius = 15.0
+color = Color(0.13319641, 0.13319641, 0.13319638, 1)
+massMultiplier = 0.01
+orbital_distance = 1800.0
+orbital_speed = 0.45
+show_gravity_rings = false
+
 [node name="Earth" parent="Sun" instance=ExtResource("6")]
 position = Vector2(2859, -101)
-mass = 100000000.0
 radius = 800.0
 color = Color(0.22048637, 0.706052, 0.9013243, 1)
+massMultiplier = 100.0
 orbital_distance = 10000.0
 orbital_speed = 0.005
 
 [node name="Moon" parent="Sun/Earth" instance=ExtResource("6")]
 position = Vector2(700, -590)
-mass = 5000000.0
 radius = 300.0
 color = Color(0.88400614, 0.9361036, 0.9804601, 1)
+massMultiplier = 10.0
 orbital_distance = 4000.0
 orbital_speed = 0.01
 

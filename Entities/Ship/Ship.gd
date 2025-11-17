@@ -274,10 +274,10 @@ func _check_landing_lock() -> void:
 				locked_offset_from_planet = Vector2.ZERO
 
 func _update_camera_shake(dt: float) -> void:
-	if not camera:
+	if not camera or is_destroyed:
 		return
 	
-	if want_boost and not is_destroyed:
+	if want_boost and want_thrust:
 		# Apply camera shake during boost
 		camera_shake_time += dt * camera_shake_speed
 		var shake_offset = Vector2(

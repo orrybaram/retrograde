@@ -4,6 +4,7 @@ class_name Planet
 @export var radius: float = 160.0
 @export var gravitational_constant: float = 4.0  # G constant for scaling
 @export var color: Color = Color(0.15, 0.6, 0.9) : set = _set_color
+@export var massMultiplier: float = 1.0;
 
 # Orbital parameters
 @export var orbital_distance: float = 500.0  # Distance from parent planet center
@@ -12,12 +13,18 @@ class_name Planet
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting
 @export var show_orbit_path: bool = true : set = _set_show_orbit_path  # Toggle to show/hide orbit visualization
-
+@export var show_gravity_rings: bool = true : set = _set_show_gravity_rings
 @onready var gravity_field: Area2D = $"GravityField"
 @onready var orbit_visual: OrbitVisual = $"OrbitVisual"
+@onready var gravity_field_visual: GravityFieldVisual = $GravityField/CollisionShape2D/GravityFieldVisual
 
 var parent_planet: Planet = null
 var orbital_angle: float = 0.0
+
+func _set_show_gravity_rings(v: bool) -> void:
+	show_gravity_rings = v
+	if gravity_field_visual:
+		gravity_field_visual.visible = v
 
 func _set_color(c: Color) -> void: 
 	color = c
@@ -36,10 +43,16 @@ func _get_gravity_strength() -> float:
 
 func _ready() -> void:
 	add_to_group("planets")
+	
+	mass = massMultiplier * 1000000
+	
 	# Set initial color on visual
 	var visual = get_node_or_null("Circle") as PlanetVisual
 	if visual:
 		visual.base_color = color
+		
+	if gravity_field_visual:
+		gravity_field_visual.visible = show_gravity_rings
 	
 	# Check if parent node is a Planet
 	var parent = get_parent()
