@@ -29,12 +29,11 @@ func _update_labels() -> void:
 	if gs == null: return
 	var fuel = gs.fuel if "fuel" in gs else 0.0
 	var max_fuel = gs.max_fuel if "max_fuel" in gs else 0.0
-	var cargo_b = gs.cargo["Basalt"] if "cargo" in gs else 0
-	var cargo_h = gs.cargo["He3"] if "cargo" in gs else 0
+	var cargo_scrap = gs.cargo.get("Scrap", 0) if "cargo" in gs else 0
 	var credits = gs.credits if "credits" in gs else 0
 	
 	fuel_label.text = "Fuel: %.0f / %.0f" % [fuel, max_fuel]
-	cargo_label.text = "Cargo: Basalt %d | He-3 %d | Credits %d" % [cargo_b, cargo_h, credits]
+	cargo_label.text = "Cargo: Scrap %d | Credits %d" % [cargo_scrap, credits]
 	
 	# Update position and velocity from ship
 	if ship and is_instance_valid(ship):
@@ -67,12 +66,12 @@ func _update_labels() -> void:
 		hull_label.modulate = Color.RED
 
 func _sell() -> void:
-	var ship := get_tree().get_first_node_in_group("ship") as Node2D
+	var ship_node := get_tree().get_first_node_in_group("ship") as Node2D
 	var home := get_tree().get_nodes_in_group("planets")[0] as Node2D
-	if ship.global_position.distance_to(home.global_position) > 170.0:
+	if ship_node.global_position.distance_to(home.global_position) > 170.0:
 		return
 	var economy = get_tree().get_first_node_in_group("economy")
-	var total: int = int(gs.cargo["Basalt"]) * economy.PRICES["Basalt"] + int(gs.cargo["He3"]) * economy.PRICES["He3"]
+	var total: int = int(gs.cargo.get("Scrap", 0)) * economy.PRICES.get("Scrap", 0)
 	gs.credits += total
 	gs.clear_cargo()
 

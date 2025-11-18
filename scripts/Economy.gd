@@ -2,8 +2,7 @@ extends Node
 class_name Economy
 
 const PRICES := {
-	"Basalt": 1,
-	"He3": 5
+	"Scrap": 2
 }
 
 static func get_cost(upgrade_name: String) -> int:

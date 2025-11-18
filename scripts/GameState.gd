@@ -12,8 +12,7 @@ var credits: int = 0 :
 		credits_changed.emit()
 
 var cargo := {
-	"Basalt": 0,
-	"He3": 0
+	"Scrap": 0
 }
 
 var hull: int = 10

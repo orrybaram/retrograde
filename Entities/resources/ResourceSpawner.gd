@@ -1,0 +1,147 @@
+extends Node2D
+class_name ResourceSpawner
+
+@export var resource_scene: PackedScene = preload("res://entities/resources/Scrap.tscn")
+@export var num_clusters: int = 5  # Number of clusters around the planet
+@export var min_resources_per_cluster: int = 3
+@export var max_resources_per_cluster: int = 8
+@export var min_distance: float = 300.0
+@export var max_distance: float = 800.0
+@export var auto_spawn: bool = true
+
+var parent_planet: Planet = null
+var scene_root: Node2D = null
+
+func _ready() -> void:
+	add_to_group("resource_spawners")
+	
+	# Find parent planet
+	_find_parent_planet()
+	
+	# Find scene root (Main) to add spawned resources to
+	_find_scene_root()
+	
+	if auto_spawn:
+		# Wait a frame to ensure everything is initialized
+		await get_tree().process_frame
+		spawn_cluster()
+
+func _find_parent_planet() -> void:
+	# Traverse up the tree to find Planet parent
+	var current = get_parent()
+	while current:
+		if current is Planet:
+			parent_planet = current as Planet
+			return
+		current = current.get_parent()
+
+func _find_scene_root() -> void:
+	# Find the root Node2D (Main scene) by traversing up the tree
+	# ResourceSpawner -> Planet -> ... -> Main
+	var current = get_parent()
+	while current:
+		var parent = current.get_parent()
+		if parent == null or parent == get_tree().root:
+			# This is the top-level node (Main)
+			scene_root = current as Node2D
+			return
+		current = parent
+	
+	# Fallback: use scene root's first child
+	if not scene_root:
+		var root = get_tree().root
+		var main = root.get_child(0) as Node2D
+		if main:
+			scene_root = main
+
+func spawn_cluster() -> void:
+	if not resource_scene:
+		push_error("Resource scene not loaded in ResourceSpawner!")
+		return
+	
+	if not parent_planet:
+		push_error("ResourceSpawner must be a child of a Planet!")
+		return
+	
+	if not scene_root:
+		push_error("Could not find scene root to spawn resources!")
+		return
+	
+	var planet_pos = parent_planet.global_position
+	var planet_radius = parent_planet.radius
+	var planet_velocity = parent_planet.linear_velocity
+	
+	# Distribute clusters evenly around the planet (360 degrees)
+	var angle_step = TAU / num_clusters  # Angle between each cluster
+	
+	# Spawn multiple clusters around the planet
+	for cluster_index in range(num_clusters):
+		# Calculate cluster angle - evenly distributed with some randomness
+		var base_angle = cluster_index * angle_step
+		var angle_variation = angle_step * 0.2  # Small variation (±20% of step)
+		var cluster_angle = base_angle + RNG.rng.randf_range(-angle_variation, angle_variation)
+		
+		# Random distance from planet surface for this cluster
+		var distance_from_surface = RNG.rng.randf_range(min_distance, max_distance)
+		var cluster_distance = planet_radius + distance_from_surface
+		
+		# Cluster center position
+		var cluster_center = planet_pos + Vector2(cos(cluster_angle), sin(cluster_angle)) * cluster_distance
+		
+		# Random number of resources in this cluster
+		var resources_in_cluster = RNG.rng.randi_range(min_resources_per_cluster, max_resources_per_cluster)
+		
+		# Spawn resources tightly grouped at cluster center
+		for i in range(resources_in_cluster):
+			var resource_pos: Vector2
+			var attempts = 0
+			var max_attempts = 10
+			
+			# Try to find a valid position outside the planet
+			while attempts < max_attempts:
+				attempts += 1
+				
+				# Resources spawn at cluster center with tiny random offset to avoid exact overlap
+				# Small offset (5-15 pixels) so they're visible but still tightly grouped
+				var tiny_offset = Vector2(
+					RNG.rng.randf_range(-150.0, 150.0),
+					RNG.rng.randf_range(-150.0, 150.0)
+				)
+				resource_pos = cluster_center + tiny_offset
+				
+				# Calculate distance from planet center
+				var distance_to_planet_center = resource_pos.distance_to(planet_pos)
+				var min_allowed_distance = planet_radius + min_distance
+				
+				# If too close to planet, push it out
+				if distance_to_planet_center < min_allowed_distance:
+					var direction = (resource_pos - planet_pos).normalized()
+					# If direction is zero (exactly at planet center), use cluster direction
+					if direction.length() < 0.001:
+						direction = Vector2(cos(cluster_angle), sin(cluster_angle))
+					resource_pos = planet_pos + direction * min_allowed_distance
+				
+				# Verify final position is outside planet
+				var final_distance = resource_pos.distance_to(planet_pos)
+				if final_distance >= planet_radius + min_distance:
+					break
+			
+			# Spawn resource
+			var resource = resource_scene.instantiate()
+			scene_root.add_child(resource)
+			resource.global_position = resource_pos
+			
+			# Set resource to orbit with planet (make it "in orbit")
+			# Resources are Area2D nodes, so we track offset and update position
+			if resource.has_method("start_harvest"):  # Check if it's a ResourceNode
+				# Store reference to planet and offset for orbital tracking
+				resource._orbital_planet = parent_planet
+				resource._offset_from_planet = resource_pos - planet_pos
+				
+				# Randomize resource properties
+				resource.amount = RNG.rng.randi_range(5, 20)
+				resource.max_amount = resource.amount
+				resource.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
+			elif resource is RigidBody2D:
+				# If it's a RigidBody2D, set velocity directly
+				(resource as RigidBody2D).linear_velocity = planet_velocity
