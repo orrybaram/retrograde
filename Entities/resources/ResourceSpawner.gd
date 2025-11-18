@@ -7,6 +7,7 @@ class_name ResourceSpawner
 @export var max_resources_per_cluster: int = 8
 @export var min_distance: float = 300.0
 @export var max_distance: float = 800.0
+@export var orbital_speed: float = 0.02  # Base angular speed for orbiting (radians per second)
 @export var auto_spawn: bool = true
 
 var parent_planet: Planet = null
@@ -131,12 +132,25 @@ func spawn_cluster() -> void:
 			scene_root.add_child(resource)
 			resource.global_position = resource_pos
 			
-			# Set resource to orbit with planet (make it "in orbit")
-			# Resources are Area2D nodes, so we track offset and update position
+			# Set resource to orbit around planet (make it "in orbit")
+			# Resources are Area2D nodes, so we simulate orbital mechanics
 			if resource.has_method("start_harvest"):  # Check if it's a ResourceNode
-				# Store reference to planet and offset for orbital tracking
+				# Calculate initial orbital parameters
+				var offset = resource_pos - planet_pos
+				var distance = offset.length()
+				var initial_angle = atan2(offset.y, offset.x)
+				
+				# Calculate orbital speed based on distance (circular orbit)
+				# Use export value from ResourceSpawner, scale by distance
+				var distance_factor = 1000.0 / max(distance, 100.0)  # Faster closer, slower farther
+				var calculated_speed = orbital_speed * distance_factor
+				
+				# Store orbital parameters
 				resource._orbital_planet = parent_planet
-				resource._offset_from_planet = resource_pos - planet_pos
+				resource._offset_from_planet = offset
+				resource._orbital_angle = initial_angle
+				resource._orbital_distance = distance
+				resource._orbital_speed = calculated_speed
 				
 				# Randomize resource properties
 				resource.amount = RNG.rng.randi_range(5, 20)

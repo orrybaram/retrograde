@@ -1,9 +1,25 @@
-[gd_scene load_steps=3 format=3 uid="uid://6y5t431r3bld"]
+[gd_scene load_steps=6 format=3 uid="uid://6y5t431r3bld"]
 
 [ext_resource type="Script" uid="uid://b2u7hpjtpv2rj" path="res://entities/resources/ResourceNode.gd" id="1"]
 
 [sub_resource type="CircleShape2D" id="1"]
-radius = 15.0
+radius = 32.159035
+
+[sub_resource type="Gradient" id="Gradient_626gi"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_4axr5"]
+gradient = SubResource("Gradient_626gi")
+
+[sub_resource type="ParticleProcessMaterial" id="4"]
+direction = Vector3(0, 0, 0)
+spread = 0.0
+initial_velocity_max = 5.0
+gravity = Vector3(0, 0, 0)
+scale_min = 5.0
+scale_max = 5.0
+color = Color(0.5836916, 0.85247123, 0.99999994, 1)
+color_ramp = SubResource("GradientTexture1D_4axr5")
 
 [node name="Scrap" type="Area2D"]
 script = ExtResource("1")
@@ -15,6 +31,13 @@ shape = SubResource("1")
 [node name="Polygon2D" type="Polygon2D" parent="."]
 position = Vector2(-9, 7)
 scale = Vector2(0.26509875, 0.26884642)
-color = Color(0.8668118, 0.8395009, 0.06277053, 1)
+color = Color(0.5836916, 0.85247123, 0.99999994, 1)
 polygon = PackedVector2Array(9, 12, -15, -28, 9, -68, 57, -68, 81, -28, 57, 12)
 uv = PackedVector2Array(2, 4, 3, -4, 26, -28, 50, -28, 50, 4, 50, 20, 2, 20)
+
+[node name="TrailParticles" type="GPUParticles2D" parent="."]
+amount = 20
+lifetime = 10.0
+preprocess = 10.0
+visibility_rect = Rect2(-2000, -2000, 4000, 4000)
+process_material = SubResource("4")

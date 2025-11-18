@@ -66,8 +66,9 @@ orbital_speed = 0.005
 num_clusters = 4
 min_resources_per_cluster = 1
 max_resources_per_cluster = 5
-min_distance = 500.0
-max_distance = 1000.0
+min_distance = 1500.0
+max_distance = 2000.0
+orbital_speed = 0.2
 
 [node name="Moon" parent="Sun/Earth" instance=ExtResource("6")]
 position = Vector2(700, -590)

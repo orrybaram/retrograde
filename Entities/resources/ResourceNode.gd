@@ -10,17 +10,26 @@ signal resource_depleted
 @export var max_amount: int = 10
 @export var harvest_rate: float = 5.0
 @export var color: Color = Color(0.5, 0.5, 0.4)  # Default gray/brown for scrap
+@export var min_scale: float = 0.8  # Minimum scale to prevent visual from getting too small
 
 var _harvesting: bool = false
 var _accum: float = 0.0
 var _ship_in_range: Ship = null
 var _orbital_planet: Planet = null
 var _offset_from_planet: Vector2 = Vector2.ZERO
+var _orbital_angle: float = 0.0
+var _orbital_distance: float = 0.0
+var _orbital_speed: float = 0.0
+var _is_depleted: bool = false
+var _trail_particles: GPUParticles2D = null
 
 func _ready() -> void:
 	add_to_group("resource_nodes")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
+	
+	# Find trail particles
+	_trail_particles = get_node_or_null("TrailParticles") as GPUParticles2D
 	
 	# Initialize max_amount if not set
 	if max_amount == 0:
@@ -40,12 +49,12 @@ func _on_body_exited(body: Node2D) -> void:
 			stop_harvest()
 
 func _process(delta: float) -> void:
-	# Update position to orbit with planet if assigned
+	# Update position to orbit around planet if assigned
 	if _orbital_planet and is_instance_valid(_orbital_planet):
-		global_position = _orbital_planet.global_position + _offset_from_planet
+		_update_orbital_position(delta)
 	
 	# Check if we should harvest: ship in range AND button pressed AND has resources
-	if _ship_in_range and amount > 0:
+	if _ship_in_range and amount > 0 and not _is_depleted:
 		# Use "scan" action for harvesting (or create "harvest" action)
 		if Input.is_action_pressed("scan"):
 			if not _harvesting:
@@ -53,9 +62,12 @@ func _process(delta: float) -> void:
 		else:
 			if _harvesting:
 				stop_harvest()
+	else:
+		if _harvesting:
+			stop_harvest()
 	
 	# Process harvesting
-	if not _harvesting or amount <= 0:
+	if not _harvesting or amount <= 0 or _is_depleted:
 		return
 	
 	_accum += harvest_rate * delta
@@ -69,12 +81,12 @@ func _process(delta: float) -> void:
 		if gs:
 			gs.add_cargo(kind, take)
 		
-		# Update visual based on depletion
-		_update_visual()
+		# Update visual based on depletion (only if not already depleted)
+		if not _is_depleted:
+			_update_visual()
 		
-		if amount <= 0:
-			resource_depleted.emit()
-			queue_free()
+		if amount <= 0 and not _is_depleted:
+			_deplete_resource()
 
 func start_harvest() -> void:
 	if _harvesting:
@@ -89,7 +101,85 @@ func stop_harvest() -> void:
 	_accum = 0.0
 	harvest_stopped.emit()
 
+func _deplete_resource() -> void:
+	if _is_depleted:
+		return
+	
+	_is_depleted = true
+	resource_depleted.emit()
+	
+	# Stop emitting new particles
+	if _trail_particles:
+		_trail_particles.emitting = false
+	
+	# Fade out the visual
+	_start_fade_out()
+	
+	# Wait for particles to decay (5 seconds) then remove
+	await get_tree().create_timer(5.0).timeout
+	queue_free()
+
+func _start_fade_out() -> void:
+	# Fade out visual over time, starting from current alpha
+	var fade_duration = 2.0  # Fade out over 2 seconds
+	var elapsed = 0.0
+	
+	# Get starting alpha from current visual state
+	var visual = _find_visual_node()
+	if not visual:
+		return
+	
+	var start_alpha: float = 1.0
+	if visual is Polygon2D:
+		start_alpha = (visual as Polygon2D).color.a
+	elif visual is ColorRect:
+		start_alpha = (visual as ColorRect).modulate.a
+	elif "modulate" in visual:
+		start_alpha = visual.modulate.a
+	
+	# Fade from current alpha to 0
+	while elapsed < fade_duration:
+		elapsed += get_process_delta_time()
+		var fade_progress = elapsed / fade_duration
+		var current_alpha = lerp(start_alpha, 0.0, fade_progress)
+		current_alpha = clamp(current_alpha, 0.0, 1.0)
+		
+		if visual:
+			if visual is Polygon2D:
+				var polygon = visual as Polygon2D
+				var original_color = polygon.color
+				polygon.color = Color(original_color.r, original_color.g, original_color.b, current_alpha)
+			elif visual is ColorRect:
+				var color_rect = visual as ColorRect
+				color_rect.modulate = Color(color_rect.modulate.r, color_rect.modulate.g, color_rect.modulate.b, current_alpha)
+			elif "modulate" in visual:
+				var current_modulate = visual.modulate
+				visual.modulate = Color(current_modulate.r, current_modulate.g, current_modulate.b, current_alpha)
+		
+		await get_tree().process_frame
+
+func _update_orbital_position(delta: float) -> void:
+	if not _orbital_planet or not is_instance_valid(_orbital_planet):
+		return
+	
+	var planet_pos = _orbital_planet.global_position
+	
+	# Update orbital angle based on speed (resources orbit around planet)
+	_orbital_angle += _orbital_speed * delta
+	
+	# Calculate new position in circular orbit around planet
+	# This creates orbital velocity - resources move tangentially around the planet
+	var orbital_offset = Vector2(cos(_orbital_angle), sin(_orbital_angle)) * _orbital_distance
+	global_position = planet_pos + orbital_offset
+	
+	# Update stored offset for reference
+	_offset_from_planet = orbital_offset
+
 func _update_visual() -> void:
+	# Don't update visual if depleted (fade-out handles it)
+	if _is_depleted:
+		return
+	
 	# Find visual child and update based on depletion ratio
 	var visual = _find_visual_node()
 	if not visual:
@@ -120,7 +210,9 @@ func _update_visual() -> void:
 			polygon.set_meta("original_scale", polygon.scale)
 		
 		var original_scale = polygon.get_meta("original_scale") as Vector2
-		polygon.scale = original_scale * depletion_ratio
+		# Clamp scale to prevent it from going too low
+		var scale_factor = max(depletion_ratio, min_scale)
+		polygon.scale = original_scale * scale_factor
 		
 		# Update color alpha (Polygon2D uses color property, not modulate)
 		var original_color = polygon.color

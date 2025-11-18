@@ -39,7 +39,6 @@ layout_mode = 2
 text = "Position: (0, 0)"
 
 [node name="CargoLabel" type="Label" parent="MarginContainer/VBoxContainer"]
-visible = false
 layout_mode = 2
 text = "Cargo: -"
 
