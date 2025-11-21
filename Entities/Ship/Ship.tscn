@@ -1,6 +1,10 @@
-[gd_scene load_steps=9 format=3 uid="uid://b051ln2ytsesm"]
+[gd_scene load_steps=13 format=3 uid="uid://b051ln2ytsesm"]
 
 [ext_resource type="Script" uid="uid://cx5ba1vmbwqiy" path="res://entities/Ship/Ship.gd" id="1"]
+[ext_resource type="Script" uid="uid://coqh8cu6dte0k" path="res://scripts/StateMachine.gd" id="2"]
+[ext_resource type="Script" uid="uid://dbehnwjpsmt4c" path="res://entities/Ship/states/FlyingState.gd" id="3"]
+[ext_resource type="Script" uid="uid://cfyoann2rnq0w" path="res://entities/Ship/states/LandedState.gd" id="4"]
+[ext_resource type="Script" uid="uid://br1pdbv2ka45p" path="res://entities/Ship/states/DestroyedState.gd" id="5"]
 
 [sub_resource type="Gradient" id="Gradient_1"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -60,7 +64,6 @@ script = ExtResource("1")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 zoom = Vector2(0.6, 0.6)
-position_smoothing_enabled = true
 rotation_smoothing_enabled = true
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
@@ -90,3 +93,15 @@ process_material = SubResource("ParticleProcessMaterial_2")
 emitting = false
 amount = 10
 process_material = SubResource("ParticleProcessMaterial_3")
+
+[node name="StateMachine" type="Node" parent="."]
+script = ExtResource("2")
+
+[node name="FlyingState" type="Node" parent="StateMachine"]
+script = ExtResource("3")
+
+[node name="LandedState" type="Node" parent="StateMachine"]
+script = ExtResource("4")
+
+[node name="DestroyedState" type="Node" parent="StateMachine"]
+script = ExtResource("5")

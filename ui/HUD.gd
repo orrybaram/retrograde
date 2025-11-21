@@ -19,6 +19,8 @@ func _ready() -> void:
 		gs.cargo_changed.connect(_update_labels)
 	if gs and gs.has_signal("credits_changed"):
 		gs.credits_changed.connect(_update_labels)
+	if ship and ship.has_signal("fuel_changed"):
+		ship.fuel_changed.connect(_update_labels)
 	sell_btn.pressed.connect(_sell)
 	upgrade_btn.pressed.connect(_buy_fuel)
 
@@ -27,15 +29,12 @@ func _process(_dt: float) -> void:
 
 func _update_labels() -> void:
 	if gs == null: return
-	var fuel = gs.fuel if "fuel" in gs else 0.0
-	var max_fuel = gs.max_fuel if "max_fuel" in gs else 0.0
 	var cargo_scrap = gs.cargo.get("Scrap", 0) if "cargo" in gs else 0
 	var credits = gs.credits if "credits" in gs else 0
 	
-	fuel_label.text = "Fuel: %.0f / %.0f" % [fuel, max_fuel]
 	cargo_label.text = "Cargo: Scrap %d | Credits %d" % [cargo_scrap, credits]
 	
-	# Update position and velocity from ship
+	# Update position, velocity, fuel, and hull from ship
 	if ship and is_instance_valid(ship):
 		var pos = ship.global_position
 		position_label.text = "Position: (%.1f, %.1f)" % [pos.x, pos.y]
@@ -43,6 +42,11 @@ func _update_labels() -> void:
 		var velocity = ship.linear_velocity
 		var speed = velocity.length()
 		velocity_label.text = "Velocity: %.1f m/s" % [speed]
+		
+		# Update fuel from ship
+		var fuel = ship.fuel if "fuel" in ship else 0.0
+		var max_fuel = ship.max_fuel if "max_fuel" in ship else 100.0
+		fuel_label.text = "Fuel: %.0f / %.0f" % [fuel, max_fuel]
 		
 		# Update hull strength
 		var hull = ship.hull_strength if "hull_strength" in ship else 0.0
@@ -62,6 +66,7 @@ func _update_labels() -> void:
 	else:
 		position_label.text = "Position: (0, 0)"
 		velocity_label.text = "Velocity: 0.0 m/s"
+		fuel_label.text = "Fuel: 0 / 0"
 		hull_label.text = "Hull: 0 / 100 (0%)"
 		hull_label.modulate = Color.RED
 
@@ -80,4 +85,4 @@ func _buy_fuel() -> void:
 	var cost: int = economy.get_cost("FuelTank_I")
 	if gs.credits >= cost:
 		gs.credits -= cost
-		economy.apply_upgrade("FuelTank_I", gs)
+		economy.apply_upgrade("FuelTank_I", gs, ship)

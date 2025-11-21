@@ -65,9 +65,6 @@ func _draw() -> void:
 
 	# Draw rings based on gravity strength, with outer rings having lower opacity
 	if outline_width > 0.0 and ring_count > 0 and planet:
-		# 96 segments ~ smooth ring; adjust for perf if needed
-		var base_strength = _get_base_gravity_strength()
-		
 		# Calculate strength at planet surface (reference point)
 		var surface_strength = _get_gravity_strength_at_distance(planet_radius)
 		

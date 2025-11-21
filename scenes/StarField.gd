@@ -26,7 +26,7 @@ var far_star_count: int = int(star_count * 0.7)
 
 # Star field area (large enough to cover camera movement)
 @export var field_size: Vector2 = Vector2(20000, 20000)
-@export var cull_margin: float = 500.0  # Extra margin around camera for culling
+@export var cull_margin: float = 2000.0  # Extra margin around camera for culling
 
 # Star data structure
 class StarData:

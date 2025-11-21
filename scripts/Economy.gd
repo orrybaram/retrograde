@@ -16,12 +16,16 @@ static func get_cost(upgrade_name: String) -> int:
 		_:
 			return 0
 
-static func apply_upgrade(upgrade_name: String, gs) -> void:
+static func apply_upgrade(upgrade_name: String, gs, ship: Ship = null) -> void:
 	match upgrade_name:
 		"FuelTank_I":
-			gs.max_fuel *= 1.25
+			if ship:
+				ship.max_fuel *= 1.25
+				ship.fuel = ship.max_fuel  # Refill to new max
 		"Hull_I":
-			gs.max_hull += 5
+			if ship:
+				ship.max_hull += 5
+				ship.hull_strength = ship.max_hull  # Heal to new max
 		"DroneBay_I":
 			gs.has_drone_bay = true
 		_:
