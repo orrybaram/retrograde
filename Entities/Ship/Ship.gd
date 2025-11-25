@@ -13,7 +13,7 @@ class_name Ship
 
 @export var max_fuel: float = 100.0  # Maximum fuel capacity
 
-signal fuel_changed(new_fuel: float)
+signal fuel_changed
 signal fuel_depleted
 
 var want_turn_left := false
@@ -156,7 +156,7 @@ func consume_fuel(amount: float) -> bool:
 	
 	var old_fuel = fuel
 	fuel = max(0.0, fuel - amount)
-	fuel_changed.emit(fuel)
+	fuel_changed.emit()
 	
 	# Emit fuel_depleted signal when fuel reaches 0
 	if fuel <= 0.0 and old_fuel > 0.0:

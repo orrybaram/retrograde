@@ -1,6 +1,16 @@
-[gd_scene load_steps=2 format=3 uid="uid://btfs0vii8ixiq"]
+[gd_scene load_steps=5 format=3 uid="uid://btfs0vii8ixiq"]
 
 [ext_resource type="Script" uid="uid://lwtmx108rwd6" path="res://ui/HUD.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://be06y1pu3xufy" path="res://ui/ProgressBarWidget.tscn" id="2"]
+[ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="3_jd13s"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2"]
+bg_color = Color(0, 0, 0, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.75, 0, 1)
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -12,34 +22,48 @@ grow_vertical = 2
 script = ExtResource("1")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 0
-offset_left = 12.0
-offset_top = 12.0
-offset_right = 392.0
-offset_bottom = 196.0
+layout_mode = 1
+anchors_preset = -1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 380.0
+offset_bottom = 184.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="HullLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="FuelProgressBar" parent="MarginContainer/VBoxContainer" instance=ExtResource("2")]
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
-text = "Hull: 100 / 100"
+theme = ExtResource("3_jd13s")
+show_label = false
 
-[node name="FuelLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="HullProgressBar" parent="MarginContainer/VBoxContainer" instance=ExtResource("2")]
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
-text = "Fuel: 0 / 0"
+theme = ExtResource("3_jd13s")
+show_label = false
 
 [node name="VelocityLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 12
 text = "Velocity: 0.0 m/s"
 
 [node name="PositionLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 12
 text = "Position: (0, 0)"
 
 [node name="CargoLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 12
 text = "Cargo: -"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
@@ -49,8 +73,18 @@ theme_override_constants/separation = 8
 
 [node name="SellBtn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_2")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_2")
+theme_override_styles/hover = SubResource("StyleBoxFlat_2")
 text = "Sell @ Home"
 
 [node name="UpgradeBtn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_2")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_2")
+theme_override_styles/hover = SubResource("StyleBoxFlat_2")
 text = "Buy FuelTank I"

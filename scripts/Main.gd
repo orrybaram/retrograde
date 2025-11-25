@@ -159,8 +159,11 @@ func _spawn_ship_on_earth() -> void:
 	var spawn_offset = Vector2(0, -earth_radius - 10)  # 10 pixels above surface
 	ship.global_position = earth_global_pos + spawn_offset
 	
-	# Reset rotation to point upward (0 rotation = pointing right, so -90 degrees = pointing up)
-	ship.rotation = -PI / 2.0
+	# Calculate rotation to face away from planet center
+	# Direction vector from planet center to ship position
+	var direction_from_center = (ship.global_position - earth_global_pos).normalized()
+	# Calculate angle using atan2 (ship points RIGHT at 0°, so this makes it point away from center)
+	ship.rotation = atan2(direction_from_center.y, direction_from_center.x)
 	
 	# Set ship's velocity to match Earth's orbital velocity (stationary relative to Earth)
 	if is_instance_valid(earth):

@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scenes/StarField.gd" id="10"]
 [ext_resource type="PackedScene" uid="uid://bq8x7vj3k2m4n" path="res://ui/StartMenu.tscn" id="11"]
 [ext_resource type="PackedScene" uid="uid://c3k9m2n5p7q8r" path="res://ui/GameOverMenu.tscn" id="12"]
+[ext_resource type="PackedScene" uid="uid://d8k2m5n7p9q0r" path="res://ui/indicators/IndicatorManager.tscn" id="13"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -89,3 +90,5 @@ orbital_speed = 0.01
 [node name="StartMenu" parent="CanvasLayer" instance=ExtResource("11")]
 
 [node name="GameOverMenu" parent="CanvasLayer" instance=ExtResource("12")]
+
+[node name="IndicatorManager" parent="CanvasLayer" instance=ExtResource("13")]

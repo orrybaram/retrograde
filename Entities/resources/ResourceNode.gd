@@ -22,6 +22,8 @@ var _orbital_distance: float = 0.0
 var _orbital_speed: float = 0.0
 var _is_depleted: bool = false
 var _trail_particles: GPUParticles2D = null
+var _indicator_target = null  # ResourceIndicatorTarget
+var _indicator_manager = null  # IndicatorManager
 
 func _ready() -> void:
 	add_to_group("resource_nodes")
@@ -30,6 +32,14 @@ func _ready() -> void:
 	
 	# Find trail particles
 	_trail_particles = get_node_or_null("TrailParticles") as GPUParticles2D
+	
+	# Find IndicatorManager
+	_indicator_manager = get_tree().get_first_node_in_group("indicator_manager")
+	if not _indicator_manager:
+		# Try to find it in the scene tree
+		var main = get_tree().get_first_node_in_group("main")
+		if main:
+			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
 	
 	# Initialize max_amount if not set
 	if max_amount == 0:
@@ -41,12 +51,14 @@ func _ready() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body is Ship:
 		_ship_in_range = body as Ship
+		_register_indicator()
 
 func _on_body_exited(body: Node2D) -> void:
 	if body is Ship and _ship_in_range == body:
 		_ship_in_range = null
 		if _harvesting:
 			stop_harvest()
+		_unregister_indicator()
 
 func _process(delta: float) -> void:
 	# Update position to orbit around planet if assigned
@@ -107,6 +119,7 @@ func _deplete_resource() -> void:
 	
 	_is_depleted = true
 	resource_depleted.emit()
+	_unregister_indicator()
 	
 	# Stop emitting new particles
 	if _trail_particles:
@@ -242,3 +255,17 @@ func _find_visual_node() -> Node2D:
 		if child.name.contains("Visual") or child.name.contains("Sprite") or child.name.contains("Color"):
 			return child as Node2D
 	return null
+
+func _register_indicator() -> void:
+	if _indicator_manager and not _indicator_target and not _is_depleted:
+		# Create ResourceIndicatorTarget using class_name
+		var target_class = load("res://ui/indicators/ResourceIndicatorTarget.gd")
+		if target_class:
+			_indicator_target = target_class.new(self)
+			if _indicator_manager.has_method("register_target"):
+				_indicator_manager.register_target(_indicator_target)
+
+func _unregister_indicator() -> void:
+	if _indicator_manager and _indicator_target:
+		_indicator_manager.unregister_target(_indicator_target)
+		_indicator_target = null

@@ -1,10 +1,10 @@
 extends Control
 
-@onready var fuel_label: Label = $"MarginContainer/VBoxContainer/FuelLabel"
+@onready var fuel_progress_bar: ProgressBarWidget = $"MarginContainer/VBoxContainer/FuelProgressBar"
+@onready var hull_progress_bar: ProgressBarWidget = $"MarginContainer/VBoxContainer/HullProgressBar"
 @onready var cargo_label: Label = $"MarginContainer/VBoxContainer/CargoLabel"
 @onready var position_label: Label = $"MarginContainer/VBoxContainer/PositionLabel"
 @onready var velocity_label: Label = $"MarginContainer/VBoxContainer/VelocityLabel"
-@onready var hull_label: Label = $"MarginContainer/VBoxContainer/HullLabel"
 @onready var sell_btn: Button = $"MarginContainer/VBoxContainer/HBoxContainer/SellBtn"
 @onready var upgrade_btn: Button = $"MarginContainer/VBoxContainer/HBoxContainer/UpgradeBtn"
 
@@ -14,6 +14,13 @@ var ship: Ship = null
 func _ready() -> void:
 	gs = get_tree().get_first_node_in_group("game_state")
 	ship = get_tree().get_first_node_in_group("ship") as Ship
+	
+	# Configure progress bar colors (terminal amber)
+	if fuel_progress_bar:
+		fuel_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber for fuel
+	if hull_progress_bar:
+		hull_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber for hull (will be updated dynamically)
+	
 	_update_labels()
 	if gs and gs.has_signal("cargo_changed"):
 		gs.cargo_changed.connect(_update_labels)
@@ -39,36 +46,46 @@ func _update_labels() -> void:
 		var pos = ship.global_position
 		position_label.text = "Position: (%.1f, %.1f)" % [pos.x, pos.y]
 		
-		var velocity = ship.linear_velocity
-		var speed = velocity.length()
-		velocity_label.text = "Velocity: %.1f m/s" % [speed]
+		# Show 0 velocity if ship is landed
+		if ship.is_locked_to_planet():
+			velocity_label.text = "Velocity: 0.0 m/s"
+		else:
+			var velocity = ship.linear_velocity
+			var speed = velocity.length()
+			velocity_label.text = "Velocity: %.1f m/s" % [speed]
 		
-		# Update fuel from ship
+		# Update fuel progress bar
 		var fuel = ship.fuel if "fuel" in ship else 0.0
 		var max_fuel = ship.max_fuel if "max_fuel" in ship else 100.0
-		fuel_label.text = "Fuel: %.0f / %.0f" % [fuel, max_fuel]
+		if fuel_progress_bar:
+			fuel_progress_bar.set_value(fuel, max_fuel)
 		
-		# Update hull strength
+		# Update hull progress bar
 		var hull = ship.hull_strength if "hull_strength" in ship else 0.0
 		var max_hull = ship.max_hull if "max_hull" in ship else 100.0
 		var hull_percent = (hull / max_hull * 100.0) if max_hull > 0 else 0.0
-		hull_label.text = "Hull: %.1f / %.1f (%.0f%%)" % [hull, max_hull, hull_percent]
-		
-		# Change color based on hull status
-		if hull <= 0:
-			hull_label.modulate = Color.RED
-		elif hull_percent < 30:
-			hull_label.modulate = Color(1.0, 0.5, 0.0)  # Orange
-		elif hull_percent < 60:
-			hull_label.modulate = Color.YELLOW
-		else:
-			hull_label.modulate = Color.WHITE
+		if hull_progress_bar:
+			hull_progress_bar.set_value(hull, max_hull)
+			
+			# Change color based on hull status (terminal-appropriate colors)
+			if hull <= 0:
+				hull_progress_bar.bar_color = Color(1.0, 0.3, 0.0)  # Red-orange
+			elif hull_percent < 10:
+				hull_progress_bar.bar_color = Color(1.0, 0.3, 0.0)  # Red-orange
+			elif hull_percent < 30:
+				hull_progress_bar.bar_color = Color(1.0, 0.5, 0.0)  # Orange
+			elif hull_percent < 60:
+				hull_progress_bar.bar_color = Color(1.0, 0.65, 0.0)  # Amber-orange
+			else:
+				hull_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber
 	else:
 		position_label.text = "Position: (0, 0)"
 		velocity_label.text = "Velocity: 0.0 m/s"
-		fuel_label.text = "Fuel: 0 / 0"
-		hull_label.text = "Hull: 0 / 100 (0%)"
-		hull_label.modulate = Color.RED
+		if fuel_progress_bar:
+			fuel_progress_bar.set_value(0.0, 100.0)
+		if hull_progress_bar:
+			hull_progress_bar.set_value(0.0, 100.0)
+			hull_progress_bar.bar_color = Color(1.0, 0.3, 0.0)  # Red-orange
 
 func _sell() -> void:
 	var ship_node := get_tree().get_first_node_in_group("ship") as Node2D

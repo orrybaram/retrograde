@@ -1,0 +1,6 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://vgcpttx0od0i"]
+
+[ext_resource type="FontFile" uid="uid://bcxox7kvpv6rh" path="res://assets/fonts/kongtext.ttf" id="1_sibcu"]
+
+[resource]
+default_font = ExtResource("1_sibcu")
