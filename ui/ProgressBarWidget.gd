@@ -33,9 +33,9 @@ func _ready() -> void:
 	if label:
 		label.visible = show_label
 
-func set_value(current: float, max: float) -> void:
+func set_value(current: float, max_val: float) -> void:
 	current_value = current
-	max_value = max
+	max_value = max_val
 	_update_display()
 
 func set_color(color: Color) -> void:
@@ -58,9 +58,8 @@ func _update_display() -> void:
 	var fill_ratio = clamp(current_value / max_value, 0.0, 1.0)
 	var bar_size = size.x * fill_ratio
 	
-	# Update fill bar width and height
-	fill_rect.size.x = bar_size
-	fill_rect.size.y = size.y
+	# Update fill bar width and height using set_deferred to avoid anchor warnings
+	fill_rect.set_deferred("size", Vector2(bar_size, size.y))
 	
 	# Update label if shown
 	if label and show_label:

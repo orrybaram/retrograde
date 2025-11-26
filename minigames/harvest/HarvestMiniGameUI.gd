@@ -6,7 +6,6 @@ class_name HarvestMiniGameUI
 
 @onready var title_label: Label = $MarginContainer/VBoxContainer/TitleLabel
 @onready var resource_label: Label = $MarginContainer/VBoxContainer/ResourceLabel
-@onready var instruction_label: Label = $MarginContainer/VBoxContainer/InstructionLabel
 @onready var scanner_container: Control = $MarginContainer/VBoxContainer/ScannerContainer
 @onready var scanner_bar: ColorRect = $MarginContainer/VBoxContainer/ScannerContainer/ScannerBar
 @onready var resource_squares_container: Control = $MarginContainer/VBoxContainer/ScannerContainer/ResourceSquaresContainer
@@ -56,14 +55,11 @@ func _update_display() -> void:
 		return
 	
 	if title_label:
-		title_label.text = "HARVEST TERMINAL"
+		title_label.text = "SCANNER"
 	
 	if resource_label:
-		resource_label.text = "Resource: %s\nAmount: %d" % [mini_game.resource_kind, mini_game.resource_amount]
+		resource_label.text = "Resource: %s" % [mini_game.resource_kind]
 	
-	if instruction_label:
-		instruction_label.text = "Press SCAN when bar is over resource"
-
 func _update_scanner() -> void:
 	if not mini_game or not scanner_bar or not scanner_container:
 		return
@@ -135,15 +131,11 @@ func _clear_resource_squares() -> void:
 
 func _on_harvest_success(_amount: int) -> void:
 	# Harvest successful - UI will close automatically
-	if instruction_label:
-		instruction_label.text = "SUCCESS! Resources harvested"
-		instruction_label.modulate = Color(0.0, 1.0, 0.0)
+	pass
 
 func _on_harvest_failed() -> void:
 	# Harvest failed - UI will close automatically
-	if instruction_label:
-		instruction_label.text = "FAILED! No resources harvested"
-		instruction_label.modulate = Color(1.0, 0.3, 0.0)
+	pass
 
 func _on_ui_opened() -> void:
 	visible = true

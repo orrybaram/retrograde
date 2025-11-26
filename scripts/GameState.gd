@@ -3,7 +3,6 @@ class_name GameState
 
 signal cargo_changed
 signal credits_changed
-signal landed(at_home: bool)
 
 var credits: int = 0 :
 	set(value):
