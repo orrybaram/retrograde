@@ -62,8 +62,6 @@ func _update_display() -> void:
 	fill_rect.size.x = bar_size
 	fill_rect.size.y = size.y
 	
-	print(show_label)
-	
 	# Update label if shown
 	if label and show_label:
 		label.text = "%.0f / %.0f" % [current_value, max_value]

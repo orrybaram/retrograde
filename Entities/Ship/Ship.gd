@@ -1,7 +1,7 @@
 extends RigidBody2D
 class_name Ship
 
-@export var thrust_power: float = 500.0
+@export var thrust_power: float = 350.0
 @export var turn_speed: float = 5
 @export var fuel_consumption_rate: float = 5.0  # Fuel consumed per second when thrusting
 @export var boost_power_multiplier: float = 2.0  # Multiplier for boost thrust power

@@ -25,6 +25,10 @@ var _trail_particles: GPUParticles2D = null
 var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
 
+# Mini-game integration
+var _mini_game: HarvestMiniGame = null
+var _mini_game_ui: HarvestMiniGameUI = null
+var _mini_game_ui_scene: PackedScene = preload("res://minigames/harvest/HarvestMiniGameUI.tscn")
 func _ready() -> void:
 	add_to_group("resource_nodes")
 	body_entered.connect(_on_body_entered)
@@ -65,50 +69,40 @@ func _process(delta: float) -> void:
 	if _orbital_planet and is_instance_valid(_orbital_planet):
 		_update_orbital_position(delta)
 	
-	# Check if we should harvest: ship in range AND button pressed AND has resources
+	# If mini-game UI is open, don't process input here (mini-game handles it)
+	if _mini_game and _mini_game.is_open:
+		return
+	
+	# Check if we should open/close harvest UI: ship in range AND button pressed AND has resources
 	if _ship_in_range and amount > 0 and not _is_depleted:
-		# Use "scan" action for harvesting (or create "harvest" action)
-		if Input.is_action_pressed("scan"):
+		# Use "scan" action for harvesting
+		if Input.is_action_just_pressed("scan"):
 			if not _harvesting:
+				# First press: open UI
 				start_harvest()
-		else:
-			if _harvesting:
-				stop_harvest()
 	else:
+		# Ship moved away - close UI if open
 		if _harvesting:
 			stop_harvest()
-	
-	# Process harvesting
-	if not _harvesting or amount <= 0 or _is_depleted:
-		return
-	
-	_accum += harvest_rate * delta
-	if _accum >= 1.0:
-		var chunk = int(_accum)
-		_accum -= float(chunk)
-		var take = min(chunk, amount)
-		amount -= take
-		
-		var gs := get_tree().get_first_node_in_group("game_state") as GameState
-		if gs:
-			gs.add_cargo(kind, take)
-		
-		# Update visual based on depletion (only if not already depleted)
-		if not _is_depleted:
-			_update_visual()
-		
-		if amount <= 0 and not _is_depleted:
-			_deplete_resource()
 
 func start_harvest() -> void:
-	if _harvesting:
+	if _harvesting or amount <= 0 or _is_depleted:
 		return
+	
 	_harvesting = true
 	harvest_started.emit()
+	
+	# Open mini-game UI
+	_start_mini_game()
 
 func stop_harvest() -> void:
 	if not _harvesting:
 		return
+	
+	# Stop mini-game if active
+	if _mini_game:
+		_stop_mini_game()
+	
 	_harvesting = false
 	_accum = 0.0
 	harvest_stopped.emit()
@@ -120,6 +114,15 @@ func _deplete_resource() -> void:
 	_is_depleted = true
 	resource_depleted.emit()
 	_unregister_indicator()
+	
+	# Stop mini-game if active
+	if _mini_game:
+		_stop_mini_game()
+	
+	# Stop harvesting
+	if _harvesting:
+		_harvesting = false
+		harvest_stopped.emit()
 	
 	# Stop emitting new particles
 	if _trail_particles:
@@ -269,3 +272,75 @@ func _unregister_indicator() -> void:
 	if _indicator_manager and _indicator_target:
 		_indicator_manager.unregister_target(_indicator_target)
 		_indicator_target = null
+
+func _start_mini_game() -> void:
+	# Create mini-game instance
+	_mini_game = HarvestMiniGame.new()
+	add_child(_mini_game)
+	
+	# Connect signals
+	_mini_game.harvest_all.connect(_on_mini_game_harvest_all)
+	_mini_game.ui_closed.connect(_on_mini_game_ui_closed)
+	
+	# Create and setup UI
+	_setup_mini_game_ui()
+	
+	# Open the UI
+	_mini_game.open_ui(kind, amount)
+
+func _setup_mini_game_ui() -> void:
+	# Find CanvasLayer to add UI to
+	var main = get_tree().get_first_node_in_group("main")
+	var canvas_layer: CanvasLayer = null
+	
+	if main:
+		canvas_layer = main.get_node_or_null("CanvasLayer")
+	
+	if not canvas_layer:
+		# Fallback: try to find CanvasLayer in scene tree
+		canvas_layer = get_tree().root.find_child("CanvasLayer", true, false) as CanvasLayer
+	
+	if not canvas_layer:
+		push_error("Could not find CanvasLayer for mini-game UI")
+		return
+	
+	# Instantiate UI scene
+	if _mini_game_ui_scene:
+		_mini_game_ui = _mini_game_ui_scene.instantiate() as HarvestMiniGameUI
+		if _mini_game_ui:
+			canvas_layer.add_child(_mini_game_ui)
+			_mini_game_ui.setup(_mini_game)
+
+func _stop_mini_game() -> void:
+	if _mini_game:
+		_mini_game.close_ui()
+	
+	if _mini_game_ui:
+		_mini_game_ui.cleanup()
+		_mini_game_ui.queue_free()
+		_mini_game_ui = null
+	
+	if _mini_game:
+		_mini_game.queue_free()
+		_mini_game = null
+
+func _on_mini_game_harvest_all(harvested_amount: int) -> void:
+	# Harvest all resources
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	if gs:
+		gs.add_cargo(kind, harvested_amount)
+	
+	amount = 0
+	
+	# Update visual
+	if not _is_depleted:
+		_update_visual()
+	
+	# Deplete resource
+	if not _is_depleted:
+		_deplete_resource()
+		_stop_mini_game()
+
+func _on_mini_game_ui_closed() -> void:
+	# UI closed - stop harvesting
+	stop_harvest()
