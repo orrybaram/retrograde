@@ -279,7 +279,8 @@ func _start_mini_game() -> void:
 	add_child(_mini_game)
 	
 	# Connect signals
-	_mini_game.harvest_all.connect(_on_mini_game_harvest_all)
+	_mini_game.harvest_success.connect(_on_mini_game_harvest_success)
+	_mini_game.harvest_failed.connect(_on_mini_game_harvest_failed)
 	_mini_game.ui_closed.connect(_on_mini_game_ui_closed)
 	
 	# Create and setup UI
@@ -324,8 +325,8 @@ func _stop_mini_game() -> void:
 		_mini_game.queue_free()
 		_mini_game = null
 
-func _on_mini_game_harvest_all(harvested_amount: int) -> void:
-	# Harvest all resources
+func _on_mini_game_harvest_success(harvested_amount: int) -> void:
+	# Harvest successful - add all resources
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
 		gs.add_cargo(kind, harvested_amount)
@@ -340,6 +341,10 @@ func _on_mini_game_harvest_all(harvested_amount: int) -> void:
 	if not _is_depleted:
 		_deplete_resource()
 		_stop_mini_game()
+
+func _on_mini_game_harvest_failed() -> void:
+	# Harvest failed - no resources collected, just close UI
+	_stop_mini_game()
 
 func _on_mini_game_ui_closed() -> void:
 	# UI closed - stop harvesting
