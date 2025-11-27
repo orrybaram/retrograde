@@ -70,7 +70,7 @@ func _process(delta: float) -> void:
 		_update_orbital_position(delta)
 	
 	# If mini-game UI is open, don't process input here (mini-game handles it)
-	if _mini_game and _mini_game.is_open:
+	if _mini_game and not _mini_game.is_idle():
 		return
 	
 	# Check if we should open/close harvest UI: ship in range AND button pressed AND has resources

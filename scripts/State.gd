@@ -32,4 +32,3 @@ func integrate_forces(_state: PhysicsDirectBodyState2D) -> void:
 ## Override in subclasses to implement state-specific frame updates
 func process(_delta: float) -> void:
 	pass
-

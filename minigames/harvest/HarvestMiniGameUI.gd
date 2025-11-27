@@ -7,7 +7,8 @@ class_name HarvestMiniGameUI
 @onready var title_label: Label = $MarginContainer/VBoxContainer/TitleLabel
 @onready var resource_label: Label = $MarginContainer/VBoxContainer/ResourceLabel
 @onready var scanner_container: Control = $MarginContainer/VBoxContainer/ScannerContainer
-@onready var scanner_bar: ColorRect = $MarginContainer/VBoxContainer/ScannerContainer/ScannerBar
+@onready var vertical_scanner_bar: ColorRect = $MarginContainer/VBoxContainer/ScannerContainer/VerticalScannerBar
+@onready var horizontal_scanner_bar: ColorRect = $MarginContainer/VBoxContainer/ScannerContainer/HorizontalScannerBar
 @onready var resource_squares_container: Control = $MarginContainer/VBoxContainer/ScannerContainer/ResourceSquaresContainer
 
 var mini_game: HarvestMiniGame = null
@@ -18,7 +19,7 @@ func _ready() -> void:
 	visible = false
 
 func _process(_delta: float) -> void:
-	if not mini_game or not mini_game.is_open:
+	if not mini_game or mini_game.is_idle():
 		return
 	
 	_update_scanner()
@@ -61,24 +62,12 @@ func _update_display() -> void:
 		resource_label.text = "Resource: %s" % [mini_game.resource_kind]
 	
 func _update_scanner() -> void:
-	if not mini_game or not scanner_bar or not scanner_container:
+	if not mini_game:
 		return
 	
-	var container_width = scanner_container.size.x
-	var scanner_x = mini_game.get_scanner_position() * container_width
-	
-	# Position scanner bar vertically centered, horizontally at scanner position
-	scanner_bar.position.x = scanner_x - scanner_bar.size.x / 2.0
-	scanner_bar.position.y = 0.0
-	
-	# Visual feedback: pulse when over resource
-	if mini_game.is_bar_over_resource():
-		var pulse = sin(Time.get_ticks_msec() / 100.0) * 0.3 + 0.7
-		scanner_bar.modulate.a = pulse
-		scanner_bar.color = Color(0.0, 1.0, 0.0, 0.8)  # Green when over resource
-	else:
-		scanner_bar.modulate.a = 0.8
-		scanner_bar.color = Color(1.0, 0.75, 0.0, 0.8)  # Amber normally
+	var current_state = mini_game.get_current_state()
+	if current_state:
+		current_state.update_visuals(self)
 
 func _update_resource_squares() -> void:
 	if not mini_game or not resource_squares_container:

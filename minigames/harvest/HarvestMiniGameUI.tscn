@@ -73,13 +73,14 @@ text = "Resource: Scrap"
 [node name="ScannerContainer" type="Control" parent="MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="GridBackground" type="Control" parent="MarginContainer/VBoxContainer/ScannerContainer"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_bottom = 100.0
+offset_bottom = -10.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3")
@@ -89,21 +90,36 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_bottom = 100.0
+offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ScannerBar" type="ColorRect" parent="MarginContainer/VBoxContainer/ScannerContainer"]
+[node name="VerticalScannerBar" type="ColorRect" parent="MarginContainer/VBoxContainer/ScannerContainer"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -1.0
-offset_top = -60.0
-offset_right = 1.0
-offset_bottom = 160.0
+offset_left = -137.0
+offset_top = -115.0
+offset_right = -135.0
+offset_bottom = 105.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0.75, 0, 0.8)
+
+[node name="HorizontalScannerBar" type="ColorRect" parent="MarginContainer/VBoxContainer/ScannerContainer"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -137.0
+offset_top = -115.0
+offset_right = 137.0
+offset_bottom = -113.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(1, 0.75, 0, 0.8)
