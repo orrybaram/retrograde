@@ -5,6 +5,7 @@ signal harvest_started
 signal harvest_stopped
 signal resource_depleted
 signal resource_harvested(amount: int, kind: String, position: Vector2)
+signal can_harvest_changed(can_harvest: bool)
 
 @export var kind: String = "Scrap"
 @export var amount: int = 10
@@ -25,6 +26,7 @@ var _is_depleted: bool = false
 var _trail_particles: GPUParticles2D = null
 var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
+var _can_harvest: bool = false  # Track if harvesting is currently possible
 
 # Mini-game integration
 var _mini_game: HarvestMiniGame = null
@@ -35,6 +37,9 @@ func _ready() -> void:
 	add_to_group("resource_nodes")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
+	
+	# Register with EventBus
+	EventBus.register_resource_node(self)
 	
 	# Find trail particles
 	_trail_particles = get_node_or_null("TrailParticles") as GPUParticles2D
@@ -64,6 +69,10 @@ func _on_body_exited(body: Node2D) -> void:
 		_ship_in_range = null
 		if _harvesting:
 			stop_harvest()
+		# Update can_harvest state when ship leaves
+		if _can_harvest:
+			_can_harvest = false
+			can_harvest_changed.emit(false)
 		_unregister_indicator()
 
 func _process(delta: float) -> void:
@@ -74,6 +83,22 @@ func _process(delta: float) -> void:
 	# If mini-game UI is open, don't process input here (mini-game handles it)
 	if _mini_game and not _mini_game.is_idle():
 		return
+	
+	# Check if harvesting is possible (ship in range, has resources, and moving slowly)
+	var new_can_harvest = false
+	if _ship_in_range and amount > 0 and not _is_depleted and not _harvesting:
+		var ship_velocity = _ship_in_range.linear_velocity
+		var resource_velocity = get_orbital_velocity()
+		var relative_velocity = ship_velocity - resource_velocity
+		
+		# Can harvest if moving slowly relative to resource (under 100 speed)
+		if relative_velocity.length() < 100.0:
+			new_can_harvest = true
+	
+	# Emit signal if state changed
+	if new_can_harvest != _can_harvest:
+		_can_harvest = new_can_harvest
+		can_harvest_changed.emit(_can_harvest)
 	
 	# Check if we should open/close harvest UI: ship in range AND button pressed AND has resources
 	if _ship_in_range and amount > 0 and not _is_depleted:
@@ -158,6 +183,9 @@ func _deplete_resource() -> void:
 	_is_depleted = true
 	resource_depleted.emit()
 	_unregister_indicator()
+	
+	# Unregister from EventBus
+	EventBus.unregister_resource_node(self)
 	
 	# Stop mini-game if active
 	if _mini_game:
