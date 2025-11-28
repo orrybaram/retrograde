@@ -91,8 +91,24 @@ func start_harvest() -> void:
 	if _harvesting or amount <= 0 or _is_depleted:
 		return
 	
+	# Check if ship is moving slowly relative to resource node (under 50 speed)
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		var ship_velocity = _ship_in_range.linear_velocity
+		var resource_velocity = get_orbital_velocity()
+		var relative_velocity = ship_velocity - resource_velocity
+		
+		if relative_velocity.length() >= 100.0:
+			# Ship moving too fast relative to resource, don't start harvesting
+			return
+	
 	_harvesting = true
 	harvest_started.emit()
+	
+	# Transition ship to HarvestingState if ship is in range
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		var state_machine = _ship_in_range.get_node_or_null("StateMachine") as StateMachine
+		if state_machine and state_machine.has_state("HarvestingState"):
+			state_machine.change_state("HarvestingState")
 	
 	# Open mini-game UI
 	_start_mini_game()
@@ -108,6 +124,32 @@ func stop_harvest() -> void:
 	_harvesting = false
 	_accum = 0.0
 	harvest_stopped.emit()
+	
+	# Transition ship back to FlyingState if ship is in range
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		var state_machine = _ship_in_range.get_node_or_null("StateMachine") as StateMachine
+		if state_machine and state_machine.has_state("FlyingState"):
+			state_machine.change_state("FlyingState")
+
+## Check if this resource node is currently being harvested
+func is_harvesting() -> bool:
+	return _harvesting
+
+## Get the orbital velocity of this resource node
+func get_orbital_velocity() -> Vector2:
+	if not _orbital_planet or not is_instance_valid(_orbital_planet):
+		return Vector2.ZERO
+	
+	# Calculate tangential velocity from orbital motion
+	# Velocity is perpendicular to radius: v = r * omega * (-sin(angle), cos(angle))
+	var tangential_velocity = Vector2(-sin(_orbital_angle), cos(_orbital_angle)) * _orbital_distance * _orbital_speed
+	
+	# Add planet's velocity (if planet is moving)
+	var planet_velocity = Vector2.ZERO
+	if _orbital_planet is RigidBody2D:
+		planet_velocity = (_orbital_planet as RigidBody2D).linear_velocity
+	
+	return tangential_velocity + planet_velocity
 
 func _deplete_resource() -> void:
 	if _is_depleted:

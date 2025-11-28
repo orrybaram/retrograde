@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://dbehnwjpsmt4c" path="res://entities/Ship/states/FlyingState.gd" id="3"]
 [ext_resource type="Script" uid="uid://cfyoann2rnq0w" path="res://entities/Ship/states/LandedState.gd" id="4"]
 [ext_resource type="Script" uid="uid://br1pdbv2ka45p" path="res://entities/Ship/states/DestroyedState.gd" id="5"]
+[ext_resource type="Script" path="res://entities/Ship/states/HarvestingState.gd" id="6"]
 
 [sub_resource type="Gradient" id="Gradient_1"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -102,6 +103,9 @@ script = ExtResource("3")
 
 [node name="LandedState" type="Node" parent="StateMachine"]
 script = ExtResource("4")
+
+[node name="HarvestingState" type="Node" parent="StateMachine"]
+script = ExtResource("6")
 
 [node name="DestroyedState" type="Node" parent="StateMachine"]
 script = ExtResource("5")
