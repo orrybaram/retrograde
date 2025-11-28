@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=15 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -9,10 +9,11 @@
 [ext_resource type="PackedScene" uid="uid://b051ln2ytsesm" path="res://entities/Ship/Ship.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://btfs0vii8ixiq" path="res://ui/HUD.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://entities/resources/ResourceSpawner.tscn" id="9"]
+[ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="9_mwfav"]
 [ext_resource type="Script" path="res://scenes/StarField.gd" id="10"]
 [ext_resource type="PackedScene" uid="uid://bq8x7vj3k2m4n" path="res://ui/StartMenu.tscn" id="11"]
-[ext_resource type="PackedScene" uid="uid://c3k9m2n5p7q8r" path="res://ui/GameOverMenu.tscn" id="12"]
-[ext_resource type="PackedScene" uid="uid://d8k2m5n7p9q0r" path="res://ui/indicators/IndicatorManager.tscn" id="13"]
+[ext_resource type="PackedScene" uid="uid://c3lam2n5p7q8r" path="res://ui/GameOverMenu.tscn" id="12"]
+[ext_resource type="PackedScene" uid="uid://d5613qx52u80" path="res://ui/indicators/IndicatorManager.tscn" id="13"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -65,6 +66,9 @@ color = Color(0.22048637, 0.706052, 0.9013243, 1)
 massMultiplier = 100.0
 orbital_distance = 10000.0
 orbital_speed = 0.005
+
+[node name="SpacePort" parent="Sun/Earth" instance=ExtResource("9_mwfav")]
+position = Vector2(0, -800)
 
 [node name="ResourceSpawner" parent="Sun/Earth" instance=ExtResource("9")]
 position = Vector2(-12, 12)
