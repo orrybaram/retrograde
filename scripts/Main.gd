@@ -109,10 +109,9 @@ func reset_game() -> void:
 		# Reset boost particles material to original state
 		ship.reset_boost_particles()
 	
-	# Reset GameState (cargo, credits)
+	# Reset GameState (cargo only, preserve credits)
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
-		gs.credits = 0
 		gs.clear_cargo()
 	
 	# Respawn ship on Earth

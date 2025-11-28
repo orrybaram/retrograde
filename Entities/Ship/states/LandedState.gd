@@ -6,6 +6,7 @@ class_name LandedState
 var locked_spaceport: SpacePort = null
 var locked_offset_from_target: Vector2 = Vector2.ZERO
 var _spaceport_rotation_set: bool = false
+var _dialogue = null  # SpacePortDialogue
 
 func enter() -> void:
 	super.enter()
@@ -45,6 +46,10 @@ func enter() -> void:
 
 func exit() -> void:
 	super.exit()
+	# Close dialogue if open
+	if _dialogue and is_instance_valid(_dialogue):
+		_dialogue.close_dialogue()
+	_dialogue = null
 	locked_spaceport = null
 	locked_offset_from_target = Vector2.ZERO
 	_spaceport_rotation_set = false
@@ -57,18 +62,17 @@ func physics_process(delta: float) -> void:
 	ship.want_thrust = Input.is_action_pressed("thrust")
 	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
 	
+	# Handle dialogue keypress (ui_accept - Space/Enter)
+	if Input.is_action_just_pressed("ui_accept"):
+		_toggle_dialogue()
+	
 	# Release lock if thrusting - transition back to FlyingState
-	if ship.want_thrust or ship.want_reverse_thrust:
+	# Don't allow takeoff if dialogue is open
+	if (ship.want_thrust or ship.want_reverse_thrust) and not (_dialogue and _dialogue.visible):
 		_exit_to_flying()
 		return
 	
-	# Stop all particles when landed
-	# if ship.thruster_particles:
-	# 	ship.thruster_particles.emitting = false
-	# if ship.boost_particles:
-	# 	ship.boost_particles.emitting = false
-	# if ship.side_thruster_particles:
-	# 	ship.side_thruster_particles.emitting = false
+
 	
 	# Reset camera shake
 	if ship.camera:
@@ -134,6 +138,25 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		state.transform.x = Vector2(cos_r, sin_r)
 		state.transform.y = Vector2(-sin_r, cos_r)
 		_spaceport_rotation_set = true
+
+func _toggle_dialogue() -> void:
+	if not locked_spaceport or not is_instance_valid(locked_spaceport):
+		return
+	
+	# Find dialogue in scene tree if not already cached
+	if not _dialogue or not is_instance_valid(_dialogue):
+		# Get the current scene (Main node)
+		var current_scene = ship.get_tree().current_scene
+		if current_scene:
+			var canvas_layer = current_scene.get_node_or_null("CanvasLayer")
+			if canvas_layer:
+				_dialogue = canvas_layer.get_node_or_null("SpacePortDialogue")
+	
+	if _dialogue and _dialogue.has_method("open_dialogue"):
+		if _dialogue.visible:
+			_dialogue.close_dialogue()
+		else:
+			_dialogue.open_dialogue(locked_spaceport)
 
 func _exit_to_flying() -> void:
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine

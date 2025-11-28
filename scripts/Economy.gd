@@ -5,6 +5,9 @@ const PRICES := {
 	"Scrap": 2
 }
 
+const REPAIR_COST_PER_POINT: int = 1  # Credits per hull point
+const REFUEL_COST_PER_POINT: int = 1  # Credits per fuel point
+
 static func get_cost(upgrade_name: String) -> int:
 	match upgrade_name:
 		"FuelTank_I":
