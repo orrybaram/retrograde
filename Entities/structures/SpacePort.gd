@@ -1,4 +1,4 @@
-extends Node2D
+extends RigidBody2D
 class_name SpacePort
 
 ## SpacePort entity with landing pad, blinking lights, tower, and hangers.
@@ -12,7 +12,6 @@ signal ship_took_off(ship: Ship)
 @export var landing_lock_distance: float = 40.0  # Distance threshold for landing lock (pixels above pad)
 
 var _landing_area: Area2D = null
-var _collision_body: StaticBody2D = null
 var _ship_on_pad: Ship = null
 var _left_light: ColorRect = null
 var _right_light: ColorRect = null
@@ -21,9 +20,12 @@ var _blink_tween: Tween = null
 func _ready() -> void:
 	add_to_group("space_ports")
 	
+	# Set RigidBody2D to static mode (doesn't move due to physics)
+	freeze_mode = RigidBody2D.FREEZE_MODE_KINEMATIC
+	freeze = true
+	
 	# Get references to components
 	_landing_area = get_node_or_null("LandingArea") as Area2D
-	_collision_body = get_node_or_null("CollisionBody") as StaticBody2D
 	_left_light = get_node_or_null("LeftLight") as ColorRect
 	_right_light = get_node_or_null("RightLight") as ColorRect
 	
@@ -91,4 +93,3 @@ func _start_blink_animation() -> void:
 ## Get the landing pad position in world space
 func get_landing_pad_position() -> Vector2:
 	return global_position  # Landing pad is at (0,0) relative to SpacePort
-

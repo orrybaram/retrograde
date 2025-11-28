@@ -68,7 +68,15 @@ orbital_distance = 10000.0
 orbital_speed = 0.005
 
 [node name="SpacePort" parent="Sun/Earth" instance=ExtResource("9_mwfav")]
-position = Vector2(0, -800)
+position = Vector2(0, -803)
+
+[node name="SpacePort2" parent="Sun/Earth" instance=ExtResource("9_mwfav")]
+position = Vector2(803.9995, -12)
+rotation = 1.5707964
+
+[node name="SpacePort3" parent="Sun/Earth" instance=ExtResource("9_mwfav")]
+position = Vector2(817, 884.99994)
+rotation = 2.3369958
 
 [node name="ResourceSpawner" parent="Sun/Earth" instance=ExtResource("9")]
 position = Vector2(-12, 12)

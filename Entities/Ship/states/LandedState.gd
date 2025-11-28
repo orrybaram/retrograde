@@ -1,10 +1,11 @@
 extends ShipState
 class_name LandedState
 
-## Handles planet locking behavior when the ship is landed on a planet.
+## Handles SpacePort locking behavior when the ship is landed on a SpacePort.
 
-var locked_planet: Planet = null
-var locked_offset_from_planet: Vector2 = Vector2.ZERO
+var locked_spaceport: SpacePort = null
+var locked_offset_from_target: Vector2 = Vector2.ZERO
+var _spaceport_rotation_set: bool = false
 
 func enter() -> void:
 	super.enter()
@@ -12,37 +13,41 @@ func enter() -> void:
 	if not is_ship_valid():
 		return
 	
-	# Find closest planet to lock to
-	var planets = ship.get_tree().get_nodes_in_group("planets")
-	if planets.is_empty():
-		# No planets, go back to flying
+	# Find closest SpacePort to lock to
+	var space_ports = ship.get_tree().get_nodes_in_group("space_ports")
+	if space_ports.is_empty():
+		# No SpacePorts, go back to flying
 		_exit_to_flying()
 		return
 	
-	var closest_planet: Planet = null
+	var closest_spaceport: SpacePort = null
 	var closest_distance: float = INF
 	var ship_pos = ship.global_position
 	
-	for node in planets:
+	for node in space_ports:
 		if not is_instance_valid(node):
 			continue
-		var planet = node as Planet
-		if not planet:
+		var spaceport = node as SpacePort
+		if not spaceport:
 			continue
 		
-		var dist = ship_pos.distance_to(planet.global_position)
+		var pad_pos = spaceport.get_landing_pad_position()
+		var dist = ship_pos.distance_to(pad_pos)
+		
 		if dist < closest_distance:
 			closest_distance = dist
-			closest_planet = planet
+			closest_spaceport = spaceport
 	
-	if closest_planet and is_instance_valid(closest_planet):
-		locked_planet = closest_planet
-		locked_offset_from_planet = Vector2.ZERO  # Will be calculated on first frame
+	if closest_spaceport and is_instance_valid(closest_spaceport):
+		locked_spaceport = closest_spaceport
+		locked_offset_from_target = Vector2.ZERO  # Will be calculated on first frame
+		_spaceport_rotation_set = false  # Reset rotation flag
 
 func exit() -> void:
 	super.exit()
-	locked_planet = null
-	locked_offset_from_planet = Vector2.ZERO
+	locked_spaceport = null
+	locked_offset_from_target = Vector2.ZERO
+	_spaceport_rotation_set = false
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -58,12 +63,12 @@ func physics_process(delta: float) -> void:
 		return
 	
 	# Stop all particles when landed
-	if ship.thruster_particles:
-		ship.thruster_particles.emitting = false
-	if ship.boost_particles:
-		ship.boost_particles.emitting = false
-	if ship.side_thruster_particles:
-		ship.side_thruster_particles.emitting = false
+	# if ship.thruster_particles:
+	# 	ship.thruster_particles.emitting = false
+	# if ship.boost_particles:
+	# 	ship.boost_particles.emitting = false
+	# if ship.side_thruster_particles:
+	# 	ship.side_thruster_particles.emitting = false
 	
 	# Reset camera shake
 	if ship.camera:
@@ -71,37 +76,64 @@ func physics_process(delta: float) -> void:
 		if ship.camera.offset != ship.camera_base_offset:
 			ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, delta * 5.0)
 	
-	# Check if planet is still valid and close enough
-	if not locked_planet or not is_instance_valid(locked_planet):
+	# Check if SpacePort is still valid and close enough
+	if not locked_spaceport or not is_instance_valid(locked_spaceport):
 		_exit_to_flying()
 		return
 	
-	var distance_to_planet = ship.global_position.distance_to(locked_planet.global_position)
-	var distance_to_surface = distance_to_planet - locked_planet.radius
+	var pad_pos = locked_spaceport.get_landing_pad_position()
+	var distance_to_pad = ship.global_position.distance_to(pad_pos)
 	
-	# If too far from surface, unlock
-	if distance_to_surface > ship.landing_lock_distance:
+	# If too far from pad, unlock
+	if distance_to_pad > locked_spaceport.landing_lock_distance:
 		_exit_to_flying()
 		return
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
-	if not is_ship_valid() or not locked_planet or not is_instance_valid(locked_planet):
+	if not is_ship_valid() or not locked_spaceport or not is_instance_valid(locked_spaceport):
 		return
 	
-	var planet_pos = locked_planet.global_position
-	var planet_vel = locked_planet.linear_velocity
+	# Lock to SpacePort landing pad
+	var target_pos = locked_spaceport.get_landing_pad_position()
 	
-	# If we just locked, calculate the offset from current state position
-	if locked_offset_from_planet == Vector2.ZERO:
-		locked_offset_from_planet = state.transform.origin - planet_pos
+	# Get SpacePort's velocity (it moves with its parent planet)
+	var target_vel = Vector2.ZERO
+	var spaceport_parent = locked_spaceport.get_parent()
+	if spaceport_parent is RigidBody2D:
+		target_vel = (spaceport_parent as RigidBody2D).linear_velocity
 	
-	# Maintain the offset and update position to follow planet
-	var desired_pos = planet_pos + locked_offset_from_planet
+	# If we just locked, calculate offset to preserve X position and set Y flush on pad
+	if locked_offset_from_target == Vector2.ZERO:
+		# Transform ship position into SpacePort's local space to account for rotation
+		var spaceport_transform = locked_spaceport.global_transform
+		var ship_local_pos = spaceport_transform.affine_inverse() * state.transform.origin
+		# In local space, pad center is at (0, 0), so preserve X and set Y to -20
+		locked_offset_from_target = Vector2(ship_local_pos.x, -20)
+		# Transform offset back to world space
+		locked_offset_from_target = spaceport_transform.basis_xform(locked_offset_from_target)
 	
-	# Set position and velocity to match planet
-	state.transform.origin = desired_pos
-	state.linear_velocity = planet_vel
+	# Maintain the offset and update position to follow SpacePort
+	var desired_pos = target_pos + locked_offset_from_target
+	
+	# Set position and velocity to match SpacePort
+	state.linear_velocity = target_vel
 	state.angular_velocity = 0.0
+	
+	# Set position
+	state.transform.origin = desired_pos
+	
+	# Align ship rotation to be perpendicular to SpacePort (only on first frame of lock)
+	if not _spaceport_rotation_set:
+		# Ship should be perpendicular to the SpacePort's rotation
+		# If SpacePort is horizontal (0°), ship should be vertical (90°)
+		var spaceport_rotation = locked_spaceport.global_rotation
+		var target_rotation = spaceport_rotation + PI / -2.0  # Perpendicular (90 degrees offset)
+		# Set rotation by creating new basis vectors
+		var cos_r = cos(target_rotation)
+		var sin_r = sin(target_rotation)
+		state.transform.x = Vector2(cos_r, sin_r)
+		state.transform.y = Vector2(-sin_r, cos_r)
+		_spaceport_rotation_set = true
 
 func _exit_to_flying() -> void:
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine

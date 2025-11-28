@@ -28,7 +28,7 @@ var last_damage_time: float = 0.0
 var damage_cooldown: float = 0.1  # Minimum time between damage applications (seconds)
 
 # Landing lock system
-var landing_lock_distance: float = 10.0  # Distance threshold for landing lock (pixels above surface)
+var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
 
 # State machine reference
 @onready var state_machine: StateMachine = $"StateMachine"

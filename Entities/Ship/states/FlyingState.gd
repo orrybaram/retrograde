@@ -184,35 +184,42 @@ func _check_landing_lock() -> void:
 	if ship.want_thrust or ship.want_reverse_thrust:
 		return
 	
-	# Find closest planet
-	var planets = ship.get_tree().get_nodes_in_group("planets")
-	if planets.is_empty():
-		return
-	
-	var closest_planet: Planet = null
-	var closest_distance: float = INF
 	var ship_pos = ship.global_position
 	
-	for node in planets:
+	# Check SpacePorts only
+	var space_ports = ship.get_tree().get_nodes_in_group("space_ports")
+	if space_ports.is_empty():
+		return
+	
+	var closest_spaceport: SpacePort = null
+	var closest_spaceport_distance: float = INF
+	
+	for node in space_ports:
 		if not is_instance_valid(node):
 			continue
-		var planet = node as Planet
-		if not planet:
+		var spaceport = node as SpacePort
+		if not spaceport:
 			continue
 		
-		var dist = ship_pos.distance_to(planet.global_position)
-		if dist < closest_distance:
-			closest_distance = dist
-			closest_planet = planet
+		var pad_pos = spaceport.get_landing_pad_position()
+		var dist = ship_pos.distance_to(pad_pos)
+		if dist < closest_spaceport_distance:
+			closest_spaceport_distance = dist
+			closest_spaceport = spaceport
 	
-	# Check if ship is close enough to surface to lock
-	if closest_planet and is_instance_valid(closest_planet):
-		var distance_to_surface = closest_distance - closest_planet.radius
-		if distance_to_surface <= ship.landing_lock_distance and distance_to_surface >= 0:
-			# Also check if ship is moving slowly relative to planet
-			var relative_velocity = ship.linear_velocity - closest_planet.linear_velocity
+	# Check if ship is close enough to SpacePort landing pad to lock
+	if closest_spaceport and is_instance_valid(closest_spaceport):
+		if closest_spaceport_distance <= closest_spaceport.landing_lock_distance:
+			# Also check if ship is moving slowly relative to SpacePort
+			var spaceport_velocity = Vector2.ZERO
+			# Get SpacePort's velocity (it moves with its parent planet)
+			var spaceport_parent = closest_spaceport.get_parent()
+			if spaceport_parent is RigidBody2D:
+				spaceport_velocity = (spaceport_parent as RigidBody2D).linear_velocity
+			
+			var relative_velocity = ship.linear_velocity - spaceport_velocity
 			if relative_velocity.length() < 50.0:  # Threshold for "landed" speed
-				# Transition to LandedState
+				# Transition to LandedState with SpacePort
 				var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
 				if state_machine and state_machine.has_state("LandedState"):
 					state_machine.change_state("LandedState")

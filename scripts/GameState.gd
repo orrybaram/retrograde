@@ -4,7 +4,7 @@ class_name GameState
 signal cargo_changed
 signal credits_changed
 
-var credits: int = 0 :
+var credits: int = 1000 :
 	set(value):
 		credits = value
 		credits_changed.emit()
