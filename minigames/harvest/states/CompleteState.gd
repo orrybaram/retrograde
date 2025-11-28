@@ -57,4 +57,3 @@ func update_visuals(ui: HarvestMiniGameUI) -> void:
 	ui.horizontal_scanner_bar.color = Color(0.0, 1.0, 0.0, 0.9)  # Green when locked
 	ui.horizontal_scanner_bar.modulate.a = 1.0
 	ui.horizontal_scanner_bar.visible = true
-

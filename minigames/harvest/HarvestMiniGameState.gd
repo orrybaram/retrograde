@@ -18,14 +18,13 @@ func exit() -> void:
 	pass
 
 ## Called every frame while in this state
-func process(delta: float) -> void:
+func process(_delta: float) -> void:
 	pass
 
 ## Handle input events
-func handle_input(action: String) -> void:
+func handle_input(_action: String) -> void:
 	pass
 
 ## Update visual elements (scanner bars, etc.)
-func update_visuals(ui: HarvestMiniGameUI) -> void:
+func update_visuals(_ui: HarvestMiniGameUI) -> void:
 	pass
-

@@ -6,10 +6,13 @@ class_name HarvestMiniGame
 ## Phase 2: Player sets horizontal scan line position
 ## Harvest amount based on distance from intersection point.
 
-signal harvest_success(amount: int)
-signal harvest_failed()
+signal harvest_success(amount: int)  # Emitted by CompleteState when harvest succeeds
+signal harvest_failed()  # Emitted by CompleteState when harvest fails
 signal ui_opened()
 signal ui_closed()
+
+# Note: harvest_success and harvest_failed signals are emitted by CompleteState,
+# not directly in this class, which is why the linter shows them as unused.
 
 var resource_kind: String = "Scrap"
 var resource_amount: int = 10

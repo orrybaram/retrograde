@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://ynuit7qp4ij" path="res://entities/Planet/PlanetVisual.gd" id="2_wsaxd"]
 [ext_resource type="Script" uid="uid://xfcikxm6fdhl" path="res://entities/Planet/PlanetGravityField.gd" id="3_744xv"]
 [ext_resource type="Script" uid="uid://34c4oelthpy5" path="res://entities/Planet/PlanetCollision.gd" id="4_2ucv6"]
-[ext_resource type="Script" uid="uid://47c5yohm8reo" path="res://scenes/GravityFieldVisual.gd" id="5_sskfm"]
+[ext_resource type="Script" uid="uid://47c5yohm8reo" path="res://entities/Planet/GravityFieldVisual.gd" id="5_sskfm"]
 [ext_resource type="Script" path="res://entities/Planet/OrbitVisual.gd" id="6"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_xv80x"]

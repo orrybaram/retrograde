@@ -4,6 +4,7 @@ class_name ResourceNode
 signal harvest_started
 signal harvest_stopped
 signal resource_depleted
+signal resource_harvested(amount: int, kind: String, position: Vector2)
 
 @export var kind: String = "Scrap"
 @export var amount: int = 10
@@ -29,6 +30,7 @@ var _indicator_manager = null  # IndicatorManager
 var _mini_game: HarvestMiniGame = null
 var _mini_game_ui: HarvestMiniGameUI = null
 var _mini_game_ui_scene: PackedScene = preload("res://minigames/harvest/HarvestMiniGameUI.tscn")
+
 func _ready() -> void:
 	add_to_group("resource_nodes")
 	body_entered.connect(_on_body_entered)
@@ -330,6 +332,9 @@ func _on_mini_game_harvest_success(harvested_amount: int) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
 		gs.add_cargo(kind, harvested_amount)
+	
+	# Emit signal for ResourceManager to handle indicator display
+	resource_harvested.emit(harvested_amount, kind, global_position)
 	
 	amount = 0
 	
