@@ -15,8 +15,6 @@ var ship: Ship = null
 var spaceport: SpacePort = null
 var gs: GameState = null
 var economy: Economy = null
-var camera: Camera2D = null
-var original_zoom: Vector2 = Vector2.ONE
 var zoom_tween: Tween = null
 
 signal dialogue_closed
@@ -26,11 +24,6 @@ func _ready() -> void:
 	ship = get_tree().get_first_node_in_group("ship") as Ship
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	economy = get_tree().get_first_node_in_group("economy") as Economy
-	
-	if ship:
-		camera = ship.get_node_or_null("Camera2D") as Camera2D
-		if camera:
-			original_zoom = camera.zoom
 	
 	if repair_button:
 		repair_button.pressed.connect(_on_repair_pressed)
@@ -48,22 +41,14 @@ func _ready() -> void:
 func open_dialogue(target_spaceport: SpacePort) -> void:
 	spaceport = target_spaceport
 	
-	# Ensure we have references
-	if not ship:
-		ship = get_tree().get_first_node_in_group("ship") as Ship
-	if not camera and ship:
-		camera = ship.get_node_or_null("Camera2D") as Camera2D
-		if camera:
-			original_zoom = camera.zoom
-	
 	visible = true
 	_update_display()
-	_zoom_camera_in()
+	ship.camera.zoom_camera_in(Vector2(2.5,2.5))
 
 func close_dialogue() -> void:
 	visible = false
 	spaceport = null
-	_zoom_camera_out()
+	ship.camera.zoom_camera_out()
 	dialogue_closed.emit()
 
 func _update_display() -> void:
@@ -146,37 +131,3 @@ func _on_refuel_pressed() -> void:
 
 func _on_close_pressed() -> void:
 	close_dialogue()
-
-func _zoom_camera_in() -> void:
-	if not camera:
-		return
-	
-	# Kill any existing zoom tween
-	if zoom_tween:
-		zoom_tween.kill()
-	
-	# Store original zoom if not already stored
-	if original_zoom == Vector2.ONE:
-		original_zoom = camera.zoom
-	
-	# Create tween for zoom
-	zoom_tween = create_tween()
-	
-	# Zoom in (e.g., to 2.5x)
-	var target_zoom = Vector2(2.5, 2.5)
-	zoom_tween.tween_property(camera, "zoom", target_zoom, 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-
-func _zoom_camera_out() -> void:
-	if not camera:
-		return
-	
-	# Kill any existing zoom tween
-	if zoom_tween:
-		zoom_tween.kill()
-	
-	# Create tween to zoom back out
-	zoom_tween = create_tween()
-	
-	# Zoom back to original
-	zoom_tween.tween_property(camera, "zoom", original_zoom, 0.5).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-

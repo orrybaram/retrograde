@@ -74,12 +74,13 @@ func _on_body_exited(body: Node2D) -> void:
 			_can_harvest = false
 			can_harvest_changed.emit(false)
 		_unregister_indicator()
-
-func _process(delta: float) -> void:
+		
+func _physics_process(delta: float) -> void:
 	# Update position to orbit around planet if assigned
 	if _orbital_planet and is_instance_valid(_orbital_planet):
 		_update_orbital_position(delta)
-	
+
+func _process(_delta: float) -> void:
 	# If mini-game UI is open, don't process input here (mini-game handles it)
 	if _mini_game and not _mini_game.is_idle():
 		return

@@ -11,7 +11,7 @@ var _harvestable_nodes: Dictionary = {}  # Track ResourceNodes that can be harve
 var _registered_nodes: Dictionary = {}  # Track registered ResourceNodes and their callables
 
 func register_resource_node(resource_node: ResourceNode) -> void:
-	"""Register a ResourceNode to track its harvest state."""
+	# Register a ResourceNode to track its harvest state.
 	if not resource_node:
 		return
 	
@@ -34,7 +34,7 @@ func register_resource_node(resource_node: ResourceNode) -> void:
 	_cleanup_invalid_nodes()
 
 func unregister_resource_node(resource_node: ResourceNode) -> void:
-	"""Unregister a ResourceNode when it's being destroyed."""
+	# Unregister a ResourceNode when it's being destroyed.
 	if not resource_node:
 		return
 	
@@ -49,7 +49,7 @@ func unregister_resource_node(resource_node: ResourceNode) -> void:
 	_check_harvest_state()
 
 func _on_resource_can_harvest_changed(resource_node: ResourceNode, can_harvest: bool) -> void:
-	"""Called when a ResourceNode's harvest state changes."""
+	# Called when a ResourceNode's harvest state changes.
 	if can_harvest:
 		_harvestable_nodes[resource_node] = true
 	else:
@@ -59,13 +59,13 @@ func _on_resource_can_harvest_changed(resource_node: ResourceNode, can_harvest: 
 
 
 func _check_harvest_state() -> void:
-	"""Check if any ResourceNode can be harvested and emit signal if state changed."""
+	# Check if any ResourceNode can be harvested and emit signal if state changed.
 	_cleanup_invalid_nodes()
 	var can_harvest = not _harvestable_nodes.is_empty()
 	harvest_available_changed.emit(can_harvest)
 
 func _cleanup_invalid_nodes() -> void:
-	"""Remove invalid ResourceNodes from tracking."""
+	# Remove invalid ResourceNodes from tracking.
 	for node in _harvestable_nodes.keys():
 		if not is_instance_valid(node):
 			_harvestable_nodes.erase(node)
@@ -75,6 +75,6 @@ func _cleanup_invalid_nodes() -> void:
 			_registered_nodes.erase(node)
 
 func is_harvest_available() -> bool:
-	"""Check if any ResourceNode can currently be harvested."""
+	# Check if any ResourceNode can currently be harvested.
 	_cleanup_invalid_nodes()
 	return not _harvestable_nodes.is_empty()

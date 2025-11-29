@@ -4,12 +4,19 @@ class_name HarvestingState
 ## Handles velocity locking behavior when the ship is harvesting a resource node.
 
 var locked_resource_node: ResourceNode = null
+var velocity_tween_start: Vector2 = Vector2.ZERO
+var velocity_tween_time: float = 0.0
+var velocity_tween_duration: float = 2.0
+var last_target_velocity: Vector2 = Vector2.ZERO
+var camera_zoom_in = Vector2(1.5, 1.5)
 
 func enter() -> void:
 	super.enter()
 	
 	if not is_ship_valid():
 		return
+	
+	ship.camera.zoom_camera_in(camera_zoom_in)
 	
 	# Find closest ResourceNode that is being harvested
 	var resource_nodes = ship.get_tree().get_nodes_in_group("resource_nodes")
@@ -40,6 +47,11 @@ func enter() -> void:
 	
 	if closest_resource and is_instance_valid(closest_resource):
 		locked_resource_node = closest_resource
+		# Initialize velocity tween from current ship velocity
+		if is_ship_valid():
+			velocity_tween_start = ship.linear_velocity
+			velocity_tween_time = 0.0
+			last_target_velocity = locked_resource_node.get_orbital_velocity()
 	else:
 		# No resource being harvested, go back to flying
 		_exit_to_flying()
@@ -47,6 +59,11 @@ func enter() -> void:
 func exit() -> void:
 	super.exit()
 	locked_resource_node = null
+	velocity_tween_time = 0.0
+	velocity_tween_start = Vector2.ZERO
+	last_target_velocity = Vector2.ZERO
+	
+	ship.camera.zoom_camera_out()
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -70,6 +87,9 @@ func physics_process(delta: float) -> void:
 		_exit_to_flying()
 		return
 	
+	# Update velocity tween time
+	velocity_tween_time += delta
+	
 	# Reset camera shake
 	if ship.camera:
 		ship.camera_shake_time = 0.0
@@ -83,8 +103,11 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	# Calculate resource node's velocity
 	var resource_velocity = _get_resource_velocity()
 	
-	# Lock ship velocity to resource node velocity
-	state.linear_velocity = resource_velocity
+	# Smoothly tween from start velocity to target velocity over 2 seconds
+	var tween_progress = min(velocity_tween_time / velocity_tween_duration, 1.0)
+	var new_velocity = velocity_tween_start.lerp(resource_velocity, tween_progress)
+	
+	state.linear_velocity = new_velocity
 	state.angular_velocity = 0.0
 
 func _get_resource_velocity() -> Vector2:
@@ -98,4 +121,3 @@ func _exit_to_flying() -> void:
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
 	if state_machine and state_machine.has_state("FlyingState"):
 		state_machine.change_state("FlyingState")
-

@@ -37,7 +37,7 @@ var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (p
 @onready var boost_particles: GPUParticles2D = $"BoostParticles"
 @onready var side_thruster_particles: GPUParticles2D = $"SideThrusterParticles"
 @onready var ship_polygon: Polygon2D = $"Polygon2D"
-@onready var camera: Camera2D = $"Camera2D"
+@onready var camera: ShipCamera = $"Camera2D"
 
 @export var camera_shake_intensity: float = 1.2  # How much the camera shakes
 @export var camera_shake_speed: float = 25.0  # How fast the shake oscillates

@@ -1,6 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://c8x7k2wam3n5p"]
+[gd_scene load_steps=4 format=3 uid="uid://ck61aimutf7gk"]
 
-[ext_resource type="Script" path="res://ui/SpacePortDialogue.gd" id="1"]
+[ext_resource type="Script" uid="uid://c4hlia7qhphbs" path="res://ui/SpacePortDialogue.gd" id="1"]
 [ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
@@ -95,4 +95,3 @@ text = "Refuel"
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Close"
-

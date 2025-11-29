@@ -1,11 +1,12 @@
-[gd_scene load_steps=13 format=3 uid="uid://b051ln2ytsesm"]
+[gd_scene load_steps=15 format=3 uid="uid://b051ln2ytsesm"]
 
 [ext_resource type="Script" uid="uid://cx5ba1vmbwqiy" path="res://entities/Ship/Ship.gd" id="1"]
 [ext_resource type="Script" uid="uid://coqh8cu6dte0k" path="res://scripts/StateMachine.gd" id="2"]
+[ext_resource type="Script" uid="uid://5mh31e6n8u0d" path="res://entities/Ship/ShipCamera.gd" id="2_0tak2"]
 [ext_resource type="Script" uid="uid://dbehnwjpsmt4c" path="res://entities/Ship/states/FlyingState.gd" id="3"]
 [ext_resource type="Script" uid="uid://cfyoann2rnq0w" path="res://entities/Ship/states/LandedState.gd" id="4"]
 [ext_resource type="Script" uid="uid://br1pdbv2ka45p" path="res://entities/Ship/states/DestroyedState.gd" id="5"]
-[ext_resource type="Script" path="res://entities/Ship/states/HarvestingState.gd" id="6"]
+[ext_resource type="Script" uid="uid://c52gah6pxgdju" path="res://entities/Ship/states/HarvestingState.gd" id="6"]
 
 [sub_resource type="Gradient" id="Gradient_1"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -66,6 +67,7 @@ script = ExtResource("1")
 [node name="Camera2D" type="Camera2D" parent="."]
 zoom = Vector2(0.6, 0.6)
 rotation_smoothing_enabled = true
+script = ExtResource("2_0tak2")
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
 position = Vector2(-4.700287, 1.2495689e-06)
