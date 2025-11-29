@@ -18,35 +18,22 @@ func enter() -> void:
 	
 	ship.camera.zoom_camera_in(camera_zoom_in)
 	
-	# Find closest ResourceNode that is being harvested
-	var resource_nodes = ship.get_tree().get_nodes_in_group("resource_nodes")
-	if resource_nodes.is_empty():
-		# No resource nodes, go back to flying
-		_exit_to_flying()
-		return
+	# Use the same logic as IndicatorManager to find which resource to lock to
+	# First, try to get the resource that IndicatorManager is currently highlighting
+	var indicator_manager = ship.get_tree().get_first_node_in_group("indicator_manager") as IndicatorManager
+	var target_resource: ResourceNode = null
 	
-	var closest_resource: ResourceNode = null
-	var closest_distance: float = INF
-	var ship_pos = ship.global_position
+	if indicator_manager and indicator_manager.current_target:
+		var current_target = indicator_manager.current_target
+		if current_target is ResourceIndicatorTarget:
+			var resource_target = current_target as ResourceIndicatorTarget
+			var resource = resource_target.resource_node
+			# Only lock if this resource is being harvested
+			if resource and is_instance_valid(resource) and resource.is_harvesting():
+				target_resource = resource
 	
-	for node in resource_nodes:
-		if not is_instance_valid(node):
-			continue
-		var resource = node as ResourceNode
-		if not resource:
-			continue
-		
-		# Only lock to resources that are currently being harvested
-		if not resource.is_harvesting():
-			continue
-		
-		var dist = ship_pos.distance_to(resource.global_position)
-		if dist < closest_distance:
-			closest_distance = dist
-			closest_resource = resource
-	
-	if closest_resource and is_instance_valid(closest_resource):
-		locked_resource_node = closest_resource
+	if target_resource and is_instance_valid(target_resource):
+		locked_resource_node = target_resource
 		# Initialize velocity tween from current ship velocity
 		if is_ship_valid():
 			velocity_tween_start = ship.linear_velocity
