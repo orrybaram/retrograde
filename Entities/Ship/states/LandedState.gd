@@ -43,6 +43,10 @@ func enter() -> void:
 		locked_spaceport = closest_spaceport
 		locked_offset_from_target = Vector2.ZERO  # Will be calculated on first frame
 		_spaceport_rotation_set = false  # Reset rotation flag
+		
+		# Emit action message for space port entry
+		var enter_key = InputUtils.get_action_key_name("action")
+		EventBus.action_message_changed.emit('Press "%s" to enter' % [enter_key])
 
 func exit() -> void:
 	super.exit()
@@ -53,6 +57,9 @@ func exit() -> void:
 	locked_spaceport = null
 	locked_offset_from_target = Vector2.ZERO
 	_spaceport_rotation_set = false
+	
+	# Clear action message
+	EventBus.action_message_changed.emit("")
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -63,7 +70,7 @@ func physics_process(delta: float) -> void:
 	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
 	
 	# Handle dialogue keypress (ui_accept - Space/Enter)
-	if Input.is_action_just_pressed("ui_accept"):
+	if Input.is_action_just_pressed("action"):
 		_toggle_dialogue()
 	
 	# Release lock if thrusting - transition back to FlyingState
@@ -71,8 +78,6 @@ func physics_process(delta: float) -> void:
 	if (ship.want_thrust or ship.want_reverse_thrust) and not (_dialogue and _dialogue.visible):
 		_exit_to_flying()
 		return
-	
-
 	
 	# Reset camera shake
 	if ship.camera:

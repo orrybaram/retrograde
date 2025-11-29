@@ -89,7 +89,8 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_2")
 theme_override_styles/hover = SubResource("StyleBoxFlat_2")
 text = "Buy FuelTank I"
 
-[node name="HarvestMessageLabel" type="Label" parent="."]
+[node name="ActionMessageLabel" type="Label" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -105,7 +106,6 @@ grow_vertical = 0
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(1, 0.75, 0, 1)
 theme_override_font_sizes/font_size = 14
-text = "Press [scan] to harvest"
+text = "Press [action] to harvest"
 horizontal_alignment = 1
 vertical_alignment = 1
-visible = false

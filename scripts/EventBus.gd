@@ -7,6 +7,10 @@ signal harvest_available_changed(can_harvest: bool)
 ## Emitted when any ResourceNode becomes harvestable or unharvestable.
 ## True if at least one ResourceNode can be harvested, false otherwise.
 
+signal action_message_changed(message: String)
+## Emitted when an action message should be displayed or cleared.
+## Empty string clears/hides the message. Components provide full formatted messages.
+
 var _harvestable_nodes: Dictionary = {}  # Track ResourceNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ResourceNodes and their callables
 
@@ -63,6 +67,13 @@ func _check_harvest_state() -> void:
 	_cleanup_invalid_nodes()
 	var can_harvest = not _harvestable_nodes.is_empty()
 	harvest_available_changed.emit(can_harvest)
+	
+	# Also emit action message for harvest
+	if can_harvest:
+		var action_key = InputUtils.get_action_key_name("action")
+		action_message_changed.emit('Press "%s" to harvest' % [action_key])
+	else:
+		action_message_changed.emit("")
 
 func _cleanup_invalid_nodes() -> void:
 	# Remove invalid ResourceNodes from tracking.

@@ -73,6 +73,7 @@ func _on_body_exited(body: Node2D) -> void:
 		if _can_harvest:
 			_can_harvest = false
 			can_harvest_changed.emit(false)
+			EventBus.action_message_changed.emit("")
 		_unregister_indicator()
 		
 func _physics_process(delta: float) -> void:
@@ -103,8 +104,8 @@ func _process(_delta: float) -> void:
 	
 	# Check if we should open/close harvest UI: ship in range AND button pressed AND has resources
 	if _ship_in_range and amount > 0 and not _is_depleted:
-		# Use "scan" action for harvesting
-		if Input.is_action_just_pressed("scan"):
+		# Use "action" action for harvesting
+		if Input.is_action_just_pressed("action"):
 			if not _harvesting:
 				# First press: open UI
 				start_harvest()

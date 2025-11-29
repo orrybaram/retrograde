@@ -7,7 +7,7 @@ extends Control
 @onready var velocity_label: Label = $"MarginContainer/VBoxContainer/VelocityLabel"
 @onready var sell_btn: Button = $"MarginContainer/VBoxContainer/HBoxContainer/SellBtn"
 @onready var upgrade_btn: Button = $"MarginContainer/VBoxContainer/HBoxContainer/UpgradeBtn"
-@onready var harvest_message_label: Label = $"HarvestMessageLabel"
+@onready var action_message_label: Label = $"ActionMessageLabel"
 
 var gs: Node = null
 var ship: Ship = null
@@ -32,35 +32,22 @@ func _ready() -> void:
 	sell_btn.pressed.connect(_sell)
 	upgrade_btn.pressed.connect(_buy_fuel)
 	
-	# Connect to EventBus for harvest availability
-	EventBus.harvest_available_changed.connect(_on_harvest_available_changed)
-	# Check initial state
-	_on_harvest_available_changed(EventBus.is_harvest_available())
+	# Connect to EventBus for action messages
+	EventBus.action_message_changed.connect(_on_action_message_changed)
+	# Check initial state (harvest message if available)
+	if EventBus.is_harvest_available():
+		var action_key = InputUtils.get_action_key_name("action")
+		_on_action_message_changed('Press "%s" to harvest' % [action_key])
+	else:	
+		_on_action_message_changed("")
 
-func _on_harvest_available_changed(can_harvest: bool) -> void:
-	_update_harvest_message(can_harvest)
+func _on_action_message_changed(message: String) -> void:
+	_update_action_message(message)
 
-func _update_harvest_message(can_harvest: bool) -> void:
-	if harvest_message_label:
-		harvest_message_label.visible = can_harvest
-		if can_harvest:
-			# Get the key name for the "scan" action
-			var scan_key = _get_action_key_name("scan")
-			harvest_message_label.text = 'Press "%s" to harvest' % [scan_key]
-
-func _get_action_key_name(action: String) -> String:
-	# Get the first key event for the action
-	var events = InputMap.action_get_events(action)
-	if events.size() > 0:
-		var event = events[0]
-		if event is InputEventKey:
-			var keycode = (event as InputEventKey).keycode
-			# Convert keycode to readable name
-			var key_name = OS.get_keycode_string(keycode)
-			return key_name
-		elif event is InputEventMouseButton:
-			return "Mouse Button"
-	return "scan"  # Fallback to action name
+func _update_action_message(message: String) -> void:
+	if action_message_label:
+		action_message_label.visible = message != ""
+		action_message_label.text = message
 
 func _process(_dt: float) -> void:
 	_update_labels()
