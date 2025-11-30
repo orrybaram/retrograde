@@ -2,7 +2,7 @@ extends Node
 class_name Economy
 
 const PRICES := {
-	"Scrap": 2
+	"scrap": 2
 }
 
 const REPAIR_COST_PER_POINT: int = 1  # Credits per hull point

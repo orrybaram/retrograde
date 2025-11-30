@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="MinimalSpaceStarter"
+config/name="Space Game"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.5")
 config/icon="res://icon.svg"
@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 RNG="*res://scripts/RNG.gd"
 EventBus="*res://scripts/EventBus.gd"
+InventoryManager="*res://scripts/InventoryManager.gd"
 
 [display]
 
