@@ -9,7 +9,7 @@ signal ship_took_off(ship: Ship)
 
 @export var landing_pad_size: Vector2 = Vector2(100, 20)
 @export var light_blink_rate: float = 1.0  # Blink rate in seconds
-@export var landing_lock_distance: float = 20.0  # Distance threshold for landing lock (pixels above pad)
+@export var landing_lock_distance: float = 30.0  # Distance threshold for landing lock (pixels above pad)
 
 var _landing_area: Area2D = null
 var _ship_on_pad: Ship = null
