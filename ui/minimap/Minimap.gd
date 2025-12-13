@@ -7,7 +7,7 @@ class_name Minimap
 @export var display_radius: float = 70.0
 
 ## The world range that the minimap covers (in world units)
-@export var world_range: float = 5000.0
+@export var world_range: float = 25000.0
 
 ## Colors
 @export var background_color: Color = Color(0.0, 0.0, 0.0, 0.8)
@@ -73,7 +73,7 @@ func _draw() -> void:
 		_draw_target(center, target, ship_rotation)
 	
 	# Draw ship indicator at center (always on top)
-	_draw_ship_indicator(center, ship_rotation)
+	_draw_ship_indicator(center)
 
 func _draw_cardinal_indicators(center: Vector2) -> void:
 	var indicator_distance = display_radius + 8
@@ -128,10 +128,11 @@ func _draw_target(center: Vector2, target: MinimapTarget, ship_rotation: float) 
 		_:
 			draw_circle(screen_pos, target_size, target_color)
 
-func _draw_ship_indicator(center: Vector2, ship_rotation: float) -> void:
+func _draw_ship_indicator(center: Vector2) -> void:
 	# Draw a small triangle pointing in the ship's direction
 	var ship_size = 6.0
-	var angle = 0.0 if rotate_with_ship else ship_rotation - PI/2
+	# Triangle points UP at angle 0, but ship rotation 0 = RIGHT, so add PI/2
+	var angle = 0.0
 	
 	_draw_triangle(center, ship_size, ship_color, angle)
 
@@ -171,4 +172,3 @@ func unregister_target(target: MinimapTarget) -> void:
 static func get_instance(tree: SceneTree) -> Minimap:
 	var minimap = tree.get_first_node_in_group("minimap")
 	return minimap as Minimap
-

@@ -20,13 +20,16 @@ signal generation_complete(spawn_position: Vector2)
 @export var sun_color_b_max: float = 0.6
 
 @export_group("Planet Properties")
-@export var planet_count: int = 5
+@export var planet_count: int = 7
 @export var planet_radius_min: float = 150.0
 @export var planet_radius_max: float = 800.0
 @export var planet_mass_min: float = 10.0
 @export var planet_mass_max: float = 100.0
-@export var planet_orbital_distance_base: float = 10000.0  ## Base distance for first planet
-@export var planet_orbital_distance_multiplier: float = 1.6  ## Multiplier for each subsequent planet
+@export var planet_orbital_distance_base: float = 100000.0  ## Base distance for first planet
+@export var planet_orbital_multiplier_min: float = 1.3  ## Min multiplier for orbital spacing
+@export var planet_orbital_multiplier_max: float = 1.8  ## Max multiplier for orbital spacing
+@export var planet_orbital_gap_chance: float = 0.15  ## Chance for a large gap (asteroid belt style)
+@export var planet_orbital_gap_multiplier: float = 2.1  ## Multiplier for large gaps
 @export var planet_orbital_speed_base: float = 0.005  ## Base orbital speed
 @export var planet_eccentricity_max: float = 0.1  ## Maximum orbital eccentricity
 
@@ -36,6 +39,7 @@ signal generation_complete(spawn_position: Vector2)
 var generated_sun: Planet = null
 var generated_planets: Array[Planet] = []
 var ship_spawn_position: Vector2 = Vector2.ZERO
+var _current_orbital_distance: float = 0.0  # Tracks cumulative orbital distance during generation
 
 func _ready() -> void:
 	add_to_group("solar_system_generator")
@@ -49,6 +53,9 @@ func generate() -> void:
 	
 	# Generate the sun
 	generated_sun = _create_sun()
+	
+	# Initialize orbital distance tracking
+	_current_orbital_distance = planet_orbital_distance_base
 	
 	# Generate planets
 	for i in range(planet_count):
@@ -127,8 +134,22 @@ func _create_planet(orbit_index: int) -> Planet:
 	var radius_factor = (planet.radius - planet_radius_min) / radius_range if radius_range > 0 else 0.5
 	planet.massMultiplier = planet_mass_min + (mass_range * radius_factor)
 	
-	# Orbital distance - exponentially increasing (Titius-Bode inspired)
-	planet.orbital_distance = planet_orbital_distance_base * pow(planet_orbital_distance_multiplier, orbit_index)
+	# Orbital distance - use cumulative distance with variable spacing
+	planet.orbital_distance = _current_orbital_distance
+	
+	# Calculate multiplier for next planet's orbit
+	# Only allow gaps in the middle planets (not first 2 or last 2)
+	var next_multiplier: float
+	var allow_gap = orbit_index >= 2 and orbit_index < planet_count - 2
+	if allow_gap and RNG.rng.randf() < planet_orbital_gap_chance:
+		# Large gap (like asteroid belt)
+		next_multiplier = planet_orbital_gap_multiplier * RNG.rng.randf_range(0.9, 1.1)
+	else:
+		# Normal spacing with variance
+		next_multiplier = RNG.rng.randf_range(planet_orbital_multiplier_min, planet_orbital_multiplier_max)
+	
+	# Update cumulative distance for next planet
+	_current_orbital_distance *= next_multiplier
 	
 	# Orbital speed - inversely proportional to distance (Kepler's 3rd law approximation)
 	planet.orbital_speed = planet_orbital_speed_base / sqrt(planet.orbital_distance / planet_orbital_distance_base)
@@ -150,4 +171,3 @@ func _create_planet(orbit_index: int) -> Planet:
 ## Get spawn position for the ship
 func get_ship_spawn_position() -> Vector2:
 	return ship_spawn_position
-

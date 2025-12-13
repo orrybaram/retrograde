@@ -11,6 +11,7 @@ enum MainGameState {
 @onready var game_over_menu: GameOverMenu = $"CanvasLayer/GameOverMenu"
 @onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
 @onready var solar_system_generator: SolarSystemGenerator = $"SolarSystemGenerator"
+@onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 
 var current_game_state: MainGameState = MainGameState.MENU
 var solar_system_generated: bool = false
@@ -48,10 +49,13 @@ func _input(event: InputEvent) -> void:
 	if current_game_state != MainGameState.PLAYING:
 		return
 	
-	# Handle inventory toggle with "i" key
 	if event is InputEventKey and event.pressed and not event.echo:
+		# Handle inventory toggle with "i" key
 		if event.keycode == KEY_I:
 			_toggle_inventory()
+		# Handle system map toggle with "m" key
+		elif event.keycode == KEY_M:
+			_toggle_system_map()
 
 func _toggle_inventory() -> void:
 	if not inventory_ui:
@@ -62,11 +66,30 @@ func _toggle_inventory() -> void:
 		return
 	if game_over_menu and game_over_menu.visible:
 		return
+	if system_map and system_map.visible:
+		return
 	
 	if inventory_ui.visible:
 		inventory_ui.close_inventory()
 	else:
 		inventory_ui.open_inventory()
+
+func _toggle_system_map() -> void:
+	if not system_map:
+		return
+	
+	# Don't toggle if other menus are open
+	if start_menu and start_menu.visible:
+		return
+	if game_over_menu and game_over_menu.visible:
+		return
+	if inventory_ui and inventory_ui.visible:
+		return
+	
+	if system_map.visible:
+		system_map.close_map()
+	else:
+		system_map.open_map()
 
 func _on_start_game() -> void:
 	await start_game()

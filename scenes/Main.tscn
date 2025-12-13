@@ -14,8 +14,9 @@
 [ext_resource type="PackedScene" uid="uid://ck61aimutf7gk" path="res://ui/SpacePortDialogue.tscn" id="14"]
 [ext_resource type="PackedScene" path="res://ui/store/StoreUI.tscn" id="15"]
 [ext_resource type="PackedScene" path="res://ui/inventory/InventoryUI.tscn" id="16"]
-[ext_resource type="PackedScene" path="res://ui/minimap/Minimap.tscn" id="17"]
-[ext_resource type="Script" path="res://scripts/generation/SolarSystemGenerator.gd" id="18"]
+[ext_resource type="PackedScene" uid="uid://0qhwlfdltlfp" path="res://ui/minimap/Minimap.tscn" id="17"]
+[ext_resource type="Script" uid="uid://dcmhawa14rw0h" path="res://scripts/generation/SolarSystemGenerator.gd" id="18"]
+[ext_resource type="PackedScene" path="res://ui/system_map/SystemMap.tscn" id="19"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -39,9 +40,9 @@ script = ExtResource("5")
 
 [node name="SolarSystemGenerator" type="Node" parent="."]
 script = ExtResource("18")
+planet_orbital_distance_base = 50000.0
 
 [node name="Ship" parent="." instance=ExtResource("7")]
-position = Vector2(0, 0)
 mass = 3.0
 angular_damp_mode = 1
 fuel_consumption_rate = 2.0
@@ -63,3 +64,5 @@ fuel_consumption_rate = 2.0
 [node name="StoreUI" parent="CanvasLayer" instance=ExtResource("15")]
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("16")]
+
+[node name="SystemMap" parent="CanvasLayer" instance=ExtResource("19")]

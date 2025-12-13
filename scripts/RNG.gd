@@ -22,4 +22,3 @@ func set_seed(new_seed: int) -> void:
 	seed_value = new_seed
 	if rng:
 		rng.seed = new_seed
-
