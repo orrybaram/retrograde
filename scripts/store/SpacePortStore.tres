@@ -1,13 +1,12 @@
-[gd_resource type="Resource" script_class="StoreData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="StoreData" load_steps=6 format=3 uid="uid://lltn0cexcj8y"]
 
-[ext_resource type="Script" path="res://scripts/store/StoreData.gd" id="1"]
-[ext_resource type="Resource" path="res://scripts/upgrades/items/Hull_1.tres" id="2"]
-[ext_resource type="Resource" path="res://scripts/upgrades/items/Hull_2.tres" id="3"]
-[ext_resource type="Resource" path="res://scripts/upgrades/items/Hull_3.tres" id="4"]
+[ext_resource type="Script" uid="uid://6o8b2pmef83k" path="res://scripts/store/StoreData.gd" id="1"]
+[ext_resource type="Resource" uid="uid://c8l4yamtxt5b5" path="res://scripts/upgrades/items/Hull_1.tres" id="2"]
+[ext_resource type="Script" uid="uid://dqrdt8a6q8bnj" path="res://scripts/upgrades/UpgradeItem.gd" id="2_47uo8"]
+[ext_resource type="Resource" uid="uid://b1sf4p0sgjlyy" path="res://scripts/upgrades/items/Hull_2.tres" id="3"]
+[ext_resource type="Resource" uid="uid://cq2nbvmp1pkpc" path="res://scripts/upgrades/items/Hull_3.tres" id="4"]
 
 [resource]
 script = ExtResource("1")
 store_name = "Space Port Store"
-upgrades = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
-can_sell_resources = true
-
+upgrades = Array[ExtResource("2_47uo8")]([ExtResource("2"), ExtResource("3"), ExtResource("4")])

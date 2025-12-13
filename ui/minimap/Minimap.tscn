@@ -1,0 +1,47 @@
+[gd_scene load_steps=4 format=3 uid="uid://0qhwlfdltlfp"]
+
+[ext_resource type="Script" uid="uid://d1nxc3fmj0egb" path="res://ui/minimap/Minimap.gd" id="1"]
+
+[sub_resource type="Gradient" id="Gradient_circle"]
+offsets = PackedFloat32Array(0.88762444, 0.93456614)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_mask"]
+gradient = SubResource("Gradient_circle")
+width = 160
+height = 160
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[node name="MinimapContainer" type="Control"]
+layout_mode = 3
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -176.0
+offset_right = 176.0
+offset_bottom = -16.0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="ClipMask" type="TextureRect" parent="."]
+clip_children = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_mask")
+
+[node name="Minimap" type="Control" parent="ClipMask"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1")

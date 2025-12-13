@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3 uid="uid://c8l4yamtxt5b5"]
 
-[ext_resource type="Script" path="res://scripts/upgrades/UpgradeItem.gd" id="1"]
+[ext_resource type="Script" uid="uid://dqrdt8a6q8bnj" path="res://scripts/upgrades/UpgradeItem.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -8,9 +8,6 @@ upgrade_id = "hull_1"
 display_name = "Hull Plating I"
 description = "Reinforced hull plating. Adds 5 points to maximum hull strength."
 upgrade_path = "hull"
-tier = 1
 cost = 30
-effect_type = 0
 effect_target = "max_hull"
 effect_value = 5.0
-

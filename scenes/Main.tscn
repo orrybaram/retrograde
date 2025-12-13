@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=17 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" uid="uid://ck61aimutf7gk" path="res://ui/SpacePortDialogue.tscn" id="14"]
 [ext_resource type="PackedScene" path="res://ui/store/StoreUI.tscn" id="15"]
 [ext_resource type="PackedScene" path="res://ui/inventory/InventoryUI.tscn" id="16"]
+[ext_resource type="PackedScene" path="res://ui/minimap/Minimap.tscn" id="17"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -101,6 +102,8 @@ orbital_speed = 0.005
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="HUD" parent="CanvasLayer" instance=ExtResource("8")]
+
+[node name="Minimap" parent="CanvasLayer" instance=ExtResource("17")]
 
 [node name="StartMenu" parent="CanvasLayer" instance=ExtResource("11")]
 
