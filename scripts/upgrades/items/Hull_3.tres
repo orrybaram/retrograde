@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrades/UpgradeItem.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "hull_3"
+display_name = "Hull Plating III"
+description = "Military-grade hull plating. Adds 10 points to maximum hull strength."
+upgrade_path = "hull"
+tier = 3
+cost = 120
+effect_type = 0
+effect_target = "max_hull"
+effect_value = 10.0
+

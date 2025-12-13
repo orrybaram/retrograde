@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StoreData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/store/StoreData.gd" id="1"]
+[ext_resource type="Resource" path="res://scripts/upgrades/items/Hull_1.tres" id="2"]
+[ext_resource type="Resource" path="res://scripts/upgrades/items/Hull_2.tres" id="3"]
+[ext_resource type="Resource" path="res://scripts/upgrades/items/Hull_3.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+store_name = "Space Port Store"
+upgrades = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
+can_sell_resources = true
+

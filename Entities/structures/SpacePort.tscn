@@ -1,6 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://bk33hils8ufhh"]
+[gd_scene load_steps=7 format=3 uid="uid://bk33hils8ufhh"]
 
 [ext_resource type="Script" uid="uid://xcs2jg80xqg2" path="res://entities/structures/SpacePort.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/store/Store.gd" id="2"]
+[ext_resource type="Resource" path="res://scripts/store/SpacePortStore.tres" id="3"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_3"]
 size = Vector2(100, 20)
@@ -55,3 +57,7 @@ monitorable = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="LandingArea"]
 position = Vector2(0.5, 0)
 shape = SubResource("RectangleShape2D_1")
+
+[node name="Store" type="Node" parent="."]
+script = ExtResource("2")
+store_data = ExtResource("3")
