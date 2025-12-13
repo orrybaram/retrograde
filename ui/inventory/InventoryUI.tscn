@@ -1,0 +1,150 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://ui/inventory/InventoryUI.gd" id="1"]
+[ext_resource type="Theme" path="res://assets/themes/terminal.tres" id="2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0, 0, 0, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.75, 0, 1)
+
+[node name="InventoryUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="BackgroundPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="InventoryWindow" type="Control" parent="CenterContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+custom_minimum_size = Vector2(1000, 600)
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/InventoryWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/InventoryWindow/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="HeaderContainer" type="HBoxContainer" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/HeaderContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 24
+text = "INVENTORY"
+
+[node name="Spacer" type="Control" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/HeaderContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ContentContainer" type="HBoxContainer" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 24
+
+[node name="SystemsSection" type="VBoxContainer" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="SectionLabel" type="Label" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer/SystemsSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 16
+text = "SHIP SYSTEMS"
+
+[node name="SystemsContent" type="Label" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer/SystemsSection"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 14
+text = "Loading..."
+
+[node name="UpgradesSection" type="VBoxContainer" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="SectionLabel" type="Label" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer/UpgradesSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 16
+text = "UPGRADES"
+
+[node name="UpgradesContent" type="Label" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer/UpgradesSection"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 14
+text = "Loading..."
+
+[node name="CargoSection" type="VBoxContainer" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="SectionLabel" type="Label" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer/CargoSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 16
+text = "CARGO"
+
+[node name="CargoContent" type="Label" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ContentContainer/CargoSection"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 14
+text = "Loading..."
+
+[node name="ActionsContainer" type="HBoxContainer" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 12
+
+[node name="Spacer2" type="Control" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ActionsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="CenterContainer/InventoryWindow/MarginContainer/VBoxContainer/ActionsContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_font_sizes/font_size = 16
+text = "Close"

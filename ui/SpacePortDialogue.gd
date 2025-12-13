@@ -136,13 +136,13 @@ func _on_refuel_pressed() -> void:
 func _on_store_pressed() -> void:
 	if not spaceport:
 		return
-	
+
 	# Find the Store component on the spaceport
-	var store = spaceport.get_node_or_null("Store") as Store
+	var store = spaceport.get_node_or_null("Store")
 	if not store:
 		push_warning("SpacePort has no Store component")
 		return
-	
+
 	# Find StoreUI in the scene
 	if not _store_ui or not is_instance_valid(_store_ui):
 		var current_scene = get_tree().current_scene

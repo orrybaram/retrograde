@@ -68,17 +68,17 @@ func apply(ship: Ship, game_state: GameState) -> void:
 	
 	match effect_type:
 		EffectType.ADD_STAT:
-			_apply_add_stat(ship, game_state)
+			_apply_add_stat(ship)
 		EffectType.MULTIPLY_STAT:
-			_apply_multiply_stat(ship, game_state)
+			_apply_multiply_stat(ship)
 		EffectType.UNLOCK_FEATURE:
-			_apply_unlock_feature(ship, game_state)
+			_apply_unlock_feature(game_state)
 	
 	# Update the player's upgrade level for this path
 	game_state.set_upgrade_level(upgrade_path, tier)
 
 
-func _apply_add_stat(ship: Ship, game_state: GameState) -> void:
+func _apply_add_stat(ship: Ship) -> void:
 	match effect_target:
 		"max_hull":
 			if ship:
@@ -92,7 +92,7 @@ func _apply_add_stat(ship: Ship, game_state: GameState) -> void:
 			push_warning("UpgradeItem: Unknown ADD_STAT target: %s" % effect_target)
 
 
-func _apply_multiply_stat(ship: Ship, game_state: GameState) -> void:
+func _apply_multiply_stat(ship: Ship) -> void:
 	match effect_target:
 		"max_hull":
 			if ship:
@@ -106,7 +106,7 @@ func _apply_multiply_stat(ship: Ship, game_state: GameState) -> void:
 			push_warning("UpgradeItem: Unknown MULTIPLY_STAT target: %s" % effect_target)
 
 
-func _apply_unlock_feature(ship: Ship, game_state: GameState) -> void:
+func _apply_unlock_feature(game_state: GameState) -> void:
 	match effect_target:
 		"has_drone_bay":
 			game_state.has_drone_bay = true
