@@ -20,6 +20,7 @@ class_name Planet
 
 var parent_planet: Planet = null
 var orbital_angle: float = 0.0
+var minimap_target: PlanetMinimapTarget = null
 
 func _set_show_gravity_rings(v: bool) -> void:
 	show_gravity_rings = v
@@ -64,6 +65,23 @@ func _ready() -> void:
 		# Update orbit visual if it exists
 		if orbit_visual:
 			orbit_visual.show_orbit = show_orbit_path
+	
+	# Register with minimap
+	_register_with_minimap.call_deferred()
+
+func _register_with_minimap() -> void:
+	var minimap = Minimap.get_instance(get_tree())
+	if minimap:
+		minimap_target = PlanetMinimapTarget.new(self)
+		minimap.register_target(minimap_target)
+
+func _exit_tree() -> void:
+	# Unregister from minimap
+	if minimap_target:
+		var minimap = Minimap.get_instance(get_tree())
+		if minimap:
+			minimap.unregister_target(minimap_target)
+		minimap_target = null
 
 func _physics_process(_dt: float) -> void:
 	# Handle orbital mechanics if this planet has a parent planet
