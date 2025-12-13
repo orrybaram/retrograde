@@ -1,29 +1,36 @@
 extends Node
 class_name GameState
 
-signal cargo_changed
 signal credits_changed
+signal upgrade_level_changed(path: String, level: int)
 
-var credits: int = 1000 :
+var credits: int = 0 :
 	set(value):
 		credits = value
 		credits_changed.emit()
 
-var cargo := {
-	"Scrap": 0
-}
-
 var has_drone_bay: bool = false
 var drones_active: int = 0
+
+## Tracks the player's current upgrade level for each upgrade path.
+## Keys are path names (e.g., "hull", "fuel_tank"), values are tier levels (0 = base, 1+ = upgraded)
+var upgrade_levels: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("game_state")
 
-func add_cargo(kind: String, amount: int) -> void:
-	cargo[kind] = (cargo.get(kind, 0) as int) + amount
-	cargo_changed.emit()
+## Get the player's current upgrade level for a given path.
+## Returns 0 (base state) if no upgrades have been purchased for this path.
+func get_upgrade_level(path: String) -> int:
+	return upgrade_levels.get(path, 0)
 
+## Set the player's upgrade level for a given path.
+## Called when an upgrade is purchased.
+func set_upgrade_level(path: String, level: int) -> void:
+	upgrade_levels[path] = level
+	upgrade_level_changed.emit(path, level)
+
+## Compatibility wrapper for clearing cargo.
+## Now delegates to InventoryManager.clear_inventory()
 func clear_cargo() -> void:
-	for k in cargo.keys():
-		cargo[k] = 0
-	cargo_changed.emit()
+	InventoryManager.clear_inventory()

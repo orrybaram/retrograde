@@ -5,8 +5,6 @@ extends Control
 @onready var cargo_label: Label = $"MarginContainer/VBoxContainer/CargoLabel"
 @onready var position_label: Label = $"MarginContainer/VBoxContainer/PositionLabel"
 @onready var velocity_label: Label = $"MarginContainer/VBoxContainer/VelocityLabel"
-@onready var sell_btn: Button = $"MarginContainer/VBoxContainer/HBoxContainer/SellBtn"
-@onready var upgrade_btn: Button = $"MarginContainer/VBoxContainer/HBoxContainer/UpgradeBtn"
 @onready var action_message_label: Label = $"ActionMessageLabel"
 
 var gs: Node = null
@@ -23,14 +21,13 @@ func _ready() -> void:
 		hull_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber for hull (will be updated dynamically)
 	
 	_update_labels()
-	if gs and gs.has_signal("cargo_changed"):
-		gs.cargo_changed.connect(_update_labels)
+	# Connect to InventoryManager for inventory changes
+	InventoryManager.inventory_changed.connect(_update_labels)
 	if gs and gs.has_signal("credits_changed"):
 		gs.credits_changed.connect(_update_labels)
 	if ship and ship.has_signal("fuel_changed"):
 		ship.fuel_changed.connect(_update_labels)
-	sell_btn.pressed.connect(_sell)
-	upgrade_btn.pressed.connect(_buy_fuel)
+	
 	
 	# Connect to EventBus for action messages
 	EventBus.action_message_changed.connect(_on_action_message_changed)
@@ -54,7 +51,7 @@ func _process(_dt: float) -> void:
 
 func _update_labels() -> void:
 	if gs == null: return
-	var cargo_scrap = gs.cargo.get("Scrap", 0) if "cargo" in gs else 0
+	var cargo_scrap = InventoryManager.get_quantity("scrap")
 	var credits = gs.credits if "credits" in gs else 0
 	
 	cargo_label.text = "Cargo: Scrap %d | Credits %d" % [cargo_scrap, credits]
@@ -104,20 +101,3 @@ func _update_labels() -> void:
 		if hull_progress_bar:
 			hull_progress_bar.set_value(0.0, 100.0)
 			hull_progress_bar.bar_color = Color(1.0, 0.3, 0.0)  # Red-orange
-
-func _sell() -> void:
-	var ship_node := get_tree().get_first_node_in_group("ship") as Node2D
-	var home := get_tree().get_nodes_in_group("planets")[0] as Node2D
-	if ship_node.global_position.distance_to(home.global_position) > 170.0:
-		return
-	var economy = get_tree().get_first_node_in_group("economy")
-	var total: int = int(gs.cargo.get("Scrap", 0)) * economy.PRICES.get("Scrap", 0)
-	gs.credits += total
-	gs.clear_cargo()
-
-func _buy_fuel() -> void:
-	var economy = get_tree().get_first_node_in_group("economy")
-	var cost: int = economy.get_cost("FuelTank_I")
-	if gs.credits >= cost:
-		gs.credits -= cost
-		economy.apply_upgrade("FuelTank_I", gs, ship)

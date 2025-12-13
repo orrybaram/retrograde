@@ -1,38 +1,24 @@
 extends Node
 class_name Economy
 
+## Global economy constants and resource pricing.
+## Upgrade costs and effects are now handled by UpgradeItem resources.
+
+## Sell prices for resources (item_id -> credits)
 const PRICES := {
-	"Scrap": 2
+	"scrap": 2
 }
 
+## Service costs
 const REPAIR_COST_PER_POINT: int = 1  # Credits per hull point
 const REFUEL_COST_PER_POINT: int = 1  # Credits per fuel point
 
-static func get_cost(upgrade_name: String) -> int:
-	match upgrade_name:
-		"FuelTank_I":
-			return 40
-		"Hull_I":
-			return 30
-		"DroneBay_I":
-			return 60
-		_:
-			return 0
 
-static func apply_upgrade(upgrade_name: String, gs, ship: Ship = null) -> void:
-	match upgrade_name:
-		"FuelTank_I":
-			if ship:
-				ship.max_fuel *= 1.25
-				ship.fuel = ship.max_fuel  # Refill to new max
-		"Hull_I":
-			if ship:
-				ship.max_hull += 5
-				ship.hull_strength = ship.max_hull  # Heal to new max
-		"DroneBay_I":
-			gs.has_drone_bay = true
-		_:
-			pass
+## Get the sell price for a resource.
+## Returns 0 if the resource is not in the price list.
+static func get_resource_price(resource_id: String) -> int:
+	return PRICES.get(resource_id, 0)
+
 
 func _ready() -> void:
 	add_to_group("economy")

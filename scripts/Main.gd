@@ -9,6 +9,7 @@ enum MainGameState {
 @onready var ship := $Ship
 @onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
 @onready var game_over_menu: GameOverMenu = $"CanvasLayer/GameOverMenu"
+@onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
 
 var current_game_state: MainGameState = MainGameState.MENU
 
@@ -40,6 +41,30 @@ func _process(_delta: float) -> void:
 		if ship.is_destroyed():
 			game_over_pending = true
 			_show_game_over_delayed("Ship Destroyed")
+
+func _input(event: InputEvent) -> void:
+	if current_game_state != MainGameState.PLAYING:
+		return
+	
+	# Handle inventory toggle with "i" key
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_I:
+			_toggle_inventory()
+
+func _toggle_inventory() -> void:
+	if not inventory_ui:
+		return
+	
+	# Don't toggle if other menus are open
+	if start_menu and start_menu.visible:
+		return
+	if game_over_menu and game_over_menu.visible:
+		return
+	
+	if inventory_ui.visible:
+		inventory_ui.close_inventory()
+	else:
+		inventory_ui.open_inventory()
 
 func _on_start_game() -> void:
 	await start_game()

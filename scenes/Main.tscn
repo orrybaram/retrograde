@@ -15,6 +15,8 @@
 [ext_resource type="PackedScene" uid="uid://c3lam2n5p7q8r" path="res://ui/GameOverMenu.tscn" id="12"]
 [ext_resource type="PackedScene" uid="uid://d5613qx52u80" path="res://ui/indicators/IndicatorManager.tscn" id="13"]
 [ext_resource type="PackedScene" uid="uid://ck61aimutf7gk" path="res://ui/SpacePortDialogue.tscn" id="14"]
+[ext_resource type="PackedScene" path="res://ui/store/StoreUI.tscn" id="15"]
+[ext_resource type="PackedScene" path="res://ui/inventory/InventoryUI.tscn" id="16"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -107,3 +109,7 @@ orbital_speed = 0.005
 [node name="IndicatorManager" parent="CanvasLayer" instance=ExtResource("13")]
 
 [node name="SpacePortDialogue" parent="CanvasLayer" instance=ExtResource("14")]
+
+[node name="StoreUI" parent="CanvasLayer" instance=ExtResource("15")]
+
+[node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("16")]

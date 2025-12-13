@@ -401,9 +401,9 @@ func _stop_mini_game() -> void:
 
 func _on_mini_game_harvest_success(harvested_amount: int) -> void:
 	# Harvest successful - add all resources
-	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	if gs:
-		gs.add_cargo(kind, harvested_amount)
+	# Map resource kind to item_id (e.g., "Scrap" -> "scrap")
+	var item_id = kind.to_lower()
+	InventoryManager.add_item(item_id, harvested_amount)
 	
 	# Emit signal for ResourceManager to handle indicator display
 	resource_harvested.emit(harvested_amount, kind, global_position)

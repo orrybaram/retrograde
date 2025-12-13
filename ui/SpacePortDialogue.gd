@@ -9,6 +9,7 @@ class_name SpacePortDialogue
 @onready var credits_label: Label = $MarginContainer/VBoxContainer/CreditsLabel
 @onready var repair_button: Button = $MarginContainer/VBoxContainer/RepairButton
 @onready var refuel_button: Button = $MarginContainer/VBoxContainer/RefuelButton
+@onready var store_button: Button = $MarginContainer/VBoxContainer/StoreButton
 @onready var close_button: Button = $MarginContainer/VBoxContainer/CloseButton
 
 var ship: Ship = null
@@ -16,6 +17,7 @@ var spaceport: SpacePort = null
 var gs: GameState = null
 var economy: Economy = null
 var zoom_tween: Tween = null
+var _store_ui: StoreUI = null
 
 signal dialogue_closed
 
@@ -29,6 +31,8 @@ func _ready() -> void:
 		repair_button.pressed.connect(_on_repair_pressed)
 	if refuel_button:
 		refuel_button.pressed.connect(_on_refuel_pressed)
+	if store_button:
+		store_button.pressed.connect(_on_store_pressed)
 	if close_button:
 		close_button.pressed.connect(_on_close_pressed)
 	
@@ -128,6 +132,37 @@ func _on_refuel_pressed() -> void:
 		ship.fuel = max_fuel
 		ship.fuel_changed.emit()
 		_update_display()
+
+func _on_store_pressed() -> void:
+	if not spaceport:
+		return
+
+	# Find the Store component on the spaceport
+	var store = spaceport.get_node_or_null("Store")
+	if not store:
+		push_warning("SpacePort has no Store component")
+		return
+
+	# Find StoreUI in the scene
+	if not _store_ui or not is_instance_valid(_store_ui):
+		var current_scene = get_tree().current_scene
+		if current_scene:
+			var canvas_layer = current_scene.get_node_or_null("CanvasLayer")
+			if canvas_layer:
+				_store_ui = canvas_layer.get_node_or_null("StoreUI") as StoreUI
+	
+	if _store_ui:
+		# Hide this dialogue and open the store
+		visible = false
+		_store_ui.open_dialogue(store)
+		# Connect to store close to reopen this dialogue
+		if not _store_ui.dialogue_closed.is_connected(_on_store_closed):
+			_store_ui.dialogue_closed.connect(_on_store_closed)
+
+func _on_store_closed() -> void:
+	# Reopen this dialogue when store closes
+	visible = true
+	_update_display()
 
 func _on_close_pressed() -> void:
 	close_dialogue()
