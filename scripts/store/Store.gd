@@ -80,7 +80,6 @@ func get_purchase_block_reason(upgrade: UpgradeItem) -> String:
 	
 	# Check tier requirement
 	if not upgrade.can_purchase(_game_state):
-		var current_tier = _game_state.get_upgrade_level(upgrade.upgrade_path)
 		var required_tier = upgrade.tier - 1
 		if required_tier > 0:
 			return "Requires %s tier %d" % [upgrade.upgrade_path.capitalize(), required_tier]

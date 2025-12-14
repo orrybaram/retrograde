@@ -1,11 +1,54 @@
 extends Node
 class_name SolarSystemGenerator
 
-## Procedural solar system generator - Step 1: Sun and player spawn
+## Procedural solar system generator with planet types
 
 signal generation_complete(spawn_position: Vector2)
 
 @export var planet_scene: PackedScene = preload("res://entities/Planet/Planet.tscn")
+
+## Planet type data resources - loaded from .tres files
+@export_group("Planet Type Data")
+@export var planet_type_data: Array[PlanetTypeData] = [
+	preload("res://resources/planet_types/gas_giant.tres"),
+	preload("res://resources/planet_types/ice_giant.tres"),
+	preload("res://resources/planet_types/earth_like.tres"),
+	preload("res://resources/planet_types/rocky.tres"),
+	preload("res://resources/planet_types/water.tres"),
+	preload("res://resources/planet_types/ice.tres"),
+	preload("res://resources/planet_types/barren.tres")
+]
+
+## Get planet type data by type enum
+func _get_type_data(planet_type: Planet.PlanetType) -> PlanetTypeData:
+	for data in planet_type_data:
+		if data.planet_type == planet_type:
+			return data
+	# Fallback to rocky if not found
+	return planet_type_data[3] if planet_type_data.size() > 3 else null
+
+## Planet type weights by orbit zone (inner, middle, outer)
+const INNER_PLANET_WEIGHTS = {
+	Planet.PlanetType.ROCKY: 40,
+	Planet.PlanetType.BARREN: 30,
+	Planet.PlanetType.EARTH_LIKE: 20,
+	Planet.PlanetType.WATER: 10
+}
+
+const MIDDLE_PLANET_WEIGHTS = {
+	Planet.PlanetType.EARTH_LIKE: 30,
+	Planet.PlanetType.WATER: 25,
+	Planet.PlanetType.ROCKY: 20,
+	Planet.PlanetType.ICE: 15,
+	Planet.PlanetType.BARREN: 10
+}
+
+const OUTER_PLANET_WEIGHTS = {
+	Planet.PlanetType.GAS_GIANT: 35,
+	Planet.PlanetType.ICE_GIANT: 30,
+	Planet.PlanetType.ICE: 20,
+	Planet.PlanetType.BARREN: 15
+}
 
 @export_group("Sun Properties")
 @export var sun_radius_min: float = 1200.0
@@ -109,30 +152,31 @@ func _create_sun() -> Planet:
 func _create_planet(orbit_index: int) -> Planet:
 	var planet = planet_scene.instantiate() as Planet
 	
-	# Planet properties - use RNG with exported ranges
-	planet.radius = RNG.rng.randf_range(planet_radius_min, planet_radius_max)
+	# Select planet type based on orbital position
+	var selected_type = _select_planet_type(orbit_index)
+	var type_data = _get_type_data(selected_type)
 	
-	# Planet colors - Earth-like colors (blues, greens, browns)
-	var color_options = [
-		Color(0.2, 0.5, 0.8),  # Blue (ocean)
-		Color(0.3, 0.6, 0.3),  # Green (forest)
-		Color(0.6, 0.4, 0.2),  # Brown (desert)
-		Color(0.8, 0.3, 0.2),  # Red (mars-like)
-		Color(0.5, 0.5, 0.6),  # Gray (barren)
-	]
-	var base_color = color_options[RNG.rng.randi() % color_options.size()]
-	# Add some variation
-	planet.color = Color(
-		clamp(base_color.r + RNG.rng.randf_range(-0.1, 0.1), 0.0, 1.0),
-		clamp(base_color.g + RNG.rng.randf_range(-0.1, 0.1), 0.0, 1.0),
-		clamp(base_color.b + RNG.rng.randf_range(-0.1, 0.1), 0.0, 1.0)
-	)
+	if not type_data:
+		push_error("No type data found for planet type: ", selected_type)
+		return planet
 	
-	# Mass based on radius
-	var mass_range = planet_mass_max - planet_mass_min
-	var radius_range = planet_radius_max - planet_radius_min
-	var radius_factor = (planet.radius - planet_radius_min) / radius_range if radius_range > 0 else 0.5
-	planet.massMultiplier = planet_mass_min + (mass_range * radius_factor)
+	# Set planet type
+	planet.planet_type = selected_type
+	
+	# Set radius from type-specific range (using resource method)
+	planet.radius = type_data.get_random_radius(RNG.rng)
+	
+	# Set color from type palette (using resource method)
+	planet.color = type_data.get_random_color(RNG.rng)
+	
+	# Set collision ratio (gas giants have smaller cores)
+	planet.collision_radius_ratio = type_data.collision_radius_ratio
+	
+	# Set habitability with slight random variation (using resource method)
+	planet.habitability = type_data.get_habitability_varied(RNG.rng)
+	
+	# Mass based on type and radius (using resource method)
+	planet.massMultiplier = type_data.get_mass_multiplier(planet.radius, RNG.rng)
 	
 	# Orbital distance - use cumulative distance with variable spacing
 	planet.orbital_distance = _current_orbital_distance
@@ -160,14 +204,47 @@ func _create_planet(orbit_index: int) -> Planet:
 	# Slight eccentricity
 	planet.eccentricity = RNG.rng.randf_range(0.0, planet_eccentricity_max)
 	
-	# Planet name
-	planet.name = "Planet " + str(orbit_index + 1)
+	# Planet name includes type (from resource)
+	planet.name = "Planet %d (%s)" % [orbit_index + 1, type_data.type_name]
 	
 	# Add as child of sun so it orbits
 	generated_sun.add_child(planet)
+	
+	print("  Created: ", planet.name, " - Radius: ", int(planet.radius), ", Habitability: ", "%.1f" % planet.habitability)
 	
 	return planet
 
 ## Get spawn position for the ship
 func get_ship_spawn_position() -> Vector2:
 	return ship_spawn_position
+
+## Select a planet type based on weighted random selection
+func _select_planet_type(orbit_index: int) -> Planet.PlanetType:
+	var weights: Dictionary
+	
+	# Determine which zone this orbit is in
+	var orbit_fraction = float(orbit_index) / float(max(planet_count - 1, 1))
+	
+	if orbit_fraction < 0.33:
+		weights = INNER_PLANET_WEIGHTS
+	elif orbit_fraction < 0.66:
+		weights = MIDDLE_PLANET_WEIGHTS
+	else:
+		weights = OUTER_PLANET_WEIGHTS
+	
+	# Calculate total weight
+	var total_weight = 0
+	for weight in weights.values():
+		total_weight += weight
+	
+	# Random selection
+	var roll = RNG.rng.randi() % total_weight
+	var cumulative = 0
+	
+	for planet_type in weights:
+		cumulative += weights[planet_type]
+		if roll < cumulative:
+			return planet_type
+	
+	# Fallback
+	return Planet.PlanetType.ROCKY
