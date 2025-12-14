@@ -9,6 +9,9 @@ class_name Minimap
 ## The world range that the minimap covers (in world units)
 @export var world_range: float = 25000.0
 
+## Planet size scaling
+@export var planet_size_multiplier: float = 2.0  ## Multiplier to make planets visible on minimap
+
 ## Colors
 @export var background_color: Color = Color(0.0, 0.0, 0.0, 0.8)
 @export var border_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
@@ -19,7 +22,7 @@ class_name Minimap
 @export var rotate_with_ship: bool = false
 
 ## Number of radar rings to display
-@export var ring_count: int = 3
+@export var ring_count: int = 4
 
 var targets: Array[MinimapTarget] = []
 var ship: Ship = null

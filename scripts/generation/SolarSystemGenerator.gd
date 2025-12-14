@@ -10,13 +10,14 @@ signal generation_complete(spawn_position: Vector2)
 ## Planet type data resources - loaded from .tres files
 @export_group("Planet Type Data")
 @export var planet_type_data: Array[PlanetTypeData] = [
-	preload("res://resources/planet_types/gas_giant.tres"),
-	preload("res://resources/planet_types/ice_giant.tres"),
-	preload("res://resources/planet_types/earth_like.tres"),
-	preload("res://resources/planet_types/rocky.tres"),
-	preload("res://resources/planet_types/water.tres"),
-	preload("res://resources/planet_types/ice.tres"),
-	preload("res://resources/planet_types/barren.tres")
+	preload("res://entities/Planet/types/sun.tres"),
+	preload("res://entities/Planet/types/gas_giant.tres"),
+	preload("res://entities/Planet/types/ice_giant.tres"),
+	preload("res://entities/Planet/types/earth_like.tres"),
+	preload("res://entities/Planet/types/rocky.tres"),
+	preload("res://entities/Planet/types/water.tres"),
+	preload("res://entities/Planet/types/ice.tres"),
+	preload("res://entities/Planet/types/barren.tres")
 ]
 
 ## Get planet type data by type enum
@@ -51,8 +52,8 @@ const OUTER_PLANET_WEIGHTS = {
 }
 
 @export_group("Sun Properties")
-@export var sun_radius_min: float = 1200.0
-@export var sun_radius_max: float = 2000.0
+@export var sun_radius_min: float = 5000.0
+@export var sun_radius_max: float = 10000.0
 @export var sun_mass_min: float = 500.0
 @export var sun_mass_max: float = 1000.0
 @export var sun_color_r_min: float = 0.9
@@ -61,11 +62,12 @@ const OUTER_PLANET_WEIGHTS = {
 @export var sun_color_g_max: float = 0.9
 @export var sun_color_b_min: float = 0.3
 @export var sun_color_b_max: float = 0.6
+@export var sun_gravitational_constant: float = 8.0  ## Sun's gravitational constant (much stronger than planets)
 
 @export_group("Planet Properties")
 @export var planet_count: int = 7
-@export var planet_radius_min: float = 150.0
-@export var planet_radius_max: float = 800.0
+@export var planet_radius_min: float = 1200.0
+@export var planet_radius_max: float = 5000.0
 @export var planet_mass_min: float = 10.0
 @export var planet_mass_max: float = 100.0
 @export var planet_orbital_distance_base: float = 100000.0  ## Base distance for first planet
@@ -130,14 +132,35 @@ func clear() -> void:
 func _create_sun() -> Planet:
 	var sun = planet_scene.instantiate() as Planet
 	
-	# Sun properties - use RNG with exported ranges
-	sun.radius = RNG.rng.randf_range(sun_radius_min, sun_radius_max)
-	sun.color = Color(
-		RNG.rng.randf_range(sun_color_r_min, sun_color_r_max),
-		RNG.rng.randf_range(sun_color_g_min, sun_color_g_max),
-		RNG.rng.randf_range(sun_color_b_min, sun_color_b_max)
-	)
-	sun.massMultiplier = RNG.rng.randf_range(sun_mass_min, sun_mass_max)
+	# Get sun type data
+	var sun_type_data = _get_type_data(Planet.PlanetType.SUN)
+	if not sun_type_data:
+		push_error("No sun type data found!")
+		sun_type_data = planet_type_data[0] if planet_type_data.size() > 0 else null
+	
+	# Set sun type
+	sun.planet_type = Planet.PlanetType.SUN
+	
+	# Sun properties - use RNG with exported ranges or type data
+	if sun_type_data:
+		sun.radius = sun_type_data.get_random_radius(RNG.rng)
+		sun.color = sun_type_data.get_random_color(RNG.rng)
+		sun.massMultiplier = sun_type_data.get_mass_multiplier(sun.radius, RNG.rng)
+		sun.collision_radius_ratio = sun_type_data.collision_radius_ratio
+		sun.habitability = sun_type_data.habitability
+	else:
+		# Fallback to old method if no type data
+		sun.radius = RNG.rng.randf_range(sun_radius_min, sun_radius_max)
+		sun.color = Color(
+			RNG.rng.randf_range(sun_color_r_min, sun_color_r_max),
+			RNG.rng.randf_range(sun_color_g_min, sun_color_g_max),
+			RNG.rng.randf_range(sun_color_b_min, sun_color_b_max)
+		)
+		sun.massMultiplier = RNG.rng.randf_range(sun_mass_min, sun_mass_max)
+	
+	# Increase gravitational constant for sun (much stronger gravity)
+	sun.gravitational_constant = sun_gravitational_constant
+	
 	sun.enable_orbiting = false
 	sun.show_orbit_path = false
 	sun.position = Vector2.ZERO

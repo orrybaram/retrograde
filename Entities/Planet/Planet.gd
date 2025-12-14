@@ -2,8 +2,8 @@ extends RigidBody2D
 class_name Planet
 
 ## Planet types that determine appearance and behavior
-enum PlanetType { GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARREN }
-
+enum PlanetType { SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARREN }
+ 
 @export var radius: float = 160.0
 @export var gravitational_constant: float = 4.0  # G constant for scaling
 @export var color: Color = Color(0.15, 0.6, 0.9) : set = _set_color

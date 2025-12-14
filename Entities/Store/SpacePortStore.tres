@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StoreData" load_steps=6 format=3 uid="uid://lltn0cexcj8y"]
+
+[ext_resource type="Script" path="res://entities/Store/StoreData.gd" id="1"]
+[ext_resource type="Resource" uid="uid://c8l4yamtxt5b5" path="res://entities/Upgrades/items/Hull_1.tres" id="2"]
+[ext_resource type="Script" path="res://entities/Upgrades/UpgradeItem.gd" id="2_47uo8"]
+[ext_resource type="Resource" uid="uid://b1sf4p0sgjlyy" path="res://entities/Upgrades/items/Hull_2.tres" id="3"]
+[ext_resource type="Resource" uid="uid://cq2nbvmp1pkpc" path="res://entities/Upgrades/items/Hull_3.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+store_name = "Space Port Store"
+upgrades = Array[ExtResource("2_47uo8")]([ExtResource("2"), ExtResource("3"), ExtResource("4")])
+
