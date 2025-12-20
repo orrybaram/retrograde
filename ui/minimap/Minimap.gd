@@ -10,7 +10,7 @@ class_name Minimap
 @export var world_range: float = 25000.0
 
 ## Planet size scaling
-@export var planet_size_multiplier: float = 2.0  ## Multiplier to make planets visible on minimap
+@export var planet_size_multiplier: float = 1.0  ## Multiplier to make planets visible on minimap
 
 ## Colors
 @export var background_color: Color = Color(0.0, 0.0, 0.0, 0.8)

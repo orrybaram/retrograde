@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PlanetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/generation/PlanetDefinition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+planet_name = "Venus"
+planet_type = 4
+radius = 1920.0
+mass_multiplier = 28.0
+color = Color(0.85, 0.7, 0.5, 1)
+habitability = 0.1
+collision_radius_ratio = 1.0
+use_procedural_orbit = true
+orbital_distance = 100000.0
+orbital_speed_multiplier = 1.0
+eccentricity = 0.02
+initial_angle = 2.1
+

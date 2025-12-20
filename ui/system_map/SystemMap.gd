@@ -15,8 +15,8 @@ signal map_closed
 
 @export_group("Display")
 @export var padding: float = 80.0  ## Padding from screen edges
-@export var planet_size_multiplier: float = 4.0  ## Multiplier for planet size (0.5 = half actual size for visibility)
-@export var sun_size_multiplier: float = 4.0  ## Multiplier for sun size
+@export var planet_size_multiplier: float = 1.0  ## Multiplier for planet size (0.5 = half actual size for visibility)
+@export var sun_size_multiplier: float = 1.0  ## Multiplier for sun size
 @export var ship_size: float = 8.0  ## Ship indicator size
 @export var grid_ring_count: int = 5  ## Number of grid rings
 

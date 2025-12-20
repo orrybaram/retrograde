@@ -1,11 +1,17 @@
 extends Node
 class_name SolarSystemGenerator
 
-## Procedural solar system generator with planet types
+## Solar system generator supporting both predefined and procedural generation
 
 signal generation_complete(spawn_position: Vector2)
 
+enum GenerationMode { PREDEFINED, PROCEDURAL }
+
 @export var planet_scene: PackedScene = preload("res://entities/Planet/Planet.tscn")
+
+@export_group("Generation Mode")
+@export var generation_mode: GenerationMode = GenerationMode.PREDEFINED
+@export var predefined_system: SolarSystemData = preload("res://scripts/generation/systems/home_system.tres")
 
 ## Planet type data resources - loaded from .tres files
 @export_group("Planet Type Data")
@@ -89,12 +95,47 @@ var _current_orbital_distance: float = 0.0  # Tracks cumulative orbital distance
 func _ready() -> void:
 	add_to_group("solar_system_generator")
 
-## Generate the solar system
+## Generate the solar system based on current generation mode
 func generate() -> void:
-	print("Generating solar system with seed: ", RNG.seed_value)
-	
 	# Clear any existing generation
 	clear()
+	
+	if generation_mode == GenerationMode.PREDEFINED and predefined_system:
+		_generate_from_data(predefined_system)
+	else:
+		_generate_procedural()
+	
+	generation_complete.emit(ship_spawn_position)
+
+## Generate solar system from predefined data
+func _generate_from_data(system_data: SolarSystemData) -> void:
+	print("Generating predefined solar system: ", system_data.system_name)
+	
+	# Create sun from predefined data
+	generated_sun = _create_sun_from_data(system_data)
+	
+	# Initialize orbital distance tracking (uses same procedural spacing rules)
+	_current_orbital_distance = planet_orbital_distance_base
+	
+	# Create planets from definitions
+	for i in range(system_data.planets.size()):
+		var planet_def = system_data.planets[i] as PlanetDefinition
+		if planet_def:
+			var planet = _create_planet_from_definition(planet_def, i, system_data.planets.size())
+			generated_planets.append(planet)
+	
+	# Calculate ship spawn position
+	ship_spawn_position = Vector2(generated_sun.radius + system_data.ship_spawn_distance, 0)
+	
+	print("Predefined solar system generated!")
+	print("  System: ", system_data.system_name)
+	print("  Sun radius: ", generated_sun.radius)
+	print("  Planets: ", generated_planets.size())
+	print("  Ship spawn: ", ship_spawn_position)
+
+## Generate solar system procedurally
+func _generate_procedural() -> void:
+	print("Generating procedural solar system with seed: ", RNG.seed_value)
 	
 	# Generate the sun
 	generated_sun = _create_sun()
@@ -110,12 +151,10 @@ func generate() -> void:
 	# Calculate ship spawn position (near the sun)
 	ship_spawn_position = Vector2(generated_sun.radius + ship_spawn_distance, 0)
 	
-	print("Solar system generated!")
+	print("Procedural solar system generated!")
 	print("  Sun radius: ", generated_sun.radius)
 	print("  Planets: ", generated_planets.size())
 	print("  Ship spawn: ", ship_spawn_position)
-	
-	generation_complete.emit(ship_spawn_position)
 
 ## Clear generated content
 func clear() -> void:
@@ -171,7 +210,74 @@ func _create_sun() -> Planet:
 	
 	return sun
 
-## Create a planet at the given orbit index
+## Create the central sun from predefined data
+func _create_sun_from_data(system_data: SolarSystemData) -> Planet:
+	var sun = planet_scene.instantiate() as Planet
+	
+	sun.planet_type = Planet.PlanetType.SUN
+	sun.radius = system_data.sun_radius
+	sun.color = system_data.sun_color
+	sun.massMultiplier = system_data.sun_mass_multiplier
+	sun.gravitational_constant = system_data.sun_gravitational_constant
+	sun.collision_radius_ratio = 1.0
+	sun.habitability = 0.0
+	
+	sun.enable_orbiting = false
+	sun.show_orbit_path = false
+	sun.position = Vector2.ZERO
+	sun.name = "Sun"
+	
+	get_parent().add_child(sun)
+	
+	return sun
+
+## Create a planet from a PlanetDefinition resource
+func _create_planet_from_definition(planet_def: PlanetDefinition, orbit_index: int, total_planets: int) -> Planet:
+	var planet = planet_scene.instantiate() as Planet
+	
+	# Set properties from definition
+	planet.planet_type = planet_def.planet_type
+	planet.radius = planet_def.radius
+	planet.color = planet_def.color
+	planet.collision_radius_ratio = planet_def.collision_radius_ratio
+	planet.habitability = planet_def.habitability
+	planet.massMultiplier = planet_def.mass_multiplier
+	
+	# Orbital distance - use procedural spacing or explicit value
+	if planet_def.use_procedural_orbit:
+		planet.orbital_distance = _current_orbital_distance
+		
+		# Calculate multiplier for next planet's orbit (same rules as procedural)
+		var next_multiplier: float
+		var allow_gap = orbit_index >= 2 and orbit_index < total_planets - 2
+		if allow_gap and RNG.rng.randf() < planet_orbital_gap_chance:
+			next_multiplier = planet_orbital_gap_multiplier * RNG.rng.randf_range(0.9, 1.1)
+		else:
+			next_multiplier = RNG.rng.randf_range(planet_orbital_multiplier_min, planet_orbital_multiplier_max)
+		
+		_current_orbital_distance *= next_multiplier
+	else:
+		planet.orbital_distance = planet_def.orbital_distance
+	
+	# Orbital speed - inversely proportional to distance (Kepler's 3rd law)
+	var base_speed = planet_orbital_speed_base / sqrt(planet.orbital_distance / planet_orbital_distance_base)
+	planet.orbital_speed = base_speed * planet_def.orbital_speed_multiplier
+	
+	# Use defined values for angle and eccentricity
+	planet.initial_angle = planet_def.initial_angle
+	planet.eccentricity = planet_def.eccentricity
+	
+	# Planet name from definition
+	planet.name = planet_def.planet_name
+	
+	# Add as child of sun so it orbits
+	generated_sun.add_child(planet)
+	
+	print("  Created: ", planet.name, " - Radius: ", int(planet.radius), ", Habitability: ", "%.1f" % planet.habitability)
+	
+	return planet
+
+## Create a planet at the given orbit index (procedural)
 func _create_planet(orbit_index: int) -> Planet:
 	var planet = planet_scene.instantiate() as Planet
 	
