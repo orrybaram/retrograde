@@ -8,12 +8,12 @@ class_name ProgressBarWidget
 @onready var fill_rect: ColorRect = $"FillRect"
 @onready var label: Label = $"Label"
 
-@export var bar_color: Color = Color(1.0, 0.75, 0.0) :
+@export var bar_color: Color = Colors.PRIMARY :
 	set(value):
 		bar_color = value
 		_update_colors()
 
-@export var background_color: Color = Color(0, 0, 0, 1) :
+@export var background_color: Color = Colors.UI_BACKGROUND_SOLID :
 	set(value):
 		background_color = value
 		_update_colors()

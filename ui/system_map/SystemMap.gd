@@ -6,13 +6,13 @@ class_name SystemMap
 signal map_closed
 
 @export_group("Colors")
-@export var background_color: Color = Color(0.0, 0.0, 0.0, 0.9)
-@export var border_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
-@export var grid_color: Color = Color(1.0, 0.75, 0.0, 0.15)  # Faded amber
-@export var orbit_color: Color = Color(1.0, 0.75, 0.0, 0.4)  # Planet orbit path color
-@export var moon_orbit_color: Color = Color(0.5, 0.75, 1.0, 0.5)  # Moon orbit path color (more visible)
-@export var sun_color: Color = Color(1.0, 0.9, 0.5, 1.0)  # Yellow-ish
-@export var ship_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
+@export var background_color: Color = Colors.UI_BACKGROUND
+@export var border_color: Color = Colors.UI_BORDER
+@export var grid_color: Color = Colors.PRIMARY_SUBTLE
+@export var orbit_color: Color = Colors.PRIMARY_FADED
+@export var moon_orbit_color: Color = Colors.MOON_ORBIT
+@export var sun_color: Color = Colors.SUN
+@export var ship_color: Color = Colors.PRIMARY
 
 @export_group("Display")
 @export var padding: float = 80.0  ## Padding from screen edges

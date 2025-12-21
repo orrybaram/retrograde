@@ -13,10 +13,10 @@ class_name Minimap
 @export var planet_size_multiplier: float = 1.0  ## Multiplier to make planets visible on minimap
 
 ## Colors
-@export var background_color: Color = Color(0.0, 0.0, 0.0, 0.8)
-@export var border_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
-@export var ring_color: Color = Color(1.0, 0.75, 0.0, 0.3)  # Faded amber
-@export var ship_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
+@export var background_color: Color = Colors.UI_BACKGROUND_LIGHT
+@export var border_color: Color = Colors.UI_BORDER
+@export var ring_color: Color = Colors.PRIMARY_MEDIUM
+@export var ship_color: Color = Colors.PRIMARY
 
 ## Whether to rotate the minimap with the ship's heading
 @export var rotate_with_ship: bool = false

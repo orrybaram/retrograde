@@ -3,7 +3,7 @@ class_name IndicatorManager
 
 ## Central manager that tracks all indicator targets and displays a single indicator at a time.
 
-@export var indicator_color: Color = Color(0.5, 0.8, 1.0, 1.0)
+@export var indicator_color: Color = Colors.INDICATOR
 @export var info_box_offset: Vector2 = Vector2(150, -80)  # Offset from bracket to info box
 
 var targets: Array[IndicatorTarget] = []
