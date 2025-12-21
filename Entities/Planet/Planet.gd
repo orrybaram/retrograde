@@ -16,7 +16,7 @@ enum PlanetType { SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARR
 
 # Orbital parameters
 @export var orbital_distance: float = 500.0  # Distance from parent planet center
-@export var orbital_speed: float = 0.05  # Angular velocity in radians per second
+@export var orbital_speed: float = 0.0001  # Angular velocity in radians per second
 @export var initial_angle: float = 0.0  # Starting angle in radians
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting

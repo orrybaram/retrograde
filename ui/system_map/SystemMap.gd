@@ -266,21 +266,37 @@ func _draw_orbits() -> void:
 		if planet.parent_planet and planet.parent_planet != generator.generated_sun:
 			continue
 		
-		var orbit_radius = planet.orbital_distance * scale_factor
+		var a = planet.orbital_distance  # semi-major axis
+		var e = clamp(planet.eccentricity, 0.0, 0.99) if "eccentricity" in planet else 0.0
 		
 		# Draw orbit path (dotted effect using segments)
 		var segments = 64
 		var segment_gap = 4  # Every nth segment is skipped for dotted effect
+		
 		for j in range(segments):
 			if j % segment_gap == 0:
 				continue
+			
 			var angle_start = (float(j) / float(segments)) * TAU
 			var angle_end = (float(j + 1) / float(segments)) * TAU
-			draw_arc(orbit_center, orbit_radius, angle_start, angle_end, 2, orbit_color, 1.0)
+			
+			if e == 0.0:
+				# Circular orbit - use simple arc
+				var orbit_radius = a * scale_factor
+				draw_arc(orbit_center, orbit_radius, angle_start, angle_end, 2, orbit_color, 1.0)
+			else:
+				# Elliptical orbit - draw line segment following the ellipse
+				# r = a * (1 - e²) / (1 + e * cos(θ))
+				var r_start = a * (1.0 - e * e) / (1.0 + e * cos(angle_start))
+				var r_end = a * (1.0 - e * e) / (1.0 + e * cos(angle_end))
+				
+				var pos_start = orbit_center + Vector2(cos(angle_start), sin(angle_start)) * r_start * scale_factor
+				var pos_end = orbit_center + Vector2(cos(angle_end), sin(angle_end)) * r_end * scale_factor
+				
+				draw_line(pos_start, pos_end, orbit_color, 1.0)
 
 func _draw_moon_orbits() -> void:
-	var orbit_center = map_center + pan_offset
-	var moon_count = 0
+	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
 	
 	for planet in generator.generated_planets:
 		if not planet or not is_instance_valid(planet):
@@ -290,23 +306,40 @@ func _draw_moon_orbits() -> void:
 		if not planet.parent_planet or planet.parent_planet == generator.generated_sun:
 			continue
 		
-		moon_count += 1
+		# Get parent planet's actual position on the map
+		var parent_relative_pos = planet.parent_planet.global_position - sun_pos
+		var parent_map_pos = map_center + pan_offset + parent_relative_pos * scale_factor
 		
-		# Calculate parent planet's current position (same logic as _draw_planets)
-		var parent_orbit_radius = planet.parent_planet.orbital_distance * scale_factor
-		var parent_angle = planet.parent_planet.orbital_angle if "orbital_angle" in planet.parent_planet else atan2(planet.parent_planet.position.y, planet.parent_planet.position.x)
-		var parent_map_pos = orbit_center + Vector2(cos(parent_angle), sin(parent_angle)) * parent_orbit_radius
+		var a = planet.orbital_distance  # semi-major axis
+		var e = clamp(planet.eccentricity, 0.0, 0.99) if "eccentricity" in planet else 0.0
 		
-		# Draw moon orbit around parent planet
-		var moon_orbit_radius = planet.orbital_distance * scale_factor
-		
-		# Ensure minimum visibility - if too small, use a minimum radius
+		# Ensure minimum visibility
 		var min_visible_radius = 5.0  # Minimum pixels for visibility
-		if moon_orbit_radius < min_visible_radius:
-			moon_orbit_radius = min_visible_radius
 		
-		# Draw orbit path as a full circle (moons are small so use solid circle)
-		draw_arc(parent_map_pos, moon_orbit_radius, 0.0, TAU, 64, moon_orbit_color, 1.5)
+		if e == 0.0:
+			# Circular orbit
+			var moon_orbit_radius = a * scale_factor
+			if moon_orbit_radius < min_visible_radius:
+				moon_orbit_radius = min_visible_radius
+			draw_arc(parent_map_pos, moon_orbit_radius, 0.0, TAU, 64, moon_orbit_color, 1.5)
+		else:
+			# Elliptical orbit - draw line segments following the ellipse
+			var segments = 64
+			for j in range(segments):
+				var angle_start = (float(j) / float(segments)) * TAU
+				var angle_end = (float(j + 1) / float(segments)) * TAU
+				
+				var r_start = a * (1.0 - e * e) / (1.0 + e * cos(angle_start))
+				var r_end = a * (1.0 - e * e) / (1.0 + e * cos(angle_end))
+				
+				# Scale to screen space with minimum visibility
+				var screen_r_start = max(r_start * scale_factor, min_visible_radius)
+				var screen_r_end = max(r_end * scale_factor, min_visible_radius)
+				
+				var pos_start = parent_map_pos + Vector2(cos(angle_start), sin(angle_start)) * screen_r_start
+				var pos_end = parent_map_pos + Vector2(cos(angle_end), sin(angle_end)) * screen_r_end
+				
+				draw_line(pos_start, pos_end, moon_orbit_color, 1.5)
 
 func _draw_sun() -> void:
 	var sun = generator.generated_sun
@@ -321,31 +354,15 @@ func _draw_sun() -> void:
 	draw_circle(sun_pos, scaled_sun_size, sun.color)
 
 func _draw_planets() -> void:
-	var orbit_center = map_center + pan_offset
+	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
 	
 	for planet in generator.generated_planets:
 		if not planet or not is_instance_valid(planet):
 			continue
 		
-		var map_pos: Vector2
-		
-		# Check if this is a moon (has a parent planet that is not the sun)
-		if planet.parent_planet and planet.parent_planet != generator.generated_sun:
-			# Moon: calculate position relative to parent planet
-			# First get parent planet's current position
-			var parent_orbit_radius = planet.parent_planet.orbital_distance * scale_factor
-			var parent_angle = planet.parent_planet.orbital_angle if "orbital_angle" in planet.parent_planet else atan2(planet.parent_planet.position.y, planet.parent_planet.position.x)
-			var parent_map_pos = orbit_center + Vector2(cos(parent_angle), sin(parent_angle)) * parent_orbit_radius
-			
-			# Then add moon's orbital offset relative to parent
-			var moon_orbit_radius = planet.orbital_distance * scale_factor
-			var moon_angle = planet.orbital_angle if "orbital_angle" in planet else atan2(planet.position.y, planet.position.x)
-			map_pos = parent_map_pos + Vector2(cos(moon_angle), sin(moon_angle)) * moon_orbit_radius
-		else:
-			# Planet orbiting sun: use actual orbital_angle for alignment with orbit path
-			var orbit_radius = planet.orbital_distance * scale_factor
-			var angle = planet.orbital_angle if "orbital_angle" in planet else atan2(planet.position.y, planet.position.x)
-			map_pos = orbit_center + Vector2(cos(angle), sin(angle)) * orbit_radius
+		# Use actual global_position relative to sun (same as ship positioning)
+		var relative_pos = planet.global_position - sun_pos
+		var map_pos = map_center + pan_offset + relative_pos * scale_factor
 		
 		# Calculate planet size based on actual radius and zoom level, with adjustable multiplier
 		var planet_size = planet.radius * scale_factor * planet_size_multiplier

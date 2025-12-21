@@ -23,7 +23,7 @@ class_name PlanetDefinition
 ## Explicit orbital distance (only used if use_procedural_orbit is false)
 @export var orbital_distance: float = 100000.0
 ## Override for orbital speed multiplier (1.0 = standard Kepler speed)
-@export var orbital_speed_multiplier: float = 1.0
+@export var orbital_speed_multiplier: float = 0.1
 ## Override for eccentricity (0.0 = circular)
 @export var eccentricity: float = 0.0
 ## Initial angle in radians (0.0 = starts at right of sun)

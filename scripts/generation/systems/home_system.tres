@@ -14,6 +14,3 @@ script = ExtResource("1")
 system_name = "Sol"
 sun_radius = 9000.0
 planets = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
-spawn_mode = 0
-spawn_planet_name = "Earth"
-ship_spawn_distance = 5000.0
