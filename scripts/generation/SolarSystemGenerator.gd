@@ -81,7 +81,7 @@ const OUTER_PLANET_WEIGHTS = {
 @export var planet_orbital_multiplier_max: float = 1.8  ## Max multiplier for orbital spacing
 @export var planet_orbital_gap_chance: float = 0.15  ## Chance for a large gap (asteroid belt style)
 @export var planet_orbital_gap_multiplier: float = 2.1  ## Multiplier for large gaps
-@export var planet_orbital_speed_base: float = 0.005  ## Base orbital speed
+@export var planet_orbital_speed_base: float = 0.001  ## Base orbital speed
 @export var planet_eccentricity_max: float = 0.1  ## Maximum orbital eccentricity
 
 @export_group("Ship Spawn")
@@ -101,7 +101,7 @@ func generate() -> void:
 	clear()
 	
 	if generation_mode == GenerationMode.PREDEFINED and predefined_system:
-		_generate_from_data(predefined_system)
+		await _generate_from_data(predefined_system)
 	else:
 		_generate_procedural()
 	
@@ -121,7 +121,7 @@ func _generate_from_data(system_data: SolarSystemData) -> void:
 	for i in range(system_data.planets.size()):
 		var planet_def = system_data.planets[i] as PlanetDefinition
 		if planet_def:
-			var planet = _create_planet_from_definition(planet_def, i, system_data.planets.size())
+			var planet = await _create_planet_from_definition(planet_def, i, system_data.planets.size())
 			generated_planets.append(planet)
 	
 	# Calculate ship spawn position
@@ -275,7 +275,71 @@ func _create_planet_from_definition(planet_def: PlanetDefinition, orbit_index: i
 	
 	print("  Created: ", planet.name, " - Radius: ", int(planet.radius), ", Habitability: ", "%.1f" % planet.habitability)
 	
+	# Create moons for this planet after planet is ready
+	await get_tree().process_frame
+	_create_moons_for_planet(planet, planet_def)
+	
 	return planet
+
+## Create moons for a planet (called after planet is fully in scene tree)
+func _create_moons_for_planet(planet: Planet, planet_def: PlanetDefinition) -> void:
+	for moon_def_resource in planet_def.moons:
+		var moon_def = moon_def_resource as MoonDefinition
+		if moon_def:
+			# Create moon but don't add to scene yet
+			var moon = _create_moon_from_definition(moon_def, planet)
+			# Add moon as child of planet (not sun) - this ensures it orbits the planet
+			planet.add_child(moon)
+			# Explicitly set parent_planet to ensure it's set correctly
+			# This ensures the moon knows to orbit the planet, not the sun
+			moon.parent_planet = planet
+			moon.orbital_angle = moon.initial_angle
+			moon.lock_rotation = true
+			# Set initial position based on orbital parameters
+			var initial_offset = Vector2(cos(moon.initial_angle), sin(moon.initial_angle)) * moon.orbital_distance
+			moon.position = initial_offset
+			generated_planets.append(moon)
+
+## Create a moon from a MoonDefinition resource
+func _create_moon_from_definition(moon_def: MoonDefinition, parent_planet: Planet) -> Planet:
+	var moon = planet_scene.instantiate() as Planet
+	
+	# Moons are always rocky/barren type
+	moon.planet_type = Planet.PlanetType.BARREN
+	
+	# Calculate moon radius as ratio of parent planet radius
+	moon.radius = parent_planet.radius * moon_def.radius_ratio
+	
+	# Moon appearance
+	moon.color = moon_def.color
+	moon.collision_radius_ratio = 1.0
+	moon.habitability = 0.0
+	moon.massMultiplier = moon_def.mass_multiplier
+	
+	# Orbital distance based on parent planet radius
+	moon.orbital_distance = parent_planet.radius * moon_def.orbital_distance_multiplier
+	
+	# Orbital speed - moons orbit faster than planets
+	# Base speed calculation similar to planets but scaled for closer orbits
+	var moon_base_speed = planet_orbital_speed_base * moon_def.orbital_speed_multiplier
+	# Moons are much closer, so they need faster angular velocity
+	moon.orbital_speed = moon_base_speed * (planet_orbital_distance_base / moon.orbital_distance)
+	
+	# Orbital properties
+	moon.initial_angle = moon_def.initial_angle
+	moon.eccentricity = moon_def.eccentricity
+	moon.enable_orbiting = true
+	moon.show_orbit_path = true
+	
+	# Moon name
+	moon.name = moon_def.moon_name
+	
+	# Note: Moon will be added as child of parent planet by caller
+	# This ensures proper scene tree hierarchy
+	
+	print("    Created moon: ", moon.name, " - Radius: ", int(moon.radius), " (orbiting ", parent_planet.name, ")")
+	
+	return moon
 
 ## Create a planet at the given orbit index (procedural)
 func _create_planet(orbit_index: int) -> Planet:

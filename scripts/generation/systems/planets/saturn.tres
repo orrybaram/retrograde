@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="PlanetDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="PlanetDefinition" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/generation/PlanetDefinition.gd" id="1"]
+[ext_resource type="Resource" path="res://scripts/generation/systems/planets/moons/titan.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -13,7 +14,7 @@ habitability = 0.0
 collision_radius_ratio = 0.3
 use_procedural_orbit = true
 orbital_distance = 100000.0
-orbital_speed_multiplier = 1.0
 eccentricity = 0.03
 initial_angle = 3.8
+moons = Array[Resource]([ExtResource("2")])
 

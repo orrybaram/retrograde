@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MoonDefinition" load_steps=2 format=3 uid="uid://bfhjebqqb4a5d"]
+
+[ext_resource type="Script" uid="uid://cglvbte5x3cm2" path="res://scripts/generation/MoonDefinition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+moon_name = "Io"
+radius_ratio = 0.29
+mass_multiplier = 2.5
+color = Color(0.9, 0.8, 0.6, 1)
+eccentricity = 0.004

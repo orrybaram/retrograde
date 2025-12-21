@@ -46,6 +46,7 @@ planet_orbital_distance_base = 50000.0
 mass = 3.0
 angular_damp_mode = 1
 fuel_consumption_rate = 2.0
+max_fuel = 100000.0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 

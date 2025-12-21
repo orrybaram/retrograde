@@ -113,7 +113,7 @@ func start_game() -> void:
 	# Generate solar system if not already generated
 	if not solar_system_generated and solar_system_generator:
 		get_tree().paused = false
-		solar_system_generator.generate()
+		await solar_system_generator.generate()
 		solar_system_generated = true
 		await get_tree().process_frame
 	

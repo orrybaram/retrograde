@@ -9,7 +9,8 @@ signal map_closed
 @export var background_color: Color = Color(0.0, 0.0, 0.0, 0.9)
 @export var border_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
 @export var grid_color: Color = Color(1.0, 0.75, 0.0, 0.15)  # Faded amber
-@export var orbit_color: Color = Color(1.0, 0.75, 0.0, 0.4)  # Orbit path color
+@export var orbit_color: Color = Color(1.0, 0.75, 0.0, 0.4)  # Planet orbit path color
+@export var moon_orbit_color: Color = Color(0.5, 0.75, 1.0, 0.5)  # Moon orbit path color (more visible)
 @export var sun_color: Color = Color(1.0, 0.9, 0.5, 1.0)  # Yellow-ish
 @export var ship_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
 
@@ -180,8 +181,11 @@ func _draw() -> void:
 	# Draw grid rings
 	# _draw_grid()
 	
-	# Draw orbital paths
+	# Draw orbital paths (planets around sun)
 	_draw_orbits()
+	
+	# Draw moon orbital paths (moons around planets)
+	_draw_moon_orbits()
 	
 	# Draw sun
 	_draw_sun()
@@ -240,6 +244,12 @@ func _draw_orbits() -> void:
 		if not planet or not is_instance_valid(planet):
 			continue
 		
+		# Only draw orbits for planets orbiting the sun
+		# Planets orbiting the sun have parent_planet == generated_sun (or null for backwards compatibility)
+		# Moons have parent_planet == a planet (not the sun)
+		if planet.parent_planet and planet.parent_planet != generator.generated_sun:
+			continue
+		
 		var orbit_radius = planet.orbital_distance * scale_factor
 		
 		# Draw orbit path (dotted effect using segments)
@@ -251,6 +261,36 @@ func _draw_orbits() -> void:
 			var angle_start = (float(j) / float(segments)) * TAU
 			var angle_end = (float(j + 1) / float(segments)) * TAU
 			draw_arc(orbit_center, orbit_radius, angle_start, angle_end, 2, orbit_color, 1.0)
+
+func _draw_moon_orbits() -> void:
+	var orbit_center = map_center + pan_offset
+	var moon_count = 0
+	
+	for planet in generator.generated_planets:
+		if not planet or not is_instance_valid(planet):
+			continue
+		
+		# Only draw orbits for moons (planets with a parent that is not the sun)
+		if not planet.parent_planet or planet.parent_planet == generator.generated_sun:
+			continue
+		
+		moon_count += 1
+		
+		# Calculate parent planet's current position (same logic as _draw_planets)
+		var parent_orbit_radius = planet.parent_planet.orbital_distance * scale_factor
+		var parent_angle = planet.parent_planet.orbital_angle if "orbital_angle" in planet.parent_planet else atan2(planet.parent_planet.position.y, planet.parent_planet.position.x)
+		var parent_map_pos = orbit_center + Vector2(cos(parent_angle), sin(parent_angle)) * parent_orbit_radius
+		
+		# Draw moon orbit around parent planet
+		var moon_orbit_radius = planet.orbital_distance * scale_factor
+		
+		# Ensure minimum visibility - if too small, use a minimum radius
+		var min_visible_radius = 5.0  # Minimum pixels for visibility
+		if moon_orbit_radius < min_visible_radius:
+			moon_orbit_radius = min_visible_radius
+		
+		# Draw orbit path as a full circle (moons are small so use solid circle)
+		draw_arc(parent_map_pos, moon_orbit_radius, 0.0, TAU, 64, moon_orbit_color, 1.5)
 
 func _draw_sun() -> void:
 	var sun = generator.generated_sun
@@ -271,11 +311,25 @@ func _draw_planets() -> void:
 		if not planet or not is_instance_valid(planet):
 			continue
 		
-		# Calculate planet position on orbit circle (ignoring eccentricity for display)
-		# Use the orbital_distance and current orbital_angle
-		var orbit_radius = planet.orbital_distance * scale_factor
-		var angle = planet.orbital_angle if "orbital_angle" in planet else atan2(planet.position.y, planet.position.x)
-		var map_pos = orbit_center + Vector2(cos(angle), sin(angle)) * orbit_radius
+		var map_pos: Vector2
+		
+		# Check if this is a moon (has a parent planet that is not the sun)
+		if planet.parent_planet and planet.parent_planet != generator.generated_sun:
+			# Moon: calculate position relative to parent planet
+			# First get parent planet's current position
+			var parent_orbit_radius = planet.parent_planet.orbital_distance * scale_factor
+			var parent_angle = planet.parent_planet.orbital_angle if "orbital_angle" in planet.parent_planet else atan2(planet.parent_planet.position.y, planet.parent_planet.position.x)
+			var parent_map_pos = orbit_center + Vector2(cos(parent_angle), sin(parent_angle)) * parent_orbit_radius
+			
+			# Then add moon's orbital offset relative to parent
+			var moon_orbit_radius = planet.orbital_distance * scale_factor
+			var moon_angle = planet.orbital_angle if "orbital_angle" in planet else atan2(planet.position.y, planet.position.x)
+			map_pos = parent_map_pos + Vector2(cos(moon_angle), sin(moon_angle)) * moon_orbit_radius
+		else:
+			# Planet orbiting sun: use actual orbital_angle for alignment with orbit path
+			var orbit_radius = planet.orbital_distance * scale_factor
+			var angle = planet.orbital_angle if "orbital_angle" in planet else atan2(planet.position.y, planet.position.x)
+			map_pos = orbit_center + Vector2(cos(angle), sin(angle)) * orbit_radius
 		
 		# Calculate planet size based on actual radius and zoom level, with adjustable multiplier
 		var planet_size = planet.radius * scale_factor * planet_size_multiplier

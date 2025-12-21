@@ -29,3 +29,7 @@ class_name PlanetDefinition
 ## Initial angle in radians (0.0 = starts at right of sun)
 @export var initial_angle: float = 0.0
 
+@export_group("Moons")
+## Array of moon definitions orbiting this planet
+@export var moons: Array[Resource] = []
+
