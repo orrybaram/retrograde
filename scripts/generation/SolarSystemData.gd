@@ -3,6 +3,8 @@ class_name SolarSystemData
 
 ## Resource defining a complete solar system with predefined planets
 
+enum SpawnMode { NEAR_PLANET, NEAR_SUN, AT_POSITION }
+
 @export var system_name: String = "Unknown System"
 
 @export_group("Sun Properties")
@@ -16,5 +18,11 @@ class_name SolarSystemData
 @export var planets: Array[Resource] = []
 
 @export_group("Ship Spawn")
-@export var ship_spawn_distance: float = 5000.0  ## Distance from sun surface to spawn ship
+@export var spawn_mode: SpawnMode = SpawnMode.NEAR_PLANET
+## Name of the planet to spawn near (only used if spawn_mode is NEAR_PLANET)
+@export var spawn_planet_name: String = "Earth"
+## Explicit spawn position (only used if spawn_mode is AT_POSITION)
+@export var spawn_position: Vector2 = Vector2.ZERO
+## Distance offset from planet surface or sun surface
+@export var ship_spawn_distance: float = 5000.0
 

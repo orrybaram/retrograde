@@ -3,7 +3,7 @@ class_name SolarSystemGenerator
 
 ## Solar system generator supporting both predefined and procedural generation
 
-signal generation_complete(spawn_position: Vector2)
+signal generation_complete()
 
 enum GenerationMode { PREDEFINED, PROCEDURAL }
 
@@ -84,12 +84,8 @@ const OUTER_PLANET_WEIGHTS = {
 @export var planet_orbital_speed_base: float = 0.001  ## Base orbital speed
 @export var planet_eccentricity_max: float = 0.1  ## Maximum orbital eccentricity
 
-@export_group("Ship Spawn")
-@export var ship_spawn_distance: float = 5000.0  ## Distance from sun surface to spawn ship
-
 var generated_sun: Planet = null
 var generated_planets: Array[Planet] = []
-var ship_spawn_position: Vector2 = Vector2.ZERO
 var _current_orbital_distance: float = 0.0  # Tracks cumulative orbital distance during generation
 
 func _ready() -> void:
@@ -105,7 +101,7 @@ func generate() -> void:
 	else:
 		_generate_procedural()
 	
-	generation_complete.emit(ship_spawn_position)
+	generation_complete.emit()
 
 ## Generate solar system from predefined data
 func _generate_from_data(system_data: SolarSystemData) -> void:
@@ -124,14 +120,10 @@ func _generate_from_data(system_data: SolarSystemData) -> void:
 			var planet = await _create_planet_from_definition(planet_def, i, system_data.planets.size())
 			generated_planets.append(planet)
 	
-	# Calculate ship spawn position
-	ship_spawn_position = Vector2(generated_sun.radius + system_data.ship_spawn_distance, 0)
-	
 	print("Predefined solar system generated!")
 	print("  System: ", system_data.system_name)
 	print("  Sun radius: ", generated_sun.radius)
 	print("  Planets: ", generated_planets.size())
-	print("  Ship spawn: ", ship_spawn_position)
 
 ## Generate solar system procedurally
 func _generate_procedural() -> void:
@@ -148,13 +140,9 @@ func _generate_procedural() -> void:
 		var planet = _create_planet(i)
 		generated_planets.append(planet)
 	
-	# Calculate ship spawn position (near the sun)
-	ship_spawn_position = Vector2(generated_sun.radius + ship_spawn_distance, 0)
-	
 	print("Procedural solar system generated!")
 	print("  Sun radius: ", generated_sun.radius)
 	print("  Planets: ", generated_planets.size())
-	print("  Ship spawn: ", ship_spawn_position)
 
 ## Clear generated content
 func clear() -> void:
@@ -166,6 +154,12 @@ func clear() -> void:
 	if generated_sun and is_instance_valid(generated_sun):
 		generated_sun.queue_free()
 	generated_sun = null
+
+## Get the current SolarSystemData (for ShipSpawner to access spawn configuration)
+func get_current_system_data() -> SolarSystemData:
+	if generation_mode == GenerationMode.PREDEFINED:
+		return predefined_system
+	return null
 
 ## Create the central sun
 func _create_sun() -> Planet:
@@ -406,10 +400,6 @@ func _create_planet(orbit_index: int) -> Planet:
 	print("  Created: ", planet.name, " - Radius: ", int(planet.radius), ", Habitability: ", "%.1f" % planet.habitability)
 	
 	return planet
-
-## Get spawn position for the ship
-func get_ship_spawn_position() -> Vector2:
-	return ship_spawn_position
 
 ## Select a planet type based on weighted random selection
 func _select_planet_type(orbit_index: int) -> Planet.PlanetType:

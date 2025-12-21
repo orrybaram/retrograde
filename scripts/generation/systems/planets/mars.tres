@@ -1,21 +1,16 @@
-[gd_resource type="Resource" script_class="PlanetDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="PlanetDefinition" load_steps=4 format=3 uid="uid://dgnlabrvv04v1"]
 
-[ext_resource type="Script" path="res://scripts/generation/PlanetDefinition.gd" id="1"]
-[ext_resource type="Resource" path="res://scripts/generation/systems/planets/moons/phobos.tres" id="2"]
-[ext_resource type="Resource" path="res://scripts/generation/systems/planets/moons/deimos.tres" id="3"]
+[ext_resource type="Script" uid="uid://clxaosg5mim88" path="res://scripts/generation/PlanetDefinition.gd" id="1"]
+[ext_resource type="Resource" uid="uid://c5pj20x1y4f13" path="res://scripts/generation/systems/planets/moons/phobos.tres" id="2"]
+[ext_resource type="Resource" uid="uid://dbc78bbaehhyo" path="res://scripts/generation/systems/planets/moons/deimos.tres" id="3"]
 
 [resource]
 script = ExtResource("1")
 planet_name = "Mars"
-planet_type = 4
 radius = 1320.0
 mass_multiplier = 18.0
 color = Color(0.75, 0.35, 0.2, 1)
 habitability = 0.2
-collision_radius_ratio = 1.0
-use_procedural_orbit = true
-orbital_distance = 100000.0
 eccentricity = 0.05
 initial_angle = 1.0
 moons = Array[Resource]([ExtResource("2"), ExtResource("3")])
-

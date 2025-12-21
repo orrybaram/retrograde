@@ -84,8 +84,24 @@ func open_map() -> void:
 	if zoom_level == 0.0 or zoom_level < min_zoom_level:
 		zoom_level = default_zoom_level
 	
-	# Reset pan offset (but preserve zoom)
-	pan_offset = Vector2.ZERO
+	# Calculate scale first (needed for centering calculation)
+	map_center = size / 2.0
+	_calculate_scale()
+	
+	# Center on player ship
+	if ship and is_instance_valid(ship) and generator and generator.generated_sun:
+		var sun_pos = generator.generated_sun.global_position
+		var relative_pos = ship.global_position - sun_pos
+		# Pan offset should position ship at map center
+		# Ship map pos = map_center + pan_offset + relative_pos * scale_factor
+		# To center ship: map_center = map_center + pan_offset + relative_pos * scale_factor
+		# Therefore: pan_offset = -relative_pos * scale_factor
+		pan_offset = -relative_pos * scale_factor
+		# Clamp pan offset to valid bounds
+		pan_offset = _clamp_pan_offset(pan_offset)
+	else:
+		# Fallback: center on sun if ship not available
+		pan_offset = Vector2.ZERO
 	
 	visible = true
 

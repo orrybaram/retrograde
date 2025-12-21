@@ -132,12 +132,15 @@ func _draw_target(center: Vector2, target: MinimapTarget, ship_rotation: float) 
 			draw_circle(screen_pos, target_size, target_color)
 
 func _draw_ship_indicator(center: Vector2) -> void:
-	# Draw a small triangle pointing in the ship's direction
-	var ship_size = 6.0
-	# Triangle points UP at angle 0, but ship rotation 0 = RIGHT, so add PI/2
-	var angle = 0.0
-	
-	_draw_triangle(center, ship_size, ship_color, angle)
+	# Draw a crosshair at the center
+	_draw_crosshair(center, 6.0, ship_color)
+
+func _draw_crosshair(pos: Vector2, marker_size: float, color: Color) -> void:
+	var line_width = 1.5
+	# Horizontal line
+	draw_line(pos + Vector2(-marker_size, 0), pos + Vector2(marker_size, 0), color, line_width)
+	# Vertical line
+	draw_line(pos + Vector2(0, -marker_size), pos + Vector2(0, marker_size), color, line_width)
 
 func _draw_triangle(pos: Vector2, marker_size: float, color: Color, angle: float) -> void:
 	var points = PackedVector2Array()

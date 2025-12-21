@@ -11,6 +11,7 @@ enum MainGameState {
 @onready var game_over_menu: GameOverMenu = $"CanvasLayer/GameOverMenu"
 @onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
 @onready var solar_system_generator: SolarSystemGenerator = $"SolarSystemGenerator"
+@onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 
 var current_game_state: MainGameState = MainGameState.MENU
@@ -115,12 +116,12 @@ func start_game() -> void:
 		get_tree().paused = false
 		await solar_system_generator.generate()
 		solar_system_generated = true
+		# Wait for ShipSpawner to complete spawning (via generation_complete signal)
+		if ship_spawner:
+			await ship_spawner.spawn_complete
 		await get_tree().process_frame
 	
-	# Spawn ship at generated position
-	await _spawn_ship_at_position(solar_system_generator.get_ship_spawn_position())
-	
-	# Show ship after spawning
+	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = true
 	
@@ -171,37 +172,12 @@ func reset_game() -> void:
 	if gs:
 		gs.clear_cargo()
 	
-	# Respawn ship at generated position
-	if solar_system_generator:
-		await _spawn_ship_at_position(solar_system_generator.get_ship_spawn_position())
+	# Respawn ship using ShipSpawner
+	if ship_spawner:
+		await ship_spawner.spawn_from_system_data()
 	
 	# Hide game over menu and unpause
 	if game_over_menu:
 		game_over_menu.hide_menu()
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
-
-func _spawn_ship_at_position(spawn_position: Vector2) -> void:
-	if not ship:
-		return
-	
-	# Wait for a frame to ensure everything is initialized
-	await get_tree().process_frame
-	
-	# Temporarily unpause for physics if needed
-	var was_paused = get_tree().paused
-	if was_paused:
-		get_tree().paused = false
-		await get_tree().physics_frame
-		get_tree().paused = true
-	
-	if not is_instance_valid(ship):
-		return
-	
-	# Position ship at spawn location
-	ship.global_position = spawn_position
-	ship.rotation = 0  # Point right
-	ship.linear_velocity = Vector2.ZERO
-	ship.angular_velocity = 0.0
-	
-	print("Ship spawned at: ", ship.global_position)
