@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PlanetDefinition" load_steps=6 format=3 uid="uid://caew8ypk5ft7b"]
+
+[ext_resource type="Script" uid="uid://clxaosg5mim88" path="res://scripts/generation/PlanetDefinition.gd" id="1"]
+[ext_resource type="Resource" uid="uid://bfhjebqqb4a5d" path="res://scripts/generation/systems/planets/moons/io.tres" id="2"]
+[ext_resource type="Resource" uid="uid://cwiris0x1lvkn" path="res://scripts/generation/systems/planets/moons/europa.tres" id="3"]
+[ext_resource type="Resource" uid="uid://ygouybuar2ad" path="res://scripts/generation/systems/planets/moons/ganymede.tres" id="4"]
+[ext_resource type="Resource" uid="uid://ckt7w1msa2d6q" path="res://scripts/generation/systems/planets/moons/callisto.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+planet_name = "Jupiter"
+planet_type = 1
+radius = 7200.0
+mass_multiplier = 120.0
+color = Color(0.8, 0.7, 0.55, 1)
+collision_radius_ratio = 0.3
+eccentricity = 0.04
+initial_angle = 5.5
+moons = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])

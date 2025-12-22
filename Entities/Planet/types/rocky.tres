@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PlanetTypeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/Planet/types/PlanetTypeData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+type_name = "Rocky"
+planet_type = 3
+radius_min = 150.0
+radius_max = 300.0
+collision_radius_ratio = 1.0
+mass_multiplier_base = 20.0
+habitability = 0.2
+color_palette = Array[Color]([Color(0.5, 0.4, 0.3, 1), Color(0.6, 0.5, 0.4, 1), Color(0.4, 0.4, 0.4, 1), Color(0.55, 0.45, 0.35, 1)])
+

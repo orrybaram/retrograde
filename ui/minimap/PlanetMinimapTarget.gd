@@ -24,9 +24,16 @@ func get_minimap_icon() -> String:
 
 func get_minimap_size() -> float:
 	if planet and is_instance_valid(planet):
-		# Scale the marker size based on planet radius
-		# Clamp between 3 and 12 pixels
-		return clamp(planet.radius / 100.0, 3.0, 12.0)
+		# Scale the marker size based on actual planet radius
+		# Scale to minimap coordinates (world_range maps to display_radius)
+		# Get minimap reference to access world_range and planet_size_multiplier
+		var minimap = Minimap.get_instance(planet.get_tree())
+		if minimap:
+			# Scale planet radius to minimap space, then apply multiplier for visibility
+			var base_size = (planet.radius / minimap.world_range) * minimap.display_radius
+			return base_size * minimap.planet_size_multiplier
+		# Fallback: scale by fixed ratio
+		return planet.radius / 100.0
 	return 4.0
 
 func get_minimap_priority() -> int:

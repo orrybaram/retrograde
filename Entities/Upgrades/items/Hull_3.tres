@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3 uid="uid://cq2nbvmp1pkpc"]
 
-[ext_resource type="Script" uid="uid://dqrdt8a6q8bnj" path="res://scripts/upgrades/UpgradeItem.gd" id="1"]
+[ext_resource type="Script" path="res://entities/Upgrades/UpgradeItem.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -12,3 +12,4 @@ tier = 3
 cost = 120
 effect_target = "max_hull"
 effect_value = 10.0
+

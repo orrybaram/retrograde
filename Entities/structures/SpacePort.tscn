@@ -1,8 +1,8 @@
 [gd_scene load_steps=7 format=3 uid="uid://bk33hils8ufhh"]
 
 [ext_resource type="Script" uid="uid://xcs2jg80xqg2" path="res://entities/structures/SpacePort.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/store/Store.gd" id="2"]
-[ext_resource type="Resource" path="res://scripts/store/SpacePortStore.tres" id="3"]
+[ext_resource type="Script" path="res://entities/Store/Store.gd" id="2"]
+[ext_resource type="Resource" path="res://entities/Store/SpacePortStore.tres" id="3"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_3"]
 size = Vector2(100, 20)

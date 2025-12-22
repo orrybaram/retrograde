@@ -1,14 +1,22 @@
 extends RigidBody2D
 class_name Planet
+
+## Planet types that determine appearance and behavior
+enum PlanetType { SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARREN }
  
 @export var radius: float = 160.0
 @export var gravitational_constant: float = 4.0  # G constant for scaling
 @export var color: Color = Color(0.15, 0.6, 0.9) : set = _set_color
-@export var massMultiplier: float = 1.0;
+@export var massMultiplier: float = 1.0
+
+# Planet type properties
+@export var planet_type: PlanetType = PlanetType.ROCKY
+@export_range(0.0, 1.0) var habitability: float = 0.0  ## 0.0 = uninhabitable, 1.0 = ideal for life
+@export_range(0.0, 1.0) var collision_radius_ratio: float = 1.0  ## Collision radius as ratio of visual radius (gas giants have smaller cores)
 
 # Orbital parameters
 @export var orbital_distance: float = 500.0  # Distance from parent planet center
-@export var orbital_speed: float = 0.05  # Angular velocity in radians per second
+@export var orbital_speed: float = 0.0001  # Angular velocity in radians per second
 @export var initial_angle: float = 0.0  # Starting angle in radians
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting

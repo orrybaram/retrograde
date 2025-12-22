@@ -1,15 +1,12 @@
-[gd_scene load_steps=17 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=19 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
 [ext_resource type="Script" uid="uid://crtq45kcwhvve" path="res://scripts/Economy.gd" id="3"]
 [ext_resource type="Script" uid="uid://1e0civ546gdp" path="res://scripts/Backend.gd" id="4"]
 [ext_resource type="Script" uid="uid://b807jsq0mf0a0" path="res://scripts/ResourceManager.gd" id="5"]
-[ext_resource type="PackedScene" uid="uid://dyj33wc7mamja" path="res://entities/Planet/Planet.tscn" id="6"]
 [ext_resource type="PackedScene" uid="uid://b051ln2ytsesm" path="res://entities/Ship/Ship.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://btfs0vii8ixiq" path="res://ui/HUD.tscn" id="8"]
-[ext_resource type="PackedScene" path="res://entities/resources/ResourceSpawner.tscn" id="9"]
-[ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="9_mwfav"]
 [ext_resource type="Script" path="res://scenes/StarField.gd" id="10"]
 [ext_resource type="PackedScene" uid="uid://bq8x7vj3k2m4n" path="res://ui/StartMenu.tscn" id="11"]
 [ext_resource type="PackedScene" uid="uid://c3lam2n5p7q8r" path="res://ui/GameOverMenu.tscn" id="12"]
@@ -17,7 +14,10 @@
 [ext_resource type="PackedScene" uid="uid://ck61aimutf7gk" path="res://ui/SpacePortDialogue.tscn" id="14"]
 [ext_resource type="PackedScene" path="res://ui/store/StoreUI.tscn" id="15"]
 [ext_resource type="PackedScene" path="res://ui/inventory/InventoryUI.tscn" id="16"]
-[ext_resource type="PackedScene" path="res://ui/minimap/Minimap.tscn" id="17"]
+[ext_resource type="PackedScene" uid="uid://0qhwlfdltlfp" path="res://ui/minimap/Minimap.tscn" id="17"]
+[ext_resource type="Script" uid="uid://dcmhawa14rw0h" path="res://scripts/generation/SolarSystemGenerator.gd" id="18"]
+[ext_resource type="PackedScene" path="res://ui/system_map/SystemMap.tscn" id="19"]
+[ext_resource type="Script" uid="uid://b4chiaxpicref" path="res://scripts/ShipSpawner.gd" id="20"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -39,65 +39,18 @@ script = ExtResource("4")
 [node name="ResourceManager" type="Node" parent="."]
 script = ExtResource("5")
 
+[node name="SolarSystemGenerator" type="Node" parent="."]
+script = ExtResource("18")
+planet_orbital_distance_base = 50000.0
+
+[node name="ShipSpawner" type="Node" parent="."]
+script = ExtResource("20")
+
 [node name="Ship" parent="." instance=ExtResource("7")]
-position = Vector2(2121, -1192)
-rotation = -1.5707964
 mass = 3.0
 angular_damp_mode = 1
 fuel_consumption_rate = 2.0
-
-[node name="Sun" parent="." instance=ExtResource("6")]
-position = Vector2(-648, 9)
-radius = 1600.0
-color = Color(0.9577778, 0.8865211, 0.5121605, 1)
-massMultiplier = 800.0
-enable_orbiting = false
-show_orbit_path = false
-
-[node name="SunStation" parent="Sun" instance=ExtResource("6")]
-position = Vector2(0, 1893)
-radius = 15.0
-color = Color(0.13319641, 0.13319641, 0.13319638, 1)
-massMultiplier = 0.01
-orbital_distance = 1800.0
-orbital_speed = 0.45
-show_gravity_rings = false
-
-[node name="Earth" parent="Sun" instance=ExtResource("6")]
-position = Vector2(7875, 4)
-radius = 800.0
-color = Color(0.22048637, 0.706052, 0.9013243, 1)
-massMultiplier = 100.0
-orbital_distance = 10000.0
-orbital_speed = 0.001
-
-[node name="SpacePort" parent="Sun/Earth" instance=ExtResource("9_mwfav")]
-position = Vector2(0, -803)
-
-[node name="SpacePort2" parent="Sun/Earth" instance=ExtResource("9_mwfav")]
-position = Vector2(803.9995, -12)
-rotation = 1.5707964
-
-[node name="SpacePort3" parent="Sun/Earth" instance=ExtResource("9_mwfav")]
-position = Vector2(817, 884.99994)
-rotation = 2.3369958
-
-[node name="ResourceSpawner" parent="Sun/Earth" instance=ExtResource("9")]
-position = Vector2(-12, 12)
-num_clusters = 4
-min_resources_per_cluster = 1
-max_resources_per_cluster = 5
-min_distance = 1500.0
-max_distance = 2000.0
-orbital_speed = 0.2
-
-[node name="Moon" parent="Sun/Earth" instance=ExtResource("6")]
-position = Vector2(2662, -21)
-radius = 300.0
-color = Color(0.88400614, 0.9361036, 0.9804601, 1)
-massMultiplier = 10.0
-orbital_distance = 4000.0
-orbital_speed = 0.005
+max_fuel = 100000.0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
@@ -116,3 +69,5 @@ orbital_speed = 0.005
 [node name="StoreUI" parent="CanvasLayer" instance=ExtResource("15")]
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("16")]
+
+[node name="SystemMap" parent="CanvasLayer" instance=ExtResource("19")]

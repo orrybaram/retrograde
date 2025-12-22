@@ -7,19 +7,22 @@ class_name Minimap
 @export var display_radius: float = 70.0
 
 ## The world range that the minimap covers (in world units)
-@export var world_range: float = 5000.0
+@export var world_range: float = 25000.0
+
+## Planet size scaling
+@export var planet_size_multiplier: float = 1.0  ## Multiplier to make planets visible on minimap
 
 ## Colors
-@export var background_color: Color = Color(0.0, 0.0, 0.0, 0.8)
-@export var border_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
-@export var ring_color: Color = Color(1.0, 0.75, 0.0, 0.3)  # Faded amber
-@export var ship_color: Color = Color(1.0, 0.75, 0.0, 1.0)  # Amber
+@export var background_color: Color = Colors.UI_BACKGROUND_LIGHT
+@export var border_color: Color = Colors.UI_BORDER
+@export var ring_color: Color = Colors.PRIMARY_MEDIUM
+@export var ship_color: Color = Colors.PRIMARY
 
 ## Whether to rotate the minimap with the ship's heading
 @export var rotate_with_ship: bool = false
 
 ## Number of radar rings to display
-@export var ring_count: int = 3
+@export var ring_count: int = 4
 
 var targets: Array[MinimapTarget] = []
 var ship: Ship = null
@@ -73,7 +76,7 @@ func _draw() -> void:
 		_draw_target(center, target, ship_rotation)
 	
 	# Draw ship indicator at center (always on top)
-	_draw_ship_indicator(center, ship_rotation)
+	_draw_ship_indicator(center)
 
 func _draw_cardinal_indicators(center: Vector2) -> void:
 	var indicator_distance = display_radius + 8
@@ -128,12 +131,16 @@ func _draw_target(center: Vector2, target: MinimapTarget, ship_rotation: float) 
 		_:
 			draw_circle(screen_pos, target_size, target_color)
 
-func _draw_ship_indicator(center: Vector2, ship_rotation: float) -> void:
-	# Draw a small triangle pointing in the ship's direction
-	var ship_size = 6.0
-	var angle = 0.0 if rotate_with_ship else ship_rotation - PI/2
-	
-	_draw_triangle(center, ship_size, ship_color, angle)
+func _draw_ship_indicator(center: Vector2) -> void:
+	# Draw a crosshair at the center
+	_draw_crosshair(center, 6.0, ship_color)
+
+func _draw_crosshair(pos: Vector2, marker_size: float, color: Color) -> void:
+	var line_width = 1.5
+	# Horizontal line
+	draw_line(pos + Vector2(-marker_size, 0), pos + Vector2(marker_size, 0), color, line_width)
+	# Vertical line
+	draw_line(pos + Vector2(0, -marker_size), pos + Vector2(0, marker_size), color, line_width)
 
 func _draw_triangle(pos: Vector2, marker_size: float, color: Color, angle: float) -> void:
 	var points = PackedVector2Array()
@@ -171,4 +178,3 @@ func unregister_target(target: MinimapTarget) -> void:
 static func get_instance(tree: SceneTree) -> Minimap:
 	var minimap = tree.get_first_node_in_group("minimap")
 	return minimap as Minimap
-

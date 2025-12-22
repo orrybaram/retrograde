@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PlanetTypeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/Planet/types/PlanetTypeData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+type_name = "Water"
+planet_type = 4
+radius_min = 200.0
+radius_max = 400.0
+collision_radius_ratio = 1.0
+mass_multiplier_base = 22.0
+habitability = 0.7
+color_palette = Array[Color]([Color(0.1, 0.3, 0.6, 1), Color(0.2, 0.4, 0.7, 1), Color(0.1, 0.5, 0.6, 1), Color(0.15, 0.35, 0.55, 1)])
+

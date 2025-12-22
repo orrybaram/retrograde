@@ -10,8 +10,12 @@ enum MainGameState {
 @onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
 @onready var game_over_menu: GameOverMenu = $"CanvasLayer/GameOverMenu"
 @onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
+@onready var solar_system_generator: SolarSystemGenerator = $"SolarSystemGenerator"
+@onready var ship_spawner: ShipSpawner = $ShipSpawner
+@onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 
 var current_game_state: MainGameState = MainGameState.MENU
+var solar_system_generated: bool = false
 
 func _ready() -> void:
 	# Connect menu signals
@@ -46,10 +50,13 @@ func _input(event: InputEvent) -> void:
 	if current_game_state != MainGameState.PLAYING:
 		return
 	
-	# Handle inventory toggle with "i" key
 	if event is InputEventKey and event.pressed and not event.echo:
+		# Handle inventory toggle with "i" key
 		if event.keycode == KEY_I:
 			_toggle_inventory()
+		# Handle system map toggle with "m" key
+		elif event.keycode == KEY_M:
+			_toggle_system_map()
 
 func _toggle_inventory() -> void:
 	if not inventory_ui:
@@ -60,11 +67,30 @@ func _toggle_inventory() -> void:
 		return
 	if game_over_menu and game_over_menu.visible:
 		return
+	if system_map and system_map.visible:
+		return
 	
 	if inventory_ui.visible:
 		inventory_ui.close_inventory()
 	else:
 		inventory_ui.open_inventory()
+
+func _toggle_system_map() -> void:
+	if not system_map:
+		return
+	
+	# Don't toggle if other menus are open
+	if start_menu and start_menu.visible:
+		return
+	if game_over_menu and game_over_menu.visible:
+		return
+	if inventory_ui and inventory_ui.visible:
+		return
+	
+	if system_map.visible:
+		system_map.close_map()
+	else:
+		system_map.open_map()
 
 func _on_start_game() -> void:
 	await start_game()
@@ -85,10 +111,17 @@ func start_game() -> void:
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
 	
-	# Ensure ship is spawned on Earth when starting (before unpausing)
-	await _spawn_ship_on_earth()
+	# Generate solar system if not already generated
+	if not solar_system_generated and solar_system_generator:
+		get_tree().paused = false
+		await solar_system_generator.generate()
+		solar_system_generated = true
+		# Wait for ShipSpawner to complete spawning (via generation_complete signal)
+		if ship_spawner:
+			await ship_spawner.spawn_complete
+		await get_tree().process_frame
 	
-	# Show ship after spawning
+	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = true
 	
@@ -139,61 +172,12 @@ func reset_game() -> void:
 	if gs:
 		gs.clear_cargo()
 	
-	# Respawn ship on Earth
-	await _spawn_ship_on_earth()
+	# Respawn ship using ShipSpawner
+	if ship_spawner:
+		await ship_spawner.spawn_from_system_data()
 	
 	# Hide game over menu and unpause
 	if game_over_menu:
 		game_over_menu.hide_menu()
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
-
-func _spawn_ship_on_earth() -> void:
-	var earth = get_node_or_null("Sun/Earth") as Planet
-	if not earth or not ship:
-		return
-	
-	# Wait for a frame to ensure Earth is initialized
-	await get_tree().process_frame
-	
-	# If game is paused, temporarily unpause to let Earth calculate its orbital position
-	var was_paused = get_tree().paused
-	if was_paused:
-		get_tree().paused = false
-		# Wait for multiple physics frames to ensure Earth's position is calculated
-		await get_tree().physics_frame
-		await get_tree().physics_frame  # Extra frame to ensure position is stable
-		get_tree().paused = true
-	else:
-		await get_tree().physics_frame
-		await get_tree().physics_frame
-	
-	# Double-check Earth is still valid after physics frames
-	if not is_instance_valid(earth) or not is_instance_valid(ship):
-		return
-	
-	# Get Earth's global position (should now be correctly calculated)
-	var earth_global_pos = earth.global_position
-	var earth_radius = earth.radius
-	
-	# Debug: Print Earth position to verify
-	print("Spawning ship on Earth at position: ", earth_global_pos, " radius: ", earth_radius)
-		
-	# Position ship on Earth's surface (above the center)
-	var spawn_offset = Vector2(0, -earth_radius - 10)  # 10 pixels above surface
-	ship.global_position = earth_global_pos + spawn_offset
-	
-	# Calculate rotation to face away from planet center
-	# Direction vector from planet center to ship position
-	var direction_from_center = (ship.global_position - earth_global_pos).normalized()
-	# Calculate angle using atan2 (ship points RIGHT at 0°, so this makes it point away from center)
-	ship.rotation = atan2(direction_from_center.y, direction_from_center.x)
-	
-	# Set ship's velocity to match Earth's orbital velocity (stationary relative to Earth)
-	if is_instance_valid(earth):
-		ship.linear_velocity = earth.linear_velocity
-		print("Ship velocity set to: ", ship.linear_velocity)
-	else:
-		ship.linear_velocity = Vector2.ZERO
-	
-	print("Ship spawned at: ", ship.global_position)

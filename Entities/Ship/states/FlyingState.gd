@@ -11,6 +11,15 @@ func physics_process(delta: float) -> void:
 	if not is_ship_valid():
 		return
 	
+	# Don't process ship input if system map is open
+	if _is_system_map_open():
+		ship.want_turn_left = false
+		ship.want_turn_right = false
+		ship.want_thrust = false
+		ship.want_reverse_thrust = false
+		ship.want_boost = false
+		return
+	
 	# Sample input here (physics rate, thread-safe for our purposes)
 	ship.want_turn_left = Input.is_action_pressed("turn_left")
 	ship.want_turn_right = Input.is_action_pressed("turn_right")
@@ -223,3 +232,19 @@ func _check_landing_lock() -> void:
 				var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
 				if state_machine and state_machine.has_state("LandedState"):
 					state_machine.change_state("LandedState")
+
+func _is_system_map_open() -> bool:
+	if not ship or not is_instance_valid(ship):
+		return false
+	var tree = ship.get_tree()
+	if not tree:
+		return false
+	var system_map = tree.get_first_node_in_group("system_map") as SystemMap
+	if system_map:
+		return system_map.visible
+	# Fallback: search by class name
+	var nodes = tree.get_nodes_in_group("system_map")
+	for node in nodes:
+		if node is SystemMap and node.visible:
+			return true
+	return false

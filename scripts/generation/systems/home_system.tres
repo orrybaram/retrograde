@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SolarSystemData" load_steps=9 format=3 uid="uid://bbfk1vdxkhiks"]
+
+[ext_resource type="Script" uid="uid://1w6pfm01xbni" path="res://scripts/generation/SolarSystemData.gd" id="1"]
+[ext_resource type="Resource" uid="uid://c14fnjevtjumx" path="res://scripts/generation/systems/planets/mercury.tres" id="2"]
+[ext_resource type="Resource" uid="uid://cbuf64xg7heqe" path="res://scripts/generation/systems/planets/venus.tres" id="3"]
+[ext_resource type="Resource" uid="uid://0d6wk3tm1x4m" path="res://scripts/generation/systems/planets/earth.tres" id="4"]
+[ext_resource type="Resource" uid="uid://dgnlabrvv04v1" path="res://scripts/generation/systems/planets/mars.tres" id="5"]
+[ext_resource type="Resource" uid="uid://caew8ypk5ft7b" path="res://scripts/generation/systems/planets/jupiter.tres" id="6"]
+[ext_resource type="Resource" uid="uid://bf4j3iy2jqba5" path="res://scripts/generation/systems/planets/saturn.tres" id="7"]
+[ext_resource type="Resource" uid="uid://bnul5yw3riwq7" path="res://scripts/generation/systems/planets/neptune.tres" id="8"]
+
+[resource]
+script = ExtResource("1")
+system_name = "Sol"
+sun_radius = 9000.0
+planets = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])

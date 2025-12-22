@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MoonDefinition" load_steps=2 format=3 uid="uid://ygouybuar2ad"]
+
+[ext_resource type="Script" uid="uid://cglvbte5x3cm2" path="res://scripts/generation/MoonDefinition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+moon_name = "Ganymede"
+radius_ratio = 0.41
+mass_multiplier = 3.5
+orbital_distance_multiplier = 7.5
+eccentricity = 0.001
+initial_angle = 3.0
