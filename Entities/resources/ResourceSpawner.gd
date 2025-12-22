@@ -11,13 +11,14 @@ class_name ResourceSpawner
 @export var auto_spawn: bool = true
 
 var parent_planet: Planet = null
+var parent_station: SpaceStation = null
 var scene_root: Node2D = null
 
 func _ready() -> void:
 	add_to_group("resource_spawners")
 	
-	# Find parent planet
-	_find_parent_planet()
+	# Find parent planet or space station
+	_find_parent_body()
 	
 	# Find scene root (Main) to add spawned resources to
 	_find_scene_root()
@@ -27,12 +28,15 @@ func _ready() -> void:
 		await get_tree().process_frame
 		spawn_cluster()
 
-func _find_parent_planet() -> void:
-	# Traverse up the tree to find Planet parent
+func _find_parent_body() -> void:
+	# Traverse up the tree to find Planet or SpaceStation parent
 	var current = get_parent()
 	while current:
 		if current is Planet:
 			parent_planet = current as Planet
+			return
+		elif current is SpaceStation:
+			parent_station = current as SpaceStation
 			return
 		current = current.get_parent()
 
@@ -60,34 +64,48 @@ func spawn_cluster() -> void:
 		push_error("Resource scene not loaded in ResourceSpawner!")
 		return
 	
-	if not parent_planet:
-		push_error("ResourceSpawner must be a child of a Planet!")
+	if not parent_planet and not parent_station:
+		push_error("ResourceSpawner must be a child of a Planet or SpaceStation!")
 		return
 	
 	if not scene_root:
 		push_error("Could not find scene root to spawn resources!")
 		return
 	
-	var planet_pos = parent_planet.global_position
-	var planet_radius = parent_planet.radius
-	var planet_velocity = parent_planet.linear_velocity
+	# Get position, radius, and velocity from parent body
+	var body_pos: Vector2
+	var body_radius: float
+	var body_velocity: Vector2
+	var orbital_body: Node2D  # The body resources will orbit around
 	
-	# Distribute clusters evenly around the planet (360 degrees)
+	if parent_planet:
+		body_pos = parent_planet.global_position
+		body_radius = parent_planet.radius
+		body_velocity = parent_planet.linear_velocity
+		orbital_body = parent_planet
+	elif parent_station:
+		body_pos = parent_station.global_position
+		# Space stations don't have a radius property, use approximate size
+		body_radius = 1200.0  # Approximate station size (moon-sized)
+		body_velocity = parent_station.linear_velocity
+		orbital_body = parent_station
+	
+	# Distribute clusters evenly around the body (360 degrees)
 	var angle_step = TAU / num_clusters  # Angle between each cluster
 	
-	# Spawn multiple clusters around the planet
+	# Spawn multiple clusters around the body
 	for cluster_index in range(num_clusters):
 		# Calculate cluster angle - evenly distributed with some randomness
 		var base_angle = cluster_index * angle_step
 		var angle_variation = angle_step * 0.2  # Small variation (±20% of step)
 		var cluster_angle = base_angle + RNG.rng.randf_range(-angle_variation, angle_variation)
 		
-		# Random distance from planet surface for this cluster
+		# Random distance from body surface for this cluster
 		var distance_from_surface = RNG.rng.randf_range(min_distance, max_distance)
-		var cluster_distance = planet_radius + distance_from_surface
+		var cluster_distance = body_radius + distance_from_surface
 		
 		# Cluster center position
-		var cluster_center = planet_pos + Vector2(cos(cluster_angle), sin(cluster_angle)) * cluster_distance
+		var cluster_center = body_pos + Vector2(cos(cluster_angle), sin(cluster_angle)) * cluster_distance
 		
 		# Random number of resources in this cluster
 		var resources_in_cluster = RNG.rng.randi_range(min_resources_per_cluster, max_resources_per_cluster)
@@ -98,7 +116,7 @@ func spawn_cluster() -> void:
 			var attempts = 0
 			var max_attempts = 10
 			
-			# Try to find a valid position outside the planet
+			# Try to find a valid position outside the body
 			while attempts < max_attempts:
 				attempts += 1
 				
@@ -110,21 +128,21 @@ func spawn_cluster() -> void:
 				)
 				resource_pos = cluster_center + tiny_offset
 				
-				# Calculate distance from planet center
-				var distance_to_planet_center = resource_pos.distance_to(planet_pos)
-				var min_allowed_distance = planet_radius + min_distance
+				# Calculate distance from body center
+				var distance_to_body_center = resource_pos.distance_to(body_pos)
+				var min_allowed_distance = body_radius + min_distance
 				
-				# If too close to planet, push it out
-				if distance_to_planet_center < min_allowed_distance:
-					var direction = (resource_pos - planet_pos).normalized()
-					# If direction is zero (exactly at planet center), use cluster direction
+				# If too close to body, push it out
+				if distance_to_body_center < min_allowed_distance:
+					var direction = (resource_pos - body_pos).normalized()
+					# If direction is zero (exactly at body center), use cluster direction
 					if direction.length() < 0.001:
 						direction = Vector2(cos(cluster_angle), sin(cluster_angle))
-					resource_pos = planet_pos + direction * min_allowed_distance
+					resource_pos = body_pos + direction * min_allowed_distance
 				
-				# Verify final position is outside planet
-				var final_distance = resource_pos.distance_to(planet_pos)
-				if final_distance >= planet_radius + min_distance:
+				# Verify final position is outside body
+				var final_distance = resource_pos.distance_to(body_pos)
+				if final_distance >= body_radius + min_distance:
 					break
 			
 			# Spawn resource
@@ -132,11 +150,11 @@ func spawn_cluster() -> void:
 			scene_root.add_child(resource)
 			resource.global_position = resource_pos
 			
-			# Set resource to orbit around planet (make it "in orbit")
+			# Set resource to orbit around body (make it "in orbit")
 			# Resources are Area2D nodes, so we simulate orbital mechanics
 			if resource.has_method("start_harvest"):  # Check if it's a ResourceNode
 				# Calculate initial orbital parameters
-				var offset = resource_pos - planet_pos
+				var offset = resource_pos - body_pos
 				var distance = offset.length()
 				var initial_angle = atan2(offset.y, offset.x)
 				
@@ -146,7 +164,14 @@ func spawn_cluster() -> void:
 				var calculated_speed = orbital_speed * distance_factor
 				
 				# Store orbital parameters
-				resource._orbital_planet = parent_planet
+				# Resources can orbit planets or space stations
+				if parent_planet:
+					resource._orbital_planet = parent_planet
+				elif parent_station:
+					# For space stations, we'll use the same property name for compatibility
+					# The ResourceNode will need to handle both Planet and SpaceStation
+					resource._orbital_planet = orbital_body
+				
 				resource._offset_from_planet = offset
 				resource._orbital_angle = initial_angle
 				resource._orbital_distance = distance
@@ -158,4 +183,4 @@ func spawn_cluster() -> void:
 				resource.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
 			elif resource is RigidBody2D:
 				# If it's a RigidBody2D, set velocity directly
-				(resource as RigidBody2D).linear_velocity = planet_velocity
+				(resource as RigidBody2D).linear_velocity = body_velocity

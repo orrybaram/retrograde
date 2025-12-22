@@ -7,7 +7,7 @@ class_name Minimap
 @export var display_radius: float = 70.0
 
 ## The world range that the minimap covers (in world units)
-@export var world_range: float = 25000.0
+@export var world_range: float = 10000.0
 
 ## Planet size scaling
 @export var planet_size_multiplier: float = 1.0  ## Multiplier to make planets visible on minimap
