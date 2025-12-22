@@ -23,7 +23,7 @@ const WHITE_FADED = Color(1.0, 1.0, 1.0, 0.25)
 # =============================================================================
 # SEMANTIC COLOR ASSIGNMENTS
 # =============================================================================
-
+ 
 # --- UI Theme Colors ---
 const PRIMARY = AMBER
 const PRIMARY_FADED = AMBER_FADED
@@ -43,4 +43,3 @@ const INDICATOR = CYAN
 # --- Defaults ---
 const PLANET_DEFAULT = BLUE
 const OUTLINE = WHITE_FADED
-
