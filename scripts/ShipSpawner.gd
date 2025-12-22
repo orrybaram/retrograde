@@ -40,6 +40,19 @@ func _on_generation_complete() -> void:
 
 ## Calculate spawn position from SolarSystemData
 func _calculate_spawn_position() -> Vector2:
+	# First priority: spawn near SpaceStation if one exists
+	var space_stations = get_tree().get_nodes_in_group("space_stations")
+	if space_stations.size() > 0:
+		var station = space_stations[0] as SpaceStation
+		if station and is_instance_valid(station):
+			# Spawn just outside the SpaceStation (offset by a small distance)
+			var station_pos = station.global_position
+			var spawn_offset = Vector2(500.0, 0)  # 500 pixels to the right of the station
+			var spawn_position = station_pos + spawn_offset
+			print("Spawning near SpaceStation at: ", spawn_position)
+			return spawn_position
+	
+	# Fallback to original spawn logic
 	var system_data = generator.get_current_system_data()
 	
 	if not system_data:

@@ -1,0 +1,129 @@
+[gd_scene load_steps=15 format=3 uid="uid://b8k2j3m4n5p6q"]
+
+[ext_resource type="Script" path="res://entities/structures/SpaceStation.gd" id="1"]
+[ext_resource type="Script" path="res://entities/structures/SpaceStationOrbitVisual.gd" id="2"]
+[ext_resource type="Script" path="res://entities/structures/SpaceStationGravityField.gd" id="3"]
+[ext_resource type="Script" path="res://entities/structures/SpaceStationGravityFieldVisual.gd" id="4"]
+[ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="5"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_station"]
+size = Vector2(200, 120)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_gravity"]
+radius = 1200.0
+
+[node name="SpaceStation" type="RigidBody2D"]
+mass = 100000.0
+gravity_scale = 0.0
+script = ExtResource("1")
+orbital_distance = 3000.0
+orbital_speed = 0.0001
+gravitational_constant = 2.0
+massMultiplier = 0.1
+gravity_radius_multiplier = 15.0
+
+[node name="Visuals" type="Node2D" parent="."]
+z_index = 1
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="CentralHub" type="ColorRect" parent="Visuals"]
+offset_left = -40.0
+offset_top = -30.0
+offset_right = 40.0
+offset_bottom = 30.0
+color = Color(0.3, 0.3, 0.35, 1)
+
+[node name="LeftArm" type="ColorRect" parent="Visuals"]
+offset_left = -120.0
+offset_top = -15.0
+offset_right = -40.0
+offset_bottom = 15.0
+color = Color(0.25, 0.25, 0.3, 1)
+
+[node name="RightArm" type="ColorRect" parent="Visuals"]
+offset_left = 40.0
+offset_top = -15.0
+offset_right = 120.0
+offset_bottom = 15.0
+color = Color(0.25, 0.25, 0.3, 1)
+
+[node name="TopTower" type="ColorRect" parent="Visuals"]
+offset_left = -15.0
+offset_top = -60.0
+offset_right = 15.0
+offset_bottom = -30.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="BottomTower" type="ColorRect" parent="Visuals"]
+offset_left = -15.0
+offset_top = 30.0
+offset_right = 15.0
+offset_bottom = 60.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="LeftModule" type="ColorRect" parent="Visuals"]
+offset_left = -130.0
+offset_top = -25.0
+offset_right = -120.0
+offset_bottom = 25.0
+color = Color(0.35, 0.35, 0.4, 1)
+
+[node name="RightModule" type="ColorRect" parent="Visuals"]
+offset_left = 120.0
+offset_top = -25.0
+offset_right = 130.0
+offset_bottom = 25.0
+color = Color(0.35, 0.35, 0.4, 1)
+
+[node name="Detail1" type="ColorRect" parent="Visuals"]
+offset_left = -50.0
+offset_top = -20.0
+offset_right = -45.0
+offset_bottom = -15.0
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Detail2" type="ColorRect" parent="Visuals"]
+offset_left = 45.0
+offset_top = -20.0
+offset_right = 50.0
+offset_bottom = -15.0
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Detail3" type="ColorRect" parent="Visuals"]
+offset_left = -50.0
+offset_top = 15.0
+offset_right = -45.0
+offset_bottom = 20.0
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Detail4" type="ColorRect" parent="Visuals"]
+offset_left = 45.0
+offset_top = 15.0
+offset_right = 50.0
+offset_bottom = 20.0
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_station")
+
+[node name="GravityField" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="GravityField"]
+shape = SubResource("CircleShape2D_gravity")
+script = ExtResource("3")
+
+[node name="GravityFieldVisual" type="Node2D" parent="GravityField/CollisionShape2D"]
+material = SubResource("CanvasItemMaterial_1")
+script = ExtResource("4")
+outline_color = Color(0.6, 0.6, 0.8, 0.2)
+ring_count = 3
+max_radius_multiplier = 10.0
+
+[node name="OrbitVisual" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="SpacePort" parent="." instance=ExtResource("5")]
+position = Vector2(0, -50)
+

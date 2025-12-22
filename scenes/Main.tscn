@@ -42,6 +42,8 @@ script = ExtResource("5")
 [node name="SolarSystemGenerator" type="Node" parent="."]
 script = ExtResource("18")
 planet_orbital_distance_base = 50000.0
+station_orbital_distance_multiplier = 20.0
+station_orbital_speed_multiplier = 0.01
 
 [node name="ShipSpawner" type="Node" parent="."]
 script = ExtResource("20")
