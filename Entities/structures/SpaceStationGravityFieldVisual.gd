@@ -29,7 +29,7 @@ func _ready() -> void:
 
 func _get_radius() -> float:
 	# SpaceStation doesn't have a radius property, use a fixed size
-	return 80.0  # Approximate station size
+	return 1200.0  # Approximate station size (moon-sized)
 
 func _get_base_gravity_strength() -> float:
 	if station:

@@ -15,7 +15,7 @@ func _ready() -> void:
 		current = current.get_parent()
 	
 	if station and shape is CircleShape2D:
-		# Use a fixed radius for space stations (smaller than planets)
-		var base_radius = 80.0  # Approximate station size
+		# Use a fixed radius for space stations (moon-sized)
+		var base_radius = 1200.0  # Approximate station size
 		shape.radius = base_radius * station.gravity_radius_multiplier
 
