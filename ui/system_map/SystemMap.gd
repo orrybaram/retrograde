@@ -316,30 +316,60 @@ func _draw_moon_orbits() -> void:
 		# Ensure minimum visibility
 		var min_visible_radius = 5.0  # Minimum pixels for visibility
 		
+		# Draw dashed orbit (dash pattern: draw 3 segments, skip 2)
+		var segments = 96  # More segments for smoother dashed effect
+		var dash_length = 3  # Number of segments per dash
+		var gap_length = 2   # Number of segments per gap
+		
 		if e == 0.0:
-			# Circular orbit
+			# Circular orbit - draw dashed arc
 			var moon_orbit_radius = a * scale_factor
 			if moon_orbit_radius < min_visible_radius:
 				moon_orbit_radius = min_visible_radius
-			draw_arc(parent_map_pos, moon_orbit_radius, 0.0, TAU, 64, moon_orbit_color, 1.5)
+			
+			var segment_angle = TAU / float(segments)
+			var dash_angle = segment_angle * dash_length
+			var gap_angle = segment_angle * gap_length
+			
+			var current_angle = 0.0
+			while current_angle < TAU:
+				var dash_end_angle = min(current_angle + dash_angle, TAU)
+				draw_arc(parent_map_pos, moon_orbit_radius, current_angle, dash_end_angle, 8, moon_orbit_color, 1.5)
+				current_angle += dash_angle + gap_angle
 		else:
-			# Elliptical orbit - draw line segments following the ellipse
-			var segments = 64
-			for j in range(segments):
-				var angle_start = (float(j) / float(segments)) * TAU
-				var angle_end = (float(j + 1) / float(segments)) * TAU
+			# Elliptical orbit - draw dashed line segments following the ellipse
+			var segment_angle = TAU / float(segments)
+			var dash_angle = segment_angle * dash_length
+			var gap_angle = segment_angle * gap_length
+			
+			var current_angle = 0.0
+			while current_angle < TAU:
+				var dash_end_angle = min(current_angle + dash_angle, TAU)
 				
-				var r_start = a * (1.0 - e * e) / (1.0 + e * cos(angle_start))
-				var r_end = a * (1.0 - e * e) / (1.0 + e * cos(angle_end))
+				# Draw dash segment
+				var dash_segments = int((dash_end_angle - current_angle) / segment_angle) + 1
+				for j in range(dash_segments):
+					var angle_start = current_angle + (float(j) / float(dash_segments)) * (dash_end_angle - current_angle)
+					var angle_end = current_angle + (float(j + 1) / float(dash_segments)) * (dash_end_angle - current_angle)
+					
+					if angle_end > TAU:
+						angle_end = TAU
+					if angle_start >= TAU:
+						break
+					
+					var r_start = a * (1.0 - e * e) / (1.0 + e * cos(angle_start))
+					var r_end = a * (1.0 - e * e) / (1.0 + e * cos(angle_end))
+					
+					# Scale to screen space with minimum visibility
+					var screen_r_start = max(r_start * scale_factor, min_visible_radius)
+					var screen_r_end = max(r_end * scale_factor, min_visible_radius)
+					
+					var pos_start = parent_map_pos + Vector2(cos(angle_start), sin(angle_start)) * screen_r_start
+					var pos_end = parent_map_pos + Vector2(cos(angle_end), sin(angle_end)) * screen_r_end
+					
+					draw_line(pos_start, pos_end, moon_orbit_color, 1.5)
 				
-				# Scale to screen space with minimum visibility
-				var screen_r_start = max(r_start * scale_factor, min_visible_radius)
-				var screen_r_end = max(r_end * scale_factor, min_visible_radius)
-				
-				var pos_start = parent_map_pos + Vector2(cos(angle_start), sin(angle_start)) * screen_r_start
-				var pos_end = parent_map_pos + Vector2(cos(angle_end), sin(angle_end)) * screen_r_end
-				
-				draw_line(pos_start, pos_end, moon_orbit_color, 1.5)
+				current_angle += dash_angle + gap_angle
 
 func _draw_sun() -> void:
 	var sun = generator.generated_sun
