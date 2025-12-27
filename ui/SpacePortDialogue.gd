@@ -93,17 +93,27 @@ func _update_display() -> void:
 			repair_button.text = "Repair (Full)"
 			repair_button.disabled = true
 	
-	# Calculate refuel cost
-	var refuel_cost = int((max_fuel - fuel) * Economy.REFUEL_COST_PER_POINT)
+	# Calculate refuel cost and available fuel purchase
+	var fuel_needed = max_fuel - fuel
+	var refuel_cost_full = int(fuel_needed * Economy.REFUEL_COST_PER_POINT)
+	var fuel_affordable = min(fuel_needed, gs.credits / Economy.REFUEL_COST_PER_POINT)
+	var refuel_cost_affordable = int(fuel_affordable * Economy.REFUEL_COST_PER_POINT)
+	
 	if refuel_button:
-		if refuel_cost > 0 and gs.credits >= refuel_cost:
-			refuel_button.text = "Refuel (%d credits)" % [refuel_cost]
-			refuel_button.disabled = false
-		elif refuel_cost > 0:
-			refuel_button.text = "Refuel (%d credits) [Insufficient]" % [refuel_cost]
-			refuel_button.disabled = true
-		else:
+		if fuel_needed <= 0:
 			refuel_button.text = "Refuel (Full)"
+			refuel_button.disabled = true
+		elif gs.credits >= refuel_cost_full:
+			# Can afford full tank
+			refuel_button.text = "Refuel (%d credits)" % [refuel_cost_full]
+			refuel_button.disabled = false
+		elif fuel_affordable > 0:
+			# Can afford partial refuel
+			refuel_button.text = "Refuel (%d credits, +%.0f fuel)" % [refuel_cost_affordable, fuel_affordable]
+			refuel_button.disabled = false
+		else:
+			# Cannot afford any fuel
+			refuel_button.text = "Refuel (%d credits) [Insufficient]" % [refuel_cost_full]
 			refuel_button.disabled = true
 
 func _on_repair_pressed() -> void:
@@ -125,11 +135,18 @@ func _on_refuel_pressed() -> void:
 	
 	var max_fuel = ship.max_fuel
 	var fuel = ship.fuel
-	var refuel_cost = int((max_fuel - fuel) * Economy.REFUEL_COST_PER_POINT)
+	var fuel_needed = max_fuel - fuel
 	
-	if refuel_cost > 0 and gs.credits >= refuel_cost:
+	if fuel_needed <= 0:
+		return
+	
+	# Calculate how much fuel can be purchased with available credits
+	var fuel_affordable = min(fuel_needed, gs.credits / Economy.REFUEL_COST_PER_POINT)
+	
+	if fuel_affordable > 0:
+		var refuel_cost = int(fuel_affordable * Economy.REFUEL_COST_PER_POINT)
 		gs.credits -= refuel_cost
-		ship.fuel = max_fuel
+		ship.fuel = min(max_fuel, fuel + fuel_affordable)
 		ship.fuel_changed.emit()
 		_update_display()
 
