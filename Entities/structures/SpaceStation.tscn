@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://b8k2j3m4n5p6q"]
+[gd_scene load_steps=10 format=3 uid="uid://b8k2j3m4n5p6q"]
 
 [ext_resource type="Script" uid="uid://c6x45wnjj471j" path="res://entities/structures/SpaceStation.gd" id="1"]
 [ext_resource type="Script" uid="uid://bmjaqqsoockba" path="res://entities/structures/SpaceStationOrbitVisual.gd" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://cx3fu6b0nb8vg" path="res://entities/structures/SpaceStationGravityFieldVisual.gd" id="4"]
 [ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="5"]
 [ext_resource type="Script" uid="uid://6qhpcd1n2bed" path="res://entities/resources/ResourceSpawner.gd" id="6"]
+[ext_resource type="Script" uid="uid://ce8cae75cf31" path="res://scripts/ShipSpawn.gd" id="7"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
@@ -270,3 +271,4 @@ max_resources_per_cluster = 5
 min_distance = 500.0
 max_distance = 1200.0
 orbital_speed = 0.015
+
