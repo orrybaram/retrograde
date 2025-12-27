@@ -30,7 +30,8 @@ signal map_closed
 @export var zoom_speed: float = 1.5  ## Zoom multiplier per key press
 @export var pan_speed: float = 500.0  ## Pixels per second panning speed
 
-var generator: SolarSystemGenerator = null
+var sun: Planet = null
+var planets: Array[Planet] = []
 var ship: Ship = null
 var base_scale_factor: float = 1.0  ## Original auto-calculated scale
 var scale_factor: float = 1.0  ## Current scale (base_scale_factor * zoom_level)
@@ -44,8 +45,22 @@ func _ready() -> void:
 	add_to_group("system_map")
 	
 	# Find references
-	generator = get_tree().get_first_node_in_group("solar_system_generator") as SolarSystemGenerator
+	_find_celestial_bodies()
 	ship = get_tree().get_first_node_in_group("ship") as Ship
+
+func _find_celestial_bodies() -> void:
+	# Find all planets in the scene
+	planets.clear()
+	sun = null
+	
+	var all_planets = get_tree().get_nodes_in_group("planets")
+	for node in all_planets:
+		if node is Planet:
+			var planet = node as Planet
+			if planet.planet_type == Planet.PlanetType.SUN:
+				sun = planet
+			else:
+				planets.append(planet)
 
 func _process(delta: float) -> void:
 	if visible:
@@ -76,9 +91,8 @@ func _gui_input(event: InputEvent) -> void:
 		close_map()
 
 func open_map() -> void:
-	# Find references if not set
-	if not generator:
-		generator = get_tree().get_first_node_in_group("solar_system_generator") as SolarSystemGenerator
+	# Refresh references
+	_find_celestial_bodies()
 	if not ship:
 		ship = get_tree().get_first_node_in_group("ship") as Ship
 	
@@ -91,8 +105,8 @@ func open_map() -> void:
 	_calculate_scale()
 	
 	# Center on player ship
-	if ship and is_instance_valid(ship) and generator and generator.generated_sun:
-		var sun_pos = generator.generated_sun.global_position
+	if ship and is_instance_valid(ship) and sun:
+		var sun_pos = sun.global_position
 		var relative_pos = ship.global_position - sun_pos
 		# Pan offset should position ship at map center
 		# Ship map pos = map_center + pan_offset + relative_pos * scale_factor
@@ -131,12 +145,12 @@ func _handle_panning(delta: float) -> void:
 		pan_offset = _clamp_pan_offset(new_pan_offset)
 
 func _clamp_pan_offset(offset: Vector2) -> Vector2:
-	if not generator or generator.generated_planets.is_empty():
+	if planets.is_empty():
 		return offset
 	
 	# Calculate system bounds
 	var max_distance: float = 0.0
-	for planet in generator.generated_planets:
+	for planet in planets:
 		if planet and is_instance_valid(planet):
 			max_distance = max(max_distance, planet.orbital_distance)
 	
@@ -184,8 +198,8 @@ func _zoom_out() -> void:
 
 func _center_on_player() -> void:
 	# Center on player ship
-	if ship and is_instance_valid(ship) and generator and generator.generated_sun:
-		var sun_pos = generator.generated_sun.global_position
+	if ship and is_instance_valid(ship) and sun:
+		var sun_pos = sun.global_position
 		var relative_pos = ship.global_position - sun_pos
 		# Pan offset should position ship at map center
 		# Ship map pos = map_center + pan_offset + relative_pos * scale_factor
@@ -199,7 +213,7 @@ func _center_on_player() -> void:
 		pan_offset = Vector2.ZERO
 
 func _draw() -> void:
-	if not generator or not generator.generated_sun:
+	if not sun:
 		return
 	
 	# Calculate map center and scale
@@ -240,14 +254,14 @@ func _draw() -> void:
 	_draw_title()
 
 func _calculate_scale() -> void:
-	if generator.generated_planets.is_empty():
+	if planets.is_empty():
 		base_scale_factor = 0.1
 		scale_factor = base_scale_factor * zoom_level
 		return
 	
 	# Find the outermost planet's orbital distance
 	var max_distance: float = 0.0
-	for planet in generator.generated_planets:
+	for planet in planets:
 		if planet and is_instance_valid(planet):
 			max_distance = max(max_distance, planet.orbital_distance)
 	
@@ -262,12 +276,12 @@ func _calculate_scale() -> void:
 	scale_factor = base_scale_factor * zoom_level
 
 func _draw_grid() -> void:
-	if generator.generated_planets.is_empty():
+	if planets.is_empty():
 		return
 	
 	# Find max distance for grid
 	var max_distance: float = 0.0
-	for planet in generator.generated_planets:
+	for planet in planets:
 		if planet and is_instance_valid(planet):
 			max_distance = max(max_distance, planet.orbital_distance)
 	
@@ -280,14 +294,14 @@ func _draw_grid() -> void:
 func _draw_orbits() -> void:
 	var orbit_center = map_center + pan_offset
 	
-	for planet in generator.generated_planets:
+	for planet in planets:
 		if not planet or not is_instance_valid(planet):
 			continue
 		
 		# Only draw orbits for planets orbiting the sun
-		# Planets orbiting the sun have parent_planet == generated_sun (or null for backwards compatibility)
+		# Planets orbiting the sun have parent_planet == sun (or null for backwards compatibility)
 		# Moons have parent_planet == a planet (not the sun)
-		if planet.parent_planet and planet.parent_planet != generator.generated_sun:
+		if planet.parent_planet and planet.parent_planet != sun:
 			continue
 		
 		var a = planet.orbital_distance  # semi-major axis
@@ -320,14 +334,14 @@ func _draw_orbits() -> void:
 				draw_line(pos_start, pos_end, orbit_color, 1.0)
 
 func _draw_moon_orbits() -> void:
-	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
+	var sun_pos = sun.global_position if sun else Vector2.ZERO
 	
-	for planet in generator.generated_planets:
+	for planet in planets:
 		if not planet or not is_instance_valid(planet):
 			continue
 		
 		# Only draw orbits for moons (planets with a parent that is not the sun)
-		if not planet.parent_planet or planet.parent_planet == generator.generated_sun:
+		if not planet.parent_planet or planet.parent_planet == sun:
 			continue
 		
 		# Get parent planet's actual position on the map
@@ -396,7 +410,7 @@ func _draw_moon_orbits() -> void:
 				current_angle += dash_angle + gap_angle
 
 func _draw_space_station_orbits() -> void:
-	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
+	var sun_pos = sun.global_position if sun else Vector2.ZERO
 	
 	# Get all space stations from the scene tree
 	var space_stations = get_tree().get_nodes_in_group("space_stations")
@@ -479,7 +493,7 @@ func _draw_space_station_orbits() -> void:
 				current_angle += dash_angle + gap_angle
 
 func _draw_space_stations() -> void:
-	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
+	var sun_pos = sun.global_position if sun else Vector2.ZERO
 	
 	# Get all space stations from the scene tree
 	var space_stations = get_tree().get_nodes_in_group("space_stations")
@@ -519,7 +533,6 @@ func _draw_space_stations() -> void:
 		draw_polyline(rotated_points, border_color, 1.0, true)
 
 func _draw_sun() -> void:
-	var sun = generator.generated_sun
 	if not sun or not is_instance_valid(sun):
 		return
 	
@@ -531,9 +544,9 @@ func _draw_sun() -> void:
 	draw_circle(sun_pos, scaled_sun_size, sun.color)
 
 func _draw_planets() -> void:
-	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
+	var sun_pos = sun.global_position if sun else Vector2.ZERO
 	
-	for planet in generator.generated_planets:
+	for planet in planets:
 		if not planet or not is_instance_valid(planet):
 			continue
 		
@@ -555,7 +568,7 @@ func _draw_ship() -> void:
 		return
 	
 	# Get ship position relative to sun (which is at origin)
-	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
+	var sun_pos = sun.global_position if sun else Vector2.ZERO
 	var relative_pos = ship.global_position - sun_pos
 	var map_pos = map_center + pan_offset + relative_pos * scale_factor
 	

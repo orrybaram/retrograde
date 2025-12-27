@@ -96,4 +96,3 @@ func set_inventory_dict(inventory: Dictionary) -> void:
 	# Emit signals for all items
 	for item_id in _inventory.keys():
 		inventory_changed.emit(item_id, _inventory[item_id])
-

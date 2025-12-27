@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=19 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -15,7 +15,7 @@
 [ext_resource type="PackedScene" path="res://ui/store/StoreUI.tscn" id="15"]
 [ext_resource type="PackedScene" path="res://ui/inventory/InventoryUI.tscn" id="16"]
 [ext_resource type="PackedScene" uid="uid://0qhwlfdltlfp" path="res://ui/minimap/Minimap.tscn" id="17"]
-[ext_resource type="Script" uid="uid://dcmhawa14rw0h" path="res://scripts/generation/SolarSystemGenerator.gd" id="18"]
+[ext_resource type="PackedScene" uid="uid://cwp82l3asrkgc" path="res://scenes/HomeSystem.tscn" id="18"]
 [ext_resource type="PackedScene" path="res://ui/system_map/SystemMap.tscn" id="19"]
 [ext_resource type="Script" uid="uid://b4chiaxpicref" path="res://scripts/ShipSpawner.gd" id="20"]
 [ext_resource type="PackedScene" uid="uid://c2o4vbaw813u0" path="res://ui/LoadingScreen.tscn" id="21"]
@@ -40,11 +40,7 @@ script = ExtResource("4")
 [node name="ResourceManager" type="Node" parent="."]
 script = ExtResource("5")
 
-[node name="SolarSystemGenerator" type="Node" parent="."]
-script = ExtResource("18")
-planet_orbital_distance_base = 50000.0
-station_orbital_distance_multiplier = 20.0
-station_orbital_speed_multiplier = 0.01
+[node name="HomeSystem" parent="." instance=ExtResource("18")]
 
 [node name="ShipSpawner" type="Node" parent="."]
 script = ExtResource("20")

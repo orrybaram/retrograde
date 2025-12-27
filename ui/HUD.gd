@@ -49,7 +49,9 @@ func _update_action_message(message: String) -> void:
 func _process(_dt: float) -> void:
 	_update_labels()
 
-func _update_labels() -> void:
+func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
+	# Parameters are provided by inventory_changed signal but not used
+	# since we query InventoryManager directly
 	if gs == null: return
 	var cargo_scrap = InventoryManager.get_quantity("scrap")
 	var credits = gs.credits if "credits" in gs else 0

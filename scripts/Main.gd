@@ -11,12 +11,10 @@ enum MainGameState {
 @onready var game_over_menu: GameOverMenu = $"CanvasLayer/GameOverMenu"
 @onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
 @onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
-@onready var solar_system_generator: SolarSystemGenerator = $"SolarSystemGenerator"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 
 var current_game_state: MainGameState = MainGameState.MENU
-var solar_system_generated: bool = false
 
 func _ready() -> void:
 	# Connect menu signals
@@ -112,24 +110,24 @@ func start_game() -> void:
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
 	
-	# Generate solar system if not already generated
-	if not solar_system_generated and solar_system_generator:
-		# Show loading screen
-		if loading_screen:
-			loading_screen.show_loading()
-		
-		get_tree().paused = false
-		await solar_system_generator.generate()
-		solar_system_generated = true
-		# Wait for ShipSpawner to complete spawning (via generation_complete signal)
-		if ship_spawner:
-			await ship_spawner.spawn_complete
-		await get_tree().process_frame
-		
-		# Hide loading screen after generation and spawning complete
-		if loading_screen:
-			await get_tree().create_timer(loading_screen.duration + 1.0).timeout
-			loading_screen.hide_loading()
+	# Show loading screen animation
+	if loading_screen:
+		loading_screen.show_loading()
+	
+	# Unpause so spawner can work
+	get_tree().paused = false
+	
+	# Wait a frame for scene to initialize
+	await get_tree().process_frame
+	
+	# Spawn ship at ShipSpawn location
+	if ship_spawner:
+		await ship_spawner.spawn_ship_at_spawn_location()
+	
+	# Wait for loading animation to complete
+	if loading_screen:
+		await get_tree().create_timer(loading_screen.duration + 0.5).timeout
+		loading_screen.hide_loading()
 	
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
@@ -184,7 +182,7 @@ func reset_game() -> void:
 	
 	# Respawn ship using ShipSpawner
 	if ship_spawner:
-		await ship_spawner.spawn_from_system_data()
+		await ship_spawner.spawn_ship_at_spawn_location()
 	
 	# Hide game over menu and unpause
 	if game_over_menu:
