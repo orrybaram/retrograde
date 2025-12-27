@@ -82,7 +82,7 @@ const OUTER_PLANET_WEIGHTS = {
 @export var planet_orbital_multiplier_max: float = 1.8  ## Max multiplier for orbital spacing
 @export var planet_orbital_gap_chance: float = 0.15  ## Chance for a large gap (asteroid belt style)
 @export var planet_orbital_gap_multiplier: float = 2.1  ## Multiplier for large gaps
-@export var planet_orbital_speed_base: float = 0.001  ## Base orbital speed
+@export_range(0, 100) var planet_orbital_speed_base: float = 5.0  ## Base orbital speed (0-100 scale, 0 = static, 100 = fastest)
 @export var planet_eccentricity_max: float = 0.1  ## Maximum orbital eccentricity
 
 @export_group("SpaceStation Orbital Parameters")
@@ -265,6 +265,7 @@ func _create_planet_from_definition(planet_def: PlanetDefinition, orbit_index: i
 		planet.orbital_distance = planet_def.orbital_distance
 	
 	# Orbital speed - inversely proportional to distance (Kepler's 3rd law)
+	# Calculate in 0-100 scale, then apply multiplier
 	var base_speed = planet_orbital_speed_base / sqrt(planet.orbital_distance / planet_orbital_distance_base)
 	planet.orbital_speed = base_speed * planet_def.orbital_speed_multiplier
 	
@@ -326,6 +327,7 @@ func _create_moon_from_definition(moon_def: MoonDefinition, parent_planet: Plane
 	
 	# Orbital speed - moons orbit faster than planets
 	# Base speed calculation similar to planets but scaled for closer orbits
+	# Calculate in 0-100 scale
 	var moon_base_speed = planet_orbital_speed_base * moon_def.orbital_speed_multiplier
 	# Moons are much closer, so they need faster angular velocity
 	moon.orbital_speed = moon_base_speed * (planet_orbital_distance_base / moon.orbital_distance)
@@ -394,6 +396,7 @@ func _create_planet(orbit_index: int) -> Planet:
 	_current_orbital_distance *= next_multiplier
 	
 	# Orbital speed - inversely proportional to distance (Kepler's 3rd law approximation)
+	# Calculate in 0-100 scale
 	planet.orbital_speed = planet_orbital_speed_base / sqrt(planet.orbital_distance / planet_orbital_distance_base)
 	
 	# Random initial angle
@@ -420,7 +423,7 @@ func _create_space_station_for_planet(planet: Planet) -> void:
 	var planet_radius = planet.radius
 	station.orbital_distance = planet_radius * station_orbital_distance_multiplier
 	
-	# Calculate orbital speed
+	# Calculate orbital speed (in 0-100 scale)
 	if station_use_kepler_law:
 		# Use Kepler's 3rd law approximation (speed inversely proportional to sqrt of distance)
 		var base_speed = planet_orbital_speed_base * station_orbital_speed_multiplier

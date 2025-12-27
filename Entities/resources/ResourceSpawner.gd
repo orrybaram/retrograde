@@ -7,7 +7,7 @@ class_name ResourceSpawner
 @export var max_resources_per_cluster: int = 8
 @export var min_distance: float = 300.0
 @export var max_distance: float = 800.0
-@export var orbital_speed: float = 0.02  # Base angular speed for orbiting (radians per second)
+@export_range(0, 100) var orbital_speed: float = 100.0  # Orbital speed scale (0 = static, 100 = fastest)
 @export var auto_spawn: bool = true
 
 var parent_planet: Planet = null
@@ -159,9 +159,10 @@ func spawn_cluster() -> void:
 				var initial_angle = atan2(offset.y, offset.x)
 				
 				# Calculate orbital speed based on distance (circular orbit)
-				# Use export value from ResourceSpawner, scale by distance
+				# Convert from 0-100 scale to radians per second, then scale by distance
+				var speed_rad_per_sec = (orbital_speed / 100.0) * 0.001
 				var distance_factor = 1000.0 / max(distance, 100.0)  # Faster closer, slower farther
-				var calculated_speed = orbital_speed * distance_factor
+				var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
 				
 				# Store orbital parameters
 				# Resources can orbit planets or space stations
@@ -175,7 +176,7 @@ func spawn_cluster() -> void:
 				resource._offset_from_planet = offset
 				resource._orbital_angle = initial_angle
 				resource._orbital_distance = distance
-				resource._orbital_speed = calculated_speed
+				resource._orbital_speed = calculated_speed_rad_per_sec
 				
 				# Randomize resource properties
 				resource.amount = RNG.rng.randi_range(5, 20)

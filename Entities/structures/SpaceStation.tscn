@@ -270,5 +270,5 @@ min_resources_per_cluster = 2
 max_resources_per_cluster = 5
 min_distance = 500.0
 max_distance = 1200.0
-orbital_speed = 0.015
+orbital_speed = 75.0
 

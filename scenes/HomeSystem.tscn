@@ -1,0 +1,125 @@
+[gd_scene load_steps=3 format=3 uid="uid://cwp82l3asrkgc"]
+
+[ext_resource type="PackedScene" uid="uid://dyj33wc7mamja" path="res://entities/Planet/Planet.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://b8k2j3m4n5p6q" path="res://entities/structures/SpaceStation.tscn" id="2"]
+
+[node name="Sun" instance=ExtResource("1")]
+radius = 20000.0
+gravitational_constant = 8.0
+color = Color(1, 0.9, 0.5, 1)
+massMultiplier = 800.0
+planet_type = 0
+orbital_distance = 0.0
+orbital_speed = 0.0
+enable_orbiting = false
+show_orbit_path = false
+
+[node name="PlanetVisual" parent="." index="0"]
+base_color = Color(1, 0.9, 0.5, 1)
+
+[node name="Mercury" parent="." index="4" instance=ExtResource("1")]
+position = Vector2(35501, 0)
+radius = 1080.0
+color = Color(0.6, 0.5, 0.45, 1)
+massMultiplier = 15.0
+planet_type = 7
+orbital_distance = 50000.0
+eccentricity = 0.05
+
+[node name="Venus" parent="." index="5" instance=ExtResource("1")]
+position = Vector2(42733, 0)
+radius = 1920.0
+color = Color(0.85, 0.7, 0.5, 1)
+massMultiplier = 28.0
+habitability = 0.1
+orbital_distance = 75000.0
+orbital_speed = 4.08
+initial_angle = 2.1
+eccentricity = 0.02
+
+[node name="Earth" parent="." index="6" instance=ExtResource("1")]
+position = Vector2(52916, 0)
+radius = 2100.0
+color = Color(0.2, 0.5, 0.8, 1)
+massMultiplier = 500.0
+planet_type = 3
+habitability = 0.9
+orbital_distance = 112500.0
+orbital_speed = 3.335
+initial_angle = 4.2
+eccentricity = 0.02
+
+[node name="Luna" parent="Earth" index="4" instance=ExtResource("1")]
+position = Vector2(4132, 0)
+radius = 567.0
+color = Color(0.6, 0.6, 0.6, 1)
+massMultiplier = 5.0
+planet_type = 7
+orbital_distance = 10500.0
+orbital_speed = 50.0
+eccentricity = 0.05
+show_gravity_rings = false
+
+[node name="Mars" parent="." index="7" instance=ExtResource("1")]
+position = Vector2(61844, 0)
+radius = 1320.0
+color = Color(0.75, 0.35, 0.2, 1)
+massMultiplier = 18.0
+habitability = 0.2
+orbital_distance = 168750.0
+orbital_speed = 2.72
+initial_angle = 1.0
+eccentricity = 0.05
+
+[node name="Jupiter" parent="." index="8" instance=ExtResource("1")]
+position = Vector2(78594, 0)
+radius = 7200.0
+color = Color(0.8, 0.7, 0.55, 1)
+massMultiplier = 120.0
+planet_type = 1
+collision_radius_ratio = 0.3
+orbital_distance = 253125.0
+orbital_speed = 2.22
+initial_angle = 5.5
+eccentricity = 0.04
+
+[node name="Saturn" parent="." index="9" instance=ExtResource("1")]
+position = Vector2(103945, 0)
+radius = 6000.0
+color = Color(0.9, 0.8, 0.6, 1)
+massMultiplier = 95.0
+planet_type = 1
+collision_radius_ratio = 0.3
+orbital_distance = 380000.0
+orbital_speed = 1.0
+initial_angle = 3.8
+eccentricity = 0.03
+
+[node name="Luna" parent="Saturn" index="4" instance=ExtResource("1")]
+position = Vector2(10047, 0)
+radius = 1600.0
+color = Color(0.6, 0.6, 0.6, 1)
+massMultiplier = 100.0
+planet_type = 7
+orbital_distance = 20000.0
+orbital_speed = 50.0
+initial_angle = 180.0
+eccentricity = 0.05
+
+[node name="SpaceStation" parent="Saturn/Luna" index="4" instance=ExtResource("2")]
+position = Vector2(2263, 74)
+orbital_distance = 10000.0
+orbital_speed = 1.0
+initial_angle = 180.0
+
+[node name="Neptune" parent="." index="10" instance=ExtResource("1")]
+position = Vector2(134672, 0)
+radius = 3900.0
+color = Color(0.3, 0.5, 0.85, 1)
+massMultiplier = 55.0
+planet_type = 2
+collision_radius_ratio = 0.4
+orbital_distance = 570000.0
+orbital_speed = 1.48
+initial_angle = 0.5
+eccentricity = 0.01

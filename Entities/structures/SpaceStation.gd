@@ -6,7 +6,7 @@ class_name SpaceStation
 
 # Orbital parameters
 @export var orbital_distance: float = 500.0  # Distance from parent planet center
-@export var orbital_speed: float = 0.0001  # Angular velocity in radians per second
+@export_range(0, 100) var orbital_speed: float = 5.0  # Orbital speed scale (0 = static, 100 = fastest)
 @export var initial_angle: float = 0.0  # Starting angle in radians
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting
@@ -38,6 +38,11 @@ func _set_show_orbit_path(v: bool) -> void:
 
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
+
+## Convert orbital speed from 0-100 scale to radians per second
+## 0 = static, 100 = 0.001 radians/second (fastest)
+func _get_orbital_speed_radians_per_second() -> float:
+	return (orbital_speed / 100.0) * 0.001
 
 func _ready() -> void:
 	add_to_group("space_stations")
@@ -82,8 +87,11 @@ func _exit_tree() -> void:
 func _physics_process(_dt: float) -> void:
 	# Handle orbital mechanics if this station has a parent planet
 	if parent_planet and enable_orbiting:
+		# Get converted orbital speed in radians per second
+		var speed_rad_per_sec = _get_orbital_speed_radians_per_second()
+		
 		# Update orbital angle
-		orbital_angle += orbital_speed * _dt
+		orbital_angle += speed_rad_per_sec * _dt
 		
 		# Calculate orbital offset (local to parent)
 		var orbital_offset: Vector2
@@ -102,14 +110,14 @@ func _physics_process(_dt: float) -> void:
 		var orbital_velocity_magnitude: float
 		if eccentricity == 0.0:
 			# Circular orbit: constant speed
-			orbital_velocity_magnitude = orbital_speed * orbital_distance
+			orbital_velocity_magnitude = speed_rad_per_sec * orbital_distance
 		else:
 			# Elliptical orbit: velocity varies with distance
 			var a = orbital_distance
 			var e = clamp(eccentricity, 0.0, 0.99)
 			var r = a * (1.0 - e * e) / (1.0 + e * cos(orbital_angle))
 			# Velocity is higher when closer to parent (periapsis) and lower when farther (apoapsis)
-			orbital_velocity_magnitude = orbital_speed * r
+			orbital_velocity_magnitude = speed_rad_per_sec * r
 		
 		# Velocity is tangential to the orbit (perpendicular to radius vector)
 		linear_velocity = Vector2(-sin(orbital_angle), cos(orbital_angle)) * orbital_velocity_magnitude
