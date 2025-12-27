@@ -25,7 +25,7 @@ func get_minimap_icon() -> String:
 
 func get_minimap_size() -> float:
 	# Small size for resources
-	return 2.0
+	return 1.0
 
 func get_minimap_priority() -> int:
 	# Resources have low priority (drawn below planets/stations)
