@@ -12,7 +12,6 @@ signal dialogue_closed
 @onready var close_button: Button = $CenterContainer/StoreWindow/MarginContainer/VBoxContainer/ActionsContainer/CloseButton
 
 var store: Store = null
-var ship: Ship = null
 var gs: GameState = null
 
 var _upgrade_buttons: Dictionary = {}  # UpgradeItem -> Button
@@ -20,7 +19,6 @@ var _upgrade_buttons: Dictionary = {}  # UpgradeItem -> Button
 
 func _ready() -> void:
 	visible = false
-	ship = get_tree().get_first_node_in_group("ship") as Ship
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	
 	if close_button:
@@ -41,17 +39,11 @@ func open_dialogue(target_store: Store) -> void:
 	_build_upgrade_list()
 	_update_display()
 	
-	if ship and ship.camera:
-		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
-
 
 func close_dialogue() -> void:
 	visible = false
 	store = null
 	_clear_upgrade_buttons()
-	
-	if ship and ship.camera:
-		ship.camera.zoom_camera_out()
 	
 	dialogue_closed.emit()
 

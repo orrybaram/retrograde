@@ -43,3 +43,11 @@ const INDICATOR = CYAN
 # --- Defaults ---
 const PLANET_DEFAULT = BLUE
 const OUTLINE = WHITE_FADED
+
+# Fuel bar colors (quarter thresholds)
+const FUEL_EMPTY = Color(1.0, 0.3, 0.0, 1.0)  # Red-orange (0%)
+const FUEL_EIGHTH = Color(1.0, 0.0, 0.0, 1.0)  # Red (0-12.5%)
+const FUEL_QUARTER = Color(1.0, 0.4, 0.0, 1.0)  # Orange-red (12.5-25%)
+const FUEL_HALF = Color(1.0, 0.6, 0.0, 1.0)  # Orange (25-50%)
+const FUEL_THREE_QUARTERS = Color(1.0, 0.7, 0.0, 1.0)  # Amber-orange (50-75%)
+const FUEL_FULL = Color(1.0, 0.75, 0.0, 1.0)  # Amber (75-100%)

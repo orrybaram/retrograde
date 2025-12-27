@@ -11,7 +11,7 @@ signal can_harvest_changed(can_harvest: bool)
 @export var amount: int = 10
 @export var max_amount: int = 10
 @export var harvest_rate: float = 5.0
-@export var color: Color = Color(0.5, 0.5, 0.4)  # Default gray/brown for scrap
+@export var color: Color = Color(0.0, 0.75, 0.725, 0.196)  # Default gray/brown for scrap
 @export var min_scale: float = 0.8  # Minimum scale to prevent visual from getting too small
 
 var _harvesting: bool = false
@@ -22,6 +22,7 @@ var _offset_from_planet: Vector2 = Vector2.ZERO
 var _orbital_angle: float = 0.0
 var _orbital_distance: float = 0.0
 var _orbital_speed: float = 0.0
+var _rotation_speed: float = 0.0  # Rotation speed in radians per second (can be negative)
 var _is_depleted: bool = false
 var _trail_particles: GPUParticles2D = null
 var _indicator_target = null  # ResourceIndicatorTarget
@@ -84,6 +85,10 @@ func _physics_process(delta: float) -> void:
 	# Update position to orbit around planet if assigned
 	if _orbital_planet and is_instance_valid(_orbital_planet):
 		_update_orbital_position(delta)
+	
+	# Apply rotation speed if set
+	if _rotation_speed != 0.0:
+		rotation += _rotation_speed * delta
 
 func _process(_delta: float) -> void:
 	# If mini-game UI is open, don't process input here (mini-game handles it)

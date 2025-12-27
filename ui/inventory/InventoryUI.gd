@@ -55,7 +55,8 @@ func close_inventory() -> void:
 	dialogue_closed.emit()
 
 
-func _update_display() -> void:
+func _update_display(_item_id: String = "", _new_quantity: int = 0) -> void:
+	# Parameters are optional for compatibility with signals that may or may not pass arguments
 	if not ship or not gs:
 		return
 	

@@ -16,7 +16,7 @@ func _ready() -> void:
 	
 	# Configure progress bar colors (terminal amber)
 	if fuel_progress_bar:
-		fuel_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber for fuel
+		fuel_progress_bar.bar_color = Colors.FUEL_FULL  # Amber for fuel
 	if hull_progress_bar:
 		hull_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber for hull (will be updated dynamically)
 	
@@ -74,8 +74,23 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 		# Update fuel progress bar
 		var fuel = ship.fuel if "fuel" in ship else 0.0
 		var max_fuel = ship.max_fuel if "max_fuel" in ship else 100.0
+		var fuel_percent = (fuel / max_fuel * 100.0) if max_fuel > 0 else 0.0
 		if fuel_progress_bar:
 			fuel_progress_bar.set_value(fuel, max_fuel)
+			
+			# Change color based on fuel level (terminal-appropriate colors)
+			if fuel <= 0:
+				fuel_progress_bar.bar_color = Colors.FUEL_EMPTY
+			elif fuel_percent <= 12.5:
+				fuel_progress_bar.bar_color = Colors.FUEL_EIGHTH  # Red (1/8)
+			elif fuel_percent <= 25:
+				fuel_progress_bar.bar_color = Colors.FUEL_QUARTER
+			elif fuel_percent <= 50:
+				fuel_progress_bar.bar_color = Colors.FUEL_HALF
+			elif fuel_percent <= 75:
+				fuel_progress_bar.bar_color = Colors.FUEL_THREE_QUARTERS
+			else:
+				fuel_progress_bar.bar_color = Colors.FUEL_FULL
 		
 		# Update hull progress bar
 		var hull = ship.hull_strength if "hull_strength" in ship else 0.0
@@ -100,6 +115,7 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 		velocity_label.text = "Velocity: 0.0 m/s"
 		if fuel_progress_bar:
 			fuel_progress_bar.set_value(0.0, 100.0)
+			fuel_progress_bar.bar_color = Colors.FUEL_EMPTY
 		if hull_progress_bar:
 			hull_progress_bar.set_value(0.0, 100.0)
 			hull_progress_bar.bar_color = Color(1.0, 0.3, 0.0)  # Red-orange
