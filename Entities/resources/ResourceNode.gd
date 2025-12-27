@@ -17,7 +17,7 @@ signal can_harvest_changed(can_harvest: bool)
 var _harvesting: bool = false
 var _accum: float = 0.0
 var _ship_in_range: Ship = null
-var _orbital_planet: Planet = null
+var _orbital_planet: Node2D = null  # Can be Planet or SpaceStation
 var _offset_from_planet: Vector2 = Vector2.ZERO
 var _orbital_angle: float = 0.0
 var _orbital_distance: float = 0.0
@@ -27,6 +27,7 @@ var _trail_particles: GPUParticles2D = null
 var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
 var _can_harvest: bool = false  # Track if harvesting is currently possible
+var minimap_target: ResourceMinimapTarget = null
 
 # Mini-game integration
 var _mini_game: HarvestMiniGame = null
@@ -58,6 +59,9 @@ func _ready() -> void:
 	
 	# Initialize visual
 	_update_visual()
+	
+	# Register with minimap
+	_register_with_minimap.call_deferred()
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Ship:
@@ -188,6 +192,13 @@ func _deplete_resource() -> void:
 	
 	# Unregister from EventBus
 	EventBus.unregister_resource_node(self)
+	
+	# Unregister from minimap
+	if minimap_target:
+		var minimap = Minimap.get_instance(get_tree())
+		if minimap:
+			minimap.unregister_target(minimap_target)
+		minimap_target = null
 	
 	# Stop mini-game if active
 	if _mini_game:
@@ -332,6 +343,12 @@ func _find_visual_node() -> Node2D:
 		if child.name.contains("Visual") or child.name.contains("Sprite") or child.name.contains("Color"):
 			return child as Node2D
 	return null
+
+func _register_with_minimap() -> void:
+	var minimap = Minimap.get_instance(get_tree())
+	if minimap:
+		minimap_target = ResourceMinimapTarget.new(self)
+		minimap.register_target(minimap_target)
 
 func _register_indicator() -> void:
 	if _indicator_manager and not _indicator_target and not _is_depleted:

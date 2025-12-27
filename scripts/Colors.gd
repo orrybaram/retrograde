@@ -37,7 +37,7 @@ const UI_BORDER = AMBER
 
 # --- Game Entity Colors ---
 const SUN = YELLOW
-const MOON_ORBIT = SKY_BLUE
+const MOON_ORBIT = AMBER_SUBTLE
 const INDICATOR = CYAN
 
 # --- Defaults ---

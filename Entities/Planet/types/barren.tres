@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="PlanetTypeData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="PlanetTypeData" load_steps=2 format=3 uid="uid://crce6v4fj8klu"]
 
-[ext_resource type="Script" path="res://entities/Planet/types/PlanetTypeData.gd" id="1"]
+[ext_resource type="Script" uid="uid://e03fttkhh6jj" path="res://entities/Planet/types/PlanetTypeData.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -8,8 +8,5 @@ type_name = "Barren"
 planet_type = 6
 radius_min = 100.0
 radius_max = 250.0
-collision_radius_ratio = 1.0
 mass_multiplier_base = 15.0
-habitability = 0.0
 color_palette = Array[Color]([Color(0.2, 0.2, 0.2, 1), Color(0.3, 0.25, 0.2, 1), Color(0.15, 0.15, 0.15, 1), Color(0.25, 0.22, 0.18, 1)])
-

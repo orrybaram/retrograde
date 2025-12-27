@@ -8,6 +8,7 @@ signal generation_complete()
 enum GenerationMode { PREDEFINED, PROCEDURAL }
 
 @export var planet_scene: PackedScene = preload("res://entities/Planet/Planet.tscn")
+@export var space_station_scene: PackedScene = preload("res://entities/structures/SpaceStation.tscn")
 
 @export_group("Generation Mode")
 @export var generation_mode: GenerationMode = GenerationMode.PREDEFINED
@@ -84,6 +85,11 @@ const OUTER_PLANET_WEIGHTS = {
 @export var planet_orbital_speed_base: float = 0.001  ## Base orbital speed
 @export var planet_eccentricity_max: float = 0.1  ## Maximum orbital eccentricity
 
+@export_group("SpaceStation Orbital Parameters")
+@export var station_orbital_distance_multiplier: float = 2.5  ## Station orbit distance as multiplier of planet radius
+@export var station_orbital_speed_multiplier: float = 1.0  ## Station orbital speed multiplier (relative to planet base speed)
+@export var station_use_kepler_law: bool = true  ## If true, calculate speed using Kepler's law. If false, use speed multiplier directly.
+
 var generated_sun: Planet = null
 var generated_planets: Array[Planet] = []
 var _current_orbital_distance: float = 0.0  # Tracks cumulative orbital distance during generation
@@ -119,6 +125,11 @@ func _generate_from_data(system_data: SolarSystemData) -> void:
 		if planet_def:
 			var planet = await _create_planet_from_definition(planet_def, i, system_data.planets.size())
 			generated_planets.append(planet)
+			
+			# Spawn SpaceStation orbiting the 6th planet (index 5, Saturn)
+			if i == 5:
+				await get_tree().process_frame
+				_create_space_station_for_planet(planet)
 	
 	print("Predefined solar system generated!")
 	print("  System: ", system_data.system_name)
@@ -388,18 +399,53 @@ func _create_planet(orbit_index: int) -> Planet:
 	# Random initial angle
 	planet.initial_angle = RNG.rng.randf_range(0.0, TAU)
 	
-	# Slight eccentricity
-	planet.eccentricity = RNG.rng.randf_range(0.0, planet_eccentricity_max)
-	
-	# Planet name includes type (from resource)
-	planet.name = "Planet %d (%s)" % [orbit_index + 1, type_data.type_name]
-	
 	# Add as child of sun so it orbits
 	generated_sun.add_child(planet)
 	
-	print("  Created: ", planet.name, " - Radius: ", int(planet.radius), ", Habitability: ", "%.1f" % planet.habitability)
-	
 	return planet
+
+## Create a SpaceStation that orbits a planet
+func _create_space_station_for_planet(planet: Planet) -> void:
+	if not space_station_scene:
+		push_error("SpaceStation scene not set in SolarSystemGenerator")
+		return
+	
+	var station = space_station_scene.instantiate() as SpaceStation
+	if not station:
+		push_error("Failed to instantiate SpaceStation")
+		return
+	
+	# Set orbital parameters for the station
+	# Orbit at a distance from the planet (outside its radius)
+	var planet_radius = planet.radius
+	station.orbital_distance = planet_radius * station_orbital_distance_multiplier
+	
+	# Calculate orbital speed
+	if station_use_kepler_law:
+		# Use Kepler's 3rd law approximation (speed inversely proportional to sqrt of distance)
+		var base_speed = planet_orbital_speed_base * station_orbital_speed_multiplier
+		station.orbital_speed = base_speed / sqrt(station.orbital_distance / planet_orbital_distance_base)
+	else:
+		# Use direct speed multiplier
+		station.orbital_speed = planet_orbital_speed_base * station_orbital_speed_multiplier
+	
+	# Random initial angle
+	station.initial_angle = RNG.rng.randf_range(0.0, TAU)
+	station.eccentricity = 0.0  # Circular orbit
+	
+	# Set initial position based on orbital parameters
+	var initial_offset = Vector2(cos(station.initial_angle), sin(station.initial_angle)) * station.orbital_distance
+	station.position = initial_offset
+	
+	# Add as child of planet so it orbits the planet
+	planet.add_child(station)
+	
+	# Explicitly set parent_planet to ensure orbital mechanics work
+	station.parent_planet = planet
+	station.orbital_angle = station.initial_angle
+	station.lock_rotation = true
+	
+	print("  Created SpaceStation orbiting: ", planet.name, " at distance: ", int(station.orbital_distance))
 
 ## Select a planet type based on weighted random selection
 func _select_planet_type(orbit_index: int) -> Planet.PlanetType:

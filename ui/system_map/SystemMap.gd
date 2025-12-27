@@ -11,8 +11,10 @@ signal map_closed
 @export var grid_color: Color = Colors.PRIMARY_SUBTLE
 @export var orbit_color: Color = Colors.PRIMARY_FADED
 @export var moon_orbit_color: Color = Colors.MOON_ORBIT
+@export var space_station_orbit_color: Color = Colors.MOON_ORBIT
 @export var sun_color: Color = Colors.SUN
 @export var ship_color: Color = Colors.PRIMARY
+@export var space_station_color: Color = Color(0.6, 0.6, 0.7, 1.0)
 
 @export_group("Display")
 @export var padding: float = 80.0  ## Padding from screen edges
@@ -24,7 +26,7 @@ signal map_closed
 @export_group("Zoom and Pan")
 @export var default_zoom_level: float = 5.0  ## Default zoom multiplier (1.5x = zoomed in)
 @export var min_zoom_level: float = 3.0  ## Minimum zoom level
-@export var max_zoom_level: float = 15.0  ## Maximum zoom level
+@export var max_zoom_level: float = 50.0  ## Maximum zoom level
 @export var zoom_speed: float = 1.5  ## Zoom multiplier per key press
 @export var pan_speed: float = 500.0  ## Pixels per second panning speed
 
@@ -171,14 +173,30 @@ func _clamp_pan_offset(offset: Vector2) -> Vector2:
 func _zoom_in() -> void:
 	zoom_level = clamp(zoom_level * zoom_speed, min_zoom_level, max_zoom_level)
 	scale_factor = base_scale_factor * zoom_level
-	# Reclamp pan offset after zoom change
-	pan_offset = _clamp_pan_offset(pan_offset)
+	# Re-center on player after zoom change
+	_center_on_player()
 
 func _zoom_out() -> void:
 	zoom_level = clamp(zoom_level / zoom_speed, min_zoom_level, max_zoom_level)
 	scale_factor = base_scale_factor * zoom_level
-	# Reclamp pan offset after zoom change
-	pan_offset = _clamp_pan_offset(pan_offset)
+	# Re-center on player after zoom change
+	_center_on_player()
+
+func _center_on_player() -> void:
+	# Center on player ship
+	if ship and is_instance_valid(ship) and generator and generator.generated_sun:
+		var sun_pos = generator.generated_sun.global_position
+		var relative_pos = ship.global_position - sun_pos
+		# Pan offset should position ship at map center
+		# Ship map pos = map_center + pan_offset + relative_pos * scale_factor
+		# To center ship: map_center = map_center + pan_offset + relative_pos * scale_factor
+		# Therefore: pan_offset = -relative_pos * scale_factor
+		pan_offset = -relative_pos * scale_factor
+		# Clamp pan offset to valid bounds
+		pan_offset = _clamp_pan_offset(pan_offset)
+	else:
+		# Fallback: center on sun if ship not available
+		pan_offset = Vector2.ZERO
 
 func _draw() -> void:
 	if not generator or not generator.generated_sun:
@@ -203,11 +221,17 @@ func _draw() -> void:
 	# Draw moon orbital paths (moons around planets)
 	_draw_moon_orbits()
 	
+	# Draw space station orbital paths (stations around planets)
+	_draw_space_station_orbits()
+	
 	# Draw sun
 	_draw_sun()
 	
 	# Draw planets
 	_draw_planets()
+	
+	# Draw space stations
+	_draw_space_stations()
 	
 	# Draw ship
 	_draw_ship()
@@ -316,30 +340,183 @@ func _draw_moon_orbits() -> void:
 		# Ensure minimum visibility
 		var min_visible_radius = 5.0  # Minimum pixels for visibility
 		
+		# Draw dashed orbit (dash pattern: draw 3 segments, skip 2)
+		var segments = 96  # More segments for smoother dashed effect
+		var dash_length = 3  # Number of segments per dash
+		var gap_length = 2   # Number of segments per gap
+		
 		if e == 0.0:
-			# Circular orbit
+			# Circular orbit - draw dashed arc
 			var moon_orbit_radius = a * scale_factor
 			if moon_orbit_radius < min_visible_radius:
 				moon_orbit_radius = min_visible_radius
-			draw_arc(parent_map_pos, moon_orbit_radius, 0.0, TAU, 64, moon_orbit_color, 1.5)
+			
+			var segment_angle = TAU / float(segments)
+			var dash_angle = segment_angle * dash_length
+			var gap_angle = segment_angle * gap_length
+			
+			var current_angle = 0.0
+			while current_angle < TAU:
+				var dash_end_angle = min(current_angle + dash_angle, TAU)
+				draw_arc(parent_map_pos, moon_orbit_radius, current_angle, dash_end_angle, 8, moon_orbit_color, 1.5)
+				current_angle += dash_angle + gap_angle
 		else:
-			# Elliptical orbit - draw line segments following the ellipse
-			var segments = 64
-			for j in range(segments):
-				var angle_start = (float(j) / float(segments)) * TAU
-				var angle_end = (float(j + 1) / float(segments)) * TAU
+			# Elliptical orbit - draw dashed line segments following the ellipse
+			var segment_angle = TAU / float(segments)
+			var dash_angle = segment_angle * dash_length
+			var gap_angle = segment_angle * gap_length
+			
+			var current_angle = 0.0
+			while current_angle < TAU:
+				var dash_end_angle = min(current_angle + dash_angle, TAU)
 				
-				var r_start = a * (1.0 - e * e) / (1.0 + e * cos(angle_start))
-				var r_end = a * (1.0 - e * e) / (1.0 + e * cos(angle_end))
+				# Draw dash segment
+				var dash_segments = int((dash_end_angle - current_angle) / segment_angle) + 1
+				for j in range(dash_segments):
+					var angle_start = current_angle + (float(j) / float(dash_segments)) * (dash_end_angle - current_angle)
+					var angle_end = current_angle + (float(j + 1) / float(dash_segments)) * (dash_end_angle - current_angle)
+					
+					if angle_end > TAU:
+						angle_end = TAU
+					if angle_start >= TAU:
+						break
+					
+					var r_start = a * (1.0 - e * e) / (1.0 + e * cos(angle_start))
+					var r_end = a * (1.0 - e * e) / (1.0 + e * cos(angle_end))
+					
+					# Scale to screen space with minimum visibility
+					var screen_r_start = max(r_start * scale_factor, min_visible_radius)
+					var screen_r_end = max(r_end * scale_factor, min_visible_radius)
+					
+					var pos_start = parent_map_pos + Vector2(cos(angle_start), sin(angle_start)) * screen_r_start
+					var pos_end = parent_map_pos + Vector2(cos(angle_end), sin(angle_end)) * screen_r_end
+					
+					draw_line(pos_start, pos_end, moon_orbit_color, 1.5)
 				
-				# Scale to screen space with minimum visibility
-				var screen_r_start = max(r_start * scale_factor, min_visible_radius)
-				var screen_r_end = max(r_end * scale_factor, min_visible_radius)
+				current_angle += dash_angle + gap_angle
+
+func _draw_space_station_orbits() -> void:
+	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
+	
+	# Get all space stations from the scene tree
+	var space_stations = get_tree().get_nodes_in_group("space_stations")
+	
+	for station in space_stations:
+		if not station or not is_instance_valid(station):
+			continue
+		
+		var station_node = station as SpaceStation
+		if not station_node:
+			continue
+		
+		# Only draw orbits for stations that have a parent planet
+		if not station_node.parent_planet:
+			continue
+		
+		# Get parent planet's actual position on the map
+		var parent_relative_pos = station_node.parent_planet.global_position - sun_pos
+		var parent_map_pos = map_center + pan_offset + parent_relative_pos * scale_factor
+		
+		var a = station_node.orbital_distance  # semi-major axis
+		var e = clamp(station_node.eccentricity, 0.0, 0.99) if "eccentricity" in station_node else 0.0
+		
+		# Ensure minimum visibility
+		var min_visible_radius = 5.0  # Minimum pixels for visibility
+		
+		# Draw dashed orbit (same style as moon orbits)
+		var segments = 96  # More segments for smoother dashed effect
+		var dash_length = 3  # Number of segments per dash
+		var gap_length = 2   # Number of segments per gap
+		
+		if e == 0.0:
+			# Circular orbit - draw dashed arc
+			var station_orbit_radius = a * scale_factor
+			if station_orbit_radius < min_visible_radius:
+				station_orbit_radius = min_visible_radius
+			
+			var segment_angle = TAU / float(segments)
+			var dash_angle = segment_angle * dash_length
+			var gap_angle = segment_angle * gap_length
+			
+			var current_angle = 0.0
+			while current_angle < TAU:
+				var dash_end_angle = min(current_angle + dash_angle, TAU)
+				draw_arc(parent_map_pos, station_orbit_radius, current_angle, dash_end_angle, 8, space_station_orbit_color, 1.5)
+				current_angle += dash_angle + gap_angle
+		else:
+			# Elliptical orbit - draw dashed line segments following the ellipse
+			var segment_angle = TAU / float(segments)
+			var dash_angle = segment_angle * dash_length
+			var gap_angle = segment_angle * gap_length
+			
+			var current_angle = 0.0
+			while current_angle < TAU:
+				var dash_end_angle = min(current_angle + dash_angle, TAU)
 				
-				var pos_start = parent_map_pos + Vector2(cos(angle_start), sin(angle_start)) * screen_r_start
-				var pos_end = parent_map_pos + Vector2(cos(angle_end), sin(angle_end)) * screen_r_end
+				# Draw dash segment
+				var dash_segments = int((dash_end_angle - current_angle) / segment_angle) + 1
+				for j in range(dash_segments):
+					var angle_start = current_angle + (float(j) / float(dash_segments)) * (dash_end_angle - current_angle)
+					var angle_end = current_angle + (float(j + 1) / float(dash_segments)) * (dash_end_angle - current_angle)
+					
+					if angle_end > TAU:
+						angle_end = TAU
+					if angle_start >= TAU:
+						break
+					
+					var r_start = a * (1.0 - e * e) / (1.0 + e * cos(angle_start))
+					var r_end = a * (1.0 - e * e) / (1.0 + e * cos(angle_end))
+					
+					# Scale to screen space with minimum visibility
+					var screen_r_start = max(r_start * scale_factor, min_visible_radius)
+					var screen_r_end = max(r_end * scale_factor, min_visible_radius)
+					
+					var pos_start = parent_map_pos + Vector2(cos(angle_start), sin(angle_start)) * screen_r_start
+					var pos_end = parent_map_pos + Vector2(cos(angle_end), sin(angle_end)) * screen_r_end
+					
+					draw_line(pos_start, pos_end, space_station_orbit_color, 1.5)
 				
-				draw_line(pos_start, pos_end, moon_orbit_color, 1.5)
+				current_angle += dash_angle + gap_angle
+
+func _draw_space_stations() -> void:
+	var sun_pos = generator.generated_sun.global_position if generator.generated_sun else Vector2.ZERO
+	
+	# Get all space stations from the scene tree
+	var space_stations = get_tree().get_nodes_in_group("space_stations")
+	
+	for station in space_stations:
+		if not station or not is_instance_valid(station):
+			continue
+		
+		var station_node = station as SpaceStation
+		if not station_node:
+			continue
+		
+		# Use actual global_position relative to sun (same as ship positioning)
+		var relative_pos = station_node.global_position - sun_pos
+		var map_pos = map_center + pan_offset + relative_pos * scale_factor
+		
+		# Calculate station size (use a fixed size since stations don't have a radius property)
+		# Stations are moon-sized, so use a reasonable size
+		var station_size = 1200.0 * scale_factor * planet_size_multiplier
+		
+		# Draw station as a square/diamond shape to distinguish from planets
+		var points = PackedVector2Array([
+			Vector2(0, -station_size),  # Top
+			Vector2(station_size, 0),   # Right
+			Vector2(0, station_size),   # Bottom
+			Vector2(-station_size, 0)   # Left
+		])
+		
+		# Rotate 45 degrees to make it a diamond
+		var rotated_points = PackedVector2Array()
+		for point in points:
+			rotated_points.append(map_pos + point.rotated(PI / 4))
+		
+		draw_polygon(rotated_points, PackedColorArray([space_station_color, space_station_color, space_station_color, space_station_color]))
+		
+		# Draw station outline
+		draw_polyline(rotated_points, border_color, 1.0, true)
 
 func _draw_sun() -> void:
 	var sun = generator.generated_sun

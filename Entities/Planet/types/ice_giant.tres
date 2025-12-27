@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="PlanetTypeData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="PlanetTypeData" load_steps=2 format=3 uid="uid://cx6n75a6y6fx3"]
 
-[ext_resource type="Script" path="res://entities/Planet/types/PlanetTypeData.gd" id="1"]
+[ext_resource type="Script" uid="uid://e03fttkhh6jj" path="res://entities/Planet/types/PlanetTypeData.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -10,6 +10,4 @@ radius_min = 400.0
 radius_max = 800.0
 collision_radius_ratio = 0.4
 mass_multiplier_base = 50.0
-habitability = 0.0
 color_palette = Array[Color]([Color(0.4, 0.6, 0.9, 1), Color(0.5, 0.8, 0.9, 1), Color(0.3, 0.5, 0.7, 1), Color(0.6, 0.75, 0.85, 1)])
-
