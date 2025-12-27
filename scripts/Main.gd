@@ -9,6 +9,7 @@ enum MainGameState {
 @onready var ship := $Ship
 @onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
 @onready var game_over_menu: GameOverMenu = $"CanvasLayer/GameOverMenu"
+@onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
 @onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
 @onready var solar_system_generator: SolarSystemGenerator = $"SolarSystemGenerator"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
@@ -113,6 +114,10 @@ func start_game() -> void:
 	
 	# Generate solar system if not already generated
 	if not solar_system_generated and solar_system_generator:
+		# Show loading screen
+		if loading_screen:
+			loading_screen.show_loading()
+		
 		get_tree().paused = false
 		await solar_system_generator.generate()
 		solar_system_generated = true
@@ -120,6 +125,10 @@ func start_game() -> void:
 		if ship_spawner:
 			await ship_spawner.spawn_complete
 		await get_tree().process_frame
+		
+		# Hide loading screen after generation and spawning complete
+		if loading_screen:
+			loading_screen.hide_loading()
 	
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
