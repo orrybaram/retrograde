@@ -128,6 +128,7 @@ func start_game() -> void:
 		
 		# Hide loading screen after generation and spawning complete
 		if loading_screen:
+			await get_tree().create_timer(loading_screen.duration + 1.0).timeout
 			loading_screen.hide_loading()
 	
 	# Show ship after spawning is complete

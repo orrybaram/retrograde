@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://c2o4vbaw813u0"]
 
-[ext_resource type="Script" path="res://ui/LoadingScreen.gd" id="1"]
+[ext_resource type="Script" uid="uid://13d44fa2c843" path="res://ui/LoadingScreen.gd" id="1"]
 
 [node name="LoadingScreen" type="Control"]
 layout_mode = 3
@@ -20,20 +20,16 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 1)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
-layout_mode = 2
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 600.0
+offset_bottom = 719.0
 theme_override_constants/separation = 20
 
-[node name="MessageLabel" type="Label" parent="CenterContainer/VBoxContainer"]
+[node name="TerminalLabel" type="RichTextLabel" parent="VBoxContainer"]
+custom_minimum_size = Vector2(600, 720)
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "Generating Solar System..."
-horizontal_alignment = 1
+theme_override_font_sizes/normal_font_size = 10
+bbcode_enabled = true
+scroll_active = false
+scroll_following = true
