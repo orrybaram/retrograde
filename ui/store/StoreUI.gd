@@ -70,7 +70,6 @@ func _create_upgrade_button(upgrade: UpgradeItem) -> void:
 	
 	_update_upgrade_button(upgrade, button)
 
-
 func _update_upgrade_button(upgrade: UpgradeItem, button: Button) -> void:
 	if not store or not gs:
 		return
@@ -92,13 +91,11 @@ func _update_upgrade_button(upgrade: UpgradeItem, button: Button) -> void:
 		button.text = "%s (%d credits) [%s]" % [upgrade.display_name, upgrade.cost, block_reason]
 		button.disabled = true
 
-
 func _clear_upgrade_buttons() -> void:
 	for button in _upgrade_buttons.values():
 		if is_instance_valid(button):
 			button.queue_free()
 	_upgrade_buttons.clear()
-
 
 func _update_display() -> void:
 	if not store or not gs:
@@ -134,22 +131,19 @@ func _update_display() -> void:
 		else:
 			sell_button.visible = false
 
-
 func _on_upgrade_pressed(upgrade: UpgradeItem) -> void:
-	if store and store.purchase_upgrade(upgrade):
-		_update_display()
-
+	if store:
+		var success = await store.purchase_upgrade(upgrade)
+		if success:
+			_update_display()
 
 func _on_sell_pressed() -> void:
 	if store:
 		store.sell_all_resources()
 		_update_display()
 
-
 func _on_close_pressed() -> void:
 	close_dialogue()
 
-
 func _on_upgrade_level_changed(_path: String, _level: int) -> void:
 	_update_display()
-
