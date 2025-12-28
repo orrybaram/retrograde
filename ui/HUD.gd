@@ -6,11 +6,13 @@ extends Control
 @onready var position_label: Label = $"MarginContainer/VBoxContainer/PositionLabel"
 @onready var velocity_label: Label = $"MarginContainer/VBoxContainer/VelocityLabel"
 @onready var action_message_label: Label = $"ActionMessageLabel"
+@onready var save_indicator_label: Label = $"SaveIndicatorLabel"
 
 var gs: Node = null
 var ship: Ship = null
 
 func _ready() -> void:
+	add_to_group("hud")
 	gs = get_tree().get_first_node_in_group("game_state")
 	ship = get_tree().get_first_node_in_group("ship") as Ship
 	
@@ -45,6 +47,16 @@ func _update_action_message(message: String) -> void:
 	if action_message_label:
 		action_message_label.visible = message != ""
 		action_message_label.text = message
+
+## Show the saving indicator
+func show_saving_indicator() -> void:
+	if save_indicator_label:
+		save_indicator_label.visible = true
+
+## Hide the saving indicator
+func hide_saving_indicator() -> void:
+	if save_indicator_label:
+		save_indicator_label.visible = false
 
 func _process(_dt: float) -> void:
 	_update_labels()

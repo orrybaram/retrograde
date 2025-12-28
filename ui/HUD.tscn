@@ -109,3 +109,24 @@ theme_override_font_sizes/font_size = 14
 text = "Press [action] to harvest"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="SaveIndicatorLabel" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -32.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(0, 1, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "Saving..."
+horizontal_alignment = 2
+vertical_alignment = 2

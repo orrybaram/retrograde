@@ -44,6 +44,22 @@ func enter() -> void:
 		locked_offset_from_target = Vector2.ZERO  # Will be calculated on first frame
 		_spaceport_rotation_set = false  # Reset rotation flag
 		
+		# Auto-save on landing (wait a frame to ensure position is set)
+		await ship.get_tree().process_frame
+		var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
+		if gs and ship:
+			# Show saving indicator
+			var hud = ship.get_tree().get_first_node_in_group("hud") as Control
+			if hud and hud.has_method("show_saving_indicator"):
+				hud.show_saving_indicator()
+			
+			Save.save(gs, ship)
+			
+			# Hide saving indicator after a brief delay
+			if hud and hud.has_method("hide_saving_indicator"):
+				await ship.get_tree().create_timer(0.5).timeout
+				hud.hide_saving_indicator()
+		
 		# Emit action message for space port entry
 		var enter_key = InputUtils.get_action_key_name("action")
 		EventBus.action_message_changed.emit('Press "%s" to enter' % [enter_key])

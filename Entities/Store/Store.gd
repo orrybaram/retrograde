@@ -104,6 +104,20 @@ func purchase_upgrade(upgrade: UpgradeItem) -> bool:
 	# Apply the upgrade
 	upgrade.apply(_ship, _game_state)
 	
+	# Auto-save after purchase
+	if _game_state and _ship:
+		# Show saving indicator
+		var hud = get_tree().get_first_node_in_group("hud") as Control
+		if hud and hud.has_method("show_saving_indicator"):
+			hud.show_saving_indicator()
+		
+		Save.save(_game_state, _ship)
+		
+		# Hide saving indicator after a brief delay
+		if hud and hud.has_method("hide_saving_indicator"):
+			await get_tree().create_timer(0.5).timeout
+			hud.hide_saving_indicator()
+	
 	purchase_completed.emit(upgrade)
 	return true
 

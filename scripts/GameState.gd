@@ -12,6 +12,9 @@ var credits: int = 0 :
 var has_drone_bay: bool = false
 var drones_active: int = 0
 
+## Death counter - tracks total number of deaths (not displayed to player)
+var death_count: int = 0
+
 ## Tracks the player's current upgrade level for each upgrade path.
 ## Keys are path names (e.g., "hull", "fuel_tank"), values are tier levels (0 = base, 1+ = upgraded)
 var upgrade_levels: Dictionary = {}
