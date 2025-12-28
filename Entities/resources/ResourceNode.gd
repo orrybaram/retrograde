@@ -17,6 +17,11 @@ signal can_harvest_changed(can_harvest: bool)
 # Performance: Distance-based processing
 const ACTIVE_DISTANCE_SQ: float = 3000.0 * 3000.0  # Squared distance for faster comparison
 
+# Collision damage/slowdown constants
+const DAMAGE_SPEED_THRESHOLD: float = 150.0  # No damage below this relative speed
+const DAMAGE_PER_SPEED: float = 0.05         # Damage scaling (5 damage per 100 speed over threshold)
+const COLLISION_SLOWDOWN: float = 0.6        # Reduce velocity to 60% on impact
+
 var _harvesting: bool = false
 var _accum: float = 0.0
 var _ship_in_range: Ship = null
@@ -68,6 +73,24 @@ func _on_body_entered(body: Node2D) -> void:
 	if body is Ship:
 		_ship_in_range = body as Ship
 		_register_indicator()
+		
+		# Calculate relative velocity for collision effects
+		var relative_velocity = _ship_in_range.linear_velocity - get_orbital_velocity()
+		var relative_speed = relative_velocity.length()
+		
+		# Apply slowdown (reduce velocity toward resource's velocity)
+		if relative_speed > 50.0:
+			_ship_in_range.linear_velocity = lerp(
+				_ship_in_range.linear_velocity,
+				get_orbital_velocity(),
+				1.0 - COLLISION_SLOWDOWN
+			)
+		
+		# Apply damage at high speeds
+		if relative_speed > DAMAGE_SPEED_THRESHOLD:
+			var damage = int((relative_speed - DAMAGE_SPEED_THRESHOLD) * DAMAGE_PER_SPEED)
+			if damage > 0:
+				_ship_in_range.take_damage(damage)
 
 func _on_body_exited(body: Node2D) -> void:
 	if body is Ship and _ship_in_range == body:
