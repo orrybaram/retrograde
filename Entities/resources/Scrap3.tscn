@@ -12,6 +12,12 @@ script = ExtResource("1")
 scale = Vector2(1.960001, 1.960001)
 shape = SubResource("1")
 
+[node name="CollisionArea" type="Area2D" parent="."]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="CollisionArea"]
+position = Vector2(-4, 12)
+polygon = PackedVector2Array(-40, -15, -22.633076, -11.158787, 35, -30, 45, -20, 41.49397, -11.158787, 33.94961, -18.597977, -22.633076, 0, -41.49397, -3.7195954)
+
 [node name="Polygon2D" type="Polygon2D" parent="."]
 position = Vector2(-4, 12)
 color = Color(0.3382, 0.36537, 0.38, 1)

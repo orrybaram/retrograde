@@ -14,6 +14,14 @@ signal can_harvest_changed(can_harvest: bool)
 @export var color: Color = Color(0.0, 0.75, 0.725, 0.196)  # Default gray/brown for scrap
 @export var min_scale: float = 0.8  # Minimum scale to prevent visual from getting too small
 
+# Performance: Distance-based processing
+const ACTIVE_DISTANCE_SQ: float = 3000.0 * 3000.0  # Squared distance for faster comparison
+
+# Collision damage/slowdown constants
+const DAMAGE_SPEED_THRESHOLD: float = 150.0  # No damage below this relative speed
+const DAMAGE_PER_SPEED: float = 0.50         # Damage scaling (50 damage per 100 speed over threshold)
+const COLLISION_SLOWDOWN: float = 0.3        # Reduce velocity to 30% on impact
+
 var _harvesting: bool = false
 var _accum: float = 0.0
 var _ship_in_range: Ship = null
@@ -24,7 +32,6 @@ var _orbital_distance: float = 0.0
 var _orbital_speed: float = 0.0
 var _rotation_speed: float = 0.0  # Rotation speed in radians per second (can be negative)
 var _is_depleted: bool = false
-var _trail_particles: GPUParticles2D = null
 var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
 var _can_harvest: bool = false  # Track if harvesting is currently possible
@@ -37,14 +44,19 @@ var _mini_game_ui_scene: PackedScene = preload("res://minigames/harvest/HarvestM
 
 func _ready() -> void:
 	add_to_group("resource_nodes")
-	body_entered.connect(_on_body_entered)
-	body_exited.connect(_on_body_exited)
+	# Main Area2D (circle) - for harvesting detection
+	body_entered.connect(_on_harvest_area_entered)
+	body_exited.connect(_on_harvest_area_exited)
+	
+	# Collision Area2D (polygon) - for damage/slowdown
+	var collision_area = get_node_or_null("CollisionArea")
+	if collision_area:
+		collision_area.body_entered.connect(_on_collision_area_entered)
+		collision_area.body_exited.connect(_on_collision_area_exited)
 	
 	# Register with EventBus
 	EventBus.register_resource_node(self)
 	
-	# Find trail particles
-	_trail_particles = get_node_or_null("TrailParticles") as GPUParticles2D
 	
 	# Find IndicatorManager
 	_indicator_manager = get_tree().get_first_node_in_group("indicator_manager")
@@ -64,12 +76,13 @@ func _ready() -> void:
 	# Register with minimap
 	_register_with_minimap.call_deferred()
 
-func _on_body_entered(body: Node2D) -> void:
+# Harvest area (circle) - for detecting ship in range for harvesting
+func _on_harvest_area_entered(body: Node2D) -> void:
 	if body is Ship:
 		_ship_in_range = body as Ship
 		_register_indicator()
 
-func _on_body_exited(body: Node2D) -> void:
+func _on_harvest_area_exited(body: Node2D) -> void:
 	if body is Ship and _ship_in_range == body:
 		_ship_in_range = null
 		if _harvesting:
@@ -80,6 +93,31 @@ func _on_body_exited(body: Node2D) -> void:
 			can_harvest_changed.emit(false)
 			EventBus.action_message_changed.emit("")
 		_unregister_indicator()
+
+# Collision area (polygon) - for damage and slowdown when hitting precise shape
+func _on_collision_area_entered(body: Node2D) -> void:
+	if body is Ship:
+		# Calculate relative velocity for collision effects
+		var relative_velocity = body.linear_velocity - get_orbital_velocity()
+		var relative_speed = relative_velocity.length()
+		
+		# Apply slowdown (reduce velocity toward resource's velocity)
+		if relative_speed > 50.0:
+			body.linear_velocity = lerp(
+				body.linear_velocity,
+				get_orbital_velocity(),
+				1.0 - COLLISION_SLOWDOWN
+			)
+		
+		# Apply damage at high speeds
+		if relative_speed > DAMAGE_SPEED_THRESHOLD:
+			var damage = int((relative_speed - DAMAGE_SPEED_THRESHOLD) * DAMAGE_PER_SPEED)
+			if damage > 0:
+				body.take_damage(damage)
+
+func _on_collision_area_exited(_body: Node2D) -> void:
+	# Collision exit doesn't need to do anything special
+	pass
 		
 func _physics_process(delta: float) -> void:
 	# Update position to orbit around planet if assigned
@@ -90,7 +128,19 @@ func _physics_process(delta: float) -> void:
 	if _rotation_speed != 0.0:
 		rotation += _rotation_speed * delta
 
+## Check if within active processing range of ship (uses squared distance for performance)
+func _is_within_active_range() -> bool:
+	var ship = get_tree().get_first_node_in_group("ship") as Ship
+	if not ship:
+		return true  # If no ship, process anyway to avoid breaking
+	return global_position.distance_squared_to(ship.global_position) <= ACTIVE_DISTANCE_SQ
+
 func _process(_delta: float) -> void:
+	# Performance: Skip processing if ship is not in Area2D range
+	# _ship_in_range is only set when ship enters our collision area
+	if not _ship_in_range:
+		return
+	
 	# If mini-game UI is open, don't process input here (mini-game handles it)
 	if _mini_game and not _mini_game.is_idle():
 		return
@@ -126,6 +176,15 @@ func _process(_delta: float) -> void:
 func start_harvest() -> void:
 	if _harvesting or amount <= 0 or _is_depleted:
 		return
+	
+	# Prevent multiple harvests: check if ship is already harvesting
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		var state_machine = _ship_in_range.get_node_or_null("StateMachine") as StateMachine
+		if state_machine:
+			var current_state = state_machine.current_state
+			if current_state and current_state is HarvestingState:
+				# Ship is already harvesting another resource, don't start this one
+				return
 	
 	# Check if ship is moving slowly relative to resource node (under 50 speed)
 	if _ship_in_range and is_instance_valid(_ship_in_range):
@@ -213,10 +272,6 @@ func _deplete_resource() -> void:
 	if _harvesting:
 		_harvesting = false
 		harvest_stopped.emit()
-	
-	# Stop emitting new particles
-	if _trail_particles:
-		_trail_particles.emitting = false
 	
 	# Fade out the visual
 	_start_fade_out()
