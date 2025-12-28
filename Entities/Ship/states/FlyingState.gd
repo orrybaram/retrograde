@@ -171,19 +171,47 @@ func _update_camera_shake(dt: float) -> void:
 	if not is_ship_valid() or not ship.camera:
 		return
 	
+	var shake_offset = Vector2.ZERO
+	
+	# Update damage shake (decay over time)
+	if ship.damage_shake_time > 0.0:
+		ship.damage_shake_time -= dt
+		ship.damage_shake_time = max(0.0, ship.damage_shake_time)
+		
+		# Calculate damage shake intensity (decay as time remaining decreases)
+		# Use current intensity (set by damage or explosion) and appropriate duration
+		var shake_duration = ship.damage_shake_duration
+		if ship.damage_shake_current_intensity >= ship.explosion_shake_intensity * 0.9:
+			# This is an explosion shake
+			shake_duration = ship.explosion_shake_duration
+		var damage_shake_progress = ship.damage_shake_time / shake_duration
+		var current_damage_intensity = ship.damage_shake_current_intensity * damage_shake_progress
+		
+		# Damage shake uses faster oscillation for impact feel
+		var damage_shake_phase = (shake_duration - ship.damage_shake_time) * 30.0
+		shake_offset += Vector2(
+			sin(damage_shake_phase * 2.1) * current_damage_intensity,
+			cos(damage_shake_phase * 1.9) * current_damage_intensity
+		)
+	
+	# Add boost shake on top of damage shake
 	if ship.want_boost and ship.want_thrust:
 		# Apply camera shake during boost
 		ship.camera_shake_time += dt * ship.camera_shake_speed
-		var shake_offset = Vector2(
+		shake_offset += Vector2(
 			sin(ship.camera_shake_time * 1.3) * ship.camera_shake_intensity,
 			cos(ship.camera_shake_time * 1.7) * ship.camera_shake_intensity
 		)
-		ship.camera.offset = ship.camera_base_offset + shake_offset
 	else:
-		# Smoothly return to base position when not boosting
+		# Reset boost shake time when not boosting
 		ship.camera_shake_time = 0.0
-		if ship.camera.offset != ship.camera_base_offset:
-			ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, dt * 5.0)
+	
+	# Apply combined shake offset
+	if shake_offset != Vector2.ZERO:
+		ship.camera.offset = ship.camera_base_offset + shake_offset
+	elif ship.camera.offset != ship.camera_base_offset:
+		# Smoothly return to base position when no shake
+		ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, dt * 5.0)
 
 func _check_landing_lock() -> void:
 	if not is_ship_valid():

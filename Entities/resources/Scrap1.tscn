@@ -12,7 +12,9 @@ script = ExtResource("1")
 scale = Vector2(1.960001, 1.960001)
 shape = SubResource("1")
 
-[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+[node name="CollisionArea" type="Area2D" parent="."]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="CollisionArea"]
 position = Vector2(-22, 15)
 polygon = PackedVector2Array(-26.405256, 7.439192, -35, -10, -15.088718, -59.513527, 56.582687, -44.635147, 75.44358, -40.91555, 67.89922, -14.878382, 56.582687, 18.597979, 33.94961, 33.476357, 56.582687, -33.476357, -7.544359, -44.635147)
 

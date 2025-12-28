@@ -82,6 +82,8 @@ func physics_process(delta: float) -> void:
 	# Reset camera shake
 	if ship.camera:
 		ship.camera_shake_time = 0.0
+		ship.damage_shake_time = 0.0
+		ship.damage_shake_current_intensity = 0.0
 		if ship.camera.offset != ship.camera_base_offset:
 			ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, delta * 5.0)
 	

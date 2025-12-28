@@ -41,8 +41,14 @@ var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (p
 
 @export var camera_shake_intensity: float = 1.2  # How much the camera shakes
 @export var camera_shake_speed: float = 25.0  # How fast the shake oscillates
+@export var damage_shake_intensity: float = 2.0  # How much the camera shakes when taking damage
+@export var damage_shake_duration: float = 0.3  # How long damage shake lasts (seconds)
+@export var explosion_shake_intensity: float = 5.0  # How much the camera shakes on explosion
+@export var explosion_shake_duration: float = 1.0  # How long explosion shake lasts (seconds)
 
 var camera_shake_time: float = 0.0
+var damage_shake_time: float = 0.0  # Time remaining for damage shake
+var damage_shake_current_intensity: float = 0.0  # Current intensity (can be overridden for explosions)
 var camera_base_offset: Vector2 = Vector2.ZERO
 
 # Store original boost particle material properties for reset
@@ -111,10 +117,18 @@ func take_damage(amount: float) -> void:
 	hull_strength -= amount
 	hull_strength = max(0.0, hull_strength)
 	
+	# Trigger camera shake on damage
+	damage_shake_time = damage_shake_duration
+	damage_shake_current_intensity = damage_shake_intensity
+	
 	if hull_strength <= 0.0:
 		explode()
 
 func explode() -> void:
+	# Trigger intense camera shake on explosion
+	damage_shake_time = explosion_shake_duration
+	damage_shake_current_intensity = explosion_shake_intensity
+	
 	# Transition to DestroyedState
 	if state_machine and state_machine.has_state("DestroyedState"):
 		state_machine.change_state("DestroyedState")
