@@ -14,6 +14,9 @@ signal can_harvest_changed(can_harvest: bool)
 @export var color: Color = Color(0.0, 0.75, 0.725, 0.196)  # Default gray/brown for scrap
 @export var min_scale: float = 0.8  # Minimum scale to prevent visual from getting too small
 
+# Performance: Distance-based processing
+const ACTIVE_DISTANCE_SQ: float = 3000.0 * 3000.0  # Squared distance for faster comparison
+
 var _harvesting: bool = false
 var _accum: float = 0.0
 var _ship_in_range: Ship = null
@@ -24,7 +27,6 @@ var _orbital_distance: float = 0.0
 var _orbital_speed: float = 0.0
 var _rotation_speed: float = 0.0  # Rotation speed in radians per second (can be negative)
 var _is_depleted: bool = false
-var _trail_particles: GPUParticles2D = null
 var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
 var _can_harvest: bool = false  # Track if harvesting is currently possible
@@ -43,8 +45,6 @@ func _ready() -> void:
 	# Register with EventBus
 	EventBus.register_resource_node(self)
 	
-	# Find trail particles
-	_trail_particles = get_node_or_null("TrailParticles") as GPUParticles2D
 	
 	# Find IndicatorManager
 	_indicator_manager = get_tree().get_first_node_in_group("indicator_manager")
@@ -90,7 +90,19 @@ func _physics_process(delta: float) -> void:
 	if _rotation_speed != 0.0:
 		rotation += _rotation_speed * delta
 
+## Check if within active processing range of ship (uses squared distance for performance)
+func _is_within_active_range() -> bool:
+	var ship = get_tree().get_first_node_in_group("ship") as Ship
+	if not ship:
+		return true  # If no ship, process anyway to avoid breaking
+	return global_position.distance_squared_to(ship.global_position) <= ACTIVE_DISTANCE_SQ
+
 func _process(_delta: float) -> void:
+	# Performance: Skip processing if ship is not in Area2D range
+	# _ship_in_range is only set when ship enters our collision area
+	if not _ship_in_range:
+		return
+	
 	# If mini-game UI is open, don't process input here (mini-game handles it)
 	if _mini_game and not _mini_game.is_idle():
 		return
@@ -213,10 +225,6 @@ func _deplete_resource() -> void:
 	if _harvesting:
 		_harvesting = false
 		harvest_stopped.emit()
-	
-	# Stop emitting new particles
-	if _trail_particles:
-		_trail_particles.emitting = false
 	
 	# Fade out the visual
 	_start_fade_out()
