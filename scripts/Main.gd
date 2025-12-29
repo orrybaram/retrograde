@@ -161,6 +161,7 @@ func start_game() -> void:
 	# Now unpause and start playing
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
+	EventBus.ship_respawned.emit()
 
 func load_game() -> void:
 	if start_menu:
@@ -209,6 +210,7 @@ func load_game() -> void:
 	# Now unpause and start playing
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
+	EventBus.ship_respawned.emit()
 
 func _show_game_over_delayed(reason: String) -> void:
 	# Wait 2 seconds before showing game over menu
@@ -302,3 +304,4 @@ func reset_game() -> void:
 		game_over_menu.hide_menu()
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
+	EventBus.ship_respawned.emit()

@@ -1,9 +1,7 @@
-[gd_scene load_steps=8 format=3 uid="uid://b8k2j3m4n5p6q"]
+[gd_scene load_steps=6 format=3 uid="uid://b8k2j3m4n5p6q"]
 
 [ext_resource type="Script" uid="uid://c6x45wnjj471j" path="res://entities/structures/SpaceStation.gd" id="1"]
-[ext_resource type="Script" uid="uid://bmjaqqsoockba" path="res://entities/structures/SpaceStationOrbitVisual.gd" id="2"]
 [ext_resource type="Script" uid="uid://baafn8q5j8qnh" path="res://entities/structures/SpaceStationGravityField.gd" id="3"]
-[ext_resource type="Script" uid="uid://cx3fu6b0nb8vg" path="res://entities/structures/SpaceStationGravityFieldVisual.gd" id="4"]
 [ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="5"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
@@ -249,14 +247,6 @@ visible = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="GravityField"]
 shape = SubResource("CircleShape2D_gravity")
 script = ExtResource("3")
-
-[node name="GravityFieldVisual" type="Node2D" parent="GravityField/CollisionShape2D"]
-material = SubResource("CanvasItemMaterial_1")
-script = ExtResource("4")
-outline_color = Color(0.6, 0.6, 0.8, 0.2)
-
-[node name="OrbitVisual" type="Node2D" parent="."]
-script = ExtResource("2")
 
 [node name="SpacePort" parent="." instance=ExtResource("5")]
 position = Vector2(8, -501)

@@ -2,12 +2,12 @@
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
+[ext_resource type="PackedScene" uid="uid://oyfitqvfp7d7" path="res://scenes/StarField.tscn" id="2_nfivy"]
 [ext_resource type="Script" uid="uid://crtq45kcwhvve" path="res://scripts/Economy.gd" id="3"]
 [ext_resource type="Script" uid="uid://1e0civ546gdp" path="res://scripts/Backend.gd" id="4"]
 [ext_resource type="Script" uid="uid://b807jsq0mf0a0" path="res://scripts/ResourceManager.gd" id="5"]
 [ext_resource type="PackedScene" uid="uid://b051ln2ytsesm" path="res://entities/Ship/Ship.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://btfs0vii8ixiq" path="res://ui/HUD.tscn" id="8"]
-[ext_resource type="Script" path="res://scenes/StarField.gd" id="10"]
 [ext_resource type="PackedScene" uid="uid://bq8x7vj3k2m4n" path="res://ui/StartMenu.tscn" id="11"]
 [ext_resource type="PackedScene" uid="uid://c3lam2n5p7q8r" path="res://ui/GameOverMenu.tscn" id="12"]
 [ext_resource type="PackedScene" uid="uid://d5613qx52u80" path="res://ui/indicators/IndicatorManager.tscn" id="13"]
@@ -16,22 +16,14 @@
 [ext_resource type="PackedScene" path="res://ui/inventory/InventoryUI.tscn" id="16"]
 [ext_resource type="PackedScene" uid="uid://0qhwlfdltlfp" path="res://ui/minimap/Minimap.tscn" id="17"]
 [ext_resource type="PackedScene" uid="uid://cwp82l3asrkgc" path="res://scenes/HomeSystem.tscn" id="18"]
-[ext_resource type="PackedScene" path="res://ui/system_map/SystemMap.tscn" id="19"]
+[ext_resource type="PackedScene" uid="uid://c7g87paxkwjsm" path="res://ui/system_map/SystemMap.tscn" id="19"]
 [ext_resource type="Script" uid="uid://b4chiaxpicref" path="res://scripts/ShipSpawner.gd" id="20"]
 [ext_resource type="PackedScene" uid="uid://c2o4vbaw813u0" path="res://ui/LoadingScreen.tscn" id="21"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
 
-[node name="StarField" type="Node2D" parent="."]
-z_index = -10
-script = ExtResource("10")
-density = 1.5
-layer_parascale = 2
-star_size = 1.0
-twinkle_effect = 0.001
-twinkle_speed = 0.003
-parallax_speed_multiplier = 1.0
+[node name="StarField" parent="." instance=ExtResource("2_nfivy")]
 
 [node name="GameState" type="Node" parent="."]
 script = ExtResource("2")
