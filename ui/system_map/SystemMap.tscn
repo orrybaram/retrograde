@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://c7g87paxkwjsm"]
 
-[ext_resource type="Script" path="res://ui/system_map/SystemMap.gd" id="1"]
+[ext_resource type="Script" uid="uid://b2186ivt43a1y" path="res://ui/system_map/SystemMap.gd" id="1"]
 
 [node name="SystemMap" type="Control"]
 layout_mode = 3
@@ -10,3 +10,4 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
+background_color = Color(0, 0, 0, 1)

@@ -11,7 +11,6 @@ class_name SpaceStation
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting
 @export var show_orbit_path: bool = false : set = _set_show_orbit_path  # Toggle to show/hide orbit visualization
-@export var show_gravity_rings: bool = false : set = _set_show_gravity_rings  # Toggle to show/hide gravity visualization
 
 # Gravity properties
 @export var gravitational_constant: float = 2.0  # G constant for scaling (smaller than planets)
@@ -20,16 +19,11 @@ class_name SpaceStation
 
 @onready var gravity_field: Area2D = $"GravityField"
 @onready var orbit_visual: SpaceStationOrbitVisual = $"OrbitVisual"
-@onready var gravity_field_visual: SpaceStationGravityFieldVisual = $GravityField/CollisionShape2D/GravityFieldVisual
 
 var parent_planet: Planet = null
 var orbital_angle: float = 0.0
 var minimap_target: SpaceStationMinimapTarget = null
 
-func _set_show_gravity_rings(v: bool) -> void:
-	show_gravity_rings = v
-	if gravity_field_visual:
-		gravity_field_visual.visible = v
 
 func _set_show_orbit_path(v: bool) -> void:
 	show_orbit_path = v
@@ -52,9 +46,6 @@ func _ready() -> void:
 	
 	# Set gravity scale to 0 (we handle gravity manually)
 	gravity_scale = 0.0
-	
-	if gravity_field_visual:
-		gravity_field_visual.visible = show_gravity_rings
 	
 	# Check if parent node is a Planet
 	var parent = get_parent()

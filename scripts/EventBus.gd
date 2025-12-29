@@ -11,6 +11,9 @@ signal action_message_changed(message: String)
 ## Emitted when an action message should be displayed or cleared.
 ## Empty string clears/hides the message. Components provide full formatted messages.
 
+signal ship_respawned()
+## Emitted when the ship respawns after game over or reset.
+
 var _harvestable_nodes: Dictionary = {}  # Track ResourceNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ResourceNodes and their callables
 

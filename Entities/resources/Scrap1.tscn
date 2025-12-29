@@ -9,16 +9,17 @@ radius = 49.00348
 script = ExtResource("1")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-scale = Vector2(1.960001, 1.960001)
 shape = SubResource("1")
 
 [node name="CollisionArea" type="Area2D" parent="."]
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="CollisionArea"]
-position = Vector2(-22, 15)
+position = Vector2(-11, 7.5)
+scale = Vector2(0.5, 0.5)
 polygon = PackedVector2Array(-26.405256, 7.439192, -35, -10, -15.088718, -59.513527, 56.582687, -44.635147, 75.44358, -40.91555, 67.89922, -14.878382, 56.582687, 18.597979, 33.94961, 33.476357, 56.582687, -33.476357, -7.544359, -44.635147)
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
-position = Vector2(-22, 15)
+position = Vector2(-11, 7.5)
+scale = Vector2(0.5, 0.5)
 color = Color(0.5483926, 0.54839265, 0.54839265, 1)
 polygon = PackedVector2Array(-26.405256, 7.439192, -35, -10, -15.088718, -59.513527, 56.582687, -44.635147, 75.44358, -40.91555, 67.89922, -14.878382, 56.582687, 18.597979, 33.94961, 33.476357, 56.582687, -33.476357, -7.544359, -44.635147)

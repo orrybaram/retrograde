@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://d1nxc3fmj0egb" path="res://ui/minimap/Minimap.gd" id="1"]
 
 [sub_resource type="Gradient" id="Gradient_circle"]
-offsets = PackedFloat32Array(0.88762444, 0.93456614)
+offsets = PackedFloat32Array(0.8719116, 0.89401823)
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_mask"]
