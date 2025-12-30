@@ -53,7 +53,7 @@ func _get_gravity_strength() -> float:
 ## Convert orbital speed from 0-100 scale to radians per second
 ## 0 = static, 100 = 0.001 radians/second (fastest)
 func _get_orbital_speed_radians_per_second() -> float:
-	return (orbital_speed / 100.0) * 0.001
+	return (orbital_speed / 100.0) * 0.01
 
 func _ready() -> void:
 	add_to_group("planets")
@@ -132,7 +132,9 @@ func _physics_process(_dt: float) -> void:
 			orbital_velocity_magnitude = speed_rad_per_sec * r
 		
 		# Velocity is tangential to the orbit (perpendicular to radius vector)
-		linear_velocity = Vector2(-sin(orbital_angle), cos(orbital_angle)) * orbital_velocity_magnitude
+		# Add parent's velocity so nested orbits (moons) inherit parent motion
+		var local_orbital_velocity = Vector2(-sin(orbital_angle), cos(orbital_angle)) * orbital_velocity_magnitude
+		linear_velocity = parent_planet.linear_velocity + local_orbital_velocity
 		
 		# Update position (use local position since we're a child in the scene tree)
 		position = orbital_offset

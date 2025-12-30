@@ -13,7 +13,8 @@ radius = 15000.0
 mass = 1000000.0
 gravity_scale = 0.0
 script = ExtResource("1")
-orbital_distance = 3000.0
+orbital_distance = 1000.0
+orbital_speed = 64.43
 massMultiplier = 1.0
 
 [node name="Visuals" type="Node2D" parent="."]
