@@ -21,226 +21,128 @@ massMultiplier = 1.0
 z_index = 1
 material = SubResource("CanvasItemMaterial_1")
 
+[node name="Tower2" type="ColorRect" parent="Visuals"]
+offset_left = -311.0
+offset_top = -598.0
+offset_right = -290.0
+offset_bottom = -515.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="ExtraModule3" type="ColorRect" parent="Visuals"]
+offset_left = -331.0
+offset_top = -536.0
+offset_right = 326.0
+offset_bottom = -513.0
+color = Color(0.38, 0.38, 0.42, 1)
+
+[node name="Tower4" type="ColorRect" parent="Visuals"]
+offset_left = 284.0
+offset_top = -698.0
+offset_right = 302.0
+offset_bottom = -489.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="Tower1" type="ColorRect" parent="Visuals"]
+offset_left = -50.0
+offset_top = -406.0
+offset_right = 50.0
+offset_bottom = 211.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="SmallModule3" type="ColorRect" parent="Visuals"]
+offset_left = -364.0
+offset_top = -521.0
+offset_right = 366.0
+offset_bottom = -471.0
+color = Color(0.4, 0.4, 0.45, 1)
+
 [node name="CentralHub" type="ColorRect" parent="Visuals"]
-offset_left = -180.0
-offset_top = -140.0
-offset_right = 220.0
-offset_bottom = 160.0
+offset_left = -199.0
+offset_top = -198.0
+offset_right = 201.0
+offset_bottom = -108.0
 color = Color(0.3, 0.3, 0.35, 1)
 
 [node name="CentralCore" type="ColorRect" parent="Visuals"]
-offset_left = -100.0
-offset_top = -70.0
-offset_right = 120.0
-offset_bottom = 80.0
-color = Color(0.25, 0.25, 0.3, 1)
-
-[node name="MainRing" type="ColorRect" parent="Visuals"]
-offset_left = -650.0
-offset_top = -50.0
-offset_right = 600.0
-offset_bottom = 50.0
-color = Color(0.28, 0.28, 0.32, 1)
-
-[node name="RingSegment1" type="ColorRect" parent="Visuals"]
-offset_left = 580.0
-offset_top = -70.0
-offset_right = 640.0
-offset_bottom = 70.0
-color = Color(0.35, 0.35, 0.4, 1)
-
-[node name="RingSegment2" type="ColorRect" parent="Visuals"]
-offset_left = -680.0
-offset_top = -70.0
-offset_right = -620.0
-offset_bottom = 70.0
-color = Color(0.35, 0.35, 0.4, 1)
-
-[node name="LeftArm" type="ColorRect" parent="Visuals"]
-offset_left = -850.0
-offset_top = -80.0
-offset_right = -200.0
-offset_bottom = 100.0
-color = Color(0.25, 0.25, 0.3, 1)
-
-[node name="RightArm" type="ColorRect" parent="Visuals"]
-offset_left = 200.0
-offset_top = -100.0
-offset_right = 850.0
-offset_bottom = 80.0
+offset_left = -109.0
+offset_top = -57.0
+offset_right = 111.0
+offset_bottom = 93.0
 color = Color(0.25, 0.25, 0.3, 1)
 
 [node name="TopArm" type="ColorRect" parent="Visuals"]
-offset_left = -80.0
-offset_top = -411.0
-offset_right = 80.0
-offset_bottom = -200.0
+offset_left = -238.0
+offset_top = -408.0
+offset_right = 238.0
+offset_bottom = -197.0
 color = Color(0.25, 0.25, 0.3, 1)
 
-[node name="LeftDockingBay" type="ColorRect" parent="Visuals"]
-offset_left = -900.0
-offset_top = -120.0
-offset_right = -850.0
-offset_bottom = 180.0
-color = Color(0.4, 0.4, 0.45, 1)
-
-[node name="RightDockingBay" type="ColorRect" parent="Visuals"]
-offset_left = 850.0
-offset_top = -143.0
-offset_right = 900.0
-offset_bottom = 120.0
-color = Color(0.4, 0.4, 0.45, 1)
-
-[node name="Tower1" type="ColorRect" parent="Visuals"]
-offset_left = -40.0
-offset_top = -350.0
-offset_right = 60.0
-offset_bottom = -140.0
-color = Color(0.2, 0.2, 0.25, 1)
-
-[node name="Tower2" type="ColorRect" parent="Visuals"]
-offset_left = -60.0
-offset_top = 160.0
-offset_right = 40.0
-offset_bottom = 320.0
-color = Color(0.2, 0.2, 0.25, 1)
-
-[node name="Tower3" type="ColorRect" parent="Visuals"]
-offset_left = -320.0
-offset_top = -40.0
-offset_right = -150.0
-offset_bottom = 60.0
-color = Color(0.2, 0.2, 0.25, 1)
-
-[node name="Tower4" type="ColorRect" parent="Visuals"]
-offset_left = 160.0
-offset_top = -60.0
-offset_right = 300.0
-offset_bottom = 40.0
-color = Color(0.2, 0.2, 0.25, 1)
-
-[node name="Module1" type="ColorRect" parent="Visuals"]
-offset_left = -950.0
-offset_top = -200.0
-offset_right = -900.0
-offset_bottom = 200.0
-color = Color(0.35, 0.35, 0.4, 1)
-
-[node name="Module2" type="ColorRect" parent="Visuals"]
-offset_left = 801.0
-offset_top = -119.0
-offset_right = 851.0
-offset_bottom = 96.0
-color = Color(0.35, 0.35, 0.4, 1)
-
-[node name="SmallModule1" type="ColorRect" parent="Visuals"]
-offset_left = -450.0
-offset_top = -140.0
-offset_right = -400.0
-offset_bottom = 140.0
-color = Color(0.4, 0.4, 0.45, 1)
-
-[node name="SmallModule2" type="ColorRect" parent="Visuals"]
-offset_left = 350.0
-offset_top = -151.0
-offset_right = 400.0
-offset_bottom = 129.0
-color = Color(0.4, 0.4, 0.45, 1)
-
-[node name="SmallModule3" type="ColorRect" parent="Visuals"]
-offset_left = -140.0
-offset_top = -450.0
-offset_right = 140.0
-offset_bottom = -400.0
-color = Color(0.4, 0.4, 0.45, 1)
+[node name="MainRing" type="ColorRect" parent="Visuals"]
+offset_left = -400.0
+offset_top = -499.0
+offset_right = 398.0
+offset_bottom = -399.0
+color = Color(0.28, 0.28, 0.32, 1)
 
 [node name="SmallModule4" type="ColorRect" parent="Visuals"]
-offset_left = -176.0
-offset_top = 252.0
-offset_right = 64.0
-offset_bottom = 302.0
+offset_left = -119.0
+offset_top = 74.0
+offset_right = 121.0
+offset_bottom = 124.0
 color = Color(0.4, 0.4, 0.45, 1)
 
-[node name="ExtraModule1" type="ColorRect" parent="Visuals"]
-offset_left = -750.0
-offset_top = -120.0
-offset_right = -700.0
-offset_bottom = 120.0
-color = Color(0.38, 0.38, 0.42, 1)
-
-[node name="ExtraModule2" type="ColorRect" parent="Visuals"]
-offset_left = 500.0
-offset_top = -111.0
-offset_right = 550.0
-offset_bottom = 89.0
-color = Color(0.38, 0.38, 0.42, 1)
-
-[node name="ExtraModule3" type="ColorRect" parent="Visuals"]
-offset_left = -98.0
-offset_top = -492.0
-offset_right = 102.0
-offset_bottom = -442.0
-color = Color(0.38, 0.38, 0.42, 1)
-
-[node name="Detail1" type="ColorRect" parent="Visuals"]
-offset_left = -280.0
-offset_top = -91.0
-offset_right = -270.0
-offset_bottom = -71.0
-color = Color(0.5, 0.5, 0.5, 1)
+[node name="SmallModule5" type="ColorRect" parent="Visuals"]
+offset_left = -56.0
+offset_top = 195.0
+offset_right = 58.0
+offset_bottom = 213.0
+color = Color(0.4, 0.4, 0.45, 1)
 
 [node name="Detail2" type="ColorRect" parent="Visuals"]
-offset_left = 270.0
-offset_top = -110.0
-offset_right = 280.0
-offset_bottom = -90.0
-color = Color(0.5, 0.5, 0.5, 1)
-
-[node name="Detail3" type="ColorRect" parent="Visuals"]
-offset_left = -280.0
-offset_top = 90.0
-offset_right = -270.0
-offset_bottom = 110.0
+offset_left = 193.0
+offset_top = -278.0
+offset_right = 203.0
+offset_bottom = -268.0
 color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="Detail4" type="ColorRect" parent="Visuals"]
-offset_left = 269.0
-offset_top = 73.0
-offset_right = 279.0
-offset_bottom = 93.0
+offset_left = 151.0
+offset_top = -296.0
+offset_right = 161.0
+offset_bottom = -268.0
 color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="Detail5" type="ColorRect" parent="Visuals"]
-offset_left = -75.0
-offset_top = -280.0
-offset_right = -55.0
-offset_bottom = -270.0
+offset_left = 167.0
+offset_top = -296.0
+offset_right = 187.0
+offset_bottom = -286.0
 color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="Detail6" type="ColorRect" parent="Visuals"]
-offset_left = 66.0
-offset_top = -280.0
-offset_right = 86.0
-offset_bottom = -270.0
+offset_left = 167.0
+offset_top = -278.0
+offset_right = 187.0
+offset_bottom = -268.0
 color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="Detail7" type="ColorRect" parent="Visuals"]
-offset_left = -110.0
-offset_top = 270.0
-offset_right = -90.0
-offset_bottom = 280.0
+offset_left = -94.0
+offset_top = 36.0
+offset_right = -74.0
+offset_bottom = 46.0
 color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="Detail8" type="ColorRect" parent="Visuals"]
-offset_left = -80.0
-offset_top = 280.0
-offset_right = -60.0
-offset_bottom = 288.0
+offset_left = -94.0
+offset_top = 51.0
+offset_right = -74.0
+offset_bottom = 59.0
 color = Color(0.5, 0.5, 0.5, 1)
 
 [node name="CollisionShape2D" type="CollisionPolygon2D" parent="."]
 position = Vector2(56, 4)
-polygon = PackedVector2Array(140, -150, 150.5664, -102.954254, 790, -103, 796, -145, 842, -145, 841, 114, 797, 118, 791, 79, 150, 75, 148, 156, -13, 158, -11, 249, 8, 251, 10, 296, -13, 298, -14, 314, -106, 321, -117, 299, -233, 298, -233, 249, -115, 248, -116, 155, -227, 152, -228, 91, -899, 94, -909, 177, -1009, 177, -1005, -201, -958, -200, -953, -125, -904, -119, -899, -79, -238, -88, -237, -141, -100, -149, -96, -204, -135, -203, -136, -402, -193, -403, -193, -458, -151, -456, -153, -496, 49, -496, 49, -451, 83, -452, 87, -403, 26, -404, 21, -148)
+polygon = PackedVector2Array(184, -404, 182, -202, 145, -203, 145, -113, -5, -115, -5, -61, 55, -60, 55, 71, 65, 71, 65, 120, -4, 120, -6, 191, 2, 192, 2, 210, -112, 209, -112, 192, -105, 192, -105, 120, -174, 119, -175, 70, -164, 71, -165, -61, -104, -60, -102, -112, -254, -111, -254, -201, -294, -201, -294, -403, -453, -403, -454, -503, -419, -502, -419, -523, -387, -524, -386, -539, 268, -538, 270, -524, 308, -524, 309, -504, 341, -504, 340, -405)
 
 [node name="GravityField" type="Area2D" parent="."]
 visible = false
@@ -250,4 +152,9 @@ shape = SubResource("CircleShape2D_gravity")
 script = ExtResource("3")
 
 [node name="SpacePort" parent="." instance=ExtResource("5")]
-position = Vector2(8, -501)
+position = Vector2(120, 10)
+rotation = 1.5707964
+
+[node name="SpacePort2" parent="." instance=ExtResource("5")]
+position = Vector2(-119, 10)
+rotation = 4.712389

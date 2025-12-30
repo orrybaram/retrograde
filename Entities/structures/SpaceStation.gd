@@ -10,7 +10,6 @@ class_name SpaceStation
 @export var initial_angle: float = 0.0  # Starting angle in radians
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting
-@export var show_orbit_path: bool = false : set = _set_show_orbit_path  # Toggle to show/hide orbit visualization
 
 # Gravity properties
 @export var gravitational_constant: float = 2.0  # G constant for scaling (smaller than planets)
@@ -18,17 +17,10 @@ class_name SpaceStation
 @export var gravity_radius_multiplier: float = 15.0  # Gravity field radius multiplier
 
 @onready var gravity_field: Area2D = $"GravityField"
-@onready var orbit_visual: SpaceStationOrbitVisual = $"OrbitVisual"
 
 var parent_planet: Planet = null
 var orbital_angle: float = 0.0
 var minimap_target: SpaceStationMinimapTarget = null
-
-
-func _set_show_orbit_path(v: bool) -> void:
-	show_orbit_path = v
-	if orbit_visual:
-		orbit_visual.show_orbit = v
 
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
@@ -54,9 +46,6 @@ func _ready() -> void:
 		orbital_angle = initial_angle
 		# Lock rotation for orbiting stations to prevent physics rotation
 		lock_rotation = true
-		# Update orbit visual if it exists
-		if orbit_visual:
-			orbit_visual.show_orbit = show_orbit_path
 	
 	# Register with minimap
 	_register_with_minimap.call_deferred()
