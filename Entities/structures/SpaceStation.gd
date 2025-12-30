@@ -11,19 +11,9 @@ class_name SpaceStation
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting
 
-# Gravity properties
-@export var gravitational_constant: float = 2.0  # G constant for scaling (smaller than planets)
-@export var massMultiplier: float = 0.1  # Mass multiplier (smaller than planets)
-@export var gravity_radius_multiplier: float = 15.0  # Gravity field radius multiplier
-
-@onready var gravity_field: Area2D = $"GravityField"
-
 var parent_planet: Planet = null
 var orbital_angle: float = 0.0
 var minimap_target: SpaceStationMinimapTarget = null
-
-func _get_gravity_strength() -> float:
-	return mass * gravitational_constant
 
 ## Convert orbital speed from 0-100 scale to radians per second
 ## 0 = static, 100 = 0.01 radians/second (fastest)
@@ -32,12 +22,6 @@ func _get_orbital_speed_radians_per_second() -> float:
 
 func _ready() -> void:
 	add_to_group("space_stations")
-	
-	# Set mass (smaller than planets)
-	mass = massMultiplier * 1000000
-	
-	# Set gravity scale to 0 (we handle gravity manually)
-	gravity_scale = 0.0
 	
 	# Check if parent node is a Planet
 	var parent = get_parent()
@@ -106,14 +90,3 @@ func _physics_process(_dt: float) -> void:
 		
 		# Update position (use local position since we're a child in the scene tree)
 		position = orbital_offset
-	
-	# Apply gravity to ships
-	if gravity_field:
-		for body in gravity_field.get_overlapping_bodies():
-			if body is Ship:
-				var gravity_strength = _get_gravity_strength()
-				var dir = global_position.direction_to(body.global_position)
-				var dist = global_position.distance_to(body.global_position)
-				var force_mag = gravity_strength / max(dist * dist, 1.0)
-
-				body.apply_force(-dir * force_mag)

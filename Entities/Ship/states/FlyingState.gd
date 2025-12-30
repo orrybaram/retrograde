@@ -4,8 +4,15 @@ class_name FlyingState
 ## Handles normal ship movement and controls.
 ## This is the default state when the ship is flying freely.
 
+# Dockable is an interface - we check for methods rather than casting
+
+var ALIGNMENT_ANGLE_THRESHOLD_DEGREES: float = 30.0
+var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after entering state
+var _state_enter_time: float = 0.0
+
 func enter() -> void:
 	super.enter()
+	_state_enter_time = Time.get_ticks_msec() / 1000.0
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -37,8 +44,9 @@ func physics_process(delta: float) -> void:
 	# Update camera shake
 	_update_camera_shake(delta)
 	
-	# Check for landing lock - transition to LandedState if conditions met
-	_check_landing_lock()
+	# Check for dockable entities and handle manual docking
+	_check_dockable_proximity()
+	_attempt_dock()
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if not is_ship_valid():
@@ -213,53 +221,144 @@ func _update_camera_shake(dt: float) -> void:
 		# Smoothly return to base position when no shake
 		ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, dt * 5.0)
 
-func _check_landing_lock() -> void:
+var _nearby_dockable: Node2D = null
+
+func _check_dockable_proximity() -> void:
 	if not is_ship_valid():
+		_nearby_dockable = null
+		EventBus.action_message_changed.emit("")
 		return
 	
-	# Don't lock if thrusting
-	if ship.want_thrust or ship.want_reverse_thrust:
-		return
+	# Suppress dock message during cooldown (after taking off)
+	var current_time = Time.get_ticks_msec() / 1000.0
+	var in_cooldown = (current_time - _state_enter_time) < DOCK_MESSAGE_COOLDOWN
 	
 	var ship_pos = ship.global_position
 	
-	# Check SpacePorts only
-	var space_ports = ship.get_tree().get_nodes_in_group("space_ports")
-	if space_ports.is_empty():
+	# Find all dockable entities
+	var dockables = ship.get_tree().get_nodes_in_group("dockable")
+	if dockables.is_empty():
+		_nearby_dockable = null
+		# Only clear docking message if harvest isn't available (harvest has priority)
+		if not EventBus.is_harvest_available():
+			EventBus.action_message_changed.emit("")
 		return
 	
-	var closest_spaceport: SpacePort = null
-	var closest_spaceport_distance: float = INF
+	var closest_dockable: Node2D = null
+	var closest_distance: float = INF
 	
-	for node in space_ports:
+	for node in dockables:
 		if not is_instance_valid(node):
 			continue
-		var spaceport = node as SpacePort
-		if not spaceport:
+		if not (node is Node2D):
 			continue
 		
-		var pad_pos = spaceport.get_landing_pad_position()
-		var dist = ship_pos.distance_to(pad_pos)
-		if dist < closest_spaceport_distance:
-			closest_spaceport_distance = dist
-			closest_spaceport = spaceport
+		# Check if node has dockable methods
+		var dockable_node = node as Node2D
+		if not dockable_node.has_method("get_dock_position") or not dockable_node.has_method("get_dock_distance"):
+			continue
+		
+		var dock_pos = dockable_node.get_dock_position()
+		var dist = ship_pos.distance_to(dock_pos)
+		var max_dist = dockable_node.get_dock_distance()
+		
+		if dist < max_dist and dist < closest_distance:
+			closest_distance = dist
+			closest_dockable = dockable_node
 	
-	# Check if ship is close enough to SpacePort landing pad to lock
-	if closest_spaceport and is_instance_valid(closest_spaceport):
-		if closest_spaceport_distance <= closest_spaceport.landing_lock_distance:
-			# Also check if ship is moving slowly relative to SpacePort
-			var spaceport_velocity = Vector2.ZERO
-			# Get SpacePort's velocity (it moves with its parent planet)
-			var spaceport_parent = closest_spaceport.get_parent()
-			if spaceport_parent is RigidBody2D:
-				spaceport_velocity = (spaceport_parent as RigidBody2D).linear_velocity
-			
-			var relative_velocity = ship.linear_velocity - spaceport_velocity
-			if relative_velocity.length() < 50.0:  # Threshold for "landed" speed
-				# Transition to LandedState with SpacePort
-				var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
-				if state_machine and state_machine.has_state("LandedState"):
-					state_machine.change_state("LandedState")
+	# Update nearby dockable and show/hide message
+	_nearby_dockable = closest_dockable
+	
+	if closest_dockable:
+		# Check if ship is moving slowly enough relative to dockable
+		var dockable_velocity = Vector2.ZERO
+		if closest_dockable.has_method("get_dock_velocity"):
+			dockable_velocity = closest_dockable.get_dock_velocity()
+		var relative_velocity = ship.linear_velocity - dockable_velocity
+		var is_slow_enough = relative_velocity.length() < 50.0  # Threshold for docking speed
+		
+		# Check if ship rotation is aligned with dock (within ±10 degrees)
+		var dock_rotation = 0.0
+		if closest_dockable.has_method("get_dock_rotation"):
+			dock_rotation = closest_dockable.get_dock_rotation()
+		else:
+			dock_rotation = closest_dockable.global_rotation
+		
+		var target_rotation = dock_rotation + PI / -2.0  # Perpendicular (90 degrees offset)
+		var ship_rotation = ship.rotation
+		var angle_diff = abs(wrapf(ship_rotation - target_rotation, -PI, PI))
+		var angle_threshold = deg_to_rad(ALIGNMENT_ANGLE_THRESHOLD_DEGREES)
+		var is_aligned = angle_diff <= angle_threshold
+		
+		if is_slow_enough and is_aligned and not in_cooldown:
+			# Show docking prompt (only if harvest isn't available)
+			if not EventBus.is_harvest_available():
+				var dock_key = InputUtils.get_action_key_name("action")
+				EventBus.action_message_changed.emit('Press "%s" to dock' % [dock_key])
+		else:
+			# Moving too fast, not aligned, or in cooldown - clear message
+			if not EventBus.is_harvest_available():
+				EventBus.action_message_changed.emit("")
+	else:
+		# No dockable nearby, clear message (unless harvest is available)
+		if not EventBus.is_harvest_available():
+			EventBus.action_message_changed.emit("")
+
+func _attempt_dock() -> void:
+	if not is_ship_valid() or not _nearby_dockable or not is_instance_valid(_nearby_dockable):
+		return
+	
+	# Don't allow docking during cooldown (after taking off)
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if (current_time - _state_enter_time) < DOCK_MESSAGE_COOLDOWN:
+		return
+	
+	# Check if action key is pressed
+	if not Input.is_action_just_pressed("action"):
+		return
+	
+	# Validate ship is close enough
+	var ship_pos = ship.global_position
+	var dock_pos = _nearby_dockable.get_dock_position()
+	var dist = ship_pos.distance_to(dock_pos)
+	
+	if dist > _nearby_dockable.get_dock_distance():
+		return
+	
+	# Validate ship is moving slowly enough relative to dockable
+	var dockable_velocity = Vector2.ZERO
+	if _nearby_dockable.has_method("get_dock_velocity"):
+		dockable_velocity = _nearby_dockable.get_dock_velocity()
+	var relative_velocity = ship.linear_velocity - dockable_velocity
+	if relative_velocity.length() >= 50.0:
+		return
+	
+	# Validate ship rotation is aligned with dock (within ±10 degrees)
+	var dock_rotation = 0.0
+	if _nearby_dockable.has_method("get_dock_rotation"):
+		dock_rotation = _nearby_dockable.get_dock_rotation()
+	else:
+		dock_rotation = _nearby_dockable.global_rotation
+	
+	# Calculate target rotation (perpendicular to dock surface)
+	var target_rotation = dock_rotation + PI / -2.0  # Perpendicular (90 degrees offset)
+	
+	# Get current ship rotation and calculate angle difference
+	var ship_rotation = ship.rotation
+	var angle_diff = abs(wrapf(ship_rotation - target_rotation, -PI, PI))
+	
+	var angle_threshold = deg_to_rad(ALIGNMENT_ANGLE_THRESHOLD_DEGREES)
+	
+	if angle_diff > angle_threshold:
+		return  # Ship is not aligned correctly
+	
+	# Transition to LandedState with the dockable entity
+	# Store dockable reference on ship for LandedState to pick up
+	ship.set_meta("pending_dockable", _nearby_dockable)
+	
+	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
+	if state_machine and state_machine.has_state("LandedState"):
+		state_machine.change_state("LandedState")
 
 func _is_system_map_open() -> bool:
 	if not ship or not is_instance_valid(ship):

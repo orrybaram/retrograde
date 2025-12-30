@@ -1,6 +1,8 @@
 extends Node
 class_name Save
 
+const LandedState = preload("res://entities/Ship/states/LandedState.gd")
+
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "credits", gs.credits)
@@ -10,9 +12,17 @@ static func save(gs: GameState, ship: Ship) -> void:
 		cfg.set_value("stats", "max_fuel", ship.max_fuel)
 		cfg.set_value("stats", "hull_strength", ship.hull_strength)
 		cfg.set_value("stats", "max_hull", ship.max_hull)
-		# Save spawn position
+		# Save spawn position and rotation (for docked state)
 		cfg.set_value("stats", "spawn_position_x", ship.global_position.x)
 		cfg.set_value("stats", "spawn_position_y", ship.global_position.y)
+		cfg.set_value("stats", "spawn_rotation", ship.rotation)
+		
+		# Save dockable identifier if ship is docked
+		var dockable_key = _get_dockable_key_from_ship(ship)
+		if dockable_key != "":
+			cfg.set_value("stats", "docked_at", dockable_key)
+		else:
+			cfg.set_value("stats", "docked_at", "")
 	
 	# Save inventory from InventoryManager
 	var inventory = InventoryManager.get_inventory_dict()
@@ -120,6 +130,129 @@ static func load_spawn_position() -> Vector2:
 	var x = float(cfg.get_value("stats", "spawn_position_x", 0.0))
 	var y = float(cfg.get_value("stats", "spawn_position_y", 0.0))
 	return Vector2(x, y)
+
+## Load spawn rotation from save file
+## Returns 0.0 if no save file or no rotation saved
+static func load_spawn_rotation() -> float:
+	var cfg := ConfigFile.new()
+	if cfg.load("user://save.cfg") != OK:
+		return 0.0
+	
+	return float(cfg.get_value("stats", "spawn_rotation", 0.0))
+
+## Get dockable key from ship's current state
+## Returns empty string if ship is not docked
+static func _get_dockable_key_from_ship(ship: Ship) -> String:
+	if not ship:
+		return ""
+	
+	# Check if ship is in LandedState
+	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
+	if not state_machine:
+		return ""
+	
+	var current_state = state_machine.current_state
+	if not current_state or not current_state is LandedState:
+		return ""
+	
+	var landed_state = current_state as LandedState
+	var locked_dockable = landed_state.locked_dockable
+	if not locked_dockable or not is_instance_valid(locked_dockable):
+		return ""
+	
+	return _get_dockable_key(locked_dockable)
+
+## Get a unique key for a dockable entity
+## Format: "PlanetName/SpacePort" or "PlanetName/SpaceStation/SpacePort" or "ParentPlanet/MoonName/SpacePort"
+static func _get_dockable_key(dockable: Node2D) -> String:
+	if not dockable or not is_instance_valid(dockable):
+		return ""
+	
+	# Build path from dockable up to planet
+	var path_parts: Array[String] = []
+	var current: Node = dockable
+	
+	# Walk up the tree to find the planet, collecting node names
+	while current:
+		if current is Planet:
+			# Found the planet - get its key (handles moons)
+			var planet_key = _get_planet_key(current as Planet)
+			if planet_key == "":
+				return ""
+			# Build full path: planet_key/path_to_dockable
+			path_parts.reverse()
+			return planet_key + "/" + "/".join(path_parts)
+		else:
+			# Add this node's name to path
+			if current.name != "":
+				path_parts.append(current.name)
+		current = current.get_parent()
+	
+	return ""
+
+## Load dockable key from save file
+## Returns empty string if no save file or no dockable saved
+static func load_dockable_key() -> String:
+	var cfg := ConfigFile.new()
+	if cfg.load("user://save.cfg") != OK:
+		return ""
+	
+	return str(cfg.get_value("stats", "docked_at", ""))
+
+## Find a dockable entity by its key
+## Returns the dockable Node2D if found, null otherwise
+static func find_dockable_by_key(tree: SceneTree, dockable_key: String) -> Node2D:
+	if dockable_key == "":
+		return null
+	
+	# Split the key into parts
+	var parts = dockable_key.split("/")
+	if parts.size() < 2:
+		return null
+	
+	# Find the planet (could be "PlanetName" or "ParentPlanet/MoonName")
+	var planets = tree.get_nodes_in_group("planets")
+	var planet: Planet = null
+	
+	# Try to match planet key (could be 1 or 2 parts for moons)
+	for i in range(1, min(3, parts.size())):
+		var potential_planet_key = "/".join(parts.slice(0, i))
+		for planet_node in planets:
+			if planet_node is Planet:
+				var p = planet_node as Planet
+				if _get_planet_key(p) == potential_planet_key:
+					planet = p
+					# Remaining parts are the path to dockable
+					var dockable_path = parts.slice(i)
+					return _find_dockable_in_node(planet, dockable_path)
+	
+	return null
+
+## Helper to find dockable in a node's subtree following the path
+static func _find_dockable_in_node(root: Node, path_parts: Array) -> Node2D:
+	if path_parts.is_empty():
+		# Check if root itself is dockable
+		if root is Node2D and root.is_in_group("dockable"):
+			return root as Node2D
+		return null
+	
+	var current_part = path_parts[0]
+	var remaining_parts = path_parts.slice(1)
+	
+	# Search children for matching name
+	for child in root.get_children():
+		if child.name == current_part:
+			# Check if this is the dockable we're looking for
+			if remaining_parts.is_empty():
+				if child is Node2D and child.is_in_group("dockable"):
+					return child as Node2D
+			else:
+				# Recurse into child
+				var found = _find_dockable_in_node(child, remaining_parts)
+				if found:
+					return found
+	
+	return null
 
 ## Check if a save file exists
 static func save_exists() -> bool:
