@@ -1,15 +1,18 @@
-extends RigidBody2D
+extends StaticBody2D
 class_name SpacePort
 
 ## SpacePort entity with landing pad, blinking lights, tower, and hangers.
 ## Detects when ships land on the pad.
+## Implements Dockable interface for manual docking.
+
+const Dockable = preload("res://entities/structures/Dockable.gd")
 
 signal ship_landed(ship: Ship)
 signal ship_took_off(ship: Ship)
 
 @export var landing_pad_size: Vector2 = Vector2(100, 20)
 @export var light_blink_rate: float = 1.0  # Blink rate in seconds
-@export var landing_lock_distance: float = 30.0  # Distance threshold for landing lock (pixels above pad)
+@export var landing_lock_distance: float = 60.0  # Distance threshold for landing lock (pixels above pad)
 
 var _landing_area: Area2D = null
 var _ship_on_pad: Ship = null
@@ -19,10 +22,8 @@ var _blink_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("space_ports")
+	add_to_group("dockable")
 	
-	# Set RigidBody2D to static mode (doesn't move due to physics)
-	freeze_mode = RigidBody2D.FREEZE_MODE_KINEMATIC
-	freeze = true
 	
 	# Get references to components
 	_landing_area = get_node_or_null("LandingArea") as Area2D
@@ -93,3 +94,20 @@ func _start_blink_animation() -> void:
 ## Get the landing pad position in world space
 func get_landing_pad_position() -> Vector2:
 	return global_position  # Landing pad is at (0,0) relative to SpacePort
+
+## Dockable interface implementation
+func get_dock_position() -> Vector2:
+	return get_landing_pad_position()
+
+func get_dock_rotation() -> float:
+	return global_rotation
+
+func get_dock_distance() -> float:
+	return landing_lock_distance
+
+func get_dock_velocity() -> Vector2:
+	# Get SpacePort's velocity (it moves with its parent planet)
+	var parent = get_parent()
+	if parent is RigidBody2D:
+		return (parent as RigidBody2D).linear_velocity
+	return Vector2.ZERO

@@ -145,9 +145,13 @@ func start_game() -> void:
 	# Wait a frame for scene to initialize
 	await get_tree().process_frame
 	
-	# Spawn ship at ShipSpawn location (new game - use default spawn)
+	# Spawn ship at default dock (new game)
 	if ship_spawner:
-		await ship_spawner.spawn_ship_at_spawn_location()
+		var dock = await ship_spawner.find_default_dock()
+		if dock:
+			await ship_spawner.spawn_at_dock(dock)
+		else:
+			push_warning("No default dock found for new game")
 	
 	# Wait for loading animation to complete
 	if loading_screen:
@@ -189,14 +193,17 @@ func load_game() -> void:
 	# Restore planet orbital angles
 	Save.restore_planet_angles(get_tree())
 	
-	# Spawn ship at saved position
+	await get_tree().physics_frame
+	
+	# Spawn ship at saved dock, or default if not found
 	if ship_spawner:
-		var saved_spawn_pos = Save.load_spawn_position()
-		if saved_spawn_pos != Vector2.ZERO:
-			await ship_spawner.spawn_at_position(saved_spawn_pos)
+		var dock = await ship_spawner.find_saved_dock()
+		if not dock:
+			dock = await ship_spawner.find_default_dock()
+		if dock:
+			await ship_spawner.spawn_at_dock(dock)
 		else:
-			# Fallback to default spawn if no saved position
-			await ship_spawner.spawn_ship_at_spawn_location()
+			push_warning("No dock found for load game")
 	
 	# Wait for loading animation to complete
 	if loading_screen:
@@ -291,13 +298,15 @@ func reset_game() -> void:
 	if gs:
 		gs.clear_cargo()
 	
-	# Clear spawn override to ensure we use default spawn location (not saved position)
+	# Spawn ship at saved dock, or default if not found
 	if ship_spawner:
-		ship_spawner.clear_override()
-	
-	# Respawn ship using ShipSpawner
-	if ship_spawner:
-		await ship_spawner.spawn_ship_at_spawn_location()
+		var dock = await ship_spawner.find_saved_dock()
+		if not dock:
+			dock = await ship_spawner.find_default_dock()
+		if dock:
+			await ship_spawner.spawn_at_dock(dock)
+		else:
+			push_warning("No dock found for respawn")
 	
 	# Hide game over menu and unpause
 	if game_over_menu:

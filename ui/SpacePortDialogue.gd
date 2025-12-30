@@ -96,7 +96,7 @@ func _update_display() -> void:
 	# Calculate refuel cost and available fuel purchase
 	var fuel_needed = max_fuel - fuel
 	var refuel_cost_full = int(fuel_needed * Economy.REFUEL_COST_PER_POINT)
-	var fuel_affordable = min(fuel_needed, gs.credits / Economy.REFUEL_COST_PER_POINT)
+	var fuel_affordable = min(fuel_needed, float(gs.credits) / Economy.REFUEL_COST_PER_POINT)
 	var refuel_cost_affordable = int(fuel_affordable * Economy.REFUEL_COST_PER_POINT)
 	
 	if refuel_button:
@@ -141,7 +141,7 @@ func _on_refuel_pressed() -> void:
 		return
 	
 	# Calculate how much fuel can be purchased with available credits
-	var fuel_affordable = min(fuel_needed, gs.credits / Economy.REFUEL_COST_PER_POINT)
+	var fuel_affordable = min(fuel_needed, float(gs.credits) / Economy.REFUEL_COST_PER_POINT)
 	
 	if fuel_affordable > 0:
 		var refuel_cost = int(fuel_affordable * Economy.REFUEL_COST_PER_POINT)
