@@ -59,6 +59,7 @@ color = Color(0.7983666, 0.7983663, 0.79836595, 1)
 color_ramp = SubResource("GradientTexture1D_3")
 
 [node name="Ship" type="RigidBody2D"]
+position = Vector2(2, 0)
 mass = 50000.0
 gravity_scale = 0.0
 center_of_mass_mode = 1
@@ -70,13 +71,34 @@ rotation_smoothing_enabled = true
 script = ExtResource("2_0tak2")
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
-position = Vector2(-4.700287, 1.2495689e-06)
-scale = Vector2(1.4453125, 0.98214287)
-polygon = PackedVector2Array(12.981818, 0, -3.0181808, -7, -3.0181808, -5.861183, -3.0181808, 7)
+position = Vector2(0, -4.7683716e-07)
+scale = Vector2(1.0416666, 0.99999994)
+polygon = PackedVector2Array(7.680001, 5.000001, 3.8400004, 7.0000014, -12.480001, 9.000002, -12.480001, -9, 3.8400004, -7.0000005, 7.680001, -5, 9.600001, 4.768372e-07)
 
-[node name="Polygon2D" type="Polygon2D" parent="."]
-scale = Vector2(1.0416666, 1)
-polygon = PackedVector2Array(14, 0, -10, 7, -10, -7)
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Polygon2D" type="Polygon2D" parent="Body"]
+position = Vector2(0, -4.7683716e-07)
+scale = Vector2(1.0416666, 0.99999994)
+polygon = PackedVector2Array(7.680001, 5.000001, 3.8400004, 7.0000014, -9.600001, 8.000002, -9.600001, -8, 3.8400004, -7.0000005, 7.680001, -5, 11.520001, 4.768372e-07)
+
+[node name="Polygon2D3" type="Polygon2D" parent="Body"]
+position = Vector2(-1.0000002, 4)
+scale = Vector2(1.0850694, 0.9999999)
+color = Color(0.56667995, 0.56668025, 0.56668013, 1)
+polygon = PackedVector2Array(-9.6, -1.0000001, -11.0592, 0, -11.0592, -8.000001, -9.6, -7.000001, 3.6864, -6.000001, 7.3728, -4.0000005, 3.6864, -2.0000002)
+
+[node name="Polygon2D4" type="Polygon2D" parent="Body"]
+position = Vector2(-1.0000004, -7)
+scale = Vector2(1.0850694, 0.9999999)
+color = Color(0.56667995, 0.56668025, 0.56668013, 1)
+polygon = PackedVector2Array(-11.0592, 0, -11.0592, -1, -11.059199, -2, -10.1376, -2, -10.1376, -1, -8.294399, -1, -8.294399, 0)
+
+[node name="Polygon2D5" type="Polygon2D" parent="Body"]
+position = Vector2(-1.0000001, 9)
+scale = Vector2(1.0850694, 0.9999999)
+color = Color(0.56667995, 0.56668025, 0.56668013, 1)
+polygon = PackedVector2Array(-11.0592, 0, -11.0592, -1, -11.059199, -2, -10.1376, -2, -8.294399, -2, -8.294399, -1, -10.1376, -1, -10.1376, 0)
 
 [node name="ThrusterParticles" type="GPUParticles2D" parent="."]
 position = Vector2(-10, 0)

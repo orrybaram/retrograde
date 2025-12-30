@@ -17,132 +17,82 @@ orbital_distance = 1000.0
 orbital_speed = 64.43
 massMultiplier = 1.0
 
+[node name="CollisionShape2D" type="CollisionPolygon2D" parent="."]
+position = Vector2(56, 4)
+polygon = PackedVector2Array(182, -403, 182, -201, 145, -201, 145, -112, -6, -112, -6, -61, 55, -61, 55, 70, 65, 70, 65, 120, -6, 120, -6, 191, 1, 191, 1, 209, -113, 209, -113, 191, -106, 191, -106, 120, -175, 120, -175, 70, -165, 70, -165, -61, -106, -61, -106, -112, -255, -112, -255, -201, -294, -201, -294, -403, -456, -403, -456, -503, -420, -503, -420, -525, -387, -525, -387, -540, 270, -540, 270, -525, 310, -525, 310, -503, 342, -503, 342, -403)
+
 [node name="Visuals" type="Node2D" parent="."]
 z_index = 1
 material = SubResource("CanvasItemMaterial_1")
 
-[node name="Tower2" type="ColorRect" parent="Visuals"]
-offset_left = -311.0
-offset_top = -598.0
-offset_right = -290.0
-offset_bottom = -515.0
+[node name="Tower2" type="Polygon2D" parent="Visuals"]
 color = Color(0.2, 0.2, 0.25, 1)
+polygon = PackedVector2Array(-311, -598, -290, -598, -290, -515, -311, -515)
 
-[node name="ExtraModule3" type="ColorRect" parent="Visuals"]
-offset_left = -331.0
-offset_top = -536.0
-offset_right = 326.0
-offset_bottom = -513.0
+[node name="ExtraModule3" type="Polygon2D" parent="Visuals"]
 color = Color(0.38, 0.38, 0.42, 1)
+polygon = PackedVector2Array(-331, -536, 326, -536, 326, -513, -331, -513)
 
-[node name="Tower4" type="ColorRect" parent="Visuals"]
-offset_left = 284.0
-offset_top = -698.0
-offset_right = 302.0
-offset_bottom = -489.0
+[node name="Tower4" type="Polygon2D" parent="Visuals"]
 color = Color(0.2, 0.2, 0.25, 1)
+polygon = PackedVector2Array(284, -698, 302, -698, 302, -489, 284, -489)
 
-[node name="Tower1" type="ColorRect" parent="Visuals"]
-offset_left = -50.0
-offset_top = -406.0
-offset_right = 50.0
-offset_bottom = 211.0
+[node name="Tower1" type="Polygon2D" parent="Visuals"]
 color = Color(0.2, 0.2, 0.25, 1)
+polygon = PackedVector2Array(-50, -406, 50, -406, 50, 211, -50, 211)
 
-[node name="SmallModule3" type="ColorRect" parent="Visuals"]
-offset_left = -364.0
-offset_top = -521.0
-offset_right = 366.0
-offset_bottom = -471.0
+[node name="SmallModule3" type="Polygon2D" parent="Visuals"]
 color = Color(0.4, 0.4, 0.45, 1)
+polygon = PackedVector2Array(-364, -521, 366, -521, 366, -471, -364, -471)
 
-[node name="CentralHub" type="ColorRect" parent="Visuals"]
-offset_left = -199.0
-offset_top = -198.0
-offset_right = 201.0
-offset_bottom = -108.0
+[node name="CentralHub" type="Polygon2D" parent="Visuals"]
 color = Color(0.3, 0.3, 0.35, 1)
+polygon = PackedVector2Array(-199, -198, 201, -198, 201, -108, -199, -108)
 
-[node name="CentralCore" type="ColorRect" parent="Visuals"]
-offset_left = -109.0
-offset_top = -57.0
-offset_right = 111.0
-offset_bottom = 93.0
+[node name="CentralCore" type="Polygon2D" parent="Visuals"]
 color = Color(0.25, 0.25, 0.3, 1)
+polygon = PackedVector2Array(-109, -57, 111, -57, 111, 93, -109, 93)
 
-[node name="TopArm" type="ColorRect" parent="Visuals"]
-offset_left = -238.0
-offset_top = -408.0
-offset_right = 238.0
-offset_bottom = -197.0
+[node name="TopArm" type="Polygon2D" parent="Visuals"]
 color = Color(0.25, 0.25, 0.3, 1)
+polygon = PackedVector2Array(-238, -408, 238, -408, 238, -197, -238, -197)
 
-[node name="MainRing" type="ColorRect" parent="Visuals"]
-offset_left = -400.0
-offset_top = -499.0
-offset_right = 398.0
-offset_bottom = -399.0
+[node name="MainRing" type="Polygon2D" parent="Visuals"]
 color = Color(0.28, 0.28, 0.32, 1)
+polygon = PackedVector2Array(-400, -499, 398, -499, 398, -399, -400, -399)
 
-[node name="SmallModule4" type="ColorRect" parent="Visuals"]
-offset_left = -119.0
-offset_top = 74.0
-offset_right = 121.0
-offset_bottom = 124.0
+[node name="SmallModule4" type="Polygon2D" parent="Visuals"]
 color = Color(0.4, 0.4, 0.45, 1)
+polygon = PackedVector2Array(-119, 74, 121, 74, 121, 124, -119, 124)
 
-[node name="SmallModule5" type="ColorRect" parent="Visuals"]
-offset_left = -56.0
-offset_top = 195.0
-offset_right = 58.0
-offset_bottom = 213.0
+[node name="SmallModule5" type="Polygon2D" parent="Visuals"]
+position = Vector2(-1, 0)
 color = Color(0.4, 0.4, 0.45, 1)
+polygon = PackedVector2Array(-56, 195, 58, 195, 58, 213, -56, 213)
 
-[node name="Detail2" type="ColorRect" parent="Visuals"]
-offset_left = 193.0
-offset_top = -278.0
-offset_right = 203.0
-offset_bottom = -268.0
+[node name="Detail2" type="Polygon2D" parent="Visuals"]
 color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(193, -278, 203, -278, 203, -268, 193, -268)
 
-[node name="Detail4" type="ColorRect" parent="Visuals"]
-offset_left = 151.0
-offset_top = -296.0
-offset_right = 161.0
-offset_bottom = -268.0
+[node name="Detail4" type="Polygon2D" parent="Visuals"]
 color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(151, -296, 161, -296, 161, -268, 151, -268)
 
-[node name="Detail5" type="ColorRect" parent="Visuals"]
-offset_left = 167.0
-offset_top = -296.0
-offset_right = 187.0
-offset_bottom = -286.0
+[node name="Detail5" type="Polygon2D" parent="Visuals"]
 color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(167, -296, 187, -296, 187, -286, 167, -286)
 
-[node name="Detail6" type="ColorRect" parent="Visuals"]
-offset_left = 167.0
-offset_top = -278.0
-offset_right = 187.0
-offset_bottom = -268.0
+[node name="Detail6" type="Polygon2D" parent="Visuals"]
 color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(167, -278, 187, -278, 187, -268, 167, -268)
 
-[node name="Detail7" type="ColorRect" parent="Visuals"]
-offset_left = -94.0
-offset_top = 36.0
-offset_right = -74.0
-offset_bottom = 46.0
+[node name="Detail7" type="Polygon2D" parent="Visuals"]
 color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(-94, 36, -74, 36, -74, 46, -94, 46)
 
-[node name="Detail8" type="ColorRect" parent="Visuals"]
-offset_left = -94.0
-offset_top = 51.0
-offset_right = -74.0
-offset_bottom = 59.0
+[node name="Detail8" type="Polygon2D" parent="Visuals"]
 color = Color(0.5, 0.5, 0.5, 1)
-
-[node name="CollisionShape2D" type="CollisionPolygon2D" parent="."]
-position = Vector2(56, 4)
-polygon = PackedVector2Array(184, -404, 182, -202, 145, -203, 145, -113, -5, -115, -5, -61, 55, -60, 55, 71, 65, 71, 65, 120, -4, 120, -6, 191, 2, 192, 2, 210, -112, 209, -112, 192, -105, 192, -105, 120, -174, 119, -175, 70, -164, 71, -165, -61, -104, -60, -102, -112, -254, -111, -254, -201, -294, -201, -294, -403, -453, -403, -454, -503, -419, -502, -419, -523, -387, -524, -386, -539, 268, -538, 270, -524, 308, -524, 309, -504, 341, -504, 340, -405)
+polygon = PackedVector2Array(-94, 51, -74, 51, -74, 59, -94, 59)
 
 [node name="GravityField" type="Area2D" parent="."]
 visible = false
