@@ -192,19 +192,14 @@ func _spawn_single_resource(i: int, angle_step: float, absolute_inner_radius: fl
 		var distance_factor = 1000.0 / max(distance, 100.0)
 		var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
 		
-		# Store orbital parameters
-		if parent_planet:
-			resource._orbital_planet = parent_planet
-		elif parent_station:
-			resource._orbital_planet = orbital_body
-		
-		resource._offset_from_planet = offset
-		resource._orbital_angle = initial_angle
-		resource._orbital_initial_angle = initial_angle
-		resource._orbital_start_time = Time.get_ticks_msec() / 1000.0
-		resource._orbital_distance = distance
-		resource._orbital_speed = calculated_speed_rad_per_sec
-		resource._orbital_initialized = true
+		# Configure OrbitalMotion component directly
+		if resource._orbital_motion:
+			var motion = resource._orbital_motion
+			motion.orbital_distance = distance
+			# Convert radians/sec to 0-100 speed scale
+			motion.orbital_speed = (calculated_speed_rad_per_sec / motion.speed_scale) * 100.0
+			motion.initial_angle = initial_angle
+			motion.initialize(orbital_body)
 		
 		# Randomize resource properties
 		resource.amount = RNG.rng.randi_range(5, 20)
@@ -212,4 +207,3 @@ func _spawn_single_resource(i: int, angle_step: float, absolute_inner_radius: fl
 		resource.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
 	elif resource is RigidBody2D:
 		(resource as RigidBody2D).linear_velocity = body_velocity
-

@@ -164,23 +164,15 @@ func spawn_cluster() -> void:
 				var distance_factor = 1000.0 / max(distance, 100.0)  # Faster closer, slower farther
 				var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
 				
-				# Store orbital parameters
-				# Resources can orbit planets or space stations
-				if parent_planet:
-					resource._orbital_planet = parent_planet
-				elif parent_station:
-					# For space stations, we'll use the same property name for compatibility
-					# The ResourceNode will need to handle both Planet and SpaceStation
-					resource._orbital_planet = orbital_body
+				# Configure OrbitalMotion component directly
+				if resource._orbital_motion:
+					var motion = resource._orbital_motion
+					motion.orbital_distance = distance
+					# Convert radians/sec to 0-100 speed scale
+					motion.orbital_speed = (calculated_speed_rad_per_sec / motion.speed_scale) * 100.0
+					motion.initial_angle = initial_angle
+					motion.initialize(orbital_body)
 				
-				resource._offset_from_planet = offset
-				resource._orbital_angle = initial_angle
-				resource._orbital_initial_angle = initial_angle  # Store initial angle for time-based calculation
-				resource._orbital_start_time = Time.get_ticks_msec() / 1000.0  # Store start time
-				resource._orbital_distance = distance
-				resource._orbital_speed = calculated_speed_rad_per_sec
-				resource._orbital_initialized = true  # Mark as ready for orbital updates
-			
 				# Randomize resource properties
 				resource.amount = RNG.rng.randi_range(5, 20)
 				resource.max_amount = resource.amount

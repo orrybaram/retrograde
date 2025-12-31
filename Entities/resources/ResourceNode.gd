@@ -1,6 +1,8 @@
 extends Area2D
 class_name ResourceNode
 
+const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
+
 signal harvest_started
 signal harvest_stopped
 signal resource_depleted
@@ -30,14 +32,7 @@ const COLLISION_SLOWDOWN: float = 0.3        # Reduce velocity to 30% on impact
 var _harvesting: bool = false
 var _accum: float = 0.0
 var _ship_in_range: Ship = null
-var _orbital_planet: Node2D = null  # Can be Planet or SpaceStation
-var _offset_from_planet: Vector2 = Vector2.ZERO
-var _orbital_angle: float = 0.0
-var _orbital_distance: float = 0.0
-var _orbital_speed: float = 0.0
-var _orbital_start_time: float = 0.0     # Time when orbit started (for time-based calculation)
-var _orbital_initial_angle: float = 0.0  # Initial angle at spawn (for time-based calculation)
-var _orbital_initialized: bool = false   # Set to true by spawner when orbital params are ready
+var _orbital_motion = null  # Composable orbital component (OrbitalMotion)
 var _rotation_speed: float = 0.0  # Rotation speed in radians per second (can be negative)
 var _collision_area_cached: Area2D = null  # Cached reference to CollisionArea
 var _is_depleted: bool = false
@@ -45,6 +40,7 @@ var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
 var _can_harvest: bool = false  # Track if harvesting is currently possible
 var minimap_target: ResourceMinimapTarget = null
+
 
 # Mini-game integration
 var _mini_game: HarvestMiniGame = null
@@ -56,6 +52,9 @@ func _ready() -> void:
 	
 	# Assign random update offset for staggered distant updates (spreads load across frames)
 	_update_offset = randi() % DISTANT_UPDATE_INTERVAL
+	
+	# Create OrbitalMotion component (spawner will configure it)
+	_setup_orbital_motion()
 	
 	# Main Area2D (circle) - for harvesting detection
 	body_entered.connect(_on_harvest_area_entered)
@@ -92,6 +91,14 @@ func _ready() -> void:
 	
 	# Register with minimap
 	_register_with_minimap.call_deferred()
+
+func _setup_orbital_motion() -> void:
+	_orbital_motion = OrbitalMotionClass.new()
+	_orbital_motion.auto_initialize = false  # Spawner will initialize
+	_orbital_motion.position_mode = OrbitalMotionClass.PositionMode.GLOBAL  # Not a child of orbital body
+	_orbital_motion.update_velocity = false  # Area2D doesn't have linear_velocity
+	_orbital_motion.enable_orbiting = false  # Disable auto-update, we control timing
+	add_child(_orbital_motion)
 
 # Harvest area (circle) - for detecting ship in range for harvesting
 func _on_harvest_area_entered(body: Node2D) -> void:
@@ -155,8 +162,12 @@ func _physics_process(delta: float) -> void:
 	# - Distant resources: update every N frames (staggered to spread load)
 	var should_update_orbit = in_range or ((frame + _update_offset) % DISTANT_UPDATE_INTERVAL == 0)
 	
-	if should_update_orbit and _orbital_planet and is_instance_valid(_orbital_planet):
-		_update_orbital_position(delta)
+	if should_update_orbit and _orbital_motion and _orbital_motion.initialized:
+		if _orbital_motion.orbital_body and is_instance_valid(_orbital_motion.orbital_body):
+			# Temporarily enable orbiting for this update, then disable
+			_orbital_motion.enable_orbiting = true
+			_orbital_motion.update_orbit()
+			_orbital_motion.enable_orbiting = false
 	
 	# Toggle collision area based on distance (no need for collision detection when far)
 	if _collision_area_cached:
@@ -277,19 +288,9 @@ func is_harvesting() -> bool:
 
 ## Get the orbital velocity of this resource node
 func get_orbital_velocity() -> Vector2:
-	if not _orbital_planet or not is_instance_valid(_orbital_planet):
+	if not _orbital_motion or not _orbital_motion.initialized:
 		return Vector2.ZERO
-	
-	# Calculate tangential velocity from orbital motion
-	# Velocity is perpendicular to radius: v = r * omega * (-sin(angle), cos(angle))
-	var tangential_velocity = Vector2(-sin(_orbital_angle), cos(_orbital_angle)) * _orbital_distance * _orbital_speed
-	
-	# Add planet's velocity (if planet is moving)
-	var planet_velocity = Vector2.ZERO
-	if _orbital_planet is RigidBody2D:
-		planet_velocity = (_orbital_planet as RigidBody2D).linear_velocity
-	
-	return tangential_velocity + planet_velocity
+	return _orbital_motion.get_full_velocity()
 
 func _deplete_resource() -> void:
 	if _is_depleted:
@@ -364,27 +365,7 @@ func _start_fade_out() -> void:
 		
 		await get_tree().process_frame
 
-func _update_orbital_position(_delta: float) -> void:
-	if not _orbital_planet or not is_instance_valid(_orbital_planet):
-		return
-	
-	# Safety check: don't update if orbital parameters aren't initialized yet
-	if not _orbital_initialized:
-		return
-	
-	var planet_pos = _orbital_planet.global_position
-	
-	# Time-based orbital calculation: position is always correct even if frames were skipped
-	# This allows us to skip processing for distant resources without them "freezing"
-	var elapsed = Time.get_ticks_msec() / 1000.0 - _orbital_start_time
-	_orbital_angle = fmod(_orbital_initial_angle + _orbital_speed * elapsed, TAU)
-	
-	# Calculate new position in circular orbit around planet
-	var orbital_offset = Vector2(cos(_orbital_angle), sin(_orbital_angle)) * _orbital_distance
-	global_position = planet_pos + orbital_offset
-	
-	# Update stored offset for reference
-	_offset_from_planet = orbital_offset
+# Orbital position updates handled by OrbitalMotion component
 
 func _update_visual() -> void:
 	# Don't update visual if depleted (fade-out handles it)

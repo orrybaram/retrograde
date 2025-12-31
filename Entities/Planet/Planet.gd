@@ -1,6 +1,8 @@
 extends RigidBody2D
 class_name Planet
 
+const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
+
 ## Planet types that determine appearance and behavior
 enum PlanetType { SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARREN }
  
@@ -14,7 +16,7 @@ enum PlanetType { SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARR
 @export_range(0.0, 1.0) var habitability: float = 0.0  ## 0.0 = uninhabitable, 1.0 = ideal for life
 @export_range(0.0, 1.0) var collision_radius_ratio: float = 1.0  ## Collision radius as ratio of visual radius (gas giants have smaller cores)
 
-# Orbital parameters
+# Orbital parameters (passed to OrbitalMotion component)
 @export var orbital_distance: float = 500.0  # Distance from parent planet center
 @export_range(0, 100) var orbital_speed: float = 5.0  # Orbital speed scale (0 = static, 100 = fastest)
 @export var initial_angle: float = 0.0  # Starting angle in radians
@@ -27,9 +29,13 @@ enum PlanetType { SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARR
 @onready var gravity_field_visual: GravityFieldVisual = $GravityField/CollisionShape2D/GravityFieldVisual
 
 var parent_planet: Planet = null
-var orbital_angle: float = 0.0
-var orbital_start_time: float = 0.0  # Time when orbit started (for time-based calculation)
 var minimap_target: PlanetMinimapTarget = null
+var _orbital_motion = null  # Composable orbital component (OrbitalMotion)
+
+## Get current orbital angle (delegates to OrbitalMotion)
+var orbital_angle: float:
+	get:
+		return _orbital_motion.orbital_angle if _orbital_motion else 0.0
 
 func _set_show_gravity_rings(v: bool) -> void:
 	show_gravity_rings = v
@@ -51,11 +57,6 @@ func _set_show_orbit_path(v: bool) -> void:
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
 
-## Convert orbital speed from 0-100 scale to radians per second
-## 0 = static, 100 = 0.001 radians/second (fastest)
-func _get_orbital_speed_radians_per_second() -> float:
-	return (orbital_speed / 100.0) * 0.01
-
 func _ready() -> void:
 	add_to_group("planets")
 	
@@ -69,20 +70,33 @@ func _ready() -> void:
 	if gravity_field_visual:
 		gravity_field_visual.visible = show_gravity_rings
 	
-	# Check if parent node is a Planet
+	# Check if parent node is a Planet - setup orbital motion
 	var parent = get_parent()
 	if parent is Planet:
 		parent_planet = parent as Planet
-		orbital_angle = initial_angle
-		orbital_start_time = Time.get_ticks_msec() / 1000.0  # Record start time for time-based calculation
 		# Lock rotation for orbiting planets to prevent physics rotation
 		lock_rotation = true
+		# Create and configure OrbitalMotion component
+		_setup_orbital_motion(parent_planet)
 		# Update orbit visual if it exists
 		if orbit_visual:
 			orbit_visual.show_orbit = show_orbit_path
 	
 	# Register with minimap
 	_register_with_minimap.call_deferred()
+
+func _setup_orbital_motion(body: Node2D) -> void:
+	_orbital_motion = OrbitalMotionClass.new()
+	_orbital_motion.auto_initialize = false  # We'll initialize manually
+	_orbital_motion.orbital_distance = orbital_distance
+	_orbital_motion.orbital_speed = orbital_speed
+	_orbital_motion.initial_angle = initial_angle
+	_orbital_motion.eccentricity = eccentricity
+	_orbital_motion.enable_orbiting = enable_orbiting
+	_orbital_motion.position_mode = OrbitalMotionClass.PositionMode.LOCAL  # Planet is child of parent
+	_orbital_motion.update_velocity = true  # RigidBody2D needs velocity updates
+	add_child(_orbital_motion)
+	_orbital_motion.initialize(body)
 
 func _register_with_minimap() -> void:
 	var minimap = Minimap.get_instance(get_tree())
@@ -99,48 +113,7 @@ func _exit_tree() -> void:
 		minimap_target = null
 
 func _physics_process(_dt: float) -> void:
-	# Handle orbital mechanics if this planet has a parent planet
-	if parent_planet and enable_orbiting:
-		# Get converted orbital speed in radians per second
-		var speed_rad_per_sec = _get_orbital_speed_radians_per_second()
-		
-		# Time-based orbital angle calculation (deterministic - same time = same position)
-		var elapsed = Time.get_ticks_msec() / 1000.0 - orbital_start_time
-		orbital_angle = fmod(initial_angle + speed_rad_per_sec * elapsed, TAU)
-		
-		# Calculate orbital offset (local to parent)
-		var orbital_offset: Vector2
-		
-		if eccentricity == 0.0:
-			# Circular orbit
-			orbital_offset = Vector2(cos(orbital_angle), sin(orbital_angle)) * orbital_distance
-		else:
-			# Elliptical orbit using true elliptical formula with focus at parent
-			var a = orbital_distance  # semi-major axis
-			var e = clamp(eccentricity, 0.0, 0.99)  # clamp eccentricity to valid range
-			var r = a * (1.0 - e * e) / (1.0 + e * cos(orbital_angle))
-			orbital_offset = Vector2(cos(orbital_angle), sin(orbital_angle)) * r
-		
-		# Calculate velocity before updating position (tangential to orbit)
-		var orbital_velocity_magnitude: float
-		if eccentricity == 0.0:
-			# Circular orbit: constant speed
-			orbital_velocity_magnitude = speed_rad_per_sec * orbital_distance
-		else:
-			# Elliptical orbit: velocity varies with distance
-			var a = orbital_distance
-			var e = clamp(eccentricity, 0.0, 0.99)
-			var r = a * (1.0 - e * e) / (1.0 + e * cos(orbital_angle))
-			# Velocity is higher when closer to parent (periapsis) and lower when farther (apoapsis)
-			orbital_velocity_magnitude = speed_rad_per_sec * r
-		
-		# Velocity is tangential to the orbit (perpendicular to radius vector)
-		# Add parent's velocity so nested orbits (moons) inherit parent motion
-		var local_orbital_velocity = Vector2(-sin(orbital_angle), cos(orbital_angle)) * orbital_velocity_magnitude
-		linear_velocity = parent_planet.linear_velocity + local_orbital_velocity
-		
-		# Update position (use local position since we're a child in the scene tree)
-		position = orbital_offset
+	# Orbital mechanics handled by OrbitalMotion child component
 	
 	# Apply gravity to ships
 	for body in gravity_field.get_overlapping_bodies():
