@@ -16,8 +16,8 @@ signal ship_took_off(ship: Ship)
 
 var _landing_area: Area2D = null
 var _ship_on_pad: Ship = null
-var _left_light: ColorRect = null
-var _right_light: ColorRect = null
+var _left_light: Polygon2D = null
+var _right_light: Polygon2D = null
 var _blink_tween: Tween = null
 
 func _ready() -> void:
@@ -27,8 +27,8 @@ func _ready() -> void:
 	
 	# Get references to components
 	_landing_area = get_node_or_null("LandingArea") as Area2D
-	_left_light = get_node_or_null("LeftLight") as ColorRect
-	_right_light = get_node_or_null("RightLight") as ColorRect
+	_left_light = get_node_or_null("LeftLight") as Polygon2D
+	_right_light = get_node_or_null("RightLight") as Polygon2D
 	
 	# Set up landing area signals
 	if _landing_area:

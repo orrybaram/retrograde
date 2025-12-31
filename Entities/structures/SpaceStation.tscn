@@ -90,9 +90,9 @@ color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(-94, 51, -74, 51, -74, 59, -94, 59)
 
 [node name="SpacePort" parent="." instance=ExtResource("5")]
-position = Vector2(116, 10)
+position = Vector2(118, 10)
 rotation = 1.5707964
 
 [node name="SpacePort2" parent="." instance=ExtResource("5")]
-position = Vector2(-114, 10)
+position = Vector2(-116, 10)
 rotation = 4.712389
