@@ -13,6 +13,9 @@ class_name Item
 @export var item_id: String = ""
 ## Unique identifier for the item (e.g., "scrap")
 
+@export var weight: float = 1.0
+## Weight per unit of this item (affects cargo capacity)
+
 @onready var _visual_node: Node2D = null
 
 func _ready() -> void:

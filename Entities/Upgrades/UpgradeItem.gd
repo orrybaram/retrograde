@@ -88,6 +88,10 @@ func _apply_add_stat(ship: Ship) -> void:
 			if ship:
 				ship.max_fuel += effect_value
 				ship.fuel = ship.max_fuel  # Refill to new max
+		"max_cargo_weight":
+			if ship:
+				ship.max_cargo_weight += effect_value
+				ship.cargo_changed.emit(ship.get_cargo_weight(), ship.max_cargo_weight)
 		_:
 			push_warning("UpgradeItem: Unknown ADD_STAT target: %s" % effect_target)
 
@@ -102,6 +106,10 @@ func _apply_multiply_stat(ship: Ship) -> void:
 			if ship:
 				ship.max_fuel *= effect_value
 				ship.fuel = ship.max_fuel
+		"max_cargo_weight":
+			if ship:
+				ship.max_cargo_weight *= effect_value
+				ship.cargo_changed.emit(ship.get_cargo_weight(), ship.max_cargo_weight)
 		_:
 			push_warning("UpgradeItem: Unknown MULTIPLY_STAT target: %s" % effect_target)
 

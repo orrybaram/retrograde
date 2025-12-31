@@ -45,6 +45,12 @@ layout_mode = 2
 theme = ExtResource("3_jd13s")
 show_label = false
 
+[node name="CargoProgressBar" parent="MarginContainer/VBoxContainer" instance=ExtResource("2")]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme = ExtResource("3_jd13s")
+show_label = false
+
 [node name="VelocityLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
