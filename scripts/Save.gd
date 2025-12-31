@@ -12,6 +12,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 		cfg.set_value("stats", "max_fuel", ship.max_fuel)
 		cfg.set_value("stats", "hull_strength", ship.hull_strength)
 		cfg.set_value("stats", "max_hull", ship.max_hull)
+		cfg.set_value("stats", "max_cargo_weight", ship.max_cargo_weight)
 		# Save spawn position and rotation (for docked state)
 		cfg.set_value("stats", "spawn_position_x", ship.global_position.x)
 		cfg.set_value("stats", "spawn_position_y", ship.global_position.y)
@@ -75,13 +76,8 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	
 	gs.credits = int(cfg.get_value("stats", "credits", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
-	if ship:
-		ship.fuel = float(cfg.get_value("stats", "fuel", 100.0))
-		ship.max_fuel = float(cfg.get_value("stats", "max_fuel", 100.0))
-		ship.hull_strength = float(cfg.get_value("stats", "hull_strength", 100.0))
-		ship.max_hull = float(cfg.get_value("stats", "max_hull", 100.0))
 	
-	# Load inventory into InventoryManager
+	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}
 	var cargo_section = cfg.get_section_keys("cargo")
 	if cargo_section:
@@ -96,12 +92,26 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 				inventory_dict[item_id] = value
 	InventoryManager.set_inventory_dict(inventory_dict)
 	
-	# Load upgrades
+	# Load upgrades FIRST
 	var upgrades_section = cfg.get_section_keys("upgrades")
 	if upgrades_section:
 		for upgrade_path in upgrades_section:
 			var level = int(cfg.get_value("upgrades", upgrade_path, 0))
 			gs.set_upgrade_level(upgrade_path, level)
+	
+	# Reapply all upgrades to ship based on loaded upgrade levels
+	# This sets max_hull, max_fuel, max_cargo_weight correctly
+	if ship and gs:
+		ship.reapply_all_upgrades(gs)
+	
+	# Load current fuel and hull values AFTER reapplication (so they're clamped to max)
+	if ship:
+		ship.fuel = float(cfg.get_value("stats", "fuel", ship.max_fuel))
+		ship.hull_strength = float(cfg.get_value("stats", "hull_strength", ship.max_hull))
+		# Clamp to max values (in case save has invalid values)
+		ship.fuel = min(ship.fuel, ship.max_fuel)
+		ship.hull_strength = min(ship.hull_strength, ship.max_hull)
+		ship.update_mass_from_cargo()  # Update mass based on loaded cargo
 
 ## Load planet orbital angles into a dictionary
 ## Returns a dictionary mapping planet keys to orbital angles

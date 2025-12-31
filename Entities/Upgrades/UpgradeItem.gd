@@ -58,6 +58,24 @@ func can_purchase(game_state: GameState) -> bool:
 	var current_tier = game_state.get_upgrade_level(upgrade_path)
 	return current_tier == tier - 1
 
+## Static helper to find an upgrade by path and tier from all stores in the scene tree.
+## Returns the UpgradeItem if found, null otherwise.
+static func find_upgrade_by_path_and_tier(tree: SceneTree, path: String, tier: int) -> UpgradeItem:
+	if not tree:
+		return null
+	
+	var stores = tree.get_nodes_in_group("stores")
+	for store_node in stores:
+		if not store_node is Store:
+			continue
+		var store = store_node as Store
+		var upgrades = store.get_all_upgrades()
+		for upgrade in upgrades:
+			if upgrade.upgrade_path == path and upgrade.tier == tier:
+				return upgrade
+	
+	return null
+
 
 ## Apply this upgrade's effect to the ship and/or game state.
 ## Also updates the player's upgrade level for this path.

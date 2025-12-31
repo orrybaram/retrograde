@@ -14,6 +14,11 @@ class_name Ship
 @export var max_fuel: float = 100.0  # Maximum fuel capacity
 
 @export var max_cargo_weight: float = 50.0  # Maximum cargo weight capacity
+
+# Base stats (stored at initialization, never modified by upgrades)
+var base_max_hull: float = 100.0
+var base_max_fuel: float = 100.0
+var base_max_cargo_weight: float = 50.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
 @export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
 
@@ -74,6 +79,11 @@ func _ready() -> void:
 	can_sleep = false  # keep body awake while testing input; turn back on later if you like
 	# Try to get GameState, with fallback
 	gs = get_tree().get_first_node_in_group("game_state")
+	
+	# Store base stats from @export values (these are the unmodified base values)
+	base_max_hull = max_hull
+	base_max_fuel = max_fuel
+	base_max_cargo_weight = max_cargo_weight
 	
 	# Initialize hull and fuel
 	hull_strength = max_hull
@@ -207,3 +217,68 @@ func get_cargo_weight() -> float:
 ## Check if cargo is at capacity
 func is_cargo_full() -> bool:
 	return InventoryManager.get_total_weight() >= max_cargo_weight
+
+## Reapply all upgrades based on upgrade levels in GameState.
+## This ensures upgrades persist through load/respawn.
+func reapply_all_upgrades(game_state: GameState) -> void:
+	if not game_state:
+		return
+	
+	# Reset ship stats to base values
+	max_hull = base_max_hull
+	max_fuel = base_max_fuel
+	max_cargo_weight = base_max_cargo_weight
+	
+	# Get the scene tree to search for stores
+	var tree = get_tree()
+	if not tree:
+		return
+	
+	# Iterate through all upgrade paths and reapply upgrades in tier order
+	for upgrade_path in game_state.upgrade_levels.keys():
+		var current_tier = game_state.get_upgrade_level(upgrade_path)
+		
+		# Apply all upgrades up to and including current tier
+		for tier in range(1, current_tier + 1):
+			var upgrade = UpgradeItem.find_upgrade_by_path_and_tier(tree, upgrade_path, tier)
+			if upgrade:
+				# Apply the upgrade effect without updating upgrade_levels (already set)
+				match upgrade.effect_type:
+					UpgradeItem.EffectType.ADD_STAT:
+						_apply_add_stat_from_upgrade(upgrade)
+					UpgradeItem.EffectType.MULTIPLY_STAT:
+						_apply_multiply_stat_from_upgrade(upgrade)
+					UpgradeItem.EffectType.UNLOCK_FEATURE:
+						# Unlock features are handled in GameState, skip here
+						pass
+	
+	# Update hull and fuel to match new max values
+	hull_strength = min(hull_strength, max_hull)
+	fuel = min(fuel, max_fuel)
+	
+	# Update cargo signal
+	cargo_changed.emit(get_cargo_weight(), max_cargo_weight)
+
+## Helper to apply ADD_STAT upgrade effect (without updating GameState)
+func _apply_add_stat_from_upgrade(upgrade: UpgradeItem) -> void:
+	match upgrade.effect_target:
+		"max_hull":
+			max_hull += int(upgrade.effect_value)
+		"max_fuel":
+			max_fuel += upgrade.effect_value
+		"max_cargo_weight":
+			max_cargo_weight += upgrade.effect_value
+		_:
+			push_warning("Ship: Unknown ADD_STAT target: %s" % upgrade.effect_target)
+
+## Helper to apply MULTIPLY_STAT upgrade effect (without updating GameState)
+func _apply_multiply_stat_from_upgrade(upgrade: UpgradeItem) -> void:
+	match upgrade.effect_target:
+		"max_hull":
+			max_hull = int(max_hull * upgrade.effect_value)
+		"max_fuel":
+			max_fuel *= upgrade.effect_value
+		"max_cargo_weight":
+			max_cargo_weight *= upgrade.effect_value
+		_:
+			push_warning("Ship: Unknown MULTIPLY_STAT target: %s" % upgrade.effect_target)

@@ -98,13 +98,16 @@ func purchase_upgrade(upgrade: UpgradeItem) -> bool:
 	if not can_purchase(upgrade):
 		return false
 	
+	# Refresh ship reference in case it respawned
+	_ship = get_tree().get_first_node_in_group("ship") as Ship
+	
 	# Deduct credits
 	_game_state.credits -= upgrade.cost
 	
 	# Apply the upgrade
 	upgrade.apply(_ship, _game_state)
 	
-	# Auto-save after purchase
+	# Auto-save after purchase (use refreshed ship reference)
 	if _game_state and _ship:
 		# Show saving indicator
 		var hud = get_tree().get_first_node_in_group("hud") as Control
