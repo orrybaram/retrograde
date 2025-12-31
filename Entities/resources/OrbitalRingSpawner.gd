@@ -15,6 +15,7 @@ class_name OrbitalRingSpawner
 @export_range(0.1, 10.0) var density_gradient: float = 2.0  # Density falloff from inner to outer (1.0 = uniform, >1.0 = more near inner, <1.0 = more near outer)
 @export_range(0, 100) var orbital_speed: float = 100.0  # Orbital speed scale (0 = static, 100 = fastest)
 @export var auto_spawn: bool = true
+@export var spawn_batch_size: int = 50  # Resources to spawn per frame (higher = faster but choppier)
 
 var parent_planet: Planet = null
 var parent_station: SpaceStation = null
@@ -129,76 +130,86 @@ func spawn_ring() -> void:
 	# Distribute resources evenly by angle
 	var angle_step = TAU / num_resources
 	
-	# Spawn resources evenly distributed around the ring
-	for i in range(num_resources):
-		# Calculate angle for this resource (evenly distributed)
-		var angle = i * angle_step
+	# Spawn resources in batches across multiple frames to prevent blocking
+	var spawned_count = 0
+	while spawned_count < num_resources:
+		# Spawn a batch of resources
+		var batch_end = min(spawned_count + spawn_batch_size, num_resources)
 		
-		# Randomize radius with gradient bias toward inner radius
-		# Use inverse power function: radius = inner + (outer - inner) * pow(random, 1/gradient)
-		# When gradient = 1.0: uniform distribution
-		# When gradient > 1.0: more bias toward inner radius (higher = more bias)
-		var random_value = RNG.rng.randf()
-		var radius_range = absolute_outer_radius - absolute_inner_radius
-		var radius = absolute_inner_radius + radius_range * pow(random_value, 1.0 / density_gradient)
+		for i in range(spawned_count, batch_end):
+			_spawn_single_resource(i, angle_step, absolute_inner_radius, absolute_outer_radius, 
+				body_pos, body_velocity, scenes_to_use, orbital_body)
 		
-		# Calculate position
-		var resource_pos = body_pos + Vector2(cos(angle), sin(angle)) * radius
+		spawned_count = batch_end
 		
-		# Randomly select a scrap scene from available scenes
-		var selected_scene = scenes_to_use[RNG.rng.randi() % scenes_to_use.size()]
+		# Yield to next frame if more resources remain (keeps game responsive)
+		if spawned_count < num_resources:
+			await get_tree().process_frame
+
+## Spawn a single resource at the given index
+func _spawn_single_resource(i: int, angle_step: float, absolute_inner_radius: float, 
+		absolute_outer_radius: float, body_pos: Vector2, body_velocity: Vector2,
+		scenes_to_use: Array[PackedScene], orbital_body: Node2D) -> void:
+	# Calculate angle for this resource (evenly distributed)
+	var angle = i * angle_step
+	
+	# Randomize radius with gradient bias toward inner radius
+	var random_value = RNG.rng.randf()
+	var radius_range = absolute_outer_radius - absolute_inner_radius
+	var radius = absolute_inner_radius + radius_range * pow(random_value, 1.0 / density_gradient)
+	
+	# Calculate position
+	var resource_pos = body_pos + Vector2(cos(angle), sin(angle)) * radius
+	
+	# Randomly select a scrap scene from available scenes
+	var selected_scene = scenes_to_use[RNG.rng.randi() % scenes_to_use.size()]
+	
+	# Spawn resource
+	var resource = selected_scene.instantiate()
+	scene_root.add_child(resource)
+	resource.global_position = resource_pos
+	
+	# Set random rotation for visual variety
+	resource.rotation = RNG.rng.randf() * TAU
+	
+	# Set random rotation speed (can be negative or positive)
+	var rotation_speed_range = 0.5
+	resource._rotation_speed = RNG.rng.randf_range(-rotation_speed_range, rotation_speed_range)
+	
+	# Set random scaling (0.5 to 1.0)
+	var random_scale = RNG.rng.randf_range(0.5, 1.0)
+	resource.scale = Vector2(random_scale, random_scale)
+	
+	# Set resource to orbit around body (make it "in orbit")
+	if resource.has_method("start_harvest"):  # Check if it's a ResourceNode
+		# Calculate initial orbital parameters
+		var offset = resource_pos - body_pos
+		var distance = offset.length()
+		var initial_angle = atan2(offset.y, offset.x)
 		
-		# Spawn resource
-		var resource = selected_scene.instantiate()
-		scene_root.add_child(resource)
-		resource.global_position = resource_pos
+		# Calculate orbital speed based on distance (circular orbit)
+		var speed_rad_per_sec = orbital_speed / 100.0
+		var distance_factor = 1000.0 / max(distance, 100.0)
+		var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
 		
-		# Set random rotation for visual variety
-		resource.rotation = RNG.rng.randf() * TAU
+		# Store orbital parameters
+		if parent_planet:
+			resource._orbital_planet = parent_planet
+		elif parent_station:
+			resource._orbital_planet = orbital_body
 		
-		# Set random rotation speed (can be negative or positive)
-		# Range: -2.0 to 2.0 radians per second
-		var rotation_speed_range = 0.5
-		resource._rotation_speed = RNG.rng.randf_range(-rotation_speed_range, rotation_speed_range)
+		resource._offset_from_planet = offset
+		resource._orbital_angle = initial_angle
+		resource._orbital_initial_angle = initial_angle
+		resource._orbital_start_time = Time.get_ticks_msec() / 1000.0
+		resource._orbital_distance = distance
+		resource._orbital_speed = calculated_speed_rad_per_sec
+		resource._orbital_initialized = true
 		
-		# Set random scaling (0.5 to 1.0)
-		var random_scale = RNG.rng.randf_range(0.5, 1.0)
-		resource.scale = Vector2(random_scale, random_scale)
-		
-		# Set resource to orbit around body (make it "in orbit")
-		# Resources are Area2D nodes, so we simulate orbital mechanics
-		if resource.has_method("start_harvest"):  # Check if it's a ResourceNode
-			# Calculate initial orbital parameters
-			var offset = resource_pos - body_pos
-			var distance = offset.length()
-			var initial_angle = atan2(offset.y, offset.x)
-			
-			# Calculate orbital speed based on distance (circular orbit)
-			# Convert from 0-100 scale to radians per second, then scale by distance
-			# Base speed: 0.1 rad/s at 100 = ~63 seconds per orbit (much more visible)
-			var speed_rad_per_sec = orbital_speed / 100.0
-			var distance_factor = 1000.0 / max(distance, 100.0)  # Faster closer, slower farther
-			var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
-			
-			# Store orbital parameters
-			# Resources can orbit planets or space stations
-			if parent_planet:
-				resource._orbital_planet = parent_planet
-			elif parent_station:
-				# For space stations, we'll use the same property name for compatibility
-				# The ResourceNode will need to handle both Planet and SpaceStation
-				resource._orbital_planet = orbital_body
-			
-			resource._offset_from_planet = offset
-			resource._orbital_angle = initial_angle
-			resource._orbital_distance = distance
-			resource._orbital_speed = calculated_speed_rad_per_sec
-			
-			# Randomize resource properties
-			resource.amount = RNG.rng.randi_range(5, 20)
-			resource.max_amount = resource.amount
-			resource.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
-		elif resource is RigidBody2D:
-			# If it's a RigidBody2D, set velocity directly
-			(resource as RigidBody2D).linear_velocity = body_velocity
+		# Randomize resource properties
+		resource.amount = RNG.rng.randi_range(5, 20)
+		resource.max_amount = resource.amount
+		resource.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
+	elif resource is RigidBody2D:
+		(resource as RigidBody2D).linear_velocity = body_velocity
 

@@ -13,6 +13,7 @@ class_name SpaceStation
 
 var parent_planet: Planet = null
 var orbital_angle: float = 0.0
+var orbital_start_time: float = 0.0  # Time when orbit started (for time-based calculation)
 var minimap_target: SpaceStationMinimapTarget = null
 
 ## Convert orbital speed from 0-100 scale to radians per second
@@ -28,6 +29,7 @@ func _ready() -> void:
 	if parent is Planet:
 		parent_planet = parent as Planet
 		orbital_angle = initial_angle
+		orbital_start_time = Time.get_ticks_msec() / 1000.0  # Record start time for time-based calculation
 		# Lock rotation for orbiting stations to prevent physics rotation
 		lock_rotation = true
 	
@@ -54,8 +56,9 @@ func _physics_process(_dt: float) -> void:
 		# Get converted orbital speed in radians per second
 		var speed_rad_per_sec = _get_orbital_speed_radians_per_second()
 		
-		# Update orbital angle
-		orbital_angle += speed_rad_per_sec * _dt
+		# Time-based orbital angle calculation (deterministic - same time = same position)
+		var elapsed = Time.get_ticks_msec() / 1000.0 - orbital_start_time
+		orbital_angle = fmod(initial_angle + speed_rad_per_sec * elapsed, TAU)
 		
 		# Calculate orbital offset (local to parent)
 		var orbital_offset: Vector2

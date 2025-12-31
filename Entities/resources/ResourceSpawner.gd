@@ -175,9 +175,12 @@ func spawn_cluster() -> void:
 				
 				resource._offset_from_planet = offset
 				resource._orbital_angle = initial_angle
+				resource._orbital_initial_angle = initial_angle  # Store initial angle for time-based calculation
+				resource._orbital_start_time = Time.get_ticks_msec() / 1000.0  # Store start time
 				resource._orbital_distance = distance
 				resource._orbital_speed = calculated_speed_rad_per_sec
-				
+				resource._orbital_initialized = true  # Mark as ready for orbital updates
+			
 				# Randomize resource properties
 				resource.amount = RNG.rng.randi_range(5, 20)
 				resource.max_amount = resource.amount

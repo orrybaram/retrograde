@@ -15,7 +15,12 @@ signal can_harvest_changed(can_harvest: bool)
 @export var min_scale: float = 0.8  # Minimum scale to prevent visual from getting too small
 
 # Performance: Distance-based processing
-const ACTIVE_DISTANCE_SQ: float = 3000.0 * 3000.0  # Squared distance for faster comparison
+const ACTIVE_DISTANCE_SQ: float = 2000.0 * 2000.0  # Squared distance for faster comparison
+const DISTANT_UPDATE_INTERVAL: int = 10  # Distant resources update every N frames (staggered)
+static var _cached_ship: Ship = null  # Shared ship reference across all resources
+var _update_offset: int = 0  # Per-resource offset for staggered updates
+var _cached_in_range: bool = false  # Cached distance check result
+var _last_range_check_frame: int = -1  # Frame when we last checked distance
 
 # Collision damage/slowdown constants
 const DAMAGE_SPEED_THRESHOLD: float = 150.0  # No damage below this relative speed
@@ -30,7 +35,11 @@ var _offset_from_planet: Vector2 = Vector2.ZERO
 var _orbital_angle: float = 0.0
 var _orbital_distance: float = 0.0
 var _orbital_speed: float = 0.0
+var _orbital_start_time: float = 0.0     # Time when orbit started (for time-based calculation)
+var _orbital_initial_angle: float = 0.0  # Initial angle at spawn (for time-based calculation)
+var _orbital_initialized: bool = false   # Set to true by spawner when orbital params are ready
 var _rotation_speed: float = 0.0  # Rotation speed in radians per second (can be negative)
+var _collision_area_cached: Area2D = null  # Cached reference to CollisionArea
 var _is_depleted: bool = false
 var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
@@ -44,18 +53,26 @@ var _mini_game_ui_scene: PackedScene = preload("res://minigames/harvest/HarvestM
 
 func _ready() -> void:
 	add_to_group("resource_nodes")
+	
+	# Assign random update offset for staggered distant updates (spreads load across frames)
+	_update_offset = randi() % DISTANT_UPDATE_INTERVAL
+	
 	# Main Area2D (circle) - for harvesting detection
 	body_entered.connect(_on_harvest_area_entered)
 	body_exited.connect(_on_harvest_area_exited)
 	
 	# Collision Area2D (polygon) - for damage/slowdown
-	var collision_area = get_node_or_null("CollisionArea")
-	if collision_area:
-		collision_area.body_entered.connect(_on_collision_area_entered)
-		collision_area.body_exited.connect(_on_collision_area_exited)
+	_collision_area_cached = get_node_or_null("CollisionArea")
+	if _collision_area_cached:
+		_collision_area_cached.body_entered.connect(_on_collision_area_entered)
+		_collision_area_cached.body_exited.connect(_on_collision_area_exited)
 	
 	# Register with EventBus
 	EventBus.register_resource_node(self)
+	
+	# Clear cached ship when ship respawns
+	if not EventBus.ship_respawned.is_connected(_on_ship_respawned):
+		EventBus.ship_respawned.connect(_on_ship_respawned)
 	
 	
 	# Find IndicatorManager
@@ -120,20 +137,48 @@ func _on_collision_area_exited(_body: Node2D) -> void:
 	pass
 		
 func _physics_process(delta: float) -> void:
-	# Update position to orbit around planet if assigned
-	if _orbital_planet and is_instance_valid(_orbital_planet):
+	var frame = Engine.get_physics_frames()
+	
+	# Distance check strategy:
+	# - If currently in range: check every frame (player might leave)
+	# - If currently out of range: only recheck every N frames (staggered)
+	var should_check_range = _cached_in_range or ((frame + _update_offset) % DISTANT_UPDATE_INTERVAL == 0)
+	
+	if should_check_range:
+		_cached_in_range = _is_within_active_range()
+		_last_range_check_frame = frame
+	
+	var in_range = _cached_in_range
+	
+	# Orbital position update strategy:
+	# - In-range resources: update every frame (smooth motion)
+	# - Distant resources: update every N frames (staggered to spread load)
+	var should_update_orbit = in_range or ((frame + _update_offset) % DISTANT_UPDATE_INTERVAL == 0)
+	
+	if should_update_orbit and _orbital_planet and is_instance_valid(_orbital_planet):
 		_update_orbital_position(delta)
 	
-	# Apply rotation speed if set
+	# Toggle collision area based on distance (no need for collision detection when far)
+	if _collision_area_cached:
+		if _collision_area_cached.monitoring != in_range:
+			_collision_area_cached.monitoring = in_range
+			_collision_area_cached.monitorable = in_range
+	
+	if not in_range:
+		return
+	
+	# Apply rotation speed if set (only when in range - minor visual detail)
 	if _rotation_speed != 0.0:
 		rotation += _rotation_speed * delta
 
 ## Check if within active processing range of ship (uses squared distance for performance)
 func _is_within_active_range() -> bool:
-	var ship = get_tree().get_first_node_in_group("ship") as Ship
-	if not ship:
+	# Use cached ship reference to avoid expensive scene tree search every frame
+	if not _cached_ship or not is_instance_valid(_cached_ship):
+		_cached_ship = get_tree().get_first_node_in_group("ship") as Ship
+	if not _cached_ship:
 		return true  # If no ship, process anyway to avoid breaking
-	return global_position.distance_squared_to(ship.global_position) <= ACTIVE_DISTANCE_SQ
+	return global_position.distance_squared_to(_cached_ship.global_position) <= ACTIVE_DISTANCE_SQ
 
 func _process(_delta: float) -> void:
 	# Performance: Skip processing if ship is not in Area2D range
@@ -319,17 +364,22 @@ func _start_fade_out() -> void:
 		
 		await get_tree().process_frame
 
-func _update_orbital_position(delta: float) -> void:
+func _update_orbital_position(_delta: float) -> void:
 	if not _orbital_planet or not is_instance_valid(_orbital_planet):
+		return
+	
+	# Safety check: don't update if orbital parameters aren't initialized yet
+	if not _orbital_initialized:
 		return
 	
 	var planet_pos = _orbital_planet.global_position
 	
-	# Update orbital angle based on speed (resources orbit around planet)
-	_orbital_angle += _orbital_speed * delta
+	# Time-based orbital calculation: position is always correct even if frames were skipped
+	# This allows us to skip processing for distant resources without them "freezing"
+	var elapsed = Time.get_ticks_msec() / 1000.0 - _orbital_start_time
+	_orbital_angle = fmod(_orbital_initial_angle + _orbital_speed * elapsed, TAU)
 	
 	# Calculate new position in circular orbit around planet
-	# This creates orbital velocity - resources move tangentially around the planet
 	var orbital_offset = Vector2(cos(_orbital_angle), sin(_orbital_angle)) * _orbital_distance
 	global_position = planet_pos + orbital_offset
 	
@@ -503,3 +553,7 @@ func _on_mini_game_harvest_failed() -> void:
 func _on_mini_game_ui_closed() -> void:
 	# UI closed - stop harvesting
 	stop_harvest()
+
+static func _on_ship_respawned() -> void:
+	# Clear cached ship reference so it gets re-fetched
+	_cached_ship = null
