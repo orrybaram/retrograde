@@ -267,6 +267,10 @@ func reset_game() -> void:
 	
 	# Reset ship state
 	if ship:
+		# Reapply upgrades first to ensure max values are correct
+		if gs:
+			ship.reapply_all_upgrades(gs)
+		
 		ship.hull_strength = ship.max_hull
 		ship.fuel = ship.max_fuel
 		ship.linear_velocity = Vector2.ZERO

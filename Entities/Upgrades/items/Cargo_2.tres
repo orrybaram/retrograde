@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3 uid="uid://cargo2upgrade"]
+
+[ext_resource type="Script" path="res://entities/Upgrades/UpgradeItem.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "cargo_2"
+display_name = "Cargo Hold II"
+description = "Reinforced cargo hold. Adds 25 units to maximum cargo capacity."
+upgrade_path = "cargo"
+tier = 2
+cost = 100
+effect_target = "max_cargo_weight"
+effect_value = 25.0
+

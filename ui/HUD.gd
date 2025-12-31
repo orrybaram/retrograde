@@ -2,6 +2,7 @@ extends Control
 
 @onready var fuel_progress_bar: ProgressBarWidget = $"MarginContainer/VBoxContainer/FuelProgressBar"
 @onready var hull_progress_bar: ProgressBarWidget = $"MarginContainer/VBoxContainer/HullProgressBar"
+@onready var cargo_progress_bar: ProgressBarWidget = $"MarginContainer/VBoxContainer/CargoProgressBar"
 @onready var cargo_label: Label = $"MarginContainer/VBoxContainer/CargoLabel"
 @onready var position_label: Label = $"MarginContainer/VBoxContainer/PositionLabel"
 @onready var velocity_label: Label = $"MarginContainer/VBoxContainer/VelocityLabel"
@@ -21,6 +22,8 @@ func _ready() -> void:
 		fuel_progress_bar.bar_color = Colors.FUEL_FULL  # Amber for fuel
 	if hull_progress_bar:
 		hull_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber for hull (will be updated dynamically)
+	if cargo_progress_bar:
+		cargo_progress_bar.bar_color = Colors.CARGO_EMPTY  # Green for cargo (will be updated dynamically)
 	
 	_update_labels()
 	# Connect to InventoryManager for inventory changes
@@ -29,6 +32,8 @@ func _ready() -> void:
 		gs.credits_changed.connect(_update_labels)
 	if ship and ship.has_signal("fuel_changed"):
 		ship.fuel_changed.connect(_update_labels)
+	if ship and ship.has_signal("cargo_changed"):
+		ship.cargo_changed.connect(_on_cargo_changed)
 	
 	
 	# Connect to EventBus for action messages
@@ -42,6 +47,9 @@ func _ready() -> void:
 
 func _on_action_message_changed(message: String) -> void:
 	_update_action_message(message)
+
+func _on_cargo_changed(_current_weight: float, _max_weight: float) -> void:
+	_update_labels()
 
 func _update_action_message(message: String) -> void:
 	if action_message_label:
@@ -122,6 +130,23 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 				hull_progress_bar.bar_color = Color(1.0, 0.65, 0.0)  # Amber-orange
 			else:
 				hull_progress_bar.bar_color = Color(1.0, 0.75, 0.0)  # Amber
+		
+		# Update cargo progress bar
+		var cargo_weight = ship.get_cargo_weight() if ship.has_method("get_cargo_weight") else 0.0
+		var max_cargo = ship.max_cargo_weight if "max_cargo_weight" in ship else 50.0
+		var cargo_percent = (cargo_weight / max_cargo * 100.0) if max_cargo > 0 else 0.0
+		if cargo_progress_bar:
+			cargo_progress_bar.set_value(cargo_weight, max_cargo)
+			
+			# Change color based on cargo fill level (green -> yellow -> orange -> red)
+			if cargo_percent >= 90:
+				cargo_progress_bar.bar_color = Colors.CARGO_FULL
+			elif cargo_percent >= 75:
+				cargo_progress_bar.bar_color = Colors.CARGO_THREE_QUARTERS
+			elif cargo_percent >= 50:
+				cargo_progress_bar.bar_color = Colors.CARGO_HALF
+			else:
+				cargo_progress_bar.bar_color = Colors.CARGO_EMPTY
 	else:
 		position_label.text = "Position: (0, 0)"
 		velocity_label.text = "Velocity: 0.0 m/s"
@@ -131,3 +156,6 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 		if hull_progress_bar:
 			hull_progress_bar.set_value(0.0, 100.0)
 			hull_progress_bar.bar_color = Color(1.0, 0.3, 0.0)  # Red-orange
+		if cargo_progress_bar:
+			cargo_progress_bar.set_value(0.0, 50.0)
+			cargo_progress_bar.bar_color = Colors.CARGO_EMPTY

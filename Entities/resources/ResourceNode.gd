@@ -242,6 +242,14 @@ func start_harvest() -> void:
 				# Ship is already harvesting another resource, don't start this one
 				return
 	
+	# Check if ship cargo is full
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		var item_id = kind.to_lower()
+		if not InventoryManager.can_add_item(item_id, 1, _ship_in_range.max_cargo_weight):
+			# Cargo is full, show warning message
+			EventBus.action_message_changed.emit("Cargo full!")
+			return
+	
 	# Check if ship is moving slowly relative to resource node (under 50 speed)
 	if _ship_in_range and is_instance_valid(_ship_in_range):
 		var ship_velocity = _ship_in_range.linear_velocity
@@ -511,6 +519,30 @@ func _on_mini_game_harvest_success(harvested_amount: int) -> void:
 	# Harvest successful - add all resources
 	# Map resource kind to item_id (e.g., "Scrap" -> "scrap")
 	var item_id = kind.to_lower()
+	
+	# Check cargo capacity - only add what fits
+	var max_cargo = 50.0  # Default fallback
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		max_cargo = _ship_in_range.max_cargo_weight
+	
+	# Check how many items can fit
+	if not InventoryManager.can_add_item(item_id, harvested_amount, max_cargo):
+		# Calculate how many can fit
+		var remaining_capacity = InventoryManager.get_remaining_capacity(max_cargo)
+		var item_weight = InventoryManager.get_item_weight(item_id)
+		var can_fit = int(remaining_capacity / item_weight) if item_weight > 0 else 0
+		
+		if can_fit <= 0:
+			# Cargo is completely full
+			EventBus.action_message_changed.emit("Cargo full!")
+			_stop_mini_game()
+			stop_harvest()
+			return
+		
+		# Add only what fits
+		harvested_amount = can_fit
+		EventBus.action_message_changed.emit("Cargo full!")
+	
 	InventoryManager.add_item(item_id, harvested_amount)
 	
 	# Emit signal for ResourceManager to handle indicator display

@@ -5,8 +5,12 @@ extends Node
 signal inventory_changed(item_id: String, new_quantity: int)
 ## Emitted when an item's quantity changes in the inventory.
 
+signal cargo_weight_changed(total_weight: float)
+## Emitted when the total cargo weight changes.
+
 var _inventory: Dictionary = {}  # Maps item_id to quantity
 var _item_registry: Dictionary = {}  # Maps item_id to Item scene path
+var _item_weights: Dictionary = {}  # Cache of item_id to weight
 
 func _ready() -> void:
 	add_to_group("inventory_manager")
@@ -18,6 +22,13 @@ func _ready() -> void:
 ## item_scene_path: Path to the Item scene file
 func register_item(item_id: String, item_scene_path: String) -> void:
 	_item_registry[item_id] = item_scene_path
+	# Cache the item weight from the scene
+	var scene = load(item_scene_path) as PackedScene
+	if scene:
+		var instance = scene.instantiate() as Item
+		if instance:
+			_item_weights[item_id] = instance.weight
+			instance.queue_free()
 
 ## Get the PackedScene for an item by its item_id.
 ## Returns null if the item is not registered.
@@ -37,6 +48,7 @@ func add_item(item_id: String, amount: int) -> void:
 	var new_quantity = current_quantity + amount
 	_inventory[item_id] = new_quantity
 	inventory_changed.emit(item_id, new_quantity)
+	cargo_weight_changed.emit(get_total_weight())
 
 ## Remove items from inventory.
 ## item_id: The unique identifier of the item
@@ -57,6 +69,7 @@ func remove_item(item_id: String, amount: int) -> bool:
 		_inventory[item_id] = new_quantity
 	
 	inventory_changed.emit(item_id, new_quantity)
+	cargo_weight_changed.emit(get_total_weight())
 	return true
 
 ## Get the current quantity of an item in inventory.
@@ -78,6 +91,7 @@ func clear_inventory() -> void:
 	# Emit signals for all cleared items
 	for item_id in item_ids:
 		inventory_changed.emit(item_id, 0)
+	cargo_weight_changed.emit(0.0)
 
 ## Get all items in inventory as a dictionary.
 ## Returns a copy of the inventory dictionary.
@@ -96,3 +110,32 @@ func set_inventory_dict(inventory: Dictionary) -> void:
 	# Emit signals for all items
 	for item_id in _inventory.keys():
 		inventory_changed.emit(item_id, _inventory[item_id])
+	cargo_weight_changed.emit(get_total_weight())
+
+## Get the weight of a single item by its item_id.
+## Returns the weight from cache, or 1.0 as default if not found.
+func get_item_weight(item_id: String) -> float:
+	return _item_weights.get(item_id, 1.0)
+
+## Get the total weight of all items in inventory.
+func get_total_weight() -> float:
+	var total: float = 0.0
+	for item_id in _inventory.keys():
+		var quantity = _inventory[item_id] as int
+		var weight = get_item_weight(item_id)
+		total += quantity * weight
+	return total
+
+## Check if adding a certain amount of an item would exceed cargo capacity.
+## Returns true if the items can be added, false if it would exceed capacity.
+func can_add_item(item_id: String, amount: int, max_cargo_weight: float) -> bool:
+	if amount <= 0:
+		return true
+	var item_weight = get_item_weight(item_id)
+	var additional_weight = amount * item_weight
+	var new_total = get_total_weight() + additional_weight
+	return new_total <= max_cargo_weight
+
+## Get the remaining cargo capacity.
+func get_remaining_capacity(max_cargo_weight: float) -> float:
+	return max_cargo_weight - get_total_weight()

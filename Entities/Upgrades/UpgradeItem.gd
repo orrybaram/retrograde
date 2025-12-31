@@ -58,6 +58,24 @@ func can_purchase(game_state: GameState) -> bool:
 	var current_tier = game_state.get_upgrade_level(upgrade_path)
 	return current_tier == tier - 1
 
+## Static helper to find an upgrade by path and tier from all stores in the scene tree.
+## Returns the UpgradeItem if found, null otherwise.
+static func find_upgrade_by_path_and_tier(tree: SceneTree, path: String, target_tier: int) -> UpgradeItem:
+	if not tree:
+		return null
+	
+	var stores = tree.get_nodes_in_group("stores")
+	for store_node in stores:
+		if not store_node is Store:
+			continue
+		var store = store_node as Store
+		var upgrades = store.get_all_upgrades()
+		for upgrade in upgrades:
+			if upgrade.upgrade_path == path and upgrade.tier == target_tier:
+				return upgrade
+	
+	return null
+
 
 ## Apply this upgrade's effect to the ship and/or game state.
 ## Also updates the player's upgrade level for this path.
@@ -88,6 +106,10 @@ func _apply_add_stat(ship: Ship) -> void:
 			if ship:
 				ship.max_fuel += effect_value
 				ship.fuel = ship.max_fuel  # Refill to new max
+		"max_cargo_weight":
+			if ship:
+				ship.max_cargo_weight += effect_value
+				ship.cargo_changed.emit(ship.get_cargo_weight(), ship.max_cargo_weight)
 		_:
 			push_warning("UpgradeItem: Unknown ADD_STAT target: %s" % effect_target)
 
@@ -102,6 +124,10 @@ func _apply_multiply_stat(ship: Ship) -> void:
 			if ship:
 				ship.max_fuel *= effect_value
 				ship.fuel = ship.max_fuel
+		"max_cargo_weight":
+			if ship:
+				ship.max_cargo_weight *= effect_value
+				ship.cargo_changed.emit(ship.get_cargo_weight(), ship.max_cargo_weight)
 		_:
 			push_warning("UpgradeItem: Unknown MULTIPLY_STAT target: %s" % effect_target)
 
