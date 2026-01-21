@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3 uid="uid://cargo1upgrade"]
 
-[ext_resource type="Script" path="res://entities/Upgrades/UpgradeItem.gd" id="1"]
+[ext_resource type="Script" uid="uid://dcolbtjprkcn1" path="res://entities/Upgrades/UpgradeItem.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -11,4 +11,3 @@ upgrade_path = "cargo"
 cost = 50
 effect_target = "max_cargo_weight"
 effect_value = 25.0
-

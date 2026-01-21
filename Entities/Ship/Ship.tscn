@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://b051ln2ytsesm"]
+[gd_scene load_steps=19 format=3 uid="uid://b051ln2ytsesm"]
 
 [ext_resource type="Script" uid="uid://cx5ba1vmbwqiy" path="res://entities/Ship/Ship.gd" id="1"]
 [ext_resource type="Script" uid="uid://coqh8cu6dte0k" path="res://scripts/StateMachine.gd" id="2"]
@@ -28,6 +28,20 @@ collision_mode = 1
 collision_friction = 0.5
 collision_bounce = 0.0
 
+[sub_resource type="Gradient" id="Gradient_0tak2"]
+offsets = PackedFloat32Array(0, 0.015806112, 0.24446785, 1)
+colors = PackedColorArray(0.63841236, 0.62294984, 1, 1, 0.9544217, 0.56951314, 0, 1, 0.6689209, 0.66892374, 0.668923, 1, 0.95, 0.95, 0.95, 0.2509804)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_omoy0"]
+gradient = SubResource("Gradient_0tak2")
+
+[sub_resource type="Curve" id="Curve_vnnms"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.9714004, 0.14026529), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_m0smr"]
+curve = SubResource("Curve_vnnms")
+
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_2"]
 direction = Vector3(-1, 0, 0)
 spread = 20.0
@@ -36,7 +50,8 @@ initial_velocity_max = 250.0
 gravity = Vector3(0, 0, 0)
 scale_min = 5.0
 scale_max = 10.0
-color = Color(0.71, 0.71, 0.71, 0.5568628)
+scale_curve = SubResource("CurveTexture_m0smr")
+color_ramp = SubResource("GradientTexture1D_omoy0")
 collision_mode = 1
 collision_friction = 0.5
 collision_bounce = 0.0
@@ -75,6 +90,25 @@ position = Vector2(0, -4.7683716e-07)
 scale = Vector2(1.0416666, 0.99999994)
 polygon = PackedVector2Array(7.680001, 5.000001, 3.8400004, 7.0000014, -12.480001, 9.000002, -12.480001, -9, 3.8400004, -7.0000005, 7.680001, -5, 9.600001, 4.768372e-07)
 
+[node name="ThrusterParticles" type="GPUParticles2D" parent="."]
+position = Vector2(-14, 0)
+emitting = false
+amount = 50
+lifetime = 1.5
+process_material = SubResource("ParticleProcessMaterial_1")
+
+[node name="BoostParticles" type="GPUParticles2D" parent="."]
+position = Vector2(-10, 0)
+emitting = false
+amount = 100
+lifetime = 1.64
+process_material = SubResource("ParticleProcessMaterial_2")
+
+[node name="SideThrusterParticles" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 10
+process_material = SubResource("ParticleProcessMaterial_3")
+
 [node name="Body" type="Node2D" parent="."]
 
 [node name="Polygon2D" type="Polygon2D" parent="Body"]
@@ -99,25 +133,6 @@ position = Vector2(-1.0000001, 9)
 scale = Vector2(1.0850694, 0.9999999)
 color = Color(0.56667995, 0.56668025, 0.56668013, 1)
 polygon = PackedVector2Array(-11.0592, 0, -11.0592, -1, -11.059199, -2, -10.1376, -2, -8.294399, -2, -8.294399, -1, -10.1376, -1, -10.1376, 0)
-
-[node name="ThrusterParticles" type="GPUParticles2D" parent="."]
-position = Vector2(-10, 0)
-emitting = false
-amount = 50
-lifetime = 1.5
-process_material = SubResource("ParticleProcessMaterial_1")
-
-[node name="BoostParticles" type="GPUParticles2D" parent="."]
-position = Vector2(-10, 0)
-emitting = false
-amount = 100
-lifetime = 1.5
-process_material = SubResource("ParticleProcessMaterial_2")
-
-[node name="SideThrusterParticles" type="GPUParticles2D" parent="."]
-emitting = false
-amount = 10
-process_material = SubResource("ParticleProcessMaterial_3")
 
 [node name="StateMachine" type="Node" parent="."]
 script = ExtResource("2")

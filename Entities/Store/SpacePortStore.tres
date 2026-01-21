@@ -5,9 +5,9 @@
 [ext_resource type="Script" uid="uid://dcolbtjprkcn1" path="res://entities/Upgrades/UpgradeItem.gd" id="2_47uo8"]
 [ext_resource type="Resource" uid="uid://b1sf4p0sgjlyy" path="res://entities/Upgrades/items/Hull_2.tres" id="3"]
 [ext_resource type="Resource" uid="uid://cq2nbvmp1pkpc" path="res://entities/Upgrades/items/Hull_3.tres" id="4"]
-[ext_resource type="Resource" path="res://entities/Upgrades/items/Cargo_1.tres" id="5"]
-[ext_resource type="Resource" path="res://entities/Upgrades/items/Cargo_2.tres" id="6"]
-[ext_resource type="Resource" path="res://entities/Upgrades/items/Cargo_3.tres" id="7"]
+[ext_resource type="Resource" uid="uid://cargo1upgrade" path="res://entities/Upgrades/items/Cargo_1.tres" id="5"]
+[ext_resource type="Resource" uid="uid://cargo2upgrade" path="res://entities/Upgrades/items/Cargo_2.tres" id="6"]
+[ext_resource type="Resource" uid="uid://cargo3upgrade" path="res://entities/Upgrades/items/Cargo_3.tres" id="7"]
 
 [resource]
 script = ExtResource("1")
