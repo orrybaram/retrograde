@@ -113,11 +113,12 @@ initial_angle = 180.0
 eccentricity = 0.05
 
 [node name="OrbitalRingSpawner" parent="Sun/Saturn/Moon" instance=ExtResource("2_vpsiu")]
+max_resources = 400
 inner_radius = 800.0
 outer_radius = 2000.0
-resource_density = 0.02
 density_gradient = 1.814
 orbital_speed = 10.0
+spawn_batch_size = 100
 
 [node name="SpaceStation" parent="Sun/Saturn/Moon" instance=ExtResource("2")]
 position = Vector2(2263, 74)

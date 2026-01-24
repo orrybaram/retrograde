@@ -21,6 +21,7 @@ RNG="*res://scripts/RNG.gd"
 EventBus="*res://scripts/EventBus.gd"
 InventoryManager="*res://scripts/InventoryManager.gd"
 Colors="*res://scripts/Colors.gd"
+ResourceNodePool="*res://scripts/ResourceNodePool.gd"
 
 [display]
 

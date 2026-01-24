@@ -152,16 +152,19 @@ func start_game() -> void:
 			await ship_spawner.spawn_at_dock(dock)
 		else:
 			push_warning("No default dock found for new game")
-	
+
 	# Wait for loading animation to complete
 	if loading_screen:
 		await get_tree().create_timer(loading_screen.duration + 0.5).timeout
 		loading_screen.hide_loading()
-	
+
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = true
-	
+
+	# Notify that planets are in position (for new game, they're already at initial angles)
+	EventBus.planets_restored.emit()
+
 	# Now unpause and start playing
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
@@ -181,17 +184,24 @@ func load_game() -> void:
 	
 	# Unpause so spawner can work
 	get_tree().paused = false
-	
+
+	# Restore spawner counts BEFORE process_frame triggers spawning
+	# Spawners wait one frame before spawning, so we set their counts now
+	Save.restore_spawner_resources(get_tree())
+
 	# Wait a frame for scene to initialize
 	await get_tree().process_frame
-	
+
 	# Load game state (credits, ship stats, inventory, upgrades)
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	if gs and ship:
 		Save.load_into(gs, ship)
-	
+
 	# Restore planet orbital angles
 	Save.restore_planet_angles(get_tree())
+
+	# Notify that planets have been restored (allows spawners to spawn at correct positions)
+	EventBus.planets_restored.emit()
 	
 	await get_tree().physics_frame
 	
