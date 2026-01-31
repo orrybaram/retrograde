@@ -9,6 +9,7 @@ signal relaunch_game
 func _ready() -> void:
 	relaunch_button.pressed.connect(_on_relaunch_pressed)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Always process so button works when paused
+	add_to_group("game_over_menu")
 	visible = false
 
 func _on_relaunch_pressed() -> void:

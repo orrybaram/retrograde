@@ -13,6 +13,7 @@ enum MainGameState {
 @onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
+@onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
 @onready var hud: Control = $"CanvasLayer/HUD"
 
 var current_game_state: MainGameState = MainGameState.MENU
@@ -25,6 +26,8 @@ func _ready() -> void:
 		start_menu.load_game.connect(_on_load_game)
 	if game_over_menu:
 		game_over_menu.relaunch_game.connect(_on_relaunch_game)
+	if pause_menu:
+		pause_menu.quit_to_menu.connect(_on_quit_to_menu)
 	
 	# Connect ship signals
 	if ship:
@@ -66,7 +69,7 @@ func _input(event: InputEvent) -> void:
 func _toggle_inventory() -> void:
 	if not inventory_ui:
 		return
-	
+
 	# Don't toggle if other menus are open
 	if start_menu and start_menu.visible:
 		return
@@ -74,7 +77,9 @@ func _toggle_inventory() -> void:
 		return
 	if system_map and system_map.visible:
 		return
-	
+	if pause_menu and pause_menu.visible:
+		return
+
 	if inventory_ui.visible:
 		inventory_ui.close_inventory()
 	else:
@@ -83,7 +88,7 @@ func _toggle_inventory() -> void:
 func _toggle_system_map() -> void:
 	if not system_map:
 		return
-	
+
 	# Don't toggle if other menus are open
 	if start_menu and start_menu.visible:
 		return
@@ -91,7 +96,9 @@ func _toggle_system_map() -> void:
 		return
 	if inventory_ui and inventory_ui.visible:
 		return
-	
+	if pause_menu and pause_menu.visible:
+		return
+
 	if system_map.visible:
 		system_map.close_map()
 	else:
@@ -126,6 +133,12 @@ func _on_fuel_depleted() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
 		game_over_pending = true
 		_show_game_over_delayed("Out of Fuel")
+
+func _on_quit_to_menu() -> void:
+	current_game_state = MainGameState.MENU
+	if start_menu:
+		start_menu.show_menu()
+	get_tree().paused = true
 
 func start_game() -> void:
 	if start_menu:

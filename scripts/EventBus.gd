@@ -23,6 +23,9 @@ signal spawner_finished(spawner_key: String)
 signal all_spawners_finished()
 ## Emitted when all registered spawners have finished spawning.
 
+signal game_unpaused(pause_duration: float)
+## Emitted when game resumes from pause with the duration paused in seconds.
+
 var _harvestable_nodes: Dictionary = {}  # Track ResourceNodes that can be harvested
 var _pending_spawners: Dictionary = {}  # Track spawners that are still spawning
 var _registered_nodes: Dictionary = {}  # Track registered ResourceNodes and their callables

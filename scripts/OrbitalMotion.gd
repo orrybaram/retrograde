@@ -61,9 +61,12 @@ func configure(distance: float, speed: float, angle: float, ecc: float = 0.0) ->
 	eccentricity = ecc
 
 func _ready() -> void:
+	# Connect to unpause signal to adjust orbital start time
+	EventBus.game_unpaused.connect(_on_game_unpaused)
+
 	if not auto_initialize:
 		return
-	
+
 	# Auto-detect orbital body: if parent's parent is a valid body, use it
 	var parent = get_orbital_parent()
 	if parent:
@@ -173,4 +176,8 @@ func get_full_velocity() -> Vector2:
 	if orbital_body and is_instance_valid(orbital_body) and orbital_body is RigidBody2D:
 		velocity += (orbital_body as RigidBody2D).linear_velocity
 	return velocity
+
+## Adjust orbital start time when game unpauses to prevent position jumps
+func _on_game_unpaused(pause_duration: float) -> void:
+	orbital_start_time += pause_duration
 

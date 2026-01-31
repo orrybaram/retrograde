@@ -173,4 +173,3 @@ func sell_all_resources() -> int:
 		resources_sold.emit(total_value)
 	
 	return total_value
-

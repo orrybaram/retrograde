@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" uid="uid://c7g87paxkwjsm" path="res://ui/system_map/SystemMap.tscn" id="19"]
 [ext_resource type="Script" uid="uid://b4chiaxpicref" path="res://scripts/ShipSpawner.gd" id="20"]
 [ext_resource type="PackedScene" uid="uid://c2o4vbaw813u0" path="res://ui/LoadingScreen.tscn" id="21"]
+[ext_resource type="PackedScene" path="res://ui/PauseMenu.tscn" id="22"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -68,3 +69,5 @@ fuel_consumption_rate = 2.0
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("16")]
 
 [node name="SystemMap" parent="CanvasLayer" instance=ExtResource("19")]
+
+[node name="PauseMenu" parent="CanvasLayer" instance=ExtResource("22")]

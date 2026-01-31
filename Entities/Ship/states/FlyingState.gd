@@ -18,8 +18,8 @@ func physics_process(delta: float) -> void:
 	if not is_ship_valid():
 		return
 	
-	# Don't process ship input if system map is open
-	if _is_system_map_open():
+	# Don't process ship input if any blocking UI is open
+	if _is_ui_blocking_input():
 		ship.want_turn_left = false
 		ship.want_turn_right = false
 		ship.want_thrust = false
@@ -360,18 +360,46 @@ func _attempt_dock() -> void:
 	if state_machine and state_machine.has_state("LandedState"):
 		state_machine.change_state("LandedState")
 
-func _is_system_map_open() -> bool:
+func _is_ui_blocking_input() -> bool:
 	if not ship or not is_instance_valid(ship):
 		return false
 	var tree = ship.get_tree()
 	if not tree:
 		return false
+
+	# Check SystemMap
 	var system_map = tree.get_first_node_in_group("system_map") as SystemMap
-	if system_map:
-		return system_map.visible
-	# Fallback: search by class name
-	var nodes = tree.get_nodes_in_group("system_map")
-	for node in nodes:
-		if node is SystemMap and node.visible:
-			return true
+	if system_map and system_map.visible:
+		return true
+
+	# Check SpacePortDialogue
+	var spaceport_dialogue = tree.get_first_node_in_group("spaceport_dialogue") as SpacePortDialogue
+	if spaceport_dialogue and spaceport_dialogue.visible:
+		return true
+
+	# Check StoreUI
+	var store_ui = tree.get_first_node_in_group("store_ui") as StoreUI
+	if store_ui and store_ui.visible:
+		return true
+
+	# Check StartMenu
+	var start_menu = tree.get_first_node_in_group("start_menu") as StartMenu
+	if start_menu and start_menu.visible:
+		return true
+
+	# Check PauseMenu
+	var pause_menu = tree.get_first_node_in_group("pause_menu") as PauseMenu
+	if pause_menu and pause_menu.visible:
+		return true
+
+	# Check InventoryUI
+	var inventory_ui = tree.get_first_node_in_group("inventory_ui") as InventoryUI
+	if inventory_ui and inventory_ui.visible:
+		return true
+
+	# Check GameOverMenu
+	var game_over_menu = tree.get_first_node_in_group("game_over_menu") as GameOverMenu
+	if game_over_menu and game_over_menu.visible:
+		return true
+
 	return false
