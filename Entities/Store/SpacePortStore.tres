@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="StoreData" load_steps=9 format=3 uid="uid://lltn0cexcj8y"]
+[gd_resource type="Resource" script_class="StoreData" load_steps=12 format=3 uid="uid://lltn0cexcj8y"]
 
 [ext_resource type="Script" uid="uid://by2u1e45ryfos" path="res://entities/Store/StoreData.gd" id="1"]
 [ext_resource type="Resource" uid="uid://c8l4yamtxt5b5" path="res://entities/Upgrades/items/Hull_1.tres" id="2"]
@@ -8,8 +8,11 @@
 [ext_resource type="Resource" uid="uid://cargo1upgrade" path="res://entities/Upgrades/items/Cargo_1.tres" id="5"]
 [ext_resource type="Resource" uid="uid://cargo2upgrade" path="res://entities/Upgrades/items/Cargo_2.tres" id="6"]
 [ext_resource type="Resource" uid="uid://cargo3upgrade" path="res://entities/Upgrades/items/Cargo_3.tres" id="7"]
+[ext_resource type="Resource" uid="uid://fueltank1upgrade" path="res://entities/Upgrades/items/FuelTank_1.tres" id="8"]
+[ext_resource type="Resource" uid="uid://fueltank2upgrade" path="res://entities/Upgrades/items/FuelTank_2.tres" id="9"]
+[ext_resource type="Resource" uid="uid://fueltank3upgrade" path="res://entities/Upgrades/items/FuelTank_3.tres" id="10"]
 
 [resource]
 script = ExtResource("1")
 store_name = "Space Port Store"
-upgrades = Array[ExtResource("2_47uo8")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
+upgrades = Array[ExtResource("2_47uo8")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10")])
