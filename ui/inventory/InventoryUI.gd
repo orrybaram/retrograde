@@ -19,6 +19,7 @@ var inventory_manager: InventoryManager = null
 
 func _ready() -> void:
 	visible = false
+	add_to_group("inventory_ui")
 	ship = get_tree().get_first_node_in_group("ship") as Ship
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
