@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3 uid="uid://fueltank2upgrade"]
+
+[ext_resource type="Script" path="res://entities/Upgrades/UpgradeItem.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "fuel_tank_2"
+display_name = "Fuel Tank II"
+description = "Enhanced fuel storage. Adds 25 points to maximum fuel capacity."
+upgrade_path = "fuel_tank"
+tier = 2
+cost = 80
+effect_target = "max_fuel"
+effect_value = 25.0
