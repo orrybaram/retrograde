@@ -8,6 +8,7 @@ signal harvest_stopped
 signal resource_depleted
 signal resource_harvested(amount: int, kind: String, position: Vector2)
 signal can_harvest_changed(can_harvest: bool)
+signal returned_to_pool
 
 @export var kind: String = "Scrap"
 @export var amount: int = 10
@@ -16,12 +17,16 @@ signal can_harvest_changed(can_harvest: bool)
 @export var color: Color = Color(0.0, 0.75, 0.725, 0.196)  # Default gray/brown for scrap
 @export var min_scale: float = 0.8  # Minimum scale to prevent visual from getting too small
 
-# Performance: Distance-based processing
-const ACTIVE_DISTANCE_SQ: float = 2000.0 * 2000.0  # Squared distance for faster comparison
-const DISTANT_UPDATE_INTERVAL: int = 10  # Distant resources update every N frames (staggered)
+# Performance: Multi-tier distance-based processing
+const ACTIVE_DISTANCE_SQ: float = 2500.0 * 2500.0  # Squared - full processing
+const MEDIUM_DISTANCE_SQ: float = 5000.0 * 5000.0  # Squared - reduced updates
+const SLEEP_DISTANCE_SQ: float = 8000.0 * 8000.0  # Squared - disable processing entirely
+const DISTANT_UPDATE_INTERVAL: int = 60  # Medium-range resources update every N frames (increased from 30)
+const SLEEP_CHECK_INTERVAL: int = 180  # Sleeping resources check wake-up every N frames (increased from 120)
 static var _cached_ship: Ship = null  # Shared ship reference across all resources
 var _update_offset: int = 0  # Per-resource offset for staggered updates
 var _cached_in_range: bool = false  # Cached distance check result
+var _is_sleeping: bool = false  # True when completely disabled (very far from ship)
 var _last_range_check_frame: int = -1  # Frame when we last checked distance
 
 # Collision damage/slowdown constants
@@ -40,7 +45,8 @@ var _indicator_target = null  # ResourceIndicatorTarget
 var _indicator_manager = null  # IndicatorManager
 var _can_harvest: bool = false  # Track if harvesting is currently possible
 var minimap_target: ResourceMinimapTarget = null
-
+var spawner_key: String = ""  # Key of the spawner that created this resource (for persistence)
+var skip_minimap_registration: bool = false  # If true, spawner handles minimap (for performance)
 
 # Mini-game integration
 var _mini_game: HarvestMiniGame = null
@@ -99,6 +105,7 @@ func _setup_orbital_motion() -> void:
 	_orbital_motion.update_velocity = false  # Area2D doesn't have linear_velocity
 	_orbital_motion.enable_orbiting = false  # Disable auto-update, we control timing
 	add_child(_orbital_motion)
+	_orbital_motion.set_physics_process(false)  # We call update_orbit() manually
 
 # Harvest area (circle) - for detecting ship in range for harvesting
 func _on_harvest_area_entered(body: Node2D) -> void:
@@ -145,42 +152,94 @@ func _on_collision_area_exited(_body: Node2D) -> void:
 		
 func _physics_process(delta: float) -> void:
 	var frame = Engine.get_physics_frames()
-	
-	# Distance check strategy:
-	# - If currently in range: check every frame (player might leave)
-	# - If currently out of range: only recheck every N frames (staggered)
-	var should_check_range = _cached_in_range or ((frame + _update_offset) % DISTANT_UPDATE_INTERVAL == 0)
-	
-	if should_check_range:
-		_cached_in_range = _is_within_active_range()
+
+	# === SLEEPING RESOURCE CHECK ===
+	# If sleeping, only check wake-up condition very infrequently
+	if _is_sleeping:
+		if (frame + _update_offset) % SLEEP_CHECK_INTERVAL != 0:
+			return  # Stay asleep, skip all processing
+		# Check if we should wake up
+		var dist_sq = _get_distance_squared_to_ship()
+		if dist_sq < SLEEP_DISTANCE_SQ:
+			_wake_up()
+		return
+
+	# === DISTANCE TIER CHECK ===
+	# Only check distance on staggered frames for non-active resources
+	var should_check_distance = _cached_in_range or ((frame + _update_offset) % DISTANT_UPDATE_INTERVAL == 0)
+
+	var dist_sq: float = -1.0
+	if should_check_distance:
+		dist_sq = _get_distance_squared_to_ship()
+		_cached_in_range = dist_sq <= ACTIVE_DISTANCE_SQ
 		_last_range_check_frame = frame
-	
+
+		# Check if should go to sleep (very far away)
+		if dist_sq > SLEEP_DISTANCE_SQ:
+			_go_to_sleep()
+			return
+
 	var in_range = _cached_in_range
-	
-	# Orbital position update strategy:
-	# - In-range resources: update every frame (smooth motion)
-	# - Distant resources: update every N frames (staggered to spread load)
-	var should_update_orbit = in_range or ((frame + _update_offset) % DISTANT_UPDATE_INTERVAL == 0)
-	
+
+	# === ORBITAL UPDATE ===
+	# In-range: every frame | Medium range: staggered | Far: sleeping (handled above)
+	var should_update_orbit: bool
+	if in_range:
+		should_update_orbit = true
+	elif dist_sq > 0 and dist_sq <= MEDIUM_DISTANCE_SQ:
+		should_update_orbit = (frame + _update_offset) % DISTANT_UPDATE_INTERVAL == 0
+	else:
+		should_update_orbit = (frame + _update_offset) % (DISTANT_UPDATE_INTERVAL * 2) == 0
+
 	if should_update_orbit and _orbital_motion and _orbital_motion.initialized:
 		if _orbital_motion.orbital_body and is_instance_valid(_orbital_motion.orbital_body):
-			# Temporarily enable orbiting for this update, then disable
 			_orbital_motion.enable_orbiting = true
 			_orbital_motion.update_orbit()
 			_orbital_motion.enable_orbiting = false
-	
-	# Toggle collision area based on distance (no need for collision detection when far)
+
+	# === COLLISION TOGGLE ===
 	if _collision_area_cached:
 		if _collision_area_cached.monitoring != in_range:
 			_collision_area_cached.monitoring = in_range
 			_collision_area_cached.monitorable = in_range
-	
+
 	if not in_range:
 		return
-	
-	# Apply rotation speed if set (only when in range - minor visual detail)
+
+	# Apply rotation speed if set (only when in range)
 	if _rotation_speed != 0.0:
 		rotation += _rotation_speed * delta
+
+## Get squared distance to ship (cached ship reference)
+func _get_distance_squared_to_ship() -> float:
+	if not _cached_ship or not is_instance_valid(_cached_ship):
+		_cached_ship = get_tree().get_first_node_in_group("ship") as Ship
+	if not _cached_ship:
+		return 0.0  # No ship, assume close
+	return global_position.distance_squared_to(_cached_ship.global_position)
+
+## Put resource to sleep (disable all processing)
+func _go_to_sleep() -> void:
+	_is_sleeping = true
+	_cached_in_range = false
+	# Disable all collision detection when sleeping
+	monitoring = false  # Main Area2D (harvest detection)
+	monitorable = false
+	if _collision_area_cached:
+		_collision_area_cached.monitoring = false
+		_collision_area_cached.monitorable = false
+	# Hide visual when sleeping (reduces rendering cost)
+	visible = false
+
+## Wake up resource from sleep
+func _wake_up() -> void:
+	_is_sleeping = false
+	# Re-enable harvest detection Area2D
+	monitoring = true
+	monitorable = true
+	# Show visual again
+	visible = true
+	# Collision area will be enabled by distance check in _physics_process
 
 ## Check if within active processing range of ship (uses squared distance for performance)
 func _is_within_active_range() -> bool:
@@ -300,6 +359,142 @@ func get_orbital_velocity() -> Vector2:
 		return Vector2.ZERO
 	return _orbital_motion.get_full_velocity()
 
+## Called when retrieved from pool. Re-register with systems.
+func on_spawn() -> void:
+	# Reset sleep state
+	_is_sleeping = false
+	_cached_in_range = false
+
+	# Re-enable main Area2D monitoring (harvest detection)
+	monitoring = true
+	monitorable = true
+
+	# Add to group
+	if not is_in_group("resource_nodes"):
+		add_to_group("resource_nodes")
+
+	# Re-register with EventBus
+	EventBus.register_resource_node(self)
+
+	# Recache collision area
+	_collision_area_cached = get_node_or_null("CollisionArea")
+	if _collision_area_cached:
+		_collision_area_cached.monitoring = false  # Will be enabled by distance check
+		_collision_area_cached.monitorable = false
+
+	# Re-setup orbital motion if needed
+	if not _orbital_motion:
+		_setup_orbital_motion()
+
+	# Find indicator manager
+	_indicator_manager = get_tree().get_first_node_in_group("indicator_manager")
+	if not _indicator_manager:
+		var main = get_tree().get_first_node_in_group("main")
+		if main:
+			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
+
+	# Register with minimap (deferred to ensure position is set)
+	_register_with_minimap.call_deferred()
+
+	# Reset update offset for staggered updates
+	_update_offset = randi() % DISTANT_UPDATE_INTERVAL
+
+	# Note: Spawner will set amount/max_amount and call _update_visual() after on_spawn()
+
+## Called when returning to pool. Unregister and reset all state.
+func on_despawn() -> void:
+	# === Unregister from systems ===
+
+	# Unregister from EventBus
+	EventBus.unregister_resource_node(self)
+
+	# Unregister from minimap
+	if minimap_target:
+		var minimap = Minimap.get_instance(get_tree())
+		if minimap:
+			minimap.unregister_target(minimap_target)
+		minimap_target = null
+
+	# Unregister indicator
+	_unregister_indicator()
+
+	# Remove from group
+	if is_in_group("resource_nodes"):
+		remove_from_group("resource_nodes")
+
+	# === Stop active processes ===
+
+	# Stop mini-game if active
+	if _mini_game:
+		_stop_mini_game()
+
+	# Stop harvesting (don't emit signal to avoid side effects)
+	_harvesting = false
+
+	# === Reset state variables ===
+
+	_accum = 0.0
+	_is_depleted = false
+	_ship_in_range = null
+	_can_harvest = false
+	_mini_game = null
+	_mini_game_ui = null
+	_indicator_target = null
+	_cached_in_range = false
+	_last_range_check_frame = -1
+	_is_sleeping = false
+	spawner_key = ""
+	skip_minimap_registration = false
+
+	# Reset resource amounts (spawner will set these on next spawn)
+	amount = 0
+	max_amount = 0
+	harvest_rate = 0.0
+
+	# Reset orbital motion
+	if _orbital_motion:
+		_orbital_motion.initialized = false
+		_orbital_motion.orbital_body = null
+		_orbital_motion.orbital_angle = 0.0
+		_orbital_motion.enable_orbiting = false
+
+	# === Reset visual state ===
+	_reset_visual_state()
+
+	# Reset transform
+	rotation = 0.0
+	scale = Vector2.ONE
+
+## Reset visual node to original state for pooling
+func _reset_visual_state() -> void:
+	var visual = _find_visual_node()
+	if not visual:
+		return
+
+	if visual is Polygon2D:
+		var polygon = visual as Polygon2D
+		# Restore original scale if stored
+		if polygon.has_meta("original_scale"):
+			polygon.scale = polygon.get_meta("original_scale") as Vector2
+			polygon.remove_meta("original_scale")
+		# Restore full alpha
+		var c = polygon.color
+		polygon.color = Color(c.r, c.g, c.b, 1.0)
+	elif visual is ColorRect:
+		var color_rect = visual as ColorRect
+		color_rect.modulate = Color(1, 1, 1, 1)
+		color_rect.scale = Vector2.ONE
+	elif "scale" in visual:
+		if visual.has_meta("original_scale"):
+			visual.scale = visual.get_meta("original_scale") as Vector2
+			visual.remove_meta("original_scale")
+		if "modulate" in visual:
+			visual.modulate = Color(1, 1, 1, 1)
+
+	# Ensure visibility
+	if "visible" in visual:
+		visual.visible = true
+
 func _deplete_resource() -> void:
 	if _is_depleted:
 		return
@@ -330,9 +525,9 @@ func _deplete_resource() -> void:
 	# Fade out the visual
 	_start_fade_out()
 	
-	# Wait for particles to decay (5 seconds) then remove
+	# Wait for particles to decay (5 seconds) then return to pool
 	await get_tree().create_timer(5.0).timeout
-	queue_free()
+	returned_to_pool.emit()
 
 func _start_fade_out() -> void:
 	# Fade out visual over time, starting from current alpha
@@ -379,7 +574,7 @@ func _update_visual() -> void:
 	# Don't update visual if depleted (fade-out handles it)
 	if _is_depleted:
 		return
-	
+
 	# Find visual child and update based on depletion ratio
 	var visual = _find_visual_node()
 	if not visual:
@@ -434,16 +629,33 @@ func _update_visual() -> void:
 		visual.modulate = Color(color.r, color.g, color.b, alpha)
 
 func _find_visual_node() -> Node2D:
-	# Look for common visual node types
+	# Look for common visual node types in direct children
 	for child in get_children():
 		if child is ColorRect or child is Sprite2D or child is Polygon2D:
 			return child as Node2D
 		# Also check for Circle2D or other visual nodes
 		if child.name.contains("Visual") or child.name.contains("Sprite") or child.name.contains("Color"):
 			return child as Node2D
+
+	# Check one level deeper (e.g., Node2D/Polygon2D structure)
+	for child in get_children():
+		if child is Node2D:
+			# Ensure the container Node2D is visible
+			if not child.visible:
+				child.visible = true
+
+			for grandchild in child.get_children():
+				if grandchild is ColorRect or grandchild is Sprite2D or grandchild is Polygon2D:
+					return grandchild as Node2D
+				if grandchild.name.contains("Visual") or grandchild.name.contains("Sprite") or grandchild.name.contains("Color"):
+					return grandchild as Node2D
+
 	return null
 
 func _register_with_minimap() -> void:
+	# Skip if spawner handles minimap registration (performance optimization)
+	if skip_minimap_registration:
+		return
 	var minimap = Minimap.get_instance(get_tree())
 	if minimap:
 		minimap_target = ResourceMinimapTarget.new(self)

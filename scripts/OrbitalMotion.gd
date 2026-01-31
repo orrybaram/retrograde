@@ -73,7 +73,10 @@ func _ready() -> void:
 			initialize()
 
 func _physics_process(_delta: float) -> void:
-	update_orbit()
+	# Only auto-update if orbiting is enabled
+	# ResourceNode manages its own update timing for performance
+	if enable_orbiting:
+		update_orbit()
 
 ## Core orbital update - call this manually if you want more control over timing
 func update_orbit() -> void:
