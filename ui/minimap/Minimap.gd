@@ -128,6 +128,8 @@ func _draw_target(center: Vector2, target: MinimapTarget, ship_rotation: float) 
 		"square":
 			var rect = Rect2(screen_pos - Vector2(target_size, target_size), Vector2(target_size * 2, target_size * 2))
 			draw_rect(rect, target_color)
+		"ring":
+			_draw_resource_ring(center, target, ship_rotation)
 		_:
 			draw_circle(screen_pos, target_size, target_color)
 
@@ -164,6 +166,49 @@ func _draw_diamond(pos: Vector2, marker_size: float, color: Color) -> void:
 		pos + Vector2(-marker_size, 0)      # Left
 	])
 	draw_polygon(points, PackedColorArray([color, color, color, color]))
+
+func _draw_resource_ring(center: Vector2, target: MinimapTarget, ship_rotation: float) -> void:
+	# Draw resource ring as clustered blobs based on actual resource positions
+	if not target is ResourceRingMinimapTarget:
+		return
+
+	var ring_target = target as ResourceRingMinimapTarget
+	var clusters = ring_target.get_clusters()
+	var ring_color = ring_target.get_minimap_color()
+	var max_count = ring_target.get_max_cluster_count()
+
+	# Get the orbital body's current position (recalculated each frame)
+	var orbital_center = ring_target.get_minimap_position()
+	var ship_pos = ship.global_position
+
+	# Draw each cluster as a blob sized by resource count
+	for cluster in clusters:
+		# Calculate world position from angle and radius relative to orbital body
+		var angle = cluster["angle"]
+		var radius = cluster["radius"]
+		var count = cluster["count"]
+
+		var cluster_pos = orbital_center + Vector2(cos(angle), sin(angle)) * radius
+		var relative_pos = cluster_pos - ship_pos
+
+		if rotate_with_ship:
+			relative_pos = relative_pos.rotated(-ship_rotation - PI/2)
+
+		var minimap_pos = center + relative_pos / world_range * display_radius
+
+		# Skip if outside minimap bounds
+		if minimap_pos.distance_to(center) > display_radius + 5:
+			continue
+
+		# Scale blob size by resource count (1.5 to 4.0)
+		var size_ratio = float(count) / float(max_count)
+		var blob_size = lerp(1.5, 4.0, size_ratio)
+
+		# Vary alpha slightly by density
+		var alpha = lerp(0.5, 0.9, size_ratio)
+		var blob_color = Color(ring_color.r, ring_color.g, ring_color.b, alpha)
+
+		draw_circle(minimap_pos, blob_size, blob_color)
 
 ## Register a target to be displayed on the minimap
 func register_target(target: MinimapTarget) -> void:

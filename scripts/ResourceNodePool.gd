@@ -14,7 +14,7 @@ const RESOURCE_SCENES: Dictionary = {
 	"Scrap5": preload("res://entities/resources/Scrap5.tscn"),
 }
 
-@export var initial_pool_size: int = 5  # Per variant (pool grows as needed)
+@export var initial_pool_size: int = 0  # Per variant - start empty, grow on demand for faster startup
 @export var can_grow: bool = true
 
 # Pools keyed by variant name: { "Scrap": { available: [], in_use: [], scene: PackedScene }, ... }

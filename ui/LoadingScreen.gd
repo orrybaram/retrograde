@@ -6,8 +6,8 @@ class_name LoadingScreen
 @onready var terminal_label: RichTextLabel = $"VBoxContainer/TerminalLabel"
 
 var _animation_tween: Tween = null
-@export var line_count: int = 100
-@export var duration: float = 0.5
+@export var line_count: int = 150
+@export var duration: float = 3.0  # Longer duration to cover resource spawning
 ## Number of lines to display in the terminal animation
 
 var _boot_messages: Array[String] = [

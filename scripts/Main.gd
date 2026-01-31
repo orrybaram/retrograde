@@ -130,21 +130,24 @@ func _on_fuel_depleted() -> void:
 func start_game() -> void:
 	if start_menu:
 		start_menu.visible = false
-	
+
 	# Hide ship while respawning to prevent showing at wrong location
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
-	
+
 	# Show loading screen animation
 	if loading_screen:
 		loading_screen.show_loading()
-	
+
+	# Reset spawner tracking
+	EventBus.reset_spawner_tracking()
+
 	# Unpause so spawner can work
 	get_tree().paused = false
-	
+
 	# Wait a frame for scene to initialize
 	await get_tree().process_frame
-	
+
 	# Spawn ship at default dock (new game)
 	if ship_spawner:
 		var dock = await ship_spawner.find_default_dock()
@@ -153,17 +156,20 @@ func start_game() -> void:
 		else:
 			push_warning("No default dock found for new game")
 
-	# Wait for loading animation to complete
+	# Notify that planets are in position (for new game, they're already at initial angles)
+	# This triggers spawners to start
+	EventBus.planets_restored.emit()
+
+	# Wait for all spawners to finish (with timeout)
+	await _wait_for_spawners(5.0)
+
+	# Hide loading screen
 	if loading_screen:
-		await get_tree().create_timer(loading_screen.duration + 0.5).timeout
 		loading_screen.hide_loading()
 
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = true
-
-	# Notify that planets are in position (for new game, they're already at initial angles)
-	EventBus.planets_restored.emit()
 
 	# Now unpause and start playing
 	get_tree().paused = false
@@ -173,15 +179,18 @@ func start_game() -> void:
 func load_game() -> void:
 	if start_menu:
 		start_menu.visible = false
-	
+
 	# Hide ship while respawning to prevent showing at wrong location
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
-	
+
 	# Show loading screen animation
 	if loading_screen:
 		loading_screen.show_loading()
-	
+
+	# Reset spawner tracking
+	EventBus.reset_spawner_tracking()
+
 	# Unpause so spawner can work
 	get_tree().paused = false
 
@@ -202,9 +211,9 @@ func load_game() -> void:
 
 	# Notify that planets have been restored (allows spawners to spawn at correct positions)
 	EventBus.planets_restored.emit()
-	
+
 	await get_tree().physics_frame
-	
+
 	# Spawn ship at saved dock, or default if not found
 	if ship_spawner:
 		var dock = await ship_spawner.find_saved_dock()
@@ -214,16 +223,18 @@ func load_game() -> void:
 			await ship_spawner.spawn_at_dock(dock)
 		else:
 			push_warning("No dock found for load game")
-	
-	# Wait for loading animation to complete
+
+	# Wait for all spawners to finish (with timeout)
+	await _wait_for_spawners(5.0)
+
+	# Hide loading screen
 	if loading_screen:
-		await get_tree().create_timer(loading_screen.duration + 0.5).timeout
 		loading_screen.hide_loading()
-	
+
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = true
-	
+
 	# Now unpause and start playing
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
@@ -328,3 +339,24 @@ func reset_game() -> void:
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 	EventBus.ship_respawned.emit()
+
+## Wait for all spawners to finish, with a maximum timeout
+func _wait_for_spawners(timeout_seconds: float) -> void:
+	if EventBus.are_all_spawners_finished():
+		return
+
+	var timeout_timer = get_tree().create_timer(timeout_seconds)
+	var finished = false
+
+	# Connect to the signal
+	var on_finished = func():
+		finished = true
+	EventBus.all_spawners_finished.connect(on_finished, CONNECT_ONE_SHOT)
+
+	# Wait for either spawners to finish or timeout
+	while not finished and timeout_timer.time_left > 0:
+		await get_tree().process_frame
+
+	# Disconnect if we timed out
+	if not finished and EventBus.all_spawners_finished.is_connected(on_finished):
+		EventBus.all_spawners_finished.disconnect(on_finished)

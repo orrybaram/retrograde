@@ -17,7 +17,14 @@ signal ship_respawned()
 signal planets_restored()
 ## Emitted when planet orbital angles have been restored from save file.
 
+signal spawner_finished(spawner_key: String)
+## Emitted when a resource spawner finishes spawning all its resources.
+
+signal all_spawners_finished()
+## Emitted when all registered spawners have finished spawning.
+
 var _harvestable_nodes: Dictionary = {}  # Track ResourceNodes that can be harvested
+var _pending_spawners: Dictionary = {}  # Track spawners that are still spawning
 var _registered_nodes: Dictionary = {}  # Track registered ResourceNodes and their callables
 
 func register_resource_node(resource_node: ResourceNode) -> void:
@@ -95,3 +102,23 @@ func is_harvest_available() -> bool:
 	# Check if any ResourceNode can currently be harvested.
 	_cleanup_invalid_nodes()
 	return not _harvestable_nodes.is_empty()
+
+## Register a spawner as pending (still spawning)
+func register_pending_spawner(spawner_key: String) -> void:
+	_pending_spawners[spawner_key] = true
+
+## Mark a spawner as finished and emit signals
+func mark_spawner_finished(spawner_key: String) -> void:
+	_pending_spawners.erase(spawner_key)
+	spawner_finished.emit(spawner_key)
+
+	if _pending_spawners.is_empty():
+		all_spawners_finished.emit()
+
+## Check if all spawners have finished
+func are_all_spawners_finished() -> bool:
+	return _pending_spawners.is_empty()
+
+## Reset spawner tracking (call before starting game)
+func reset_spawner_tracking() -> void:
+	_pending_spawners.clear()

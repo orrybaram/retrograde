@@ -18,11 +18,11 @@ signal returned_to_pool
 @export var min_scale: float = 0.8  # Minimum scale to prevent visual from getting too small
 
 # Performance: Multi-tier distance-based processing
-const ACTIVE_DISTANCE_SQ: float = 2000.0 * 2000.0  # Squared - full processing
+const ACTIVE_DISTANCE_SQ: float = 2500.0 * 2500.0  # Squared - full processing
 const MEDIUM_DISTANCE_SQ: float = 5000.0 * 5000.0  # Squared - reduced updates
-const SLEEP_DISTANCE_SQ: float = 10000.0 * 10000.0  # Squared - disable processing entirely
-const DISTANT_UPDATE_INTERVAL: int = 30  # Medium-range resources update every N frames
-const SLEEP_CHECK_INTERVAL: int = 120  # Sleeping resources check wake-up every N frames
+const SLEEP_DISTANCE_SQ: float = 8000.0 * 8000.0  # Squared - disable processing entirely
+const DISTANT_UPDATE_INTERVAL: int = 60  # Medium-range resources update every N frames (increased from 30)
+const SLEEP_CHECK_INTERVAL: int = 180  # Sleeping resources check wake-up every N frames (increased from 120)
 static var _cached_ship: Ship = null  # Shared ship reference across all resources
 var _update_offset: int = 0  # Per-resource offset for staggered updates
 var _cached_in_range: bool = false  # Cached distance check result
@@ -46,6 +46,7 @@ var _indicator_manager = null  # IndicatorManager
 var _can_harvest: bool = false  # Track if harvesting is currently possible
 var minimap_target: ResourceMinimapTarget = null
 var spawner_key: String = ""  # Key of the spawner that created this resource (for persistence)
+var skip_minimap_registration: bool = false  # If true, spawner handles minimap (for performance)
 
 # Mini-game integration
 var _mini_game: HarvestMiniGame = null
@@ -227,6 +228,8 @@ func _go_to_sleep() -> void:
 	if _collision_area_cached:
 		_collision_area_cached.monitoring = false
 		_collision_area_cached.monitorable = false
+	# Hide visual when sleeping (reduces rendering cost)
+	visible = false
 
 ## Wake up resource from sleep
 func _wake_up() -> void:
@@ -234,6 +237,8 @@ func _wake_up() -> void:
 	# Re-enable harvest detection Area2D
 	monitoring = true
 	monitorable = true
+	# Show visual again
+	visible = true
 	# Collision area will be enabled by distance check in _physics_process
 
 ## Check if within active processing range of ship (uses squared distance for performance)
@@ -439,6 +444,7 @@ func on_despawn() -> void:
 	_last_range_check_frame = -1
 	_is_sleeping = false
 	spawner_key = ""
+	skip_minimap_registration = false
 
 	# Reset resource amounts (spawner will set these on next spawn)
 	amount = 0
@@ -647,6 +653,9 @@ func _find_visual_node() -> Node2D:
 	return null
 
 func _register_with_minimap() -> void:
+	# Skip if spawner handles minimap registration (performance optimization)
+	if skip_minimap_registration:
+		return
 	var minimap = Minimap.get_instance(get_tree())
 	if minimap:
 		minimap_target = ResourceMinimapTarget.new(self)

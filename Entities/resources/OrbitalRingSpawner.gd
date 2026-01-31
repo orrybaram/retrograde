@@ -25,6 +25,9 @@ var parent_planet: Planet = null
 var parent_station: SpaceStation = null
 var scene_root: Node2D = null
 
+# Minimap integration - single target for entire ring
+var _minimap_target: ResourceRingMinimapTarget = null
+
 func _ready() -> void:
 	add_to_group("resource_spawners")
 
@@ -42,6 +45,9 @@ func _ready() -> void:
 	_find_scene_root()
 
 	if auto_spawn:
+		# Register as pending spawner
+		EventBus.register_pending_spawner(spawner_key)
+
 		# Wait for planet angles to be restored before spawning
 		# This ensures resources spawn at the correct orbital position
 		if EventBus.has_signal("planets_restored"):
@@ -49,7 +55,10 @@ func _ready() -> void:
 		else:
 			# Fallback: wait a frame if signal doesn't exist (new game)
 			await get_tree().process_frame
-		spawn_ring()
+		await spawn_ring()
+
+		# Mark spawning as complete
+		EventBus.mark_spawner_finished(spawner_key)
 
 func _generate_spawner_key() -> String:
 	var parts: Array[String] = [name]
@@ -142,6 +151,9 @@ func spawn_ring() -> void:
 	var absolute_inner_radius = body_radius + inner_radius
 	var absolute_outer_radius = body_radius + outer_radius
 
+	# Register with minimap as a single ring target (instead of individual resources)
+	_register_with_minimap(orbital_body, body_radius)
+
 	# Distribute resources evenly by angle
 	var angle_step = TAU / remaining_resources
 
@@ -185,6 +197,7 @@ func _spawn_single_resource(i: int, angle_step: float, absolute_inner_radius: fl
 
 	resource.global_position = resource_pos
 	resource.spawner_key = spawner_key
+	resource.skip_minimap_registration = true  # Spawner handles minimap
 
 	# Connect to track when resource is depleted
 	if not resource.resource_depleted.is_connected(_on_resource_depleted):
@@ -228,3 +241,17 @@ func _spawn_single_resource(i: int, angle_step: float, absolute_inner_radius: fl
 func _on_resource_depleted(resource: ResourceNode) -> void:
 	remaining_resources -= 1
 	_spawned_resources.erase(resource)
+
+func _register_with_minimap(orbital_body: Node2D, body_radius: float) -> void:
+	var minimap = Minimap.get_instance(get_tree())
+	if minimap and not _minimap_target:
+		_minimap_target = ResourceRingMinimapTarget.new(self, orbital_body, body_radius, inner_radius, outer_radius)
+		minimap.register_target(_minimap_target)
+
+func _exit_tree() -> void:
+	# Unregister from minimap
+	if _minimap_target:
+		var minimap = Minimap.get_instance(get_tree())
+		if minimap:
+			minimap.unregister_target(_minimap_target)
+		_minimap_target = null
