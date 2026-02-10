@@ -54,7 +54,7 @@ func _process(_delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if current_game_state != MainGameState.PLAYING:
 		return
-	
+
 	if event is InputEventKey and event.pressed and not event.echo:
 		# Handle inventory toggle with "i" key
 		if event.keycode == KEY_I:
@@ -65,6 +65,15 @@ func _input(event: InputEvent) -> void:
 		# Handle manual save with "F5" key
 		elif event.keycode == KEY_F5:
 			_manual_save()
+		# Handle ESC to close inventory or map
+		elif event.keycode == KEY_ESCAPE:
+			print("Escape key pressed")
+			if inventory_ui and inventory_ui.visible:
+				inventory_ui.close_inventory()
+				get_viewport().set_input_as_handled()
+			elif system_map and system_map.visible:
+				system_map.close_map()
+				get_viewport().set_input_as_handled()
 
 func _toggle_inventory() -> void:
 	if not inventory_ui:

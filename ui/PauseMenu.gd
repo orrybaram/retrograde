@@ -28,6 +28,14 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	# Handle escape to toggle pause
 	if event.is_action_pressed("ui_cancel"):
+		# If inventory or map is visible, let them handle ESC instead
+		var inventory = get_tree().get_first_node_in_group("inventory_ui") as InventoryUI
+		if inventory and inventory.visible:
+			return
+		var system_map = get_tree().get_first_node_in_group("system_map") as SystemMap
+		if system_map and system_map.visible:
+			return
+
 		if visible:
 			_on_resume_pressed()
 		else:

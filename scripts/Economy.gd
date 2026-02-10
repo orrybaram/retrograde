@@ -6,12 +6,12 @@ class_name Economy
 
 ## Sell prices for resources (item_id -> credits)
 const PRICES := {
-	"scrap": 2
+	"scrap": 5
 }
 
 ## Service costs
 const REPAIR_COST_PER_POINT: int = 1  # Credits per hull point
-const REFUEL_COST_PER_POINT: int = 1  # Credits per fuel point
+const REFUEL_COST_PER_POINT: float = 0.3  # Credits per fuel point
 
 
 ## Get the sell price for a resource.
