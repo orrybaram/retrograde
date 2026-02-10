@@ -205,7 +205,7 @@ func _on_upgrade_row_gui_input(event: InputEvent, index: int) -> void:
 func _clear_upgrade_rows() -> void:
 	for item in _menu_items:
 		if item.get("type") == "upgrade":
-			var container = item.get("container") as HBoxContainer
+			var container = item.get("container")
 			if container and is_instance_valid(container):
 				container.queue_free()
 

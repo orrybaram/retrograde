@@ -89,6 +89,138 @@ label.modulate = Color(1.0, 0.75, 0.0)  # Use Colors.AMBER instead
 - Custom widgets (like `ProgressBarWidget`) encapsulate reusable UI
 - HUD elements are in a `CanvasLayer` for proper layering
 
+## Architecture Patterns
+
+### State Machines
+
+**IMPORTANT: Use state machines whenever an entity has multiple distinct behavioral modes.**
+
+State machines are the preferred pattern for managing complex entity behavior. They provide:
+- Clear separation of concerns between different modes
+- Easier debugging and maintenance
+- Predictable state transitions
+- Clean handling of input and physics in each mode
+
+#### When to Use State Machines
+
+Use state machines for entities that have:
+- Multiple behavioral modes (flying, landed, harvesting, destroyed)
+- Different input handling in different situations
+- Mode-specific physics or rendering logic
+- State transitions that need to be controlled and validated
+
+#### State Machine Structure
+
+The codebase uses a reusable `StateMachine` component with individual `State` subclasses:
+
+```gdscript
+# Generic state machine (scripts/StateMachine.gd)
+StateMachine
+├── manages state transitions
+├── delegates physics_process/integrate_forces to current state
+└── validates state changes
+
+# Entity-specific base state (e.g., entities/Ship/states/ShipState.gd)
+ShipState extends State
+├── provides ship reference
+└── shared helper methods
+
+# Concrete states (e.g., entities/Ship/states/)
+FlyingState extends ShipState
+LandedState extends ShipState
+HarvestingState extends ShipState
+DestroyedState extends ShipState
+```
+
+#### State Implementation Example
+
+Each state should implement:
+
+```gdscript
+extends ShipState
+class_name FlyingState
+
+func enter() -> void:
+    super.enter()
+    # Initialize state (zoom camera, play animations, etc.)
+    if ship.camera:
+        ship.camera.zoom_camera_out()
+
+func exit() -> void:
+    super.exit()
+    # Clean up state (stop particles, reset variables, etc.)
+
+func physics_process(delta: float) -> void:
+    # Handle per-frame logic (input sampling, particle updates, etc.)
+    ship.want_thrust = Input.is_action_pressed("thrust")
+
+func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+    # Handle physics (apply forces, set velocities, etc.)
+    if ship.want_thrust:
+        state.apply_central_force(force)
+```
+
+#### State Ownership Guidelines
+
+**Camera Zoom**: States control camera zoom based on their context
+- `LandedState.enter()` zooms in when docking
+- `LandedState.exit()` zooms out when undocking
+- UI elements (dialogues, menus) should NOT control zoom if state manages it
+
+**UI Blocking**: States should check for blocking UI before allowing transitions
+- Check if dialogues/menus are visible before allowing state changes
+- Example: `LandedState` checks if SpacePortDialogue or StoreUI is open before allowing undock
+
+**Resource Management**: Each state manages its own resources
+- Particles, sounds, visual effects owned by a state
+- Clean up in `exit()` to prevent leaks
+
+#### Best Practices
+
+1. **Single Responsibility**: Each state handles one behavioral mode
+2. **Clean Transitions**: Use `enter()` and `exit()` hooks for state setup/teardown
+3. **Minimal State Data**: Store only what's needed for the current state
+4. **Validate Transitions**: Check conditions before changing states
+5. **Avoid State Coupling**: States shouldn't directly reference each other
+6. **Use Helper Methods**: Put shared logic in the base state class (e.g., `ShipState`)
+
+#### Example: Ship State Machine
+
+The Ship uses a state machine to manage its behavioral modes:
+
+```
+FlyingState (default)
+├── Normal flight controls
+├── Collision damage
+├── Can transition to: LandedState, HarvestingState, DestroyedState
+└── Camera zoomed out
+
+LandedState
+├── Docked to a space station
+├── No flight controls (except undocking)
+├── Can transition to: FlyingState
+└── Camera zoomed in
+
+HarvestingState
+├── Locked to resource ring
+├── Controls disabled (minigame active)
+├── Can transition to: FlyingState
+└── Camera focused on minigame
+
+DestroyedState
+├── Ship exploded
+├── All controls disabled
+├── Terminal state
+└── Explosion effects
+```
+
+#### When NOT to Use State Machines
+
+Avoid state machines for:
+- Simple boolean flags (use variables: `is_boosting`, `is_damaged`)
+- Linear sequences (use coroutines/await)
+- Pure data containers (use resources or dictionaries)
+
 ## File Structure
 
 ```

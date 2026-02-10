@@ -37,3 +37,22 @@ func set_upgrade_level(path: String, level: int) -> void:
 ## Now delegates to InventoryManager.clear_inventory()
 func clear_cargo() -> void:
 	InventoryManager.clear_inventory()
+
+## Reset all game state to initial values for a new game.
+## This clears credits, upgrades, inventory, and all other persistent state.
+func reset_all_state() -> void:
+	# Store upgrade paths before clearing to emit signals
+	var upgrade_paths = upgrade_levels.keys()
+
+	# Reset all state variables
+	credits = 0
+	has_drone_bay = false
+	drones_active = 0
+	death_count = 0
+	upgrade_levels.clear()
+	InventoryManager.clear_inventory()
+
+	# Emit signals for any listeners
+	credits_changed.emit()
+	for path in upgrade_paths:
+		upgrade_level_changed.emit(path, 0)

@@ -45,6 +45,11 @@ func _ready() -> void:
 	_find_scene_root()
 
 	if auto_spawn:
+		# Connect to planets_restored signal for load game support
+		# This allows respawning resources when loading a saved game
+		if EventBus.has_signal("planets_restored"):
+			EventBus.planets_restored.connect(_on_planets_restored)
+
 		# Register as pending spawner
 		EventBus.register_pending_spawner(spawner_key)
 
@@ -59,6 +64,35 @@ func _ready() -> void:
 
 		# Mark spawning as complete
 		EventBus.mark_spawner_finished(spawner_key)
+
+func _on_planets_restored() -> void:
+	# Called when loading a saved game - despawn old resources and spawn new ones
+	# Skip the first call (which happens in _ready)
+	if _spawned_resources.is_empty():
+		print("[OrbitalRingSpawner] First planets_restored signal - skipping respawn for: ", spawner_key)
+		return
+
+	print("[OrbitalRingSpawner] Load game respawn triggered for: ", spawner_key)
+	print("  - Current spawned resources: ", _spawned_resources.size())
+	print("  - Remaining resources to spawn: ", remaining_resources)
+
+	# Despawn existing resources
+	for resource in _spawned_resources:
+		if is_instance_valid(resource):
+			ResourceNodePool.return_instance(resource)
+	_spawned_resources.clear()
+
+	# Register as pending spawner
+	EventBus.register_pending_spawner(spawner_key)
+
+	# Respawn resources with new remaining_resources count
+	await spawn_ring()
+
+	print("[OrbitalRingSpawner] Respawn complete for: ", spawner_key)
+	print("  - Resources spawned: ", _spawned_resources.size())
+
+	# Mark spawning as complete
+	EventBus.mark_spawner_finished(spawner_key)
 
 func _generate_spawner_key() -> String:
 	var parts: Array[String] = [name]
@@ -108,6 +142,8 @@ func _find_scene_root() -> void:
 			scene_root = main
 
 func spawn_ring() -> void:
+	print("[OrbitalRingSpawner] spawn_ring called for: ", spawner_key, " with remaining_resources: ", remaining_resources)
+
 	# Determine which scene to use
 	var scenes_to_use: Array[PackedScene] = []
 	if resource_scene:
@@ -131,6 +167,7 @@ func spawn_ring() -> void:
 		return
 
 	if remaining_resources <= 0:
+		print("[OrbitalRingSpawner] No resources to spawn (remaining_resources <= 0)")
 		return  # No resources left to spawn
 
 	# Get position, radius from parent body

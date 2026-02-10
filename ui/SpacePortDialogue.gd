@@ -107,12 +107,10 @@ func open_dialogue(target_spaceport: SpacePort) -> void:
 
 	visible = true
 	_update_display()
-	ship.camera.zoom_camera_in(Vector2(2.5,2.5))
 
 func close_dialogue() -> void:
 	visible = false
 	spaceport = null
-	ship.camera.zoom_camera_out()
 	dialogue_closed.emit()
 
 func _update_display() -> void:

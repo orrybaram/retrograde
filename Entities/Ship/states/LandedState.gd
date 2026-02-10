@@ -14,31 +14,31 @@ var _dialogue = null  # SpacePortDialogue
 
 func enter() -> void:
 	super.enter()
-	
+
 	if not is_ship_valid():
 		return
-	
+
 	# Get dockable from ship's metadata (set by FlyingState or ShipSpawner)
 	var pending_dockable = ship.get_meta("pending_dockable", null) as Node2D
 	ship.remove_meta("pending_dockable")
-	
+
 	# Check for instant dock flag (set by ShipSpawner for spawning)
 	var instant_dock = ship.get_meta("instant_dock", false)
 	ship.remove_meta("instant_dock")
-	
+
 	if not pending_dockable or not is_instance_valid(pending_dockable):
 		# No dockable provided, go back to flying
 		_exit_to_flying()
 		return
-	
+
 	# Verify it has dockable methods
 	if not pending_dockable.has_method("get_dock_position") or not pending_dockable.has_method("get_dock_distance"):
 		_exit_to_flying()
 		return
-	
+
 	locked_dockable = pending_dockable
 	locked_offset_from_target = Vector2.ZERO  # Will be calculated on first frame
-	
+
 	if instant_dock:
 		# Instant dock: skip animation by setting start time far in the past
 		_docking_start_time = 0.0
@@ -49,9 +49,13 @@ func enter() -> void:
 		_docking_start_time = Time.get_ticks_msec() / 1000.0
 		_initial_ship_position = ship.global_position
 		_initial_ship_rotation = ship.rotation
-	
+
 	# Clear docking action message since we're now docked
 	EventBus.action_message_changed.emit("")
+
+	# Zoom camera in when docked
+	if ship.camera:
+		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
 	
 	# Auto-save on landing (wait a frame to ensure position is set)
 	await ship.get_tree().process_frame
@@ -84,9 +88,13 @@ func exit() -> void:
 	_docking_start_time = 0.0
 	_initial_ship_position = Vector2.ZERO
 	_initial_ship_rotation = 0.0
-	
+
 	# Clear action message
 	EventBus.action_message_changed.emit("")
+
+	# Zoom camera out when undocking
+	if ship and ship.camera:
+		ship.camera.zoom_camera_out()
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -101,8 +109,9 @@ func physics_process(delta: float) -> void:
 		_toggle_dialogue()
 	
 	# Release lock if thrusting - transition back to FlyingState
-	# Don't allow takeoff if dialogue is open
-	if (ship.want_thrust or ship.want_reverse_thrust) and not (_dialogue and _dialogue.visible):
+	# Don't allow takeoff if any UI is open (dialogue, store, etc.)
+	var is_ui_blocking = (_dialogue and _dialogue.visible) or _is_store_open()
+	if (ship.want_thrust or ship.want_reverse_thrust) and not is_ui_blocking:
 		_exit_to_flying()
 		return
 	
@@ -255,3 +264,12 @@ func _exit_to_flying() -> void:
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
 	if state_machine and state_machine.has_state("FlyingState"):
 		state_machine.change_state("FlyingState")
+
+func _is_store_open() -> bool:
+	if not ship or not is_instance_valid(ship):
+		return false
+	var tree = ship.get_tree()
+	if not tree:
+		return false
+	var store_ui = tree.get_first_node_in_group("store_ui") as StoreUI
+	return store_ui and store_ui.visible

@@ -88,25 +88,27 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}
-	var cargo_section = cfg.get_section_keys("cargo")
-	if cargo_section:
-		for k in cargo_section:
-			var value = int(cfg.get_value("cargo", k, 0))
-			# Backward compatibility: convert old "Scrap" to "scrap"
-			var item_id = k.to_lower() if k == "Scrap" else k
-			# Merge quantities if both old and new keys exist
-			if inventory_dict.has(item_id):
-				inventory_dict[item_id] += value
-			else:
-				inventory_dict[item_id] = value
+	if cfg.has_section("cargo"):
+		var cargo_section = cfg.get_section_keys("cargo")
+		if cargo_section:
+			for k in cargo_section:
+				var value = int(cfg.get_value("cargo", k, 0))
+				# Backward compatibility: convert old "Scrap" to "scrap"
+				var item_id = k.to_lower() if k == "Scrap" else k
+				# Merge quantities if both old and new keys exist
+				if inventory_dict.has(item_id):
+					inventory_dict[item_id] += value
+				else:
+					inventory_dict[item_id] = value
 	InventoryManager.set_inventory_dict(inventory_dict)
-	
+
 	# Load upgrades FIRST
-	var upgrades_section = cfg.get_section_keys("upgrades")
-	if upgrades_section:
-		for upgrade_path in upgrades_section:
-			var level = int(cfg.get_value("upgrades", upgrade_path, 0))
-			gs.set_upgrade_level(upgrade_path, level)
+	if cfg.has_section("upgrades"):
+		var upgrades_section = cfg.get_section_keys("upgrades")
+		if upgrades_section:
+			for upgrade_path in upgrades_section:
+				var level = int(cfg.get_value("upgrades", upgrade_path, 0))
+				gs.set_upgrade_level(upgrade_path, level)
 	
 	# Reapply all upgrades to ship based on loaded upgrade levels
 	# This sets max_hull, max_fuel, max_cargo_weight correctly
@@ -130,13 +132,14 @@ static func load_planet_angles() -> Dictionary:
 	var cfg := ConfigFile.new()
 	if cfg.load("user://save.cfg") != OK:
 		return planet_angles
-	
-	var planets_section = cfg.get_section_keys("planets")
-	if planets_section:
-		for planet_key in planets_section:
-			var angle = float(cfg.get_value("planets", planet_key, 0.0))
-			planet_angles[planet_key] = angle
-	
+
+	if cfg.has_section("planets"):
+		var planets_section = cfg.get_section_keys("planets")
+		if planets_section:
+			for planet_key in planets_section:
+				var angle = float(cfg.get_value("planets", planet_key, 0.0))
+				planet_angles[planet_key] = angle
+
 	return planet_angles
 
 ## Load spawn position from save file
@@ -301,11 +304,12 @@ static func load_spawner_resources() -> Dictionary:
 	if cfg.load("user://save.cfg") != OK:
 		return spawner_resources
 
-	var spawners_section = cfg.get_section_keys("spawners")
-	if spawners_section:
-		for spawner_key in spawners_section:
-			var count = int(cfg.get_value("spawners", spawner_key, 0))
-			spawner_resources[spawner_key] = count
+	if cfg.has_section("spawners"):
+		var spawners_section = cfg.get_section_keys("spawners")
+		if spawners_section:
+			for spawner_key in spawners_section:
+				var count = int(cfg.get_value("spawners", spawner_key, 0))
+				spawner_resources[spawner_key] = count
 
 	return spawner_resources
 
@@ -313,12 +317,23 @@ static func load_spawner_resources() -> Dictionary:
 ## Should be called BEFORE spawners auto-spawn (they check remaining_resources)
 static func restore_spawner_resources(tree: SceneTree) -> void:
 	var spawner_resources = load_spawner_resources()
+	print("[Save] restore_spawner_resources - loaded from save: ", spawner_resources)
+
 	if spawner_resources.is_empty():
+		print("[Save] No spawner resources in save file")
 		return
 
 	var spawners = tree.get_nodes_in_group("resource_spawners")
+	print("[Save] Found ", spawners.size(), " spawners in scene")
+
 	for spawner in spawners:
 		if spawner.has_method("get_spawner_key"):
 			var spawner_key = spawner.get_spawner_key()
+			print("[Save] Checking spawner: ", spawner_key)
+
 			if spawner_key != "" and spawner_resources.has(spawner_key):
-				spawner.set_remaining_resources(spawner_resources[spawner_key])
+				var count = spawner_resources[spawner_key]
+				print("[Save] Setting remaining_resources to ", count, " for ", spawner_key)
+				spawner.set_remaining_resources(count)
+			else:
+				print("[Save] No saved data for spawner: ", spawner_key)

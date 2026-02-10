@@ -144,6 +144,15 @@ func start_game() -> void:
 	if start_menu:
 		start_menu.visible = false
 
+	# Reset all game state for new game
+	var gs = get_tree().get_first_node_in_group("game_state") as GameState
+	if gs:
+		gs.reset_all_state()
+
+	# Reset ship to initial state
+	if ship:
+		ship.reset_to_initial_state()
+
 	# Hide ship while respawning to prevent showing at wrong location
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
@@ -154,6 +163,12 @@ func start_game() -> void:
 
 	# Reset spawner tracking
 	EventBus.reset_spawner_tracking()
+
+	# Reset all resource spawners to initial state for new game
+	var spawners = get_tree().get_nodes_in_group("resource_spawners")
+	for spawner in spawners:
+		if spawner.has_method("set_remaining_resources"):
+			spawner.set_remaining_resources(spawner.max_resources)
 
 	# Unpause so spawner can work
 	get_tree().paused = false

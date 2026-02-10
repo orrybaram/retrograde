@@ -282,3 +282,45 @@ func _apply_multiply_stat_from_upgrade(upgrade: UpgradeItem) -> void:
 			max_cargo_weight *= upgrade.effect_value
 		_:
 			push_warning("Ship: Unknown MULTIPLY_STAT target: %s" % upgrade.effect_target)
+
+## Reset ship to initial state for a new game.
+## Clears all upgrades and resets stats to base values.
+func reset_to_initial_state() -> void:
+	# Reset stats to base values (no upgrades)
+	max_hull = base_max_hull
+	max_fuel = base_max_fuel
+	max_cargo_weight = base_max_cargo_weight
+
+	# Reset current values to full
+	hull_strength = max_hull
+	fuel = max_fuel
+
+	# Reset physics
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+	rotation = 0.0
+
+	# Reset camera shake
+	camera_shake_time = 0.0
+	damage_shake_time = 0.0
+	damage_shake_current_intensity = 0.0
+
+	# Reset boost particles
+	reset_boost_particles()
+
+	# Reset to FlyingState
+	if state_machine and state_machine.has_state("FlyingState"):
+		state_machine.change_state("FlyingState")
+
+	# Ensure ship is enabled and visible
+	set_process(true)
+	set_physics_process(true)
+	if ship_polygon:
+		ship_polygon.visible = true
+
+	# Update mass based on cargo (should be 0 after reset)
+	update_mass_from_cargo()
+
+	# Emit signals
+	fuel_changed.emit()
+	cargo_changed.emit(0.0, max_cargo_weight)
