@@ -57,6 +57,9 @@ func _register_with_minimap() -> void:
 		return
 	var minimap = Minimap.get_instance(get_tree())
 	if minimap:
+		# Unregister any existing target first to prevent orphaned targets
+		if minimap_target:
+			minimap.unregister_target(minimap_target)
 		minimap_target = ResourceMinimapTarget.new(self)
 		minimap.register_target(minimap_target)
 

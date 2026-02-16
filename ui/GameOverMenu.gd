@@ -22,8 +22,8 @@ var is_typing: bool = false
 var full_text_lines: Array = []  # Array of strings (one per line)
 var current_line_index: int = 0
 var current_char_index: int = 0
-var typing_speed: float = 0.015  # Seconds per character (death message)
-var boot_typing_speed: float = 0.00375  # Seconds per character (4x faster for boot)
+var typing_speed: float = 0.0075  # Seconds per character (death message)
+var boot_typing_speed: float = 0.001875  # Seconds per character (4x faster for boot)
 var typing_timer: float = 0.0
 var displayed_text: String = ""
 var typing_complete: bool = false
@@ -92,10 +92,14 @@ func _input(event: InputEvent) -> void:
 	if not visible or is_fading:
 		return
 
-	# Listen for Enter key to start boot sequence
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-			if typing_complete and not is_booting and not boot_complete:
+			# If currently typing, skip to end immediately
+			if is_typing:
+				_skip_typing()
+				get_viewport().set_input_as_handled()
+			# If typing is done, start boot sequence
+			elif typing_complete and not is_booting and not boot_complete:
 				_start_boot_sequence()
 				get_viewport().set_input_as_handled()
 
@@ -163,37 +167,59 @@ func _start_typing() -> void:
 	# Build array of lines to type out
 	full_text_lines.clear()
 
-	# ASCII skull and crossbones
-	full_text_lines.append("    ___")
-	full_text_lines.append("   /   \\")
-	full_text_lines.append("  | X X |")
-	full_text_lines.append("  |  ^  |")
-	full_text_lines.append("  | \\_/ |")
-	full_text_lines.append("   \\___/")
-	full_text_lines.append("   _|_|_")
-	full_text_lines.append("  / | | \\")
-	full_text_lines.append("")
-
-	# System failure message based on death reason
-	full_text_lines.append("> SYSTEM FAILURE DETECTED")
-
-	if reason == "Ship Destroyed":
-		full_text_lines.append("> HULL INTEGRITY: 0%")
-		full_text_lines.append("> CRITICAL STRUCTURAL DAMAGE")
-	elif reason == "Out of Fuel":
+	if reason == "Tractor Beam":
+		# Tractor beam rescue messaging (no skull, no death count)
+		full_text_lines.append("    /  \\")
+		full_text_lines.append("   / || \\")
+		full_text_lines.append("  /  ||  \\")
+		full_text_lines.append(" /   ||   \\")
+		full_text_lines.append("/    ||    \\")
+		full_text_lines.append("     ||")
+		full_text_lines.append("     /\\")
+		full_text_lines.append("    /  \\")
+		full_text_lines.append("")
 		full_text_lines.append("> FUEL RESERVES DEPLETED")
-		full_text_lines.append("> LIFE SUPPORT OFFLINE")
+		full_text_lines.append("> TRACTOR BEAM LOCK DETECTED")
+		full_text_lines.append("> INITIATING EMERGENCY DOCK SEQUENCE...")
+		full_text_lines.append("")
+		full_text_lines.append("")
+		full_text_lines.append("> CARGO AND CREDITS PRESERVED")
+		full_text_lines.append("")
+		full_text_lines.append("")
+		full_text_lines.append("")
+		full_text_lines.append("> PRESS [ENTER] TO CONTINUE")
 	else:
-		full_text_lines.append("> CATASTROPHIC FAILURE")
+		# ASCII skull and crossbones
+		full_text_lines.append("    ___")
+		full_text_lines.append("   /   \\")
+		full_text_lines.append("  | X X |")
+		full_text_lines.append("  |  ^  |")
+		full_text_lines.append("  | \\_/ |")
+		full_text_lines.append("   \\___/")
+		full_text_lines.append("   _|_|_")
+		full_text_lines.append("  / | | \\")
+		full_text_lines.append("")
 
-	full_text_lines.append("> INITIATING EMERGENCY PROTOCOLS...")
-	full_text_lines.append("")
-	full_text_lines.append("")
-	full_text_lines.append("> TOTAL DEATHS: %d" % death_count)
-	full_text_lines.append("")
-	full_text_lines.append("")
-	full_text_lines.append("")
-	full_text_lines.append("> PRESS [ENTER] TO CONTINUE")
+		# System failure message based on death reason
+		full_text_lines.append("> SYSTEM FAILURE DETECTED")
+
+		if reason == "Ship Destroyed":
+			full_text_lines.append("> HULL INTEGRITY: 0%")
+			full_text_lines.append("> CRITICAL STRUCTURAL DAMAGE")
+		elif reason == "Out of Fuel":
+			full_text_lines.append("> FUEL RESERVES DEPLETED")
+			full_text_lines.append("> LIFE SUPPORT OFFLINE")
+		else:
+			full_text_lines.append("> CATASTROPHIC FAILURE")
+
+		full_text_lines.append("> INITIATING EMERGENCY PROTOCOLS...")
+		full_text_lines.append("")
+		full_text_lines.append("")
+		full_text_lines.append("> TOTAL DEATHS: %d" % death_count)
+		full_text_lines.append("")
+		full_text_lines.append("")
+		full_text_lines.append("")
+		full_text_lines.append("> PRESS [ENTER] TO CONTINUE")
 
 	# Start typing
 	current_line_index = 0
@@ -210,6 +236,22 @@ func _start_typing() -> void:
 	# Hide the separate cursor label (we use text-based cursor now)
 	if cursor_label:
 		cursor_label.visible = false
+
+func _skip_typing() -> void:
+	if not is_typing or not terminal_output:
+		return
+
+	# Render all remaining text immediately
+	while current_line_index < full_text_lines.size():
+		var line = full_text_lines[current_line_index]
+		displayed_text += line.substr(current_char_index) + "\n"
+		current_char_index = 0
+		current_line_index += 1
+
+	if is_booting:
+		_finish_boot_sequence()
+	else:
+		_finish_typing()
 
 func _type_next_character() -> void:
 	if not is_typing or current_line_index >= full_text_lines.size():
@@ -258,17 +300,29 @@ func _start_boot_sequence() -> void:
 	full_text_lines.clear()
 
 	# Boot sequence messages
-	full_text_lines.append("> REBOOTING SYSTEMS...")
-	full_text_lines.append("")
-	full_text_lines.append("> INITIALIZING CORE FUNCTIONS.........[OK]")
-	full_text_lines.append("> LOADING NAVIGATION SYSTEMS...........[OK]")
-	full_text_lines.append("> RESTORING HULL INTEGRITY.............[OK]")
-	full_text_lines.append("> REFUELING TANKS......................[OK]")
-	full_text_lines.append("> CALIBRATING SENSORS..................[OK]")
-	full_text_lines.append("> ESTABLISHING ORBITAL LINK............[OK]")
-	full_text_lines.append("")
-	full_text_lines.append("> SYSTEM READY")
-	full_text_lines.append("> LAUNCHING...")
+	if reason == "Tractor Beam":
+		full_text_lines.append("> TRACTOR BEAM ENGAGED...")
+		full_text_lines.append("")
+		full_text_lines.append("> PULLING VESSEL TO DOCK...............[OK]")
+		full_text_lines.append("> REFUELING TANKS......................[OK]")
+		full_text_lines.append("> RESTORING HULL INTEGRITY.............[OK]")
+		full_text_lines.append("> CALIBRATING SENSORS..................[OK]")
+		full_text_lines.append("> DOCKING CLAMPS SECURED...............[OK]")
+		full_text_lines.append("")
+		full_text_lines.append("> EMERGENCY DOCK COMPLETE")
+		full_text_lines.append("> SYSTEMS ONLINE")
+	else:
+		full_text_lines.append("> REBOOTING SYSTEMS...")
+		full_text_lines.append("")
+		full_text_lines.append("> INITIALIZING CORE FUNCTIONS.........[OK]")
+		full_text_lines.append("> LOADING NAVIGATION SYSTEMS...........[OK]")
+		full_text_lines.append("> RESTORING HULL INTEGRITY.............[OK]")
+		full_text_lines.append("> REFUELING TANKS......................[OK]")
+		full_text_lines.append("> CALIBRATING SENSORS..................[OK]")
+		full_text_lines.append("> ESTABLISHING ORBITAL LINK............[OK]")
+		full_text_lines.append("")
+		full_text_lines.append("> SYSTEM READY")
+		full_text_lines.append("> LAUNCHING...")
 
 	# Reset typing state and start boot sequence
 	current_line_index = 0

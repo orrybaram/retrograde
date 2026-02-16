@@ -1,19 +1,18 @@
 extends Control
 class_name SpacePortDialogue
 
-## Space Port dialogue UI for repairing and refueling the ship.
+## Space Port dialogue UI for repairing the ship.
 ## Terminal-style interface with arrow key navigation.
 
 @onready var title_label: Label = $BorderPanel/TitleLabel
 @onready var hull_progress: ProgressBar = $MarginContainer/VBoxContainer/HullProgressBar
 @onready var hull_label: Label = $MarginContainer/VBoxContainer/HullProgressBar/HullLabel
-@onready var fuel_progress: ProgressBar = $MarginContainer/VBoxContainer/FuelProgressBar
-@onready var fuel_label: Label = $MarginContainer/VBoxContainer/FuelProgressBar/FuelLabel
 @onready var credits_label: RichTextLabel = $MarginContainer/VBoxContainer/CreditsRow/CreditsLabel
 @onready var repair_button: RichTextLabel = $MarginContainer/VBoxContainer/RepairRow/RepairButton
 @onready var repair_cost_label: RichTextLabel = $MarginContainer/VBoxContainer/RepairRow/RepairCost
-@onready var refuel_button: RichTextLabel = $MarginContainer/VBoxContainer/RefuelRow/RefuelButton
-@onready var refuel_cost_label: RichTextLabel = $MarginContainer/VBoxContainer/RefuelRow/RefuelCost
+@onready var sell_button: RichTextLabel = $MarginContainer/VBoxContainer/SellRow/SellButton
+@onready var sell_value_label: RichTextLabel = $MarginContainer/VBoxContainer/SellRow/SellValue
+@onready var sell_row: HBoxContainer = $MarginContainer/VBoxContainer/SellRow
 @onready var store_button: RichTextLabel = $MarginContainer/VBoxContainer/StoreRow/StoreButton
 @onready var close_button: RichTextLabel = $MarginContainer/VBoxContainer/CloseRow/CloseButton
 
@@ -39,8 +38,8 @@ func _ready() -> void:
 	# Connect click handlers
 	if repair_button:
 		repair_button.gui_input.connect(_on_item_gui_input.bind(0))
-	if refuel_button:
-		refuel_button.gui_input.connect(_on_item_gui_input.bind(1))
+	if sell_button:
+		sell_button.gui_input.connect(_on_item_gui_input.bind(1))
 	if store_button:
 		store_button.gui_input.connect(_on_item_gui_input.bind(2))
 	if close_button:
@@ -49,8 +48,6 @@ func _ready() -> void:
 	# Connect to signals for updates
 	if gs and gs.has_signal("credits_changed"):
 		gs.credits_changed.connect(_update_display)
-	if ship and ship.has_signal("fuel_changed"):
-		ship.fuel_changed.connect(_update_display)
 
 func _input(event: InputEvent) -> void:
 	if not visible:
@@ -126,15 +123,6 @@ func _update_display() -> void:
 	if hull_label:
 		hull_label.text = "HULL %.0f/%.0f" % [hull, max_hull]
 
-	# Update fuel display
-	var fuel = ship.fuel
-	var max_fuel = ship.max_fuel
-	if fuel_progress:
-		fuel_progress.max_value = max_fuel
-		fuel_progress.value = fuel
-	if fuel_label:
-		fuel_label.text = "FUEL %.0f/%.0f" % [fuel, max_fuel]
-
 	# Update credits display
 	if credits_label:
 		credits_label.text = "[color=#ffbf00]CREDITS[/color] %d" % [gs.credits]
@@ -143,11 +131,6 @@ func _update_display() -> void:
 	var repair_cost = int((max_hull - hull) * Economy.REPAIR_COST_PER_POINT)
 	var repair_needed = repair_cost > 0
 	var repair_affordable = gs.credits >= repair_cost
-
-	var fuel_needed_amount = max_fuel - fuel
-	var refuel_cost = int(fuel_needed_amount * Economy.REFUEL_COST_PER_POINT)
-	var refuel_needed = fuel_needed_amount > 0
-	var refuel_affordable = gs.credits >= refuel_cost or (fuel_needed_amount > 0 and gs.credits > 0)
 
 	# Build menu items
 	_menu_items.clear()
@@ -161,16 +144,25 @@ func _update_display() -> void:
 		"needed": repair_needed,
 		"affordable": repair_affordable
 	})
+	# Sell resources item
+	var store = spaceport.get_node_or_null("Store") as Store if spaceport else null
+	var sell_value = store.get_sell_value() if store and store.can_sell_resources() else 0
+	var can_sell = sell_value > 0
 	_menu_items.append({
-		"button": refuel_button,
-		"cost_label": refuel_cost_label,
-		"action": _on_refuel_pressed,
-		"enabled": refuel_needed and refuel_affordable,
-		"label": "REFUEL",
-		"cost_text": "%d CR" % refuel_cost if refuel_needed else "FULL",
-		"needed": refuel_needed,
-		"affordable": refuel_affordable
+		"button": sell_button,
+		"cost_label": sell_value_label,
+		"action": _on_sell_pressed,
+		"enabled": can_sell,
+		"label": "SELL ALL RESOURCES",
+		"cost_text": "+%d CR" % sell_value if can_sell else "+0 CR",
+		"needed": can_sell,
+		"affordable": true
 	})
+
+	# Show/hide sell row based on store support
+	if sell_row:
+		sell_row.visible = store != null and store.can_sell_resources()
+
 	_menu_items.append({
 		"button": store_button,
 		"cost_label": null,
@@ -249,26 +241,15 @@ func _on_repair_pressed() -> void:
 		ship.hull_strength = max_hull
 		_update_display()
 
-func _on_refuel_pressed() -> void:
-	if not ship or not gs or not economy:
+func _on_sell_pressed() -> void:
+	if not spaceport:
 		return
-
-	var max_fuel = ship.max_fuel
-	var fuel = ship.fuel
-	var fuel_needed = max_fuel - fuel
-
-	if fuel_needed <= 0:
-		return
-
-	# Calculate how much fuel can be purchased with available credits
-	var fuel_affordable = min(fuel_needed, float(gs.credits) / Economy.REFUEL_COST_PER_POINT)
-
-	if fuel_affordable > 0:
-		var refuel_cost = int(fuel_affordable * Economy.REFUEL_COST_PER_POINT)
-		gs.credits -= refuel_cost
-		ship.fuel = min(max_fuel, fuel + fuel_affordable)
-		ship.fuel_changed.emit()
-		_update_display()
+	var store = spaceport.get_node_or_null("Store") as Store
+	if store and store.can_sell_resources():
+		var sell_value = store.get_sell_value()
+		if sell_value > 0:
+			store.sell_all_resources()
+			_update_display()
 
 func _on_store_pressed() -> void:
 	if not spaceport:

@@ -170,6 +170,24 @@ func get_orbital_center_global() -> Vector2:
 		return orbital_body.global_position
 	return Vector2.ZERO
 
+## Compute the predicted global position at the current time without side effects.
+## Useful for minimap or other systems that need the position without updating state.
+func get_predicted_global_position() -> Vector2:
+	if not initialized or not orbital_body or not is_instance_valid(orbital_body):
+		return Vector2.ZERO
+	var speed_rad = get_speed_radians_per_second()
+	var elapsed = Time.get_ticks_msec() / 1000.0 - orbital_start_time
+	var angle = fmod(initial_angle + speed_rad * elapsed, TAU)
+	var offset: Vector2
+	if eccentricity == 0.0:
+		offset = Vector2(cos(angle), sin(angle)) * orbital_distance
+	else:
+		var a = orbital_distance
+		var e = clamp(eccentricity, 0.0, 0.99)
+		var r = a * (1.0 - e * e) / (1.0 + e * cos(angle))
+		offset = Vector2(cos(angle), sin(angle)) * r
+	return orbital_body.global_position + offset
+
 ## Get full orbital velocity including parent body's velocity
 func get_full_velocity() -> Vector2:
 	var velocity = calculate_orbital_velocity()

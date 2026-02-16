@@ -143,33 +143,6 @@ theme_override_constants/separation = 4
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
-[node name="ActionsHeader" type="Label" parent="CenterContainer/StoreWindow/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
-text = "A C T I O N S"
-
-[node name="SellRow" type="HBoxContainer" parent="CenterContainer/StoreWindow/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="SellButton" type="RichTextLabel" parent="CenterContainer/StoreWindow/MarginContainer/VBoxContainer/SellRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 1
-theme_override_colors/default_color = Color(1, 0.75, 0, 1)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
-bbcode_enabled = true
-text = "  SELL ALL RESOURCES"
-fit_content = true
-
-[node name="SellValue" type="RichTextLabel" parent="CenterContainer/StoreWindow/MarginContainer/VBoxContainer/SellRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/default_color = Color(0.75, 0.56, 0, 1)
-bbcode_enabled = true
-text = "[right]+0 CR"
-fit_content = true
-
 [node name="CloseRow" type="HBoxContainer" parent="CenterContainer/StoreWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
 

@@ -20,6 +20,7 @@ var current_game_state: MainGameState = MainGameState.MENU
 var last_game_over_reason: String = ""
 
 func _ready() -> void:
+	add_to_group("main")
 	# Connect menu signals
 	if start_menu:
 		start_menu.start_game.connect(_on_start_game)
@@ -32,6 +33,9 @@ func _ready() -> void:
 	# Connect ship signals
 	if ship:
 		ship.fuel_depleted.connect(_on_fuel_depleted)
+
+	# Connect rescue beacon signal
+	EventBus.rescue_beacon_deployed.connect(_on_rescue_beacon_deployed)
 	
 	# Start with menu visible and game paused
 	if start_menu:
@@ -62,9 +66,6 @@ func _input(event: InputEvent) -> void:
 		# Handle system map toggle with "m" key
 		elif event.keycode == KEY_M:
 			_toggle_system_map()
-		# Handle manual save with "F5" key
-		elif event.keycode == KEY_F5:
-			_manual_save()
 		# Handle ESC to close inventory or map
 		elif event.keycode == KEY_ESCAPE:
 			print("Escape key pressed")
@@ -113,22 +114,6 @@ func _toggle_system_map() -> void:
 	else:
 		system_map.open_map()
 
-func _manual_save() -> void:
-	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	if gs and ship:
-		# Show saving indicator
-		if hud and hud.has_method("show_saving_indicator"):
-			hud.show_saving_indicator()
-		
-		Save.save(gs, ship)
-		
-		# Hide saving indicator after a brief delay
-		if hud and hud.has_method("hide_saving_indicator"):
-			await get_tree().create_timer(0.5).timeout
-			hud.hide_saving_indicator()
-		
-		print("Game saved!")
-
 func _on_start_game() -> void:
 	await start_game()
 
@@ -140,15 +125,31 @@ func _on_relaunch_game() -> void:
 
 func _on_fuel_depleted() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
+		# Transition ship to stranded state (player must deploy rescue beacon)
+		if ship and ship.state_machine and ship.state_machine.has_state("StrandedState"):
+			ship.state_machine.change_state("StrandedState")
+
+func _is_within_tractor_beam() -> bool:
+	var stations = get_tree().get_nodes_in_group("space_stations")
+	for station in stations:
+		var tractor_beam = station.get_node_or_null("TractorBeamArea/TractorBeamCollision")
+		if tractor_beam and tractor_beam.shape is CircleShape2D:
+			var radius = tractor_beam.shape.radius
+			var distance = ship.global_position.distance_to(station.global_position)
+			if distance <= radius:
+				return true
+	return false
+
+func _on_rescue_beacon_deployed() -> void:
+	if current_game_state == MainGameState.PLAYING and not game_over_pending:
 		game_over_pending = true
-		_show_game_over_delayed("Out of Fuel")
+		# If within tractor beam range, rescue instead of death
+		if ship and _is_within_tractor_beam():
+			_show_game_over_delayed("Tractor Beam")
+		else:
+			_show_game_over_delayed("Out of Fuel")
 
 func _on_quit_to_menu() -> void:
-	# Save game before returning to menu
-	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	if gs and ship:
-		Save.save(gs, ship)
-
 	current_game_state = MainGameState.MENU
 	if start_menu:
 		start_menu.show_menu()
@@ -268,12 +269,13 @@ func _show_game_over_delayed(reason: String) -> void:
 func show_game_over(reason: String) -> void:
 	# Store reason for cost calculation on relaunch
 	last_game_over_reason = reason
-	
-	# Increment death counter
-	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	if gs:
-		gs.death_count += 1
-	
+
+	# Increment death counter (skip for tractor beam rescue)
+	if reason != "Tractor Beam":
+		var gs = get_tree().get_first_node_in_group("game_state") as GameState
+		if gs:
+			gs.death_count += 1
+
 	# Don't pause - physics should continue during game over
 	if game_over_menu:
 		game_over_menu.show_menu(reason)
@@ -285,24 +287,20 @@ func reset_game() -> void:
 	
 	# Calculate relaunch costs before resetting ship
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	var refuel_cost: int = 0
 	var penalty_cost: int = 0
-	
+
+	var is_tractor_beam_rescue = last_game_over_reason == "Tractor Beam"
+
 	if ship and gs:
-		# Calculate refueling cost (fuel needed to fill tank)
-		var fuel_needed = ship.max_fuel - ship.fuel
-		refuel_cost = int(fuel_needed * Economy.REFUEL_COST_PER_POINT)
-		
-		# Calculate penalty based on game over reason
+		# Calculate penalty based on game over reason (no penalty for tractor beam)
 		if last_game_over_reason == "Ship Destroyed":
 			penalty_cost = 20
 		elif last_game_over_reason == "Out of Fuel":
 			penalty_cost = 10
-		
-		# Deduct total cost from credits
-		var total_cost = refuel_cost + penalty_cost
-		gs.credits = max(0, gs.credits - total_cost)
-		
+
+		# Deduct penalty from credits
+		gs.credits = max(0, gs.credits - penalty_cost)
+
 		# Clear the reason after using it
 		last_game_over_reason = ""
 	
@@ -338,9 +336,9 @@ func reset_game() -> void:
 		# Reset boost particles material to original state
 		ship.reset_boost_particles()
 	
-	# Reset GameState (cargo only, preserve credits)
+	# Reset GameState (cargo only, preserve credits) - skip for tractor beam rescue
 	# Note: gs was already retrieved above for cost calculation
-	if gs:
+	if gs and not is_tractor_beam_rescue:
 		gs.clear_cargo()
 	
 	# Spawn ship at saved dock, or default if not found
@@ -358,4 +356,10 @@ func reset_game() -> void:
 		game_over_menu.hide_menu()
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
+
+	# Save game after respawn (penalty already applied, ship reset at dock)
+	var save_gs = get_tree().get_first_node_in_group("game_state") as GameState
+	if save_gs and ship:
+		Save.save(save_gs, ship)
+
 	EventBus.ship_respawned.emit()

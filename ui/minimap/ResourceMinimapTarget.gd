@@ -12,15 +12,13 @@ func get_minimap_position() -> Vector2:
 	if not resource or not is_instance_valid(resource):
 		return Vector2.ZERO
 
-	# Compute position from orbital parameters to avoid stale global_position
+	# Use OrbitalMotion's predicted position to avoid stale global_position
 	# (distant/sleeping nodes don't update their position every frame)
 	var orbital = resource._orbital_motion
-	if orbital and orbital.initialized and orbital.orbital_body and is_instance_valid(orbital.orbital_body):
-		var speed_rad_per_sec = (orbital.orbital_speed / 100.0) * orbital.speed_scale
-		var elapsed = Time.get_ticks_msec() / 1000.0 - orbital.orbital_start_time
-		var angle = fmod(orbital.initial_angle + speed_rad_per_sec * elapsed, TAU)
-		var offset = Vector2(cos(angle), sin(angle)) * orbital.orbital_distance
-		return orbital.orbital_body.global_position + offset
+	if orbital and orbital.initialized:
+		var pos = orbital.get_predicted_global_position()
+		if pos != Vector2.ZERO:
+			return pos
 
 	return resource.global_position
 

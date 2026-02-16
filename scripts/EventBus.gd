@@ -17,6 +17,9 @@ signal ship_respawned()
 signal planets_restored()
 ## Emitted when planet orbital angles have been restored from save file.
 
+signal rescue_beacon_deployed()
+## Emitted when the player deploys a rescue beacon after running out of fuel.
+
 signal game_unpaused(pause_duration: float)
 ## Emitted when game resumes from pause with the duration paused in seconds.
 

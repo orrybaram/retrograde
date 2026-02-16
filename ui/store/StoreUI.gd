@@ -1,7 +1,7 @@
 extends Control
 class_name StoreUI
 
-## Store UI for purchasing upgrades and selling resources.
+## Store UI for purchasing upgrades.
 ## Terminal-style interface with arrow key navigation.
 
 signal dialogue_closed
@@ -9,9 +9,6 @@ signal dialogue_closed
 @onready var title_label: Label = $CenterContainer/StoreWindow/BorderPanel/TitleLabel
 @onready var credits_label: Label = $CenterContainer/StoreWindow/BorderPanel/CreditsDecoration
 @onready var upgrades_container: VBoxContainer = $CenterContainer/StoreWindow/MarginContainer/VBoxContainer/ScrollContainer/UpgradesContainer
-@onready var sell_button: RichTextLabel = $CenterContainer/StoreWindow/MarginContainer/VBoxContainer/SellRow/SellButton
-@onready var sell_value_label: RichTextLabel = $CenterContainer/StoreWindow/MarginContainer/VBoxContainer/SellRow/SellValue
-@onready var sell_row: HBoxContainer = $CenterContainer/StoreWindow/MarginContainer/VBoxContainer/SellRow
 @onready var close_button: RichTextLabel = $CenterContainer/StoreWindow/MarginContainer/VBoxContainer/CloseRow/CloseButton
 
 var store: Store = null
@@ -26,8 +23,6 @@ func _ready() -> void:
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 
 	# Connect click handlers for static elements
-	if sell_button:
-		sell_button.gui_input.connect(_on_sell_gui_input)
 	if close_button:
 		close_button.gui_input.connect(_on_close_gui_input)
 
@@ -80,15 +75,6 @@ func _activate_selection() -> void:
 		if item["enabled"] and item["action"]:
 			item["action"].call()
 
-func _on_sell_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# Find sell item index and activate
-		for i in range(_menu_items.size()):
-			if _menu_items[i].get("type") == "sell" and _menu_items[i]["enabled"]:
-				_selected_index = i
-				_activate_selection()
-				break
-
 func _on_close_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_on_close_pressed()
@@ -121,18 +107,6 @@ func _build_menu_items() -> void:
 	for i in range(upgrades.size()):
 		var upgrade = upgrades[i]
 		_create_upgrade_row(upgrade, i)
-
-	# Add sell item (if store supports selling)
-	if store.can_sell_resources():
-		_menu_items.append({
-			"button": sell_button,
-			"cost_label": sell_value_label,
-			"action": _on_sell_pressed,
-			"enabled": true,
-			"label": "SELL ALL RESOURCES",
-			"cost_text": "+0 CR",
-			"type": "sell"
-		})
 
 	# Add close item
 	_menu_items.append({
@@ -236,17 +210,6 @@ func _update_display() -> void:
 					item["enabled"] = false
 					item["cost_text"] = "%d CR" % upgrade.cost
 
-	# Update sell item
-	for item in _menu_items:
-		if item.get("type") == "sell":
-			var sell_value = store.get_sell_value()
-			if sell_value > 0:
-				item["enabled"] = true
-				item["cost_text"] = "+%d CR" % sell_value
-			else:
-				item["enabled"] = false
-				item["cost_text"] = "+0 CR"
-
 	# Ensure selected index is on an enabled item
 	if _selected_index < _menu_items.size() and not _menu_items[_selected_index]["enabled"]:
 		# Find first enabled item
@@ -254,10 +217,6 @@ func _update_display() -> void:
 			if _menu_items[i]["enabled"]:
 				_selected_index = i
 				break
-
-	# Update sell row visibility
-	if sell_row:
-		sell_row.visible = store.can_sell_resources()
 
 	_update_menu_display()
 
@@ -293,13 +252,6 @@ func _on_upgrade_pressed(upgrade: UpgradeItem) -> void:
 	if store:
 		var success = await store.purchase_upgrade(upgrade)
 		if success:
-			_update_display()
-
-func _on_sell_pressed() -> void:
-	if store and store.can_sell_resources():
-		var sell_value = store.get_sell_value()
-		if sell_value > 0:
-			store.sell_all_resources()
 			_update_display()
 
 func _on_close_pressed() -> void:

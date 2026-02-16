@@ -118,26 +118,6 @@ theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 text = "HULL 100/100"
 vertical_alignment = 1
 
-[node name="FuelProgressBar" type="ProgressBar" parent="MarginContainer/VBoxContainer" unique_id=777525933]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_progress_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_progress_fill")
-value = 100.0
-show_percentage = false
-
-[node name="FuelLabel" type="Label" parent="MarginContainer/VBoxContainer/FuelProgressBar" unique_id=171472856]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
-text = "FUEL 100/100"
-vertical_alignment = 1
-
 [node name="CreditsRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=816827276]
 layout_mode = 2
 
@@ -181,25 +161,26 @@ bbcode_enabled = true
 text = "[right]0 CR"
 fit_content = true
 
-[node name="RefuelRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1922672173]
+[node name="SellRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=52189144]
 layout_mode = 2
 
-[node name="RefuelButton" type="RichTextLabel" parent="MarginContainer/VBoxContainer/RefuelRow" unique_id=896675135]
+[node name="SellButton" type="RichTextLabel" parent="MarginContainer/VBoxContainer/SellRow" unique_id=830040522]
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
 theme_override_colors/default_color = Color(1, 0.75, 0, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 bbcode_enabled = true
-text = "  REFUEL"
+text = "  SELL ALL RESOURCES"
 fit_content = true
 
-[node name="RefuelCost" type="RichTextLabel" parent="MarginContainer/VBoxContainer/RefuelRow" unique_id=1884763912]
+[node name="SellValue" type="RichTextLabel" parent="MarginContainer/VBoxContainer/SellRow" unique_id=62992184]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/default_color = Color(0.75, 0.56, 0, 1)
 bbcode_enabled = true
-text = "[right]0 CR"
+text = "[right]+0 CR"
 fit_content = true
 
 [node name="StoreRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=289946314]

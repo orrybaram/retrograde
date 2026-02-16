@@ -38,6 +38,11 @@ var _orbital_motion = null # Composable orbital component (OrbitalMotion)
 var orbital_angle: float:
 	get:
 		return _orbital_motion.orbital_angle if _orbital_motion else 0.0
+	set(value):
+		if _orbital_motion:
+			_orbital_motion.orbital_angle = value
+			_orbital_motion.initial_angle = value
+			_orbital_motion.orbital_start_time = Time.get_ticks_msec() / 1000.0
 
 func _set_show_gravity_rings(v: bool) -> void:
 	show_gravity_rings = v

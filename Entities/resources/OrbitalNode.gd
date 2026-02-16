@@ -103,6 +103,13 @@ func _physics_process(delta: float) -> void:
 	if _is_sleeping:
 		if (frame + _update_offset) % SLEEP_CHECK_INTERVAL != 0:
 			return
+		# Update orbital position before distance check so sleeping nodes
+		# track their orbiting planet instead of using stale positions
+		if _orbital_motion and _orbital_motion.initialized:
+			if _orbital_motion.orbital_body and is_instance_valid(_orbital_motion.orbital_body):
+				_orbital_motion.enable_orbiting = true
+				_orbital_motion.update_orbit()
+				_orbital_motion.enable_orbiting = false
 		var dist_sq = _get_distance_squared_to_ship()
 		if dist_sq < SLEEP_DISTANCE_SQ:
 			_wake_up()

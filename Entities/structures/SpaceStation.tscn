@@ -1,98 +1,108 @@
-[gd_scene load_steps=4 format=3 uid="uid://b8k2j3m4n5p6q"]
+[gd_scene format=3 uid="uid://b8k2j3m4n5p6q"]
 
 [ext_resource type="Script" uid="uid://c6x45wnjj471j" path="res://entities/structures/SpaceStation.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="5"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
-[node name="SpaceStation" type="RigidBody2D"]
+[sub_resource type="CircleShape2D" id="CircleShape2D_ig3ly"]
+radius = 1077.9819
+
+[node name="SpaceStation" type="RigidBody2D" unique_id=1171741131]
 mass = 1000000.0
 gravity_scale = 0.0
 script = ExtResource("1")
 orbital_distance = 1000.0
 orbital_speed = 64.43
 
-[node name="CollisionShape2D" type="CollisionPolygon2D" parent="."]
+[node name="CollisionShape2D" type="CollisionPolygon2D" parent="." unique_id=1813966489]
 position = Vector2(56, 4)
 polygon = PackedVector2Array(182, -403, 182, -201, 145, -201, 145, -112, -6, -112, -6, -61, 55, -61, 55, 70, 65, 70, 65, 120, -6, 120, -6, 191, 1, 191, 1, 209, -113, 209, -113, 191, -106, 191, -106, 120, -175, 120, -175, 70, -165, 70, -165, -61, -106, -61, -106, -112, -255, -112, -255, -201, -294, -201, -294, -403, -456, -403, -456, -503, -420, -503, -420, -525, -387, -525, -387, -540, 270, -540, 270, -525, 310, -525, 310, -503, 342, -503, 342, -403)
 
-[node name="Visuals" type="Node2D" parent="."]
+[node name="Visuals" type="Node2D" parent="." unique_id=1837500441]
 z_index = 1
 material = SubResource("CanvasItemMaterial_1")
 
-[node name="Tower2" type="Polygon2D" parent="Visuals"]
+[node name="Tower2" type="Polygon2D" parent="Visuals" unique_id=630651126]
 color = Color(0.2, 0.2, 0.25, 1)
 polygon = PackedVector2Array(-311, -598, -290, -598, -290, -515, -311, -515)
 
-[node name="ExtraModule3" type="Polygon2D" parent="Visuals"]
+[node name="ExtraModule3" type="Polygon2D" parent="Visuals" unique_id=1865401052]
 color = Color(0.38, 0.38, 0.42, 1)
 polygon = PackedVector2Array(-331, -536, 326, -536, 326, -513, -331, -513)
 
-[node name="Tower4" type="Polygon2D" parent="Visuals"]
+[node name="Tower4" type="Polygon2D" parent="Visuals" unique_id=1097602942]
 color = Color(0.2, 0.2, 0.25, 1)
 polygon = PackedVector2Array(284, -698, 302, -698, 302, -489, 284, -489)
 
-[node name="Tower1" type="Polygon2D" parent="Visuals"]
+[node name="Tower1" type="Polygon2D" parent="Visuals" unique_id=938997562]
 color = Color(0.2, 0.2, 0.25, 1)
 polygon = PackedVector2Array(-50, -406, 50, -406, 50, 211, -50, 211)
 
-[node name="SmallModule3" type="Polygon2D" parent="Visuals"]
+[node name="SmallModule3" type="Polygon2D" parent="Visuals" unique_id=1890118020]
 color = Color(0.4, 0.4, 0.45, 1)
 polygon = PackedVector2Array(-364, -521, 366, -521, 366, -471, -364, -471)
 
-[node name="CentralHub" type="Polygon2D" parent="Visuals"]
+[node name="CentralHub" type="Polygon2D" parent="Visuals" unique_id=421597117]
 color = Color(0.3, 0.3, 0.35, 1)
 polygon = PackedVector2Array(-199, -198, 201, -198, 201, -108, -199, -108)
 
-[node name="CentralCore" type="Polygon2D" parent="Visuals"]
+[node name="CentralCore" type="Polygon2D" parent="Visuals" unique_id=1630805651]
 color = Color(0.25, 0.25, 0.3, 1)
 polygon = PackedVector2Array(-109, -57, 111, -57, 111, 93, -109, 93)
 
-[node name="TopArm" type="Polygon2D" parent="Visuals"]
+[node name="TopArm" type="Polygon2D" parent="Visuals" unique_id=1109548991]
 color = Color(0.25, 0.25, 0.3, 1)
 polygon = PackedVector2Array(-238, -408, 238, -408, 238, -197, -238, -197)
 
-[node name="MainRing" type="Polygon2D" parent="Visuals"]
+[node name="MainRing" type="Polygon2D" parent="Visuals" unique_id=1135850650]
 color = Color(0.28, 0.28, 0.32, 1)
 polygon = PackedVector2Array(-400, -499, 398, -499, 398, -399, -400, -399)
 
-[node name="SmallModule4" type="Polygon2D" parent="Visuals"]
+[node name="SmallModule4" type="Polygon2D" parent="Visuals" unique_id=293416300]
 color = Color(0.4, 0.4, 0.45, 1)
 polygon = PackedVector2Array(-119, 74, 121, 74, 121, 124, -119, 124)
 
-[node name="SmallModule5" type="Polygon2D" parent="Visuals"]
+[node name="SmallModule5" type="Polygon2D" parent="Visuals" unique_id=955784579]
 position = Vector2(-1, 0)
 color = Color(0.4, 0.4, 0.45, 1)
 polygon = PackedVector2Array(-56, 195, 58, 195, 58, 213, -56, 213)
 
-[node name="Detail2" type="Polygon2D" parent="Visuals"]
+[node name="Detail2" type="Polygon2D" parent="Visuals" unique_id=71925457]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(193, -278, 203, -278, 203, -268, 193, -268)
 
-[node name="Detail4" type="Polygon2D" parent="Visuals"]
+[node name="Detail4" type="Polygon2D" parent="Visuals" unique_id=1811953921]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(151, -296, 161, -296, 161, -268, 151, -268)
 
-[node name="Detail5" type="Polygon2D" parent="Visuals"]
+[node name="Detail5" type="Polygon2D" parent="Visuals" unique_id=644877739]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(167, -296, 187, -296, 187, -286, 167, -286)
 
-[node name="Detail6" type="Polygon2D" parent="Visuals"]
+[node name="Detail6" type="Polygon2D" parent="Visuals" unique_id=819241762]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(167, -278, 187, -278, 187, -268, 167, -268)
 
-[node name="Detail7" type="Polygon2D" parent="Visuals"]
+[node name="Detail7" type="Polygon2D" parent="Visuals" unique_id=2147263520]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(-94, 36, -74, 36, -74, 46, -94, 46)
 
-[node name="Detail8" type="Polygon2D" parent="Visuals"]
+[node name="Detail8" type="Polygon2D" parent="Visuals" unique_id=261225713]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(-94, 51, -74, 51, -74, 59, -94, 59)
 
-[node name="SpacePort" parent="." instance=ExtResource("5")]
+[node name="SpacePort" parent="." unique_id=1193258047 instance=ExtResource("5")]
 position = Vector2(118, 10)
 rotation = 1.5707964
 
-[node name="SpacePort2" parent="." instance=ExtResource("5")]
+[node name="SpacePort2" parent="." unique_id=1954255124 instance=ExtResource("5")]
 position = Vector2(-116, 10)
 rotation = 4.712389
+
+[node name="TractorBeamArea" type="Area2D" parent="." unique_id=1581157943]
+collision_layer = 0
+collision_mask = 0
+
+[node name="TractorBeamCollision" type="CollisionShape2D" parent="TractorBeamArea"]
+shape = SubResource("CircleShape2D_ig3ly")
