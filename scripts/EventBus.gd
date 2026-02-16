@@ -17,6 +17,9 @@ signal ship_respawned()
 signal planets_restored()
 ## Emitted when planet orbital angles have been restored from save file.
 
+signal resources_refresh_requested()
+## Emitted when resource nodes should respawn (e.g. docking at a space port or respawning).
+
 signal rescue_beacon_deployed()
 ## Emitted when the player deploys a rescue beacon after running out of fuel.
 

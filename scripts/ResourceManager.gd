@@ -48,7 +48,7 @@ func _check_for_new_nodes() -> void:
 	_node_check_timer.timeout.connect(_connect_to_resource_nodes)
 	_node_check_timer.start()  # Explicitly start the timer
 
-func show_gain_indicator(amount: int, kind: String, position: Vector2) -> void:
+func show_gain_indicator(amount: int, kind: String, position: Vector2, tier_name: String = "") -> void:
 	# Find CanvasLayer to add indicator to
 	var main = get_tree().get_first_node_in_group("main")
 	var canvas_layer: CanvasLayer = null
@@ -74,4 +74,4 @@ func show_gain_indicator(amount: int, kind: String, position: Vector2) -> void:
 
 	# Wait for next frame to ensure _ready() is called and @onready vars are set
 	await get_tree().process_frame
-	indicator.show_gain(amount, kind, position)
+	indicator.show_gain(amount, kind, position, tier_name)

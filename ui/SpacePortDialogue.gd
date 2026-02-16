@@ -1,18 +1,17 @@
 extends Control
 class_name SpacePortDialogue
 
-## Space Port dialogue UI for repairing the ship.
+## Space Port dialogue UI.
 ## Terminal-style interface with arrow key navigation.
 
 @onready var title_label: Label = $BorderPanel/TitleLabel
 @onready var hull_progress: ProgressBar = $MarginContainer/VBoxContainer/HullProgressBar
 @onready var hull_label: Label = $MarginContainer/VBoxContainer/HullProgressBar/HullLabel
 @onready var credits_label: RichTextLabel = $MarginContainer/VBoxContainer/CreditsRow/CreditsLabel
-@onready var repair_button: RichTextLabel = $MarginContainer/VBoxContainer/RepairRow/RepairButton
-@onready var repair_cost_label: RichTextLabel = $MarginContainer/VBoxContainer/RepairRow/RepairCost
 @onready var sell_button: RichTextLabel = $MarginContainer/VBoxContainer/SellRow/SellButton
 @onready var sell_value_label: RichTextLabel = $MarginContainer/VBoxContainer/SellRow/SellValue
 @onready var sell_row: HBoxContainer = $MarginContainer/VBoxContainer/SellRow
+@onready var mechanic_button: RichTextLabel = $MarginContainer/VBoxContainer/MechanicRow/MechanicButton
 @onready var store_button: RichTextLabel = $MarginContainer/VBoxContainer/StoreRow/StoreButton
 @onready var close_button: RichTextLabel = $MarginContainer/VBoxContainer/CloseRow/CloseButton
 
@@ -24,7 +23,7 @@ var zoom_tween: Tween = null
 var _store_ui: StoreUI = null
 
 var _selected_index: int = 0
-var _menu_items: Array[Dictionary] = []  # [{button: RichTextLabel, cost_label: RichTextLabel, action: Callable, enabled: bool, label: String, cost_text: String}]
+var _menu_items: Array[Dictionary] = []
 
 signal dialogue_closed
 
@@ -36,10 +35,10 @@ func _ready() -> void:
 	economy = get_tree().get_first_node_in_group("economy") as Economy
 
 	# Connect click handlers
-	if repair_button:
-		repair_button.gui_input.connect(_on_item_gui_input.bind(0))
 	if sell_button:
-		sell_button.gui_input.connect(_on_item_gui_input.bind(1))
+		sell_button.gui_input.connect(_on_item_gui_input.bind(0))
+	if mechanic_button:
+		mechanic_button.gui_input.connect(_on_item_gui_input.bind(1))
 	if store_button:
 		store_button.gui_input.connect(_on_item_gui_input.bind(2))
 	if close_button:
@@ -127,23 +126,9 @@ func _update_display() -> void:
 	if credits_label:
 		credits_label.text = "[color=#ffbf00]CREDITS[/color] %d" % [gs.credits]
 
-	# Calculate costs and build menu items
-	var repair_cost = int((max_hull - hull) * Economy.REPAIR_COST_PER_POINT)
-	var repair_needed = repair_cost > 0
-	var repair_affordable = gs.credits >= repair_cost
-
 	# Build menu items
 	_menu_items.clear()
-	_menu_items.append({
-		"button": repair_button,
-		"cost_label": repair_cost_label,
-		"action": _on_repair_pressed,
-		"enabled": repair_needed and repair_affordable,
-		"label": "REPAIR HULL",
-		"cost_text": "%d CR" % repair_cost if repair_needed else "FULL",
-		"needed": repair_needed,
-		"affordable": repair_affordable
-	})
+
 	# Sell resources item
 	var store = spaceport.get_node_or_null("Store") as Store if spaceport else null
 	var sell_value = store.get_sell_value() if store and store.can_sell_resources() else 0
@@ -164,11 +149,21 @@ func _update_display() -> void:
 		sell_row.visible = store != null and store.can_sell_resources()
 
 	_menu_items.append({
+		"button": mechanic_button,
+		"cost_label": null,
+		"action": _on_mechanic_pressed,
+		"enabled": true,
+		"label": "MECHANIC",
+		"cost_text": "",
+		"needed": true,
+		"affordable": true
+	})
+	_menu_items.append({
 		"button": store_button,
 		"cost_label": null,
 		"action": _on_store_pressed,
 		"enabled": true,
-		"label": "UPGRADES",
+		"label": "STORE",
 		"cost_text": "",
 		"needed": true,
 		"affordable": true
@@ -228,19 +223,6 @@ func _update_menu_display() -> void:
 			else:
 				cost_label.text = "[right]%s" % cost_text
 
-func _on_repair_pressed() -> void:
-	if not ship or not gs or not economy:
-		return
-
-	var max_hull = ship.max_hull
-	var hull = ship.hull_strength
-	var repair_cost = int((max_hull - hull) * Economy.REPAIR_COST_PER_POINT)
-
-	if repair_cost > 0 and gs.credits >= repair_cost:
-		gs.credits -= repair_cost
-		ship.hull_strength = max_hull
-		_update_display()
-
 func _on_sell_pressed() -> void:
 	if not spaceport:
 		return
@@ -251,17 +233,29 @@ func _on_sell_pressed() -> void:
 			store.sell_all_resources()
 			_update_display()
 
+func _on_mechanic_pressed() -> void:
+	if not spaceport:
+		return
+
+	var mechanic_store = spaceport.get_node_or_null("MechanicStore") as Store
+	if not mechanic_store:
+		push_warning("SpacePort has no MechanicStore component")
+		return
+
+	_open_store_ui(mechanic_store)
+
 func _on_store_pressed() -> void:
 	if not spaceport:
 		return
 
-	# Find the Store component on the spaceport
-	var store = spaceport.get_node_or_null("Store")
+	var store = spaceport.get_node_or_null("Store") as Store
 	if not store:
 		push_warning("SpacePort has no Store component")
 		return
 
-	# Find StoreUI in the scene
+	_open_store_ui(store)
+
+func _open_store_ui(target_store: Store) -> void:
 	if not _store_ui or not is_instance_valid(_store_ui):
 		var current_scene = get_tree().current_scene
 		if current_scene:
@@ -270,15 +264,12 @@ func _on_store_pressed() -> void:
 				_store_ui = canvas_layer.get_node_or_null("StoreUI") as StoreUI
 
 	if _store_ui:
-		# Hide this dialogue and open the store
 		visible = false
-		_store_ui.open_dialogue(store)
-		# Connect to store close to reopen this dialogue
+		_store_ui.open_dialogue(target_store)
 		if not _store_ui.dialogue_closed.is_connected(_on_store_closed):
 			_store_ui.dialogue_closed.connect(_on_store_closed)
 
 func _on_store_closed() -> void:
-	# Reopen this dialogue when store closes
 	visible = true
 	_selected_index = 0
 	_update_display()

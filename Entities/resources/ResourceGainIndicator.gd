@@ -57,7 +57,7 @@ func _world_to_screen(world_pos: Vector2) -> Vector2:
 	return screen_pos
 
 ## Show the gain indicator animation
-func show_gain(amount: int, _resource_kind: String, world_position: Vector2) -> void:
+func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "") -> void:
 	# Ensure nodes are ready (in case called before _ready)
 	if not amount_label:
 		amount_label = get_node_or_null("AmountLabel") as Label
@@ -74,7 +74,10 @@ func show_gain(amount: int, _resource_kind: String, world_position: Vector2) -> 
 		_find_camera()
 	
 	# Set text
-	amount_label.text = "+%d" % amount
+	if tier_name != "":
+		amount_label.text = "+%d %s" % [amount, tier_name]
+	else:
+		amount_label.text = "+%d" % amount
 	
 	# Calculate scale based on amount
 	var target_scale = base_scale + (amount * scale_multiplier)

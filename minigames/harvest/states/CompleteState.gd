@@ -18,14 +18,20 @@ func process(delta: float) -> void:
 			# Transition back to idle after delay
 			mini_game.close_ui()
 	else:
-		# Calculate harvest amount
+		# Calculate harvest amount and roll tier
 		var harvest_amount = mini_game.calculate_harvest_amount()
 		harvest_calculated = true
-		
+
+		var tier: TierData.Tier
 		if harvest_amount > 0:
-			mini_game.harvest_success.emit(harvest_amount)
+			tier = TierData.roll_tier(RNG.rng)
 		else:
-			mini_game.harvest_failed.emit()
+			# Botched — force Slag
+			tier = TierData.Tier.SLAG
+
+		var tier_item_id = TierData.get_item_id(tier)
+		var tier_name = TierData.get_display_name(tier)
+		mini_game.harvest_success.emit(tier_item_id, tier_name)
 
 func handle_input(_action: String) -> void:
 	# No input handling in complete state

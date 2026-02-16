@@ -363,3 +363,4 @@ func reset_game() -> void:
 		Save.save(save_gs, ship)
 
 	EventBus.ship_respawned.emit()
+	EventBus.resources_refresh_requested.emit()

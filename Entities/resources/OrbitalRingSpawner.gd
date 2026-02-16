@@ -39,6 +39,8 @@ func _ready() -> void:
 	# Find scene root (Main) to add spawned resources to
 	_find_scene_root()
 
+	EventBus.resources_refresh_requested.connect(_on_resources_refresh_requested)
+
 	if auto_spawn:
 		# Connect to planets_restored signal for load game support
 		if EventBus.has_signal("planets_restored"):
@@ -239,6 +241,118 @@ func _spawn_single_node(i: int, angle_step: float, absolute_inner_radius: float,
 			scrap.resource_depleted.connect(_on_resource_depleted.bind(scrap))
 
 	# Update visual
+	node._update_visual()
+
+func _on_resources_refresh_requested() -> void:
+	# Clean up invalid references
+	_spawned_nodes = _spawned_nodes.filter(func(n): return is_instance_valid(n))
+
+	var current_count = _spawned_nodes.size()
+	var to_spawn = max_resources - current_count
+	if to_spawn <= 0:
+		return
+
+	var scrap_scenes_to_use: Array[PackedScene] = []
+	if resource_scene:
+		scrap_scenes_to_use = [resource_scene]
+	elif scrap_scenes.size() > 0:
+		scrap_scenes_to_use = scrap_scenes
+	else:
+		return
+
+	if not parent_planet and not parent_station:
+		return
+	if not scene_root:
+		return
+
+	var body_pos: Vector2
+	var body_radius: float
+	var orbital_body: Node2D
+
+	if parent_planet:
+		body_pos = parent_planet.global_position
+		body_radius = parent_planet.radius
+		orbital_body = parent_planet
+	elif parent_station:
+		body_pos = parent_station.global_position
+		body_radius = 1200.0
+		orbital_body = parent_station
+
+	var absolute_inner_radius = body_radius + inner_radius
+	var absolute_outer_radius = body_radius + outer_radius
+
+	var debris_count = int(to_spawn * debris_ratio)
+	var scrap_count = to_spawn - debris_count
+
+	var node_types: Array[bool] = []
+	for j in range(scrap_count):
+		node_types.append(false)
+	for j in range(debris_count):
+		node_types.append(true)
+
+	for j in range(node_types.size() - 1, 0, -1):
+		var k = RNG.rng.randi() % (j + 1)
+		var tmp = node_types[j]
+		node_types[j] = node_types[k]
+		node_types[k] = tmp
+
+	var angle_step = TAU / to_spawn
+	var angle_offset = RNG.rng.randf() * TAU
+	for i in range(to_spawn):
+		var is_debris = node_types[i]
+		var angle = angle_offset + i * angle_step
+		_spawn_single_node_at_angle(angle, absolute_inner_radius, absolute_outer_radius,
+			body_pos, scrap_scenes_to_use, orbital_body, is_debris)
+
+func _spawn_single_node_at_angle(angle: float, absolute_inner_radius: float,
+		absolute_outer_radius: float, body_pos: Vector2,
+		scrap_scenes_to_use: Array[PackedScene], orbital_body: Node2D, is_debris: bool) -> void:
+	var random_value = RNG.rng.randf()
+	var radius_range = absolute_outer_radius - absolute_inner_radius
+	var radius = absolute_inner_radius + radius_range * pow(random_value, 1.0 / density_gradient)
+
+	var node_pos = body_pos + Vector2(cos(angle), sin(angle)) * radius
+
+	var node: OrbitalNode
+	if is_debris:
+		var debris_variants = ["Debris1", "Debris2", "Debris3"]
+		var variant_name = debris_variants[RNG.rng.randi() % debris_variants.size()]
+		node = ResourceNodePool.get_instance(variant_name, scene_root)
+	else:
+		var selected_scene = scrap_scenes_to_use[RNG.rng.randi() % scrap_scenes_to_use.size()]
+		var variant_name = selected_scene.resource_path.get_file().get_basename()
+		node = ResourceNodePool.get_instance(variant_name, scene_root)
+
+	if not node:
+		return
+
+	node.global_position = node_pos
+	_spawned_nodes.append(node)
+
+	node.rotation = RNG.rng.randf() * TAU
+	node._rotation_speed = RNG.rng.randf_range(-0.5, 0.5)
+
+	var random_scale = RNG.rng.randf_range(0.5, 1.0)
+	node.scale = Vector2(random_scale, random_scale)
+
+	if node._orbital_motion:
+		var motion = node._orbital_motion
+		motion.orbital_distance = radius
+		var speed_rad_per_sec = orbital_speed / 100.0
+		var distance_factor = 1000.0 / max(radius, 100.0)
+		var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
+		motion.orbital_speed = (calculated_speed_rad_per_sec / motion.speed_scale) * 100.0
+		motion.initial_angle = angle
+		motion.initialize(orbital_body)
+
+	if node is ScrapNode:
+		var scrap = node as ScrapNode
+		scrap.amount = RNG.rng.randi_range(5, 20)
+		scrap.max_amount = scrap.amount
+		scrap.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
+		if not scrap.resource_depleted.is_connected(_on_resource_depleted):
+			scrap.resource_depleted.connect(_on_resource_depleted.bind(scrap))
+
 	node._update_visual()
 
 func _on_resource_depleted(resource: ScrapNode) -> void:

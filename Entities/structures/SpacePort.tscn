@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3 uid="uid://bk33hils8ufhh"]
+[gd_scene load_steps=8 format=3 uid="uid://bk33hils8ufhh"]
 
 [ext_resource type="Script" uid="uid://xcs2jg80xqg2" path="res://entities/structures/SpacePort.gd" id="1"]
 [ext_resource type="Script" uid="uid://b8ca0re18prf6" path="res://entities/Store/Store.gd" id="2"]
 [ext_resource type="Resource" uid="uid://lltn0cexcj8y" path="res://entities/Store/SpacePortStore.tres" id="3"]
 [ext_resource type="Script" uid="uid://ce8cae75cf31" path="res://scripts/ShipSpawn.gd" id="4"]
+[ext_resource type="Resource" path="res://entities/Store/MechanicStore.tres" id="5"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
 size = Vector2(101, 10)
@@ -60,6 +61,10 @@ shape = SubResource("RectangleShape2D_1")
 [node name="Store" type="Node" parent="."]
 script = ExtResource("2")
 store_data = ExtResource("3")
+
+[node name="MechanicStore" type="Node" parent="."]
+script = ExtResource("2")
+store_data = ExtResource("5")
 
 [node name="ShipSpawn" type="Node" parent="."]
 script = ExtResource("4")

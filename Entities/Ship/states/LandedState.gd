@@ -57,10 +57,11 @@ func enter() -> void:
 	if ship.camera:
 		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
 	
-	# Auto-refuel when docking at a space port
+	# Auto-refuel and refresh resources when docking at a space port
 	if locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
 		ship.fuel = ship.max_fuel
 		ship.fuel_changed.emit()
+		EventBus.resources_refresh_requested.emit()
 
 	# Auto-save on landing (wait a frame to ensure position is set)
 	await ship.get_tree().process_frame

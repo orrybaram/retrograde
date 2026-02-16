@@ -6,7 +6,12 @@ class_name Economy
 
 ## Sell prices for resources (item_id -> credits)
 const PRICES := {
-	"scrap": 5
+	"slag": 1,
+	"scrap": 5,
+	"salvage": 15,
+	"component": 40,
+	"mil_spec": 100,
+	"artifact": 250,
 }
 
 ## Service costs

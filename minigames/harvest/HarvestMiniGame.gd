@@ -6,7 +6,7 @@ class_name HarvestMiniGame
 ## Phase 2: Player sets horizontal scan line position
 ## Harvest amount based on distance from intersection point.
 
-signal harvest_success(amount: int)  # Emitted by CompleteState when harvest succeeds
+signal harvest_success(tier_item_id: String, tier_name: String)  # Emitted by CompleteState when harvest succeeds
 signal harvest_failed()  # Emitted by CompleteState when harvest fails
 signal ui_opened()
 signal ui_closed()

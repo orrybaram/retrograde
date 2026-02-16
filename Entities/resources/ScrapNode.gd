@@ -4,7 +4,7 @@ class_name ScrapNode
 signal harvest_started
 signal harvest_stopped
 signal resource_depleted
-signal resource_harvested(amount: int, kind: String, position: Vector2)
+signal resource_harvested(amount: int, kind: String, position: Vector2, tier_name: String)
 signal can_harvest_changed(can_harvest: bool)
 
 @export var kind: String = "Scrap"
@@ -156,8 +156,7 @@ func start_harvest() -> void:
 				return
 
 	if _ship_in_range and is_instance_valid(_ship_in_range):
-		var item_id = kind.to_lower()
-		if not InventoryManager.can_add_item(item_id, 1, _ship_in_range.max_cargo_weight):
+		if InventoryManager.get_remaining_capacity(_ship_in_range.max_cargo_weight) <= 0:
 			EventBus.action_message_changed.emit("Cargo full!")
 			return
 
@@ -422,30 +421,20 @@ func _stop_mini_game() -> void:
 		_mini_game.queue_free()
 		_mini_game = null
 
-func _on_mini_game_harvest_success(harvested_amount: int) -> void:
-	var item_id = kind.to_lower()
-
+func _on_mini_game_harvest_success(tier_item_id: String, tier_name: String) -> void:
 	var max_cargo = 50.0
 	if _ship_in_range and is_instance_valid(_ship_in_range):
 		max_cargo = _ship_in_range.max_cargo_weight
 
-	if not InventoryManager.can_add_item(item_id, harvested_amount, max_cargo):
-		var remaining_capacity = InventoryManager.get_remaining_capacity(max_cargo)
-		var item_weight = InventoryManager.get_item_weight(item_id)
-		var can_fit = int(remaining_capacity / item_weight) if item_weight > 0 else 0
-
-		if can_fit <= 0:
-			EventBus.action_message_changed.emit("Cargo full!")
-			_stop_mini_game()
-			stop_harvest()
-			return
-
-		harvested_amount = can_fit
+	if not InventoryManager.can_add_item(tier_item_id, 1, max_cargo):
 		EventBus.action_message_changed.emit("Cargo full!")
+		_stop_mini_game()
+		stop_harvest()
+		return
 
-	InventoryManager.add_item(item_id, harvested_amount)
+	InventoryManager.add_item(tier_item_id, 1)
 
-	resource_harvested.emit(harvested_amount, kind, global_position)
+	resource_harvested.emit(1, kind, global_position, tier_name)
 
 	amount = 0
 

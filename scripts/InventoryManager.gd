@@ -16,6 +16,10 @@ func _ready() -> void:
 	add_to_group("inventory_manager")
 	# Register default items
 	register_item("scrap", "res://entities/resources/items/ScrapItem.tscn")
+	# Register all tier items (lightweight — no scene file needed)
+	for tier in TierData.TIERS.keys():
+		var tier_data = TierData.TIERS[tier]
+		register_item_data(tier_data["item_id"], tier_data["weight"])
 
 ## Register an item type with the inventory system.
 ## item_id: Unique identifier for the item (e.g., "scrap")
@@ -29,6 +33,11 @@ func register_item(item_id: String, item_scene_path: String) -> void:
 		if instance:
 			_item_weights[item_id] = instance.weight
 			instance.queue_free()
+
+## Register an item type with just weight data (no scene file required).
+## Useful for items that don't need a visual representation (e.g., tiered resources).
+func register_item_data(item_id: String, weight: float) -> void:
+	_item_weights[item_id] = weight
 
 ## Get the PackedScene for an item by its item_id.
 ## Returns null if the item is not registered.

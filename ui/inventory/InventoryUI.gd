@@ -105,6 +105,9 @@ func _update_upgrades() -> void:
 	upgrades_label.text = upgrades_text
 
 
+func _format_item_name(item_id: String) -> String:
+	return TierData.get_display_name_for_item_id(item_id)
+
 func _update_cargo() -> void:
 	if not cargo_label or not inventory_manager:
 		return
@@ -117,7 +120,7 @@ func _update_cargo() -> void:
 	else:
 		for item_id in all_items.keys():
 			var quantity = all_items[item_id] as int
-			var item_display = item_id.capitalize()
+			var item_display = _format_item_name(item_id)
 			cargo_text += "    %s: %d\n" % [item_display, quantity]
 		# Remove trailing newline
 		cargo_text = cargo_text.trim_suffix("\n")

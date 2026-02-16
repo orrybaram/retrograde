@@ -140,27 +140,6 @@ theme_override_colors/font_color = Color(1, 0.75, 0, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 text = "A C T I O N S"
 
-[node name="RepairRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1683441210]
-layout_mode = 2
-
-[node name="RepairButton" type="RichTextLabel" parent="MarginContainer/VBoxContainer/RepairRow" unique_id=1277235989]
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 1
-theme_override_colors/default_color = Color(1, 0.75, 0, 1)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
-bbcode_enabled = true
-text = "> REPAIR HULL"
-fit_content = true
-
-[node name="RepairCost" type="RichTextLabel" parent="MarginContainer/VBoxContainer/RepairRow" unique_id=1223073297]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/default_color = Color(0.75, 0.56, 0, 1)
-bbcode_enabled = true
-text = "[right]0 CR"
-fit_content = true
-
 [node name="SellRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=52189144]
 layout_mode = 2
 
@@ -183,6 +162,19 @@ bbcode_enabled = true
 text = "[right]+0 CR"
 fit_content = true
 
+[node name="MechanicRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="MechanicButton" type="RichTextLabel" parent="MarginContainer/VBoxContainer/MechanicRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+theme_override_colors/default_color = Color(1, 0.75, 0, 1)
+theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
+bbcode_enabled = true
+text = "  MECHANIC"
+fit_content = true
+
 [node name="StoreRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=289946314]
 layout_mode = 2
 
@@ -193,7 +185,7 @@ mouse_filter = 1
 theme_override_colors/default_color = Color(1, 0.75, 0, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 bbcode_enabled = true
-text = "  UPGRADES"
+text = "  STORE"
 fit_content = true
 
 [node name="Spacer2" type="Control" parent="MarginContainer/VBoxContainer" unique_id=1188758670]

@@ -6,7 +6,7 @@
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ig3ly"]
-radius = 1077.9819
+radius = 1608.5748
 
 [node name="SpaceStation" type="RigidBody2D" unique_id=1171741131]
 mass = 1000000.0
@@ -104,5 +104,5 @@ rotation = 4.712389
 collision_layer = 0
 collision_mask = 0
 
-[node name="TractorBeamCollision" type="CollisionShape2D" parent="TractorBeamArea"]
+[node name="TractorBeamCollision" type="CollisionShape2D" parent="TractorBeamArea" unique_id=1949401749]
 shape = SubResource("CircleShape2D_ig3ly")

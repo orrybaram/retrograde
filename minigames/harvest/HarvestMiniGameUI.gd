@@ -118,7 +118,7 @@ func _clear_resource_squares() -> void:
 			square.queue_free()
 	resource_squares.clear()
 
-func _on_harvest_success(_amount: int) -> void:
+func _on_harvest_success(_tier_item_id: String, _tier_name: String) -> void:
 	# Harvest successful - UI will close automatically
 	pass
 

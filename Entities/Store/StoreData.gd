@@ -13,3 +13,6 @@ class_name StoreData
 @export var can_sell_resources: bool = true
 ## Whether players can sell their resources at this store
 
+@export var can_repair: bool = false
+## Whether this store offers hull repair services
+
