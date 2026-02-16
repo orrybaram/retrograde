@@ -1,0 +1,21 @@
+# Godot generated files
+.godot/
+
+# Scene files (verbose, read only when explicitly needed)
+*.tscn
+
+# Resource files
+*.tres
+*.uid
+
+# Import metadata
+*.import
+
+# Assets (images, audio, etc.)
+assets/
+
+# Exports
+export_presets.cfg
+
+# Design doc (110KB - read on demand, not every conversation)
+DESIGN.md

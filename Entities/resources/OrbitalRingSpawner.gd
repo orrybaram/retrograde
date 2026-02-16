@@ -29,8 +29,6 @@ var parent_planet: Planet = null
 var parent_station: SpaceStation = null
 var scene_root: Node2D = null
 
-# Minimap integration - single target for entire ring
-var _minimap_target: ResourceRingMinimapTarget = null
 
 func _ready() -> void:
 	add_to_group("resource_spawners")
@@ -134,9 +132,6 @@ func spawn_ring() -> void:
 	var absolute_inner_radius = body_radius + inner_radius
 	var absolute_outer_radius = body_radius + outer_radius
 
-	# Register with minimap as a single ring target
-	_register_with_minimap(orbital_body, body_radius)
-
 	# Calculate counts - debris_ratio controls what fraction of total nodes are debris
 	var total_count = max_resources
 	var debris_count = int(total_count * debris_ratio)
@@ -201,7 +196,6 @@ func _spawn_single_node(i: int, angle_step: float, absolute_inner_radius: float,
 		return
 
 	node.global_position = node_pos
-	node.skip_minimap_registration = true  # Spawner handles minimap
 
 	_spawned_nodes.append(node)
 
@@ -249,16 +243,3 @@ func _spawn_single_node(i: int, angle_step: float, absolute_inner_radius: float,
 
 func _on_resource_depleted(resource: ScrapNode) -> void:
 	_spawned_nodes.erase(resource)
-
-func _register_with_minimap(orbital_body: Node2D, body_radius: float) -> void:
-	var minimap = Minimap.get_instance(get_tree())
-	if minimap and not _minimap_target:
-		_minimap_target = ResourceRingMinimapTarget.new(self, orbital_body, body_radius, inner_radius, outer_radius)
-		minimap.register_target(_minimap_target)
-
-func _exit_tree() -> void:
-	if _minimap_target:
-		var minimap = Minimap.get_instance(get_tree())
-		if minimap:
-			minimap.unregister_target(_minimap_target)
-		_minimap_target = null

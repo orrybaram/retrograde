@@ -9,9 +9,20 @@ func _init(r: ScrapNode) -> void:
 	resource = r
 
 func get_minimap_position() -> Vector2:
-	if resource and is_instance_valid(resource):
-		return resource.global_position
-	return Vector2.ZERO
+	if not resource or not is_instance_valid(resource):
+		return Vector2.ZERO
+
+	# Compute position from orbital parameters to avoid stale global_position
+	# (distant/sleeping nodes don't update their position every frame)
+	var orbital = resource._orbital_motion
+	if orbital and orbital.initialized and orbital.orbital_body and is_instance_valid(orbital.orbital_body):
+		var speed_rad_per_sec = (orbital.orbital_speed / 100.0) * orbital.speed_scale
+		var elapsed = Time.get_ticks_msec() / 1000.0 - orbital.orbital_start_time
+		var angle = fmod(orbital.initial_angle + speed_rad_per_sec * elapsed, TAU)
+		var offset = Vector2(cos(angle), sin(angle)) * orbital.orbital_distance
+		return orbital.orbital_body.global_position + offset
+
+	return resource.global_position
 
 func get_minimap_color() -> Color:
 	# Use a distinct color for resources (green/yellow)
@@ -24,8 +35,7 @@ func get_minimap_icon() -> String:
 	return "dot"  # Small dot for resources
 
 func get_minimap_size() -> float:
-	# Small size for resources
-	return 1.0
+	return 2.0
 
 func get_minimap_priority() -> int:
 	# Resources have low priority (drawn below planets/stations)
