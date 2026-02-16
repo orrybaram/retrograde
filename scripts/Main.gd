@@ -170,15 +170,6 @@ func start_game() -> void:
 	if loading_screen:
 		loading_screen.show_loading()
 
-	# Reset spawner tracking
-	EventBus.reset_spawner_tracking()
-
-	# Reset all resource spawners to initial state for new game
-	var spawners = get_tree().get_nodes_in_group("resource_spawners")
-	for spawner in spawners:
-		if spawner.has_method("set_remaining_resources"):
-			spawner.set_remaining_resources(spawner.max_resources)
-
 	# Unpause so spawner can work
 	get_tree().paused = false
 
@@ -196,9 +187,6 @@ func start_game() -> void:
 	# Notify that planets are in position (for new game, they're already at initial angles)
 	# This triggers spawners to start
 	EventBus.planets_restored.emit()
-
-	# Wait for all spawners to finish (with timeout)
-	await _wait_for_spawners(5.0)
 
 	# Hide loading screen
 	if loading_screen:
@@ -225,15 +213,8 @@ func load_game() -> void:
 	if loading_screen:
 		loading_screen.show_loading()
 
-	# Reset spawner tracking
-	EventBus.reset_spawner_tracking()
-
 	# Unpause so spawner can work
 	get_tree().paused = false
-
-	# Restore spawner counts BEFORE process_frame triggers spawning
-	# Spawners wait one frame before spawning, so we set their counts now
-	Save.restore_spawner_resources(get_tree())
 
 	# Wait a frame for scene to initialize
 	await get_tree().process_frame
@@ -260,9 +241,6 @@ func load_game() -> void:
 			await ship_spawner.spawn_at_dock(dock)
 		else:
 			push_warning("No dock found for load game")
-
-	# Wait for all spawners to finish (with timeout)
-	await _wait_for_spawners(5.0)
 
 	# Hide loading screen
 	if loading_screen:
@@ -376,24 +354,3 @@ func reset_game() -> void:
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 	EventBus.ship_respawned.emit()
-
-## Wait for all spawners to finish, with a maximum timeout
-func _wait_for_spawners(timeout_seconds: float) -> void:
-	if EventBus.are_all_spawners_finished():
-		return
-
-	var timeout_timer = get_tree().create_timer(timeout_seconds)
-	var finished = false
-
-	# Connect to the signal
-	var on_finished = func():
-		finished = true
-	EventBus.all_spawners_finished.connect(on_finished, CONNECT_ONE_SHOT)
-
-	# Wait for either spawners to finish or timeout
-	while not finished and timeout_timer.time_left > 0:
-		await get_tree().process_frame
-
-	# Disconnect if we timed out
-	if not finished and EventBus.all_spawners_finished.is_connected(on_finished):
-		EventBus.all_spawners_finished.disconnect(on_finished)

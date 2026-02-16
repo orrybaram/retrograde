@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://6y5t431r3bld"]
 
-[ext_resource type="Script" uid="uid://b2u7hpjtpv2rj" path="res://entities/resources/ResourceNode.gd" id="1"]
+[ext_resource type="Script" path="res://entities/resources/ScrapNode.gd" id="1"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 49.00348
@@ -18,7 +18,7 @@ initial_velocity_max = 5.0
 gravity = Vector3(0, 0, 0)
 scale_min = 5.0
 scale_max = 5.0
-color = Color(0.5836916, 0.85247123, 0.99999994, 1)
+color = Color(0.78, 0.82, 0.88, 1)
 color_ramp = SubResource("GradientTexture1D_4axr5")
 
 [node name="Scrap" type="Area2D"]
@@ -38,7 +38,7 @@ polygon = PackedVector2Array(9, 12, -15, -28, 9, -68, 57, -68, 81, -28, 57, 12)
 [node name="Polygon2D" type="Polygon2D" parent="."]
 position = Vector2(-9, 7)
 scale = Vector2(0.26509875, 0.26884642)
-color = Color(0.5836916, 0.85247123, 0.99999994, 1)
+color = Color(0.75, 0.78, 0.82, 1)
 polygon = PackedVector2Array(9, 12, -15, -28, 9, -68, 57, -68, 81, -28, 57, 12)
 uv = PackedVector2Array(2, 4, 3, -4, 26, -28, 50, -28, 50, 4, 50, 20, 2, 20)
 

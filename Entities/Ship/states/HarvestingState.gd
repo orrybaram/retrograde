@@ -3,7 +3,7 @@ class_name HarvestingState
 
 ## Handles velocity locking behavior when the ship is harvesting a resource node.
 
-var locked_resource_node: ResourceNode = null
+var locked_resource_node: ScrapNode = null
 var velocity_tween_start: Vector2 = Vector2.ZERO
 var velocity_tween_time: float = 0.0
 var velocity_tween_duration: float = 2.0
@@ -21,7 +21,7 @@ func enter() -> void:
 	# Use the same logic as IndicatorManager to find which resource to lock to
 	# First, try to get the resource that IndicatorManager is currently highlighting
 	var indicator_manager = ship.get_tree().get_first_node_in_group("indicator_manager") as IndicatorManager
-	var target_resource: ResourceNode = null
+	var target_resource: ScrapNode = null
 	
 	if indicator_manager and indicator_manager.current_target:
 		var current_target = indicator_manager.current_target

@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://cbvhped0jc1ct"]
 
-[ext_resource type="Script" uid="uid://b2u7hpjtpv2rj" path="res://entities/resources/ResourceNode.gd" id="1"]
+[ext_resource type="Script" path="res://entities/resources/ScrapNode.gd" id="1"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 64.00781
@@ -21,5 +21,5 @@ polygon = PackedVector2Array(-30, 10, -25, -5, -10, -15, 5, -20, 20, -10, 35, 5,
 [node name="Polygon2D" type="Polygon2D" parent="."]
 position = Vector2(-3.5, -3)
 scale = Vector2(0.5, 0.5)
-color = Color(0.6221053, 0.62210536, 0.62210536, 1)
+color = Color(0.72, 0.75, 0.80, 1)
 polygon = PackedVector2Array(-30, 10, -25, -5, -10, -15, 5, -20, 20, -10, 35, 5, 40, 25, 25, 35, 5, 30, -15, 25)

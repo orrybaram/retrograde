@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/resources/DebrisNode.gd" id="1"]
+
+[node name="Debris1" type="Area2D"]
+script = ExtResource("1")
+
+[node name="CollisionArea" type="Area2D" parent="."]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="CollisionArea"]
+scale = Vector2(1.0, 1.0)
+polygon = PackedVector2Array(-45, -20, -30, -55, 10, -60, 50, -45, 65, -10, 55, 30, 20, 50, -25, 40, -50, 15)
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+scale = Vector2(1.0, 1.0)
+color = Color(0.2, 0.2, 0.22, 1)
+polygon = PackedVector2Array(-45, -20, -30, -55, 10, -60, 50, -45, 65, -10, 55, 30, 20, 50, -25, 40, -50, 15)

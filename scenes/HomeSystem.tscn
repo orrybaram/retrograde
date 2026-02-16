@@ -1,12 +1,12 @@
-[gd_scene load_steps=4 format=3 uid="uid://cwp82l3asrkgc"]
+[gd_scene format=3 uid="uid://cwp82l3asrkgc"]
 
 [ext_resource type="PackedScene" uid="uid://dyj33wc7mamja" path="res://entities/Planet/Planet.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://b8k2j3m4n5p6q" path="res://entities/structures/SpaceStation.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://entities/resources/OrbitalRingSpawner.tscn" id="2_vpsiu"]
 
-[node name="HomeSystem" type="Node2D"]
+[node name="HomeSystem" type="Node2D" unique_id=1363253957]
 
-[node name="Sun" parent="." instance=ExtResource("1")]
+[node name="Sun" parent="." unique_id=2093463924 instance=ExtResource("1")]
 planet_name = "Sun"
 radius = 20000.0
 gravitational_constant = 8.0
@@ -19,7 +19,7 @@ orbital_speed = 0.0
 enable_orbiting = false
 show_orbit_path = false
 
-[node name="Mercury" parent="Sun" instance=ExtResource("1")]
+[node name="Mercury" parent="Sun" unique_id=1437977707 instance=ExtResource("1")]
 position = Vector2(35501, 0)
 radius = 1080.0
 color = Color(0.6, 0.5, 0.45, 1)
@@ -28,7 +28,7 @@ planet_type = 7
 orbital_distance = 50000.0
 eccentricity = 0.05
 
-[node name="Venus" parent="Sun" instance=ExtResource("1")]
+[node name="Venus" parent="Sun" unique_id=496336881 instance=ExtResource("1")]
 position = Vector2(42733, 0)
 radius = 1920.0
 color = Color(0.85, 0.7, 0.5, 1)
@@ -39,7 +39,7 @@ orbital_speed = 4.08
 initial_angle = 2.1
 eccentricity = 0.02
 
-[node name="Earth" parent="Sun" instance=ExtResource("1")]
+[node name="Earth" parent="Sun" unique_id=1142076191 instance=ExtResource("1")]
 position = Vector2(52916, 0)
 radius = 2100.0
 color = Color(0.2, 0.5, 0.8, 1)
@@ -51,7 +51,7 @@ orbital_speed = 3.335
 initial_angle = 4.2
 eccentricity = 0.02
 
-[node name="Luna" parent="Sun/Earth" instance=ExtResource("1")]
+[node name="Luna" parent="Sun/Earth" unique_id=797776579 instance=ExtResource("1")]
 position = Vector2(4132, 0)
 radius = 567.0
 color = Color(0.6, 0.6, 0.6, 1)
@@ -62,7 +62,7 @@ orbital_speed = 50.0
 eccentricity = 0.05
 show_gravity_rings = false
 
-[node name="Mars" parent="Sun" instance=ExtResource("1")]
+[node name="Mars" parent="Sun" unique_id=511975100 instance=ExtResource("1")]
 position = Vector2(61844, 0)
 radius = 1320.0
 color = Color(0.75, 0.35, 0.2, 1)
@@ -73,7 +73,7 @@ orbital_speed = 2.72
 initial_angle = 1.0
 eccentricity = 0.05
 
-[node name="Jupiter" parent="Sun" instance=ExtResource("1")]
+[node name="Jupiter" parent="Sun" unique_id=1442963267 instance=ExtResource("1")]
 position = Vector2(78594, 0)
 planet_name = "Jupiter"
 radius = 7200.0
@@ -86,7 +86,7 @@ orbital_speed = 2.22
 initial_angle = 5.5
 eccentricity = 0.04
 
-[node name="Saturn" parent="Sun" instance=ExtResource("1")]
+[node name="Saturn" parent="Sun" unique_id=459937283 instance=ExtResource("1")]
 position = Vector2(103945, 0)
 planet_name = "Saturn"
 radius = 6000.0
@@ -99,7 +99,7 @@ orbital_speed = 1.0
 initial_angle = 3.8
 eccentricity = 0.03
 
-[node name="Moon" parent="Sun/Saturn" instance=ExtResource("1")]
+[node name="Moon" parent="Sun/Saturn" unique_id=769120327 instance=ExtResource("1")]
 position = Vector2(10047, 0)
 planet_name = "Moon 1"
 radius = 1600.0
@@ -112,20 +112,21 @@ orbital_speed = 20.0
 initial_angle = 180.0
 eccentricity = 0.05
 
-[node name="OrbitalRingSpawner" parent="Sun/Saturn/Moon" instance=ExtResource("2_vpsiu")]
-max_resources = 600
+[node name="OrbitalRingSpawner" parent="Sun/Saturn/Moon" unique_id=1314295804 instance=ExtResource("2_vpsiu")]
+max_resources = 200
+debris_ratio = 0.93
 inner_radius = 800.0
 outer_radius = 2000.0
 density_gradient = 1.814
 orbital_speed = 10.0
 
-[node name="SpaceStation" parent="Sun/Saturn/Moon" instance=ExtResource("2")]
+[node name="SpaceStation" parent="Sun/Saturn/Moon" unique_id=1245345729 instance=ExtResource("2")]
 position = Vector2(2263, 74)
 orbital_distance = 6000.0
 orbital_speed = 20.0
 initial_angle = 180.0
 
-[node name="Neptune" parent="Sun" instance=ExtResource("1")]
+[node name="Neptune" parent="Sun" unique_id=926371594 instance=ExtResource("1")]
 position = Vector2(134672, 0)
 radius = 3900.0
 color = Color(0.3, 0.5, 0.85, 1)

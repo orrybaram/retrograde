@@ -1,11 +1,11 @@
 extends MinimapTarget
 class_name ResourceMinimapTarget
 
-## MinimapTarget implementation for ResourceNode entities.
+## MinimapTarget implementation for ScrapNode entities.
 
-var resource: ResourceNode
+var resource: ScrapNode
 
-func _init(r: ResourceNode) -> void:
+func _init(r: ScrapNode) -> void:
 	resource = r
 
 func get_minimap_position() -> Vector2:
@@ -16,7 +16,7 @@ func get_minimap_position() -> Vector2:
 func get_minimap_color() -> Color:
 	# Use a distinct color for resources (green/yellow)
 	if resource and is_instance_valid(resource):
-		# Use the resource's color (ResourceNode has a color property)
+		# Use the resource's color (ScrapNode has a color property)
 		return resource.color
 	return Color(0.4, 0.9, 0.4)  # Fallback light green
 
@@ -35,7 +35,6 @@ func is_minimap_visible() -> bool:
 	# Only show if resource exists and is not depleted
 	if not resource or not is_instance_valid(resource):
 		return false
-	# Check if resource is depleted (ResourceNode has _is_depleted property)
 	if resource._is_depleted:
 		return false
 	return true

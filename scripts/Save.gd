@@ -45,17 +45,6 @@ static func save(gs: GameState, ship: Ship) -> void:
 					if planet_key != "":
 						cfg.set_value("planets", planet_key, planet.orbital_angle)
 
-	# Save spawner remaining resources
-	if ship:
-		var tree = ship.get_tree()
-		if tree:
-			var spawners = tree.get_nodes_in_group("resource_spawners")
-			for spawner in spawners:
-				if spawner.has_method("get_spawner_key"):
-					var spawner_key = spawner.get_spawner_key()
-					if spawner_key != "":
-						cfg.set_value("spawners", spawner_key, spawner.remaining_resources)
-
 	cfg.save("user://save.cfg")
 
 ## Helper function to get a unique key for a planet
@@ -295,45 +284,3 @@ static func restore_planet_angles(tree: SceneTree) -> void:
 			var planet_key = _get_planet_key(planet)
 			if planet_key != "" and planet_angles.has(planet_key):
 				planet.orbital_angle = planet_angles[planet_key]
-
-## Load spawner remaining resources into a dictionary
-## Returns a dictionary mapping spawner keys to remaining resource counts
-static func load_spawner_resources() -> Dictionary:
-	var spawner_resources: Dictionary = {}
-	var cfg := ConfigFile.new()
-	if cfg.load("user://save.cfg") != OK:
-		return spawner_resources
-
-	if cfg.has_section("spawners"):
-		var spawners_section = cfg.get_section_keys("spawners")
-		if spawners_section:
-			for spawner_key in spawners_section:
-				var count = int(cfg.get_value("spawners", spawner_key, 0))
-				spawner_resources[spawner_key] = count
-
-	return spawner_resources
-
-## Restore spawner remaining resources from saved data
-## Should be called BEFORE spawners auto-spawn (they check remaining_resources)
-static func restore_spawner_resources(tree: SceneTree) -> void:
-	var spawner_resources = load_spawner_resources()
-	print("[Save] restore_spawner_resources - loaded from save: ", spawner_resources)
-
-	if spawner_resources.is_empty():
-		print("[Save] No spawner resources in save file")
-		return
-
-	var spawners = tree.get_nodes_in_group("resource_spawners")
-	print("[Save] Found ", spawners.size(), " spawners in scene")
-
-	for spawner in spawners:
-		if spawner.has_method("get_spawner_key"):
-			var spawner_key = spawner.get_spawner_key()
-			print("[Save] Checking spawner: ", spawner_key)
-
-			if spawner_key != "" and spawner_resources.has(spawner_key):
-				var count = spawner_resources[spawner_key]
-				print("[Save] Setting remaining_resources to ", count, " for ", spawner_key)
-				spawner.set_remaining_resources(count)
-			else:
-				print("[Save] No saved data for spawner: ", spawner_key)

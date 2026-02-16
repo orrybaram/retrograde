@@ -46,7 +46,7 @@ func is_minimap_visible() -> bool:
 		return false
 	if not _orbital_body or not is_instance_valid(_orbital_body):
 		return false
-	return spawner.remaining_resources > 0
+	return not spawner._spawned_nodes.is_empty()
 
 ## Update cluster data from actual resource positions
 ## Stores angular data (angle + radius) so positions can be recalculated relative to moving orbital body
@@ -56,7 +56,7 @@ func update_clusters() -> void:
 	if not spawner or not is_instance_valid(spawner):
 		return
 
-	var resources: Array = spawner._spawned_resources
+	var resources: Array = spawner._spawned_nodes
 	if resources.is_empty():
 		return
 
@@ -71,7 +71,7 @@ func update_clusters() -> void:
 	for resource in resources:
 		if not resource or not is_instance_valid(resource):
 			continue
-		if resource._is_depleted:
+		if resource is ScrapNode and (resource as ScrapNode)._is_depleted:
 			continue
 
 		# Use orbital motion's time-based position instead of global_position

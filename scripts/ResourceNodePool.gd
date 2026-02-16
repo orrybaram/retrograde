@@ -1,7 +1,7 @@
 extends Node
 
-## Object pool manager for ResourceNode variants.
-## Maintains separate pools for each scene variant (Scrap, Scrap1-5).
+## Object pool manager for OrbitalNode variants (ScrapNode and DebrisNode).
+## Maintains separate pools for each scene variant.
 ## Add to Project Settings > Autoload as "ResourceNodePool"
 
 # Scene paths for all resource variants
@@ -12,6 +12,9 @@ const RESOURCE_SCENES: Dictionary = {
 	"Scrap3": preload("res://entities/resources/Scrap3.tscn"),
 	"Scrap4": preload("res://entities/resources/Scrap4.tscn"),
 	"Scrap5": preload("res://entities/resources/Scrap5.tscn"),
+	"Debris1": preload("res://entities/resources/Debris1.tscn"),
+	"Debris2": preload("res://entities/resources/Debris2.tscn"),
+	"Debris3": preload("res://entities/resources/Debris3.tscn"),
 }
 
 @export var initial_pool_size: int = 0  # Per variant - start empty, grow on demand for faster startup
@@ -24,8 +27,8 @@ func _ready() -> void:
 	# Initialize pools for all variants
 	for variant_name in RESOURCE_SCENES.keys():
 		_pools[variant_name] = {
-			"available": [] as Array[ResourceNode],
-			"in_use": [] as Array[ResourceNode],
+			"available": [] as Array[OrbitalNode],
+			"in_use": [] as Array[OrbitalNode],
 			"scene": RESOURCE_SCENES[variant_name]
 		}
 		_initialize_pool(variant_name)
@@ -34,11 +37,11 @@ func _initialize_pool(variant_name: String) -> void:
 	for i in initial_pool_size:
 		_create_instance(variant_name)
 
-func _create_instance(variant_name: String) -> ResourceNode:
+func _create_instance(variant_name: String) -> OrbitalNode:
 	var pool_data = _pools[variant_name]
 	var scene: PackedScene = pool_data["scene"]
 
-	var instance := scene.instantiate() as ResourceNode
+	var instance := scene.instantiate() as OrbitalNode
 	instance.process_mode = Node.PROCESS_MODE_DISABLED
 	instance.visible = false
 
@@ -55,15 +58,15 @@ func _create_instance(variant_name: String) -> ResourceNode:
 	return instance
 
 ## Get an instance from the pool for the specified variant
-## @param variant_name: "Scrap", "Scrap1", "Scrap2", etc.
+## @param variant_name: "Scrap", "Scrap1", "Scrap2", ..., "Debris1", "Debris2", "Debris3"
 ## @param parent: The node to reparent the instance to (typically scene_root)
-func get_instance(variant_name: String, parent: Node) -> ResourceNode:
+func get_instance(variant_name: String, parent: Node) -> OrbitalNode:
 	if not _pools.has(variant_name):
 		push_error("ResourceNodePool: Unknown resource variant: %s" % variant_name)
 		return null
 
 	var pool_data = _pools[variant_name]
-	var instance: ResourceNode
+	var instance: OrbitalNode
 
 	if pool_data["available"].is_empty():
 		if can_grow:
@@ -90,12 +93,18 @@ func get_instance(variant_name: String, parent: Node) -> ResourceNode:
 	return instance
 
 ## Get a random instance from scrap variants (Scrap1-5)
-func get_random_scrap_instance(parent: Node) -> ResourceNode:
+func get_random_scrap_instance(parent: Node) -> OrbitalNode:
 	var variants = ["Scrap1", "Scrap2", "Scrap3", "Scrap4", "Scrap5"]
 	var selected = variants[RNG.rng.randi() % variants.size()]
 	return get_instance(selected, parent)
 
-func _return_to_pool(instance: ResourceNode, variant_name: String) -> void:
+## Get a random instance from debris variants (Debris1-3)
+func get_random_debris_instance(parent: Node) -> OrbitalNode:
+	var variants = ["Debris1", "Debris2", "Debris3"]
+	var selected = variants[RNG.rng.randi() % variants.size()]
+	return get_instance(selected, parent)
+
+func _return_to_pool(instance: OrbitalNode, variant_name: String) -> void:
 	if not _pools.has(variant_name):
 		return
 
@@ -117,6 +126,14 @@ func _return_to_pool(instance: ResourceNode, variant_name: String) -> void:
 	instance.visible = false
 
 	pool_data["available"].append(instance)
+
+## Return a specific instance to the pool
+func return_instance(instance: OrbitalNode) -> void:
+	if not instance:
+		return
+	var variant_name = instance.get_meta("pool_variant", "") as String
+	if variant_name != "" and _pools.has(variant_name):
+		instance.returned_to_pool.emit()
 
 ## Return all active instances to the pool (useful for scene reset)
 func return_all() -> void:
