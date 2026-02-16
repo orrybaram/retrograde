@@ -144,6 +144,11 @@ func _on_fuel_depleted() -> void:
 		_show_game_over_delayed("Out of Fuel")
 
 func _on_quit_to_menu() -> void:
+	# Save game before returning to menu
+	var gs = get_tree().get_first_node_in_group("game_state") as GameState
+	if gs and ship:
+		Save.save(gs, ship)
+
 	current_game_state = MainGameState.MENU
 	if start_menu:
 		start_menu.show_menu()

@@ -94,6 +94,11 @@ func is_indicator_visible() -> bool:
 	if not resource_node or not is_instance_valid(resource_node):
 		return false
 
+	# Never show indicators outside of active gameplay
+	var main = resource_node.get_tree().get_first_node_in_group("main")
+	if main and main.current_game_state != main.MainGameState.PLAYING:
+		return false
+
 	# Only show indicator when ship is in range and resource is not depleted
 	return resource_node._ship_in_range != null and not resource_node._is_depleted and resource_node.amount > 0
 
