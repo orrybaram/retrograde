@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "hull_1"
 display_name = "Hull Plating I"
-description = "Reinforced hull plating. Adds 5 points to maximum hull strength."
+description = "Scavenged ablative panels bolted over the thin spots. Better than nothing."
 upgrade_path = "hull"
 cost = 30
 effect_target = "max_hull"

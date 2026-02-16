@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "cargo_3"
 display_name = "Cargo Hold III"
-description = "Maximum capacity cargo hold. Adds 50 units to maximum cargo capacity."
+description = "Military surplus freight module. They didn't ask where you got it. You didn't tell."
 upgrade_path = "cargo"
 tier = 3
 cost = 200

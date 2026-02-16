@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "cargo_1"
 display_name = "Cargo Hold I"
-description = "Expanded cargo hold. Adds 25 units to maximum cargo capacity."
+description = "Welded-on bulkhead compartments. Smells like rust and old coolant, but it holds."
 upgrade_path = "cargo"
 cost = 50
 effect_target = "max_cargo_weight"

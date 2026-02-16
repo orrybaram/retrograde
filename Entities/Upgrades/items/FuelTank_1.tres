@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "fuel_tank_1"
 display_name = "Fuel Tank I"
-description = "Expanded fuel storage. Adds 25 points to maximum fuel capacity."
+description = "Auxiliary tank strapped to the undercarriage. Leaks a little when you push the throttle."
 upgrade_path = "fuel_tank"
 cost = 40
 effect_target = "max_fuel"

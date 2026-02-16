@@ -143,6 +143,16 @@ theme_override_constants/separation = 4
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
+[node name="InfoPanel" type="RichTextLabel" parent="CenterContainer/StoreWindow/MarginContainer/VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 30)
+theme_override_colors/default_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/normal_font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
+bbcode_enabled = true
+fit_content = true
+text = ""
+
 [node name="CloseRow" type="HBoxContainer" parent="CenterContainer/StoreWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
 

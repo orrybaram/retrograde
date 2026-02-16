@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "fuel_tank_2"
 display_name = "Fuel Tank II"
-description = "Enhanced fuel storage. Adds 25 points to maximum fuel capacity."
+description = "Dual-bladder pressurized tank. Rated for deep orbit runs and long hauls."
 upgrade_path = "fuel_tank"
 tier = 2
 cost = 80

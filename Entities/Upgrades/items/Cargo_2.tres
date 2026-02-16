@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "cargo_2"
 display_name = "Cargo Hold II"
-description = "Reinforced cargo hold. Adds 25 units to maximum cargo capacity."
+description = "Pressure-sealed mag-lock bays. Keeps your haul from floating off during hard burns."
 upgrade_path = "cargo"
 tier = 2
 cost = 100

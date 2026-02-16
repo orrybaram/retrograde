@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "fuel_tank_3"
 display_name = "Fuel Tank III"
-description = "Maximum fuel storage. Adds 50 points to maximum fuel capacity."
+description = "Fleet-class reserve system. You could fly to the outer rings and back without blinking."
 upgrade_path = "fuel_tank"
 tier = 3
 cost = 160

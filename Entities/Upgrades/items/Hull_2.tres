@@ -6,7 +6,7 @@
 script = ExtResource("1")
 upgrade_id = "hull_2"
 display_name = "Hull Plating II"
-description = "Advanced hull plating. Adds 5 points to maximum hull strength."
+description = "Layered composite armor from a decommissioned patrol craft. Still has the scorch marks."
 upgrade_path = "hull"
 tier = 2
 cost = 60
