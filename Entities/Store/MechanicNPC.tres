@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="NPCData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/Store/NPCData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+npc_name = "Grix the Mechanic"
+ascii_art = "    ___
+   /o o\\
+  | === |
+  |  _  |
+ /|_| |_|\\
+/ |_____| \\
+  |  |  |
+  |__|__|"
+greeting = "* Ah, another ship limping in.
+* Don't worry, I've seen worse.
+* What do you need?"
+talk_topics = PackedStringArray("How's business?", "Any tips for a traveller?", "What's the weirdest ship you've fixed?")

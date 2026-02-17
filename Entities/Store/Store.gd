@@ -150,6 +150,33 @@ func get_sell_value() -> int:
 	return total_value
 
 
+## Sell a specific resource from the player's inventory.
+## Returns the credits earned.
+func sell_resource(item_id: String, amount: int = 1) -> int:
+	if not can_sell_resources():
+		return 0
+
+	if not _inventory_manager:
+		_cache_references()
+	if not _inventory_manager or not _game_state:
+		return 0
+
+	var quantity = _inventory_manager.get_quantity(item_id)
+	if quantity <= 0 or amount <= 0:
+		return 0
+
+	var sell_amount = min(amount, quantity) as int
+	var price = Economy.get_resource_price(item_id)
+	var total = sell_amount * price
+
+	if _inventory_manager.remove_item(item_id, sell_amount):
+		_game_state.credits += total
+		resources_sold.emit(total)
+		return total
+
+	return 0
+
+
 ## Sell all resources in the player's inventory.
 ## Returns the total credits earned.
 func sell_all_resources() -> int:

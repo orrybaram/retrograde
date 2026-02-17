@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="NPCData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/Store/NPCData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+npc_name = "Vex the Shopkeeper"
+ascii_art = "   .---.
+  / o o \\
+  |  ^  |
+  | '-' |
+ /|     |\\
+/ |=====| \\
+  | $$$ |
+  |_____|"
+greeting = "* Welcome, traveller!
+* Take a look around.
+* Everything's priced to move."
+talk_topics = PackedStringArray("What's new in stock?", "Heard any rumours?", "Where do you source your goods?")

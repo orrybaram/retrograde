@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UpgradeItem" load_steps=2 format=3 uid="uid://cargo3upgrade"]
+[gd_resource type="Resource" script_class="UpgradeItem" format=3 uid="uid://cargo3upgrade"]
 
 [ext_resource type="Script" uid="uid://dcolbtjprkcn1" path="res://entities/Upgrades/UpgradeItem.gd" id="1"]
 

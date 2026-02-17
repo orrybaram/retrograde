@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="StoreData" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="StoreData" load_steps=10 format=3]
 
 [ext_resource type="Script" uid="uid://by2u1e45ryfos" path="res://entities/Store/StoreData.gd" id="1"]
 [ext_resource type="Script" uid="uid://dcolbtjprkcn1" path="res://entities/Upgrades/UpgradeItem.gd" id="2_47uo8"]
@@ -8,6 +8,7 @@
 [ext_resource type="Resource" uid="uid://fueltank1upgrade" path="res://entities/Upgrades/items/FuelTank_1.tres" id="6"]
 [ext_resource type="Resource" uid="uid://fueltank2upgrade" path="res://entities/Upgrades/items/FuelTank_2.tres" id="7"]
 [ext_resource type="Resource" uid="uid://fueltank3upgrade" path="res://entities/Upgrades/items/FuelTank_3.tres" id="8"]
+[ext_resource type="Resource" path="res://entities/Store/MechanicNPC.tres" id="9"]
 
 [resource]
 script = ExtResource("1")
@@ -15,3 +16,4 @@ store_name = "Mechanic"
 upgrades = Array[ExtResource("2_47uo8")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
 can_sell_resources = false
 can_repair = true
+npc_data = ExtResource("9")

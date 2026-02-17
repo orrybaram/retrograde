@@ -16,3 +16,5 @@ class_name StoreData
 @export var can_repair: bool = false
 ## Whether this store offers hull repair services
 
+@export var npc_data: NPCData = null
+## NPC character data for this store
