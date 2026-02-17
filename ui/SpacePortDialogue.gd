@@ -152,6 +152,7 @@ func open_dialogue(target_spaceport: SpacePort) -> void:
 	_selected_index = 0
 	_update_hub_display()
 	visible = true
+	EventBus.action_message_changed.emit("")
 
 func close_dialogue() -> void:
 	if _store_ui and is_instance_valid(_store_ui) and _store_ui.visible:

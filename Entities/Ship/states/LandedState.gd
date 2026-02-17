@@ -82,11 +82,15 @@ func enter() -> void:
 	# Automatically open SpacePort dialogue if docked to a SpacePort (but not on spawn)
 	if not instant_dock and locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
 		_open_spaceport_dialogue()
+	elif instant_dock and locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
+		_show_enter_spaceport_message()
 
 func exit() -> void:
 	super.exit()
 	# Close dialogue if open
 	if _dialogue and is_instance_valid(_dialogue):
+		if _dialogue.dialogue_closed.is_connected(_on_dialogue_closed):
+			_dialogue.dialogue_closed.disconnect(_on_dialogue_closed)
 		_dialogue.close_dialogue()
 	_dialogue = null
 	locked_dockable = null
@@ -231,6 +235,8 @@ func _open_spaceport_dialogue() -> void:
 				_dialogue = canvas_layer.get_node_or_null("SpacePortDialogue")
 	
 	if _dialogue and _dialogue.has_method("open_dialogue"):
+		if not _dialogue.dialogue_closed.is_connected(_on_dialogue_closed):
+			_dialogue.dialogue_closed.connect(_on_dialogue_closed)
 		_dialogue.open_dialogue(spaceport)
 
 func _toggle_dialogue() -> void:
@@ -252,6 +258,8 @@ func _toggle_dialogue() -> void:
 				_dialogue = canvas_layer.get_node_or_null("SpacePortDialogue")
 	
 	if _dialogue and _dialogue.has_method("open_dialogue"):
+		if not _dialogue.dialogue_closed.is_connected(_on_dialogue_closed):
+			_dialogue.dialogue_closed.connect(_on_dialogue_closed)
 		if _dialogue.visible:
 			_dialogue.close_dialogue()
 		else:
@@ -262,7 +270,7 @@ func _toggle_dialogue() -> void:
 				if sp == locked_dockable:
 					spaceport = sp as SpacePort
 					break
-			
+
 			if spaceport:
 				_dialogue.open_dialogue(spaceport)
 
@@ -270,6 +278,13 @@ func _exit_to_flying() -> void:
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
 	if state_machine and state_machine.has_state("FlyingState"):
 		state_machine.change_state("FlyingState")
+
+func _show_enter_spaceport_message() -> void:
+	var action_key = InputUtils.get_action_key_name("action")
+	EventBus.action_message_changed.emit('Press "%s" to enter spaceport' % [action_key])
+
+func _on_dialogue_closed() -> void:
+	_show_enter_spaceport_message()
 
 func _is_store_open() -> bool:
 	if not ship or not is_instance_valid(ship):
