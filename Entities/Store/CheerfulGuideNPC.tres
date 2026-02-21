@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="NPCData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/Store/NPCData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+npc_name = "[NAME TBD] - The Guide"
+ascii_art = "    .===.
+   |o   o|
+   | _=_ |
+   |'   '|
+  /|  |  |\\
+ [_|--|--|_]
+   |__|__|
+   d|  |b"
+greeting = "* Hey there, pilot!
+* Welcome to SR-7.
+* I've got everything you need -
+* upgrades, repairs, you name it."
+talk_topics = PackedStringArray("What is this place?", "Any advice for a new pilot?", "What upgrades do you recommend?")

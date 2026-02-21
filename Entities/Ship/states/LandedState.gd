@@ -115,7 +115,8 @@ func physics_process(delta: float) -> void:
 	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
 	
 	# Handle dialogue keypress (ui_accept - Space/Enter)
-	if Input.is_action_just_pressed("action"):
+	# Don't toggle dialogue if store UI is open (Space is used for menu selection there)
+	if Input.is_action_just_pressed("action") and not _is_store_open():
 		_toggle_dialogue()
 	
 	# Release lock if thrusting - transition back to FlyingState

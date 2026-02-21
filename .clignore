@@ -1,6 +1,8 @@
 # Godot generated files
 .godot/
 
+.vscode
+
 # Scene files (verbose, read only when explicitly needed)
 *.tscn
 
@@ -18,4 +20,5 @@ assets/
 export_presets.cfg
 
 # Design doc (110KB - read on demand, not every conversation)
-DESIGN.md
+docs/
+

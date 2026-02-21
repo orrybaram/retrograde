@@ -75,18 +75,22 @@ func _setup_orbital_motion() -> void:
 	add_child(_orbital_motion)
 	_orbital_motion.set_physics_process(false)
 
-# Collision area (polygon) - for damage and slowdown when hitting precise shape
+# Collision area (polygon) - bounce and damage when hitting precise shape
 func _on_collision_area_entered(body: Node2D) -> void:
 	if body is Ship:
-		var relative_velocity = body.linear_velocity - get_orbital_velocity()
+		var orbital_vel = get_orbital_velocity()
+		var relative_velocity = body.linear_velocity - orbital_vel
 		var relative_speed = relative_velocity.length()
 
 		if relative_speed > 50.0:
-			body.linear_velocity = lerp(
-				body.linear_velocity,
-				get_orbital_velocity(),
-				1.0 - COLLISION_SLOWDOWN
-			)
+			# Reflect ship velocity off the collision normal
+			var collision_normal = (body.global_position - global_position).normalized()
+			var velocity_along_normal = relative_velocity.dot(collision_normal)
+
+			# Only bounce if moving toward the debris
+			if velocity_along_normal < 0:
+				var bounce = relative_velocity - 2.0 * velocity_along_normal * collision_normal
+				body.linear_velocity = orbital_vel + bounce * COLLISION_SLOWDOWN
 
 		if relative_speed > DAMAGE_SPEED_THRESHOLD:
 			var damage = int((relative_speed - DAMAGE_SPEED_THRESHOLD) * DAMAGE_PER_SPEED)

@@ -67,7 +67,7 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 					continue
 
 				var ship_speed = state.get_contact_local_velocity_at_position(i)
-				
+
 				var collider_speed = collider.linear_velocity
 				var relative_velocity = ship_speed - collider_speed
 				var speed_along_normal = relative_velocity.dot(collision_normal)
