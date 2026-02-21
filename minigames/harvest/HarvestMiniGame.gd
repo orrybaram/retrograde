@@ -63,35 +63,24 @@ func change_state(new_state: HarvestMiniGameState) -> void:
 func calculate_harvest_amount() -> int:
 	if resource_positions.is_empty():
 		return 0
-	
+
 	# Calculate intersection point in grid coordinates
 	var intersection_x = vertical_line_position * grid_cells
 	var intersection_y = horizontal_line_position * grid_cells
-	
-	var total_harvest = 0
-	
-	# Calculate harvest for each resource based on distance from intersection
+
+	# Check if intersection is close enough to any resource position
 	for resource_pos in resource_positions:
 		var resource_x = float(resource_pos.x) + 0.5  # Center of cell
 		var resource_y = float(resource_pos.y) + 0.5  # Center of cell
-		
-		# Calculate distance from intersection
+
 		var dx = resource_x - intersection_x
 		var dy = resource_y - intersection_y
 		var distance = sqrt(dx * dx + dy * dy)
-		
-		# Calculate yield percentage based on distance (closer = higher yield)
+
 		if distance <= max_harvest_distance:
-			var yield_percentage = 1.0 - (distance / max_harvest_distance)
-			yield_percentage = max(0.0, yield_percentage)  # Ensure non-negative
-			
-			# Each resource contributes based on distance
-			# Base amount per resource (distribute total amount across resources)
-			var base_per_resource = float(resource_amount) / resource_positions.size()
-			var resource_yield = int(base_per_resource * yield_percentage)
-			total_harvest += resource_yield
-	
-	return total_harvest
+			return 1
+
+	return 0
 
 func get_vertical_line_position() -> float:
 	return vertical_line_position

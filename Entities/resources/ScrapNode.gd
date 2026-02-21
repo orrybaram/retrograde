@@ -8,8 +8,8 @@ signal resource_harvested(amount: int, kind: String, position: Vector2, tier_nam
 signal can_harvest_changed(can_harvest: bool)
 
 @export var kind: String = "Scrap"
-@export var amount: int = 10
-@export var max_amount: int = 10
+@export var amount: int = 1
+@export var max_amount: int = 1
 @export var harvest_rate: float = 5.0
 
 var _harvesting: bool = false
@@ -422,7 +422,7 @@ func _stop_mini_game() -> void:
 		_mini_game = null
 
 func _on_mini_game_harvest_success(tier_item_id: String, tier_name: String) -> void:
-	var max_cargo = 50.0
+	var max_cargo = 5.0
 	if _ship_in_range and is_instance_valid(_ship_in_range):
 		max_cargo = _ship_in_range.max_cargo_weight
 

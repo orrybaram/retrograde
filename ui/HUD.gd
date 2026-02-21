@@ -133,7 +133,7 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 		
 		# Update cargo progress bar
 		var cargo_weight = ship.get_cargo_weight() if ship.has_method("get_cargo_weight") else 0.0
-		var max_cargo = ship.max_cargo_weight if "max_cargo_weight" in ship else 50.0
+		var max_cargo = ship.max_cargo_weight if "max_cargo_weight" in ship else 5.0
 		var cargo_percent = (cargo_weight / max_cargo * 100.0) if max_cargo > 0 else 0.0
 		if cargo_progress_bar:
 			cargo_progress_bar.set_value(cargo_weight, max_cargo)

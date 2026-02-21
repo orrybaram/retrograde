@@ -11,4 +11,4 @@ upgrade_path = "cargo"
 tier = 3
 cost = 200
 effect_target = "max_cargo_weight"
-effect_value = 50.0
+effect_value = 10.0

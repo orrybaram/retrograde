@@ -232,8 +232,8 @@ func _spawn_single_node(i: int, angle_step: float, absolute_inner_radius: float,
 	# Set scrap-specific properties
 	if node is ScrapNode:
 		var scrap = node as ScrapNode
-		scrap.amount = RNG.rng.randi_range(5, 20)
-		scrap.max_amount = scrap.amount
+		scrap.amount = 1
+		scrap.max_amount = 1
 		scrap.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
 
 		# Connect depletion signal for scrap only
@@ -347,8 +347,8 @@ func _spawn_single_node_at_angle(angle: float, absolute_inner_radius: float,
 
 	if node is ScrapNode:
 		var scrap = node as ScrapNode
-		scrap.amount = RNG.rng.randi_range(5, 20)
-		scrap.max_amount = scrap.amount
+		scrap.amount = 1
+		scrap.max_amount = 1
 		scrap.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
 		if not scrap.resource_depleted.is_connected(_on_resource_depleted):
 			scrap.resource_depleted.connect(_on_resource_depleted.bind(scrap))
