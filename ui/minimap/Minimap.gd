@@ -44,9 +44,6 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	var center = size / 2.0
 	
-	# Draw background circle
-	draw_circle(center, display_radius + 2, background_color)
-	
 	# Draw radar rings
 	for i in range(1, ring_count + 1):
 		var ring_radius = display_radius * (float(i) / float(ring_count))

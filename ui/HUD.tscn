@@ -1,112 +1,144 @@
-[gd_scene load_steps=5 format=3 uid="uid://btfs0vii8ixiq"]
+[gd_scene format=3 uid="uid://btfs0vii8ixiq"]
 
 [ext_resource type="Script" uid="uid://lwtmx108rwd6" path="res://ui/HUD.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://be06y1pu3xufy" path="res://ui/ProgressBarWidget.tscn" id="2"]
 [ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="3_jd13s"]
+[ext_resource type="PackedScene" uid="uid://0qhwlfdltlfp" path="res://ui/minimap/Minimap.tscn" id="4_minimap"]
+[ext_resource type="Script" uid="uid://brkyb1x4rjpsu" path="res://ui/HullSegmentBar.gd" id="5_hull"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2"]
-bg_color = Color(0, 0, 0, 0.8)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 0.75, 0, 1)
-
-[node name="HUD" type="Control"]
+[node name="HUD" type="Control" unique_id=441189887]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="DashboardAnchor" type="MarginContainer" parent="." unique_id=1627695327]
 layout_mode = 1
-anchors_preset = -1
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 380.0
-offset_bottom = 184.0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = -228.0
+offset_right = 360.0
+offset_bottom = -37.0
+grow_vertical = 0
+size_flags_horizontal = 0
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="HBox" type="HBoxContainer" parent="DashboardAnchor" unique_id=707506609]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LeftColumn" type="VBoxContainer" parent="DashboardAnchor/HBox" unique_id=755769770]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 4
+
+[node name="Minimap" parent="DashboardAnchor/HBox/LeftColumn" unique_id=2008509394 instance=ExtResource("4_minimap")]
+layout_mode = 2
+
+[node name="VelocityLabel" type="Label" parent="DashboardAnchor/HBox/LeftColumn" unique_id=1356911807]
+layout_mode = 2
+theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 10
+text = "0.0 m/s"
+horizontal_alignment = 1
+clip_text = true
+
+[node name="RightColumn" type="VBoxContainer" parent="DashboardAnchor/HBox" unique_id=910139846]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="FuelRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=1250526577]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="FuelProgressBar" parent="MarginContainer/VBoxContainer" instance=ExtResource("2")]
-custom_minimum_size = Vector2(0, 30)
+[node name="E" type="Label" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=1429954255]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_font_sizes/font_size = 10
+text = "E"
+
+[node name="FuelProgressBar" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=113507462 instance=ExtResource("2")]
+custom_minimum_size = Vector2(140, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("3_jd13s")
+background_color = Color(0.22923827, 0.14380166, 0, 1)
 show_label = false
 
-[node name="HullProgressBar" parent="MarginContainer/VBoxContainer" instance=ExtResource("2")]
-custom_minimum_size = Vector2(0, 10)
-layout_mode = 2
-theme = ExtResource("3_jd13s")
-show_label = false
-
-[node name="CargoProgressBar" parent="MarginContainer/VBoxContainer" instance=ExtResource("2")]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-theme = ExtResource("3_jd13s")
-show_label = false
-
-[node name="VelocityLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="F" type="Label" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=2080482548]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(1, 0.75, 0, 1)
-theme_override_font_sizes/font_size = 12
-text = "Velocity: 0.0 m/s"
+theme_override_font_sizes/font_size = 10
+text = "F"
 
-[node name="PositionLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="HullRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=282324887]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="HullLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/HullRow" unique_id=1872784425]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(1, 0.75, 0, 1)
-theme_override_font_sizes/font_size = 12
-text = "Position: (0, 0)"
+theme_override_font_sizes/font_size = 10
+text = "HP"
 
-[node name="CargoLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="HullSegmentBar" type="Control" parent="DashboardAnchor/HBox/RightColumn/HullRow" unique_id=216387399]
+custom_minimum_size = Vector2(120, 14)
 layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_hull")
+
+[node name="CargoRow" type="Control" parent="DashboardAnchor/HBox/RightColumn" unique_id=1185582045]
+layout_direction = 2
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="CurrentCargoLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1658296246]
+layout_mode = 0
+offset_right = 28.0
+offset_bottom = 29.0
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(1, 0.75, 0, 1)
-theme_override_font_sizes/font_size = 12
-text = "Cargo: -"
+theme_override_font_sizes/font_size = 28
+text = "0"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
-visible = false
-layout_mode = 2
-theme_override_constants/separation = 8
+[node name="MaxCargoLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1592758723]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 13.0
+offset_right = 53.0
+offset_bottom = 28.0
+size_flags_vertical = 8
+theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(0.37, 0.28, 0, 1)
+theme_override_font_sizes/font_size = 14
+text = "/5"
 
-[node name="SellBtn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
-theme_override_font_sizes/font_size = 12
-theme_override_styles/normal = SubResource("StyleBoxFlat_2")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_2")
-theme_override_styles/hover = SubResource("StyleBoxFlat_2")
-text = "Sell @ Home"
-
-[node name="UpgradeBtn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
-theme_override_font_sizes/font_size = 12
-theme_override_styles/normal = SubResource("StyleBoxFlat_2")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_2")
-theme_override_styles/hover = SubResource("StyleBoxFlat_2")
-text = "Buy FuelTank I"
-
-[node name="ActionMessageLabel" type="Label" parent="."]
-visible = false
+[node name="ActionMessageLabel" type="Label" parent="." unique_id=583314362]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -200.0
-offset_top = -40.0
-offset_right = 200.0
-offset_bottom = -16.0
+offset_left = -190.0
+offset_top = -57.0
+offset_right = 210.0
+offset_bottom = -33.0
 grow_horizontal = 2
 grow_vertical = 0
 theme = ExtResource("3_jd13s")
@@ -116,8 +148,7 @@ text = "Press [action] to harvest"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="SaveIndicatorLabel" type="Label" parent="."]
-visible = false
+[node name="SaveIndicatorLabel" type="Label" parent="." unique_id=234891140]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0

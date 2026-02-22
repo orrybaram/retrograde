@@ -9,6 +9,7 @@ const AMBER = Color(1.0, 0.75, 0.0, 1.0)
 const AMBER_FADED = Color(1.0, 0.75, 0.0, 0.4)
 const AMBER_MEDIUM = Color(1.0, 0.75, 0.0, 0.3)
 const AMBER_SUBTLE = Color(1.0, 0.75, 0.0, 0.15)
+const AMBER_DIM = Color(1.0, 0.75, 0.0, 0.1)
 
 const BLACK = Color(0.0, 0.0, 0.0, 1.0)
 const BLACK_90 = Color(0.0, 0.0, 0.0, 0.9)
@@ -29,6 +30,7 @@ const PRIMARY = AMBER
 const PRIMARY_FADED = AMBER_FADED
 const PRIMARY_MEDIUM = AMBER_MEDIUM
 const PRIMARY_SUBTLE = AMBER_SUBTLE
+const PRIMARY_DIM = AMBER_DIM
 
 const UI_BACKGROUND = BLACK_90
 const UI_BACKGROUND_LIGHT = BLACK_80
