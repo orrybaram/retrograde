@@ -9,6 +9,7 @@ var velocity_tween_time: float = 0.0
 var velocity_tween_duration: float = 2.0
 var last_target_velocity: Vector2 = Vector2.ZERO
 var camera_zoom_in = Vector2(1.5, 1.5)
+var _shake_grace_time: float = 0.0
 
 func enter() -> void:
 	super.enter()
@@ -17,7 +18,13 @@ func enter() -> void:
 		return
 	
 	ship.camera.zoom_camera_in(camera_zoom_in)
-	
+
+	# Lock-on screen shake impulse
+	ship.damage_shake_time = ship.harvest_lockon_shake_duration
+	ship.damage_shake_current_intensity = ship.harvest_lockon_shake_intensity
+	_shake_grace_time = ship.harvest_lockon_shake_duration
+
+
 	# Use the same logic as IndicatorManager to find which resource to lock to
 	# First, try to get the resource that IndicatorManager is currently highlighting
 	var indicator_manager = ship.get_tree().get_first_node_in_group("indicator_manager") as IndicatorManager
@@ -76,14 +83,18 @@ func physics_process(delta: float) -> void:
 	
 	# Update velocity tween time
 	velocity_tween_time += delta
-	
-	# Reset camera shake
-	if ship.camera:
-		ship.camera_shake_time = 0.0
-		ship.damage_shake_time = 0.0
-		ship.damage_shake_current_intensity = 0.0
-		if ship.camera.offset != ship.camera_base_offset:
-			ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, delta * 5.0)
+
+	# Allow shake grace period (for lock-on bump) before resetting
+	if _shake_grace_time > 0.0:
+		_shake_grace_time -= delta
+	else:
+		# Reset camera shake after grace period
+		if ship.camera:
+			ship.camera_shake_time = 0.0
+			ship.damage_shake_time = 0.0
+			ship.damage_shake_current_intensity = 0.0
+			if ship.camera.offset != ship.camera_base_offset:
+				ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, delta * 5.0)
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if not is_ship_valid() or not locked_resource_node or not is_instance_valid(locked_resource_node):

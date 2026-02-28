@@ -12,7 +12,9 @@ class_name OrbitalRingSpawner
 @export var debris_scenes: Array[PackedScene] = [
 	preload("res://entities/resources/Debris1.tscn"),
 	preload("res://entities/resources/Debris2.tscn"),
-	preload("res://entities/resources/Debris3.tscn")
+	preload("res://entities/resources/Debris3.tscn"),
+	preload("res://entities/resources/Debris4.tscn"),
+	preload("res://entities/resources/Debris5.tscn")
 ]
 @export var max_resources: int = 50  # Number of scrap nodes to spawn
 @export_range(0.0, 1.0) var debris_ratio: float = 0.3  # Ratio of debris to scrap
@@ -185,7 +187,7 @@ func _spawn_single_node(i: int, angle_step: float, absolute_inner_radius: float,
 
 	var node: OrbitalNode
 	if is_debris:
-		var debris_variants = ["Debris1", "Debris2", "Debris3"]
+		var debris_variants = ["Debris1", "Debris2", "Debris3", "Debris4", "Debris5"]
 		var variant_name = debris_variants[RNG.rng.randi() % debris_variants.size()]
 		node = ResourceNodePool.get_instance(variant_name, scene_root)
 	else:
@@ -315,7 +317,7 @@ func _spawn_single_node_at_angle(angle: float, absolute_inner_radius: float,
 
 	var node: OrbitalNode
 	if is_debris:
-		var debris_variants = ["Debris1", "Debris2", "Debris3"]
+		var debris_variants = ["Debris1", "Debris2", "Debris3", "Debris4", "Debris5"]
 		var variant_name = debris_variants[RNG.rng.randi() % debris_variants.size()]
 		node = ResourceNodePool.get_instance(variant_name, scene_root)
 	else:

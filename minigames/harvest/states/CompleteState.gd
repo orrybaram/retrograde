@@ -10,6 +10,15 @@ var harvest_calculated: bool = false
 func enter() -> void:
 	delay_timer = 0.0
 	harvest_calculated = false
+	# Flash the horizontal bar that was just locked
+	if mini_game.ui and mini_game.ui.horizontal_scanner_bar:
+		mini_game.ui.flash_line_lock(mini_game.ui.horizontal_scanner_bar, false)
+	# Intersection pulse
+	if mini_game.ui:
+		mini_game.ui.flash_intersection(
+			mini_game.get_vertical_line_position(),
+			mini_game.get_horizontal_line_position()
+		)
 
 func process(delta: float) -> void:
 	if harvest_calculated:
@@ -31,6 +40,9 @@ func process(delta: float) -> void:
 
 		var tier_item_id = TierData.get_item_id(tier)
 		var tier_name = TierData.get_display_name(tier)
+
+		# Hitstop: brief pause before emitting success
+		await mini_game.get_tree().create_timer(0.05).timeout
 		mini_game.harvest_success.emit(tier_item_id, tier_name)
 
 func handle_input(_action: String) -> void:

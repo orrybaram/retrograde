@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://cllg0id2e6pvy"]
+
+[sub_resource type="Curve" id="Curve_alpha"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.03574848), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_alpha"]
+curve = SubResource("Curve_alpha")
+
+[sub_resource type="Curve" id="Curve_scale"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.99419725, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_scale"]
+curve = SubResource("Curve_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_sparkle"]
+emission_shape_scale = Vector3(5, 5, 1)
+emission_shape = 1
+emission_sphere_radius = 11.8
+direction = Vector3(1, 1, 0)
+spread = 180.0
+radial_velocity_min = 11.999977
+radial_velocity_max = 17.999977
+gravity = Vector3(0, 0, 0)
+scale_min = 5.0
+scale_max = 10.0
+scale_curve = SubResource("CurveTexture_scale")
+alpha_curve = SubResource("CurveTexture_alpha")
+
+[node name="SparkleParticles" type="GPUParticles2D" unique_id=295895869]
+amount = 4
+lifetime = 1.2
+local_coords = true
+process_material = SubResource("ParticleProcessMaterial_sparkle")

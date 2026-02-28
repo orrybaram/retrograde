@@ -7,6 +7,9 @@ func enter() -> void:
 	mini_game.horizontal_line_position = 0.0
 	mini_game.horizontal_moving_down = true
 	mini_game.horizontal_locked = false
+	# Flash the vertical bar that was just locked
+	if mini_game.ui and mini_game.ui.vertical_scanner_bar:
+		mini_game.ui.flash_line_lock(mini_game.ui.vertical_scanner_bar, true)
 
 func process(delta: float) -> void:
 	if mini_game.horizontal_locked:

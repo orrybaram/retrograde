@@ -19,7 +19,6 @@ var _is_depleted: bool = false
 var _indicator_target = null
 var _indicator_manager = null
 var _can_harvest: bool = false
-var _pulse_tween: Tween = null
 
 # Mini-game integration
 var _mini_game: HarvestMiniGame = null
@@ -50,7 +49,6 @@ func _ready() -> void:
 	if max_amount == 0:
 		max_amount = amount
 
-	_start_glow_pulse()
 
 func _register_with_minimap() -> void:
 	if skip_minimap_registration:
@@ -62,42 +60,6 @@ func _register_with_minimap() -> void:
 			minimap.unregister_target(minimap_target)
 		minimap_target = ResourceMinimapTarget.new(self)
 		minimap.register_target(minimap_target)
-
-func _start_glow_pulse() -> void:
-	var visual = _find_visual_node()
-	if not visual:
-		return
-	# Randomize start offset so not all scrap pulses in sync
-	var delay = randf_range(0.0, 2.0)
-	await get_tree().create_timer(delay).timeout
-	if not is_instance_valid(self) or _is_depleted:
-		return
-	_run_pulse_loop(visual)
-
-func _run_pulse_loop(visual: Node2D) -> void:
-	if _pulse_tween and _pulse_tween.is_valid():
-		_pulse_tween.kill()
-	_pulse_tween = create_tween().set_loops()
-	var duration = randf_range(1.2, 2.0)
-	# Pulse modulate from base gray up to bright white-ish glow
-	var base_color = Color(0.75, 0.78, 0.82, 1.0)
-	var glow_color = Color(1.1, 1.15, 1.25, 1.0)
-	if visual is Polygon2D:
-		var polygon = visual as Polygon2D
-		_pulse_tween.tween_property(polygon, "color", glow_color, duration) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		_pulse_tween.tween_property(polygon, "color", base_color, duration) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	else:
-		_pulse_tween.tween_property(visual, "modulate", glow_color, duration) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		_pulse_tween.tween_property(visual, "modulate", base_color, duration) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-func _stop_glow_pulse() -> void:
-	if _pulse_tween and _pulse_tween.is_valid():
-		_pulse_tween.kill()
-		_pulse_tween = null
 
 # Harvest area (circle) - for detecting ship in range for harvesting
 func _on_harvest_area_entered(body: Node2D) -> void:
@@ -249,10 +211,13 @@ func _deplete_resource() -> void:
 	if _is_depleted:
 		return
 
-	_stop_glow_pulse()
 	_is_depleted = true
 	resource_depleted.emit()
 	_unregister_indicator()
+
+	# Disable collision immediately so ship can't interact during fade-out
+	monitoring = false
+	monitorable = false
 
 	EventBus.unregister_resource_node(self)
 
@@ -313,11 +278,13 @@ func _start_fade_out() -> void:
 func on_spawn() -> void:
 	super.on_spawn()
 
+	monitoring = true
+	monitorable = true
+
 	if not is_in_group("resource_nodes"):
 		add_to_group("resource_nodes")
 
 	EventBus.register_resource_node(self)
-	_start_glow_pulse()
 
 	# Find indicator manager
 	_indicator_manager = get_tree().get_first_node_in_group("indicator_manager")
@@ -336,9 +303,6 @@ func on_despawn() -> void:
 	# Remove from group
 	if is_in_group("resource_nodes"):
 		remove_from_group("resource_nodes")
-
-	# Stop glow pulse
-	_stop_glow_pulse()
 
 	# Stop mini-game if active
 	if _mini_game:
@@ -436,16 +400,69 @@ func _on_mini_game_harvest_success(tier_item_id: String, tier_name: String) -> v
 
 	resource_harvested.emit(1, kind, global_position, tier_name)
 
+	# Trigger harvest screen shake on the ship
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		_ship_in_range.damage_shake_time = _ship_in_range.harvest_shake_duration
+		_ship_in_range.damage_shake_current_intensity = _ship_in_range.harvest_shake_intensity
+
+	# Spawn harvest particle burst
+	_spawn_harvest_particles()
+
 	amount = 0
 
-	if not _is_depleted:
-		_update_visual()
+	# Pop effect: scale up then shrink to 0 before depletion
+	_pop_and_deplete()
 
+func _pop_and_deplete() -> void:
+	var visual = _find_visual_node()
+	if visual:
+		var pop_tween = create_tween()
+		pop_tween.tween_property(visual, "scale", visual.scale * 1.2, 0.1).set_ease(Tween.EASE_OUT)
+		pop_tween.tween_property(visual, "scale", Vector2.ZERO, 0.2).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+		pop_tween.tween_callback(_finish_depletion)
+	else:
+		_finish_depletion()
+
+func _finish_depletion() -> void:
 	if not _is_depleted:
 		_deplete_resource()
-		_stop_mini_game()
+	_stop_mini_game()
+
+func _spawn_harvest_particles() -> void:
+	var particles = GPUParticles2D.new()
+	particles.amount = 30
+	particles.lifetime = 0.6
+	particles.one_shot = true
+	particles.emitting = false
+	particles.position = Vector2.ZERO
+
+	var material = ParticleProcessMaterial.new()
+	material.direction = Vector3(0, 0, 0)
+	material.spread = 360.0
+	material.initial_velocity_min = 20.0
+	material.initial_velocity_max = 60.0
+	material.gravity = Vector3.ZERO
+	material.scale_min = 1.0
+	material.scale_max = 3.0
+	material.color = Colors.PRIMARY
+	material.damping_min = 20.0
+	material.damping_max = 40.0
+
+	particles.process_material = material
+	add_child(particles)
+	particles.emitting = true
+
+	# Auto-cleanup after particles finish
+	get_tree().create_timer(particles.lifetime + 0.5).timeout.connect(func():
+		if is_instance_valid(particles):
+			particles.queue_free()
+	)
 
 func _on_mini_game_harvest_failed() -> void:
+	# Small screen shake on failure
+	if _ship_in_range and is_instance_valid(_ship_in_range):
+		_ship_in_range.damage_shake_time = 0.2
+		_ship_in_range.damage_shake_current_intensity = 0.8
 	_stop_mini_game()
 
 func _on_mini_game_ui_closed() -> void:

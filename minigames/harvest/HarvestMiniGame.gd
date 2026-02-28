@@ -35,6 +35,7 @@ var vertical_moving_right: bool = true
 var horizontal_moving_down: bool = true
 
 var resource_positions: Array[Vector2i] = []  # Grid cell positions (column, row) where resources are located
+var ui: HarvestMiniGameUI = null  # Reference to UI for juice effects
 
 func _ready() -> void:
 	# Initialize with idle state

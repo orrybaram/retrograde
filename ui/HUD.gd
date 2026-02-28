@@ -11,6 +11,8 @@ extends Control
 
 var gs: Node = null
 var ship: Ship = null
+var _last_cargo_weight: float = 0.0
+var _cargo_punch_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("hud")
@@ -23,7 +25,8 @@ func _ready() -> void:
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
 	_update_labels()
-	InventoryManager.inventory_changed.connect(_update_labels)
+	_last_cargo_weight = InventoryManager.get_total_weight()
+	InventoryManager.inventory_changed.connect(_on_inventory_changed)
 	if ship and ship.has_signal("fuel_changed"):
 		ship.fuel_changed.connect(_update_labels)
 	if ship and ship.has_signal("cargo_changed"):
@@ -38,6 +41,13 @@ func _ready() -> void:
 
 func _on_action_message_changed(message: String) -> void:
 	_update_action_message(message)
+
+func _on_inventory_changed(item_id: String = "", new_quantity: int = 0) -> void:
+	_update_labels(item_id, new_quantity)
+	var new_weight = InventoryManager.get_total_weight()
+	if new_weight > _last_cargo_weight:
+		_punch_cargo_label()
+	_last_cargo_weight = new_weight
 
 func _on_cargo_changed(_current_weight: float, _max_weight: float) -> void:
 	_update_labels()
@@ -54,6 +64,23 @@ func show_saving_indicator() -> void:
 func hide_saving_indicator() -> void:
 	if save_indicator_label:
 		save_indicator_label.visible = false
+
+func _punch_cargo_label() -> void:
+	if not current_cargo_label:
+		return
+
+	if _cargo_punch_tween and _cargo_punch_tween.is_valid():
+		_cargo_punch_tween.kill()
+
+	current_cargo_label.pivot_offset = current_cargo_label.size / 2.0
+	_cargo_punch_tween = create_tween()
+	# Scale punch
+	_cargo_punch_tween.tween_property(current_cargo_label, "scale", Vector2(1.3, 1.3), 0.1).set_ease(Tween.EASE_OUT)
+	_cargo_punch_tween.tween_property(current_cargo_label, "scale", Vector2(1.0, 1.0), 0.2).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+	# Flash bright amber
+	current_cargo_label.modulate = Colors.PRIMARY * 1.5
+	current_cargo_label.modulate.a = 1.0
+	_cargo_punch_tween.parallel().tween_property(current_cargo_label, "modulate", Color.WHITE, 0.3)
 
 func _fit_dashboard() -> void:
 	if not dashboard:

@@ -14,6 +14,9 @@ class_name HarvestMiniGameUI
 var mini_game: HarvestMiniGame = null
 var terminal_color: Color = Color(1.0, 0.75, 0.0)  # Amber/orange terminal color
 var resource_squares: Array[ColorRect] = []  # Dynamic resource square nodes
+var _line_flash_tween: Tween = null
+var _intersection_tween: Tween = null
+var _fail_flash_tween: Tween = null
 
 func _ready() -> void:
 	visible = false
@@ -29,6 +32,7 @@ func setup(mini_game_instance: HarvestMiniGame) -> void:
 	mini_game = mini_game_instance
 	
 	if mini_game:
+		mini_game.ui = self
 		mini_game.harvest_success.connect(_on_harvest_success)
 		mini_game.harvest_failed.connect(_on_harvest_failed)
 		mini_game.ui_opened.connect(_on_ui_opened)
@@ -118,13 +122,81 @@ func _clear_resource_squares() -> void:
 			square.queue_free()
 	resource_squares.clear()
 
+## Flash a scanner bar white→green with a width punch on line lock
+func flash_line_lock(bar: ColorRect, is_vertical: bool) -> void:
+	if _line_flash_tween and _line_flash_tween.is_valid():
+		_line_flash_tween.kill()
+
+	_line_flash_tween = create_tween()
+	_line_flash_tween.set_parallel(true)
+
+	# Color flash: white → green
+	bar.color = Color(1.0, 1.0, 1.0, 1.0)
+	_line_flash_tween.tween_property(bar, "color", Color(0.0, 1.0, 0.0, 0.9), 0.15)
+
+	# Width/height punch
+	var original_size: float
+	var property: String
+	if is_vertical:
+		original_size = 2.0
+		property = "size:x"
+		bar.size.x = 2.0 * 1.5
+	else:
+		original_size = 2.0
+		property = "size:y"
+		bar.size.y = 2.0 * 1.5
+	_line_flash_tween.tween_property(bar, property, original_size, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+## Pulse a glow ring at the intersection of both locked lines
+func flash_intersection(v_pos: float, h_pos: float) -> void:
+	if not scanner_container:
+		return
+
+	var container_width = scanner_container.size.x
+	var container_height = scanner_container.size.y
+	var x = v_pos * container_width
+	var y = h_pos * container_height
+
+	var ring = ColorRect.new()
+	ring.size = Vector2(6, 6)
+	ring.position = Vector2(x - 3, y - 3)
+	ring.color = Color(0.0, 1.0, 0.0, 1.0)
+	scanner_container.add_child(ring)
+
+	if _intersection_tween and _intersection_tween.is_valid():
+		_intersection_tween.kill()
+
+	_intersection_tween = create_tween()
+	_intersection_tween.set_parallel(true)
+	# Scale up the ring
+	ring.pivot_offset = ring.size / 2.0
+	ring.scale = Vector2(1.0, 1.0)
+	_intersection_tween.tween_property(ring, "scale", Vector2(4.0, 4.0), 0.4).set_ease(Tween.EASE_OUT)
+	_intersection_tween.tween_property(ring, "modulate:a", 0.0, 0.4).set_ease(Tween.EASE_IN)
+	_intersection_tween.tween_callback(ring.queue_free).set_delay(0.4)
+
+## Flash scanner bars red on failure
+func flash_fail() -> void:
+	if _fail_flash_tween and _fail_flash_tween.is_valid():
+		_fail_flash_tween.kill()
+
+	_fail_flash_tween = create_tween()
+	_fail_flash_tween.set_parallel(true)
+
+	if vertical_scanner_bar:
+		vertical_scanner_bar.color = Color(1.0, 0.2, 0.2, 1.0)
+		_fail_flash_tween.tween_property(vertical_scanner_bar, "color", Color(1.0, 0.75, 0.0, 0.8), 0.15)
+	if horizontal_scanner_bar:
+		horizontal_scanner_bar.color = Color(1.0, 0.2, 0.2, 1.0)
+		_fail_flash_tween.tween_property(horizontal_scanner_bar, "color", Color(1.0, 0.75, 0.0, 0.8), 0.15)
+
 func _on_harvest_success(_tier_item_id: String, _tier_name: String) -> void:
 	# Harvest successful - UI will close automatically
 	pass
 
 func _on_harvest_failed() -> void:
-	# Harvest failed - UI will close automatically
-	pass
+	# Harvest failed - flash red and play SFX
+	flash_fail()
 
 func _on_ui_opened() -> void:
 	visible = true

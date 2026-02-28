@@ -55,6 +55,10 @@ var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (p
 @export var damage_shake_duration: float = 0.3  # How long damage shake lasts (seconds)
 @export var explosion_shake_intensity: float = 5.0  # How much the camera shakes on explosion
 @export var explosion_shake_duration: float = 1.0  # How long explosion shake lasts (seconds)
+@export var harvest_shake_intensity: float = 1.5  # How much the camera shakes on harvest success
+@export var harvest_shake_duration: float = 0.5  # How long harvest shake lasts (seconds)
+@export var harvest_lockon_shake_intensity: float = 0.8  # Camera bump on harvest lock-on
+@export var harvest_lockon_shake_duration: float = 0.3  # Duration of lock-on bump
 
 var camera_shake_time: float = 0.0
 var damage_shake_time: float = 0.0  # Time remaining for damage shake

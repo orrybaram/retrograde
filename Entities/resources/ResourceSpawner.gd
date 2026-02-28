@@ -5,7 +5,9 @@ class_name ResourceSpawner
 @export var debris_scenes: Array[PackedScene] = [
 	preload("res://entities/resources/Debris1.tscn"),
 	preload("res://entities/resources/Debris2.tscn"),
-	preload("res://entities/resources/Debris3.tscn")
+	preload("res://entities/resources/Debris3.tscn"),
+	preload("res://entities/resources/Debris4.tscn"),
+	preload("res://entities/resources/Debris5.tscn")
 ]
 @export var max_resources: int = 30
 @export_range(0.0, 1.0) var debris_ratio: float = 0.3
@@ -130,7 +132,7 @@ func spawn_resources() -> void:
 		# Get node from pool
 		var node: OrbitalNode
 		if is_debris:
-			var debris_variants = ["Debris1", "Debris2", "Debris3"]
+			var debris_variants = ["Debris1", "Debris2", "Debris3", "Debris4", "Debris5"]
 			var variant_name = debris_variants[RNG.rng.randi() % debris_variants.size()]
 			node = ResourceNodePool.get_instance(variant_name, scene_root)
 		else:
@@ -232,7 +234,7 @@ func _on_resources_refresh_requested() -> void:
 
 		var node: OrbitalNode
 		if is_debris:
-			var debris_variants = ["Debris1", "Debris2", "Debris3"]
+			var debris_variants = ["Debris1", "Debris2", "Debris3", "Debris4", "Debris5"]
 			var variant_name = debris_variants[RNG.rng.randi() % debris_variants.size()]
 			node = ResourceNodePool.get_instance(variant_name, scene_root)
 		else:

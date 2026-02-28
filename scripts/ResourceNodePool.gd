@@ -15,6 +15,8 @@ const RESOURCE_SCENES: Dictionary = {
 	"Debris1": preload("res://entities/resources/Debris1.tscn"),
 	"Debris2": preload("res://entities/resources/Debris2.tscn"),
 	"Debris3": preload("res://entities/resources/Debris3.tscn"),
+	"Debris4": preload("res://entities/resources/Debris4.tscn"),
+	"Debris5": preload("res://entities/resources/Debris5.tscn"),
 }
 
 @export var initial_pool_size: int = 0  # Per variant - start empty, grow on demand for faster startup
@@ -100,7 +102,7 @@ func get_random_scrap_instance(parent: Node) -> OrbitalNode:
 
 ## Get a random instance from debris variants (Debris1-3)
 func get_random_debris_instance(parent: Node) -> OrbitalNode:
-	var variants = ["Debris1", "Debris2", "Debris3"]
+	var variants = ["Debris1", "Debris2", "Debris3", "Debris4", "Debris5"]
 	var selected = variants[RNG.rng.randi() % variants.size()]
 	return get_instance(selected, parent)
 

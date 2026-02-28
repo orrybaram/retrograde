@@ -89,13 +89,13 @@ func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tie
 	if not _camera:
 		push_warning("ResourceGainIndicator: Camera not found, using world position")
 	
-	# Set initial state
-	scale = Vector2(0.5, 0.5)
+	# Set initial state — start smaller for bigger pop
+	scale = Vector2(0.3, 0.3)
 	modulate.a = 0.0
 	position = screen_pos
 	visible = true
 	set_process(true)  # Enable processing to track camera movement
-	
+
 	# Start animation
 	_animate_text(target_scale)
 
@@ -106,9 +106,9 @@ func _animate_text(target_scale: float) -> void:
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	
-	# Scale animation: 0.5x -> target_scale (peak at 30% duration) -> slightly larger -> fade
-	var peak_scale = target_scale * 1.1  # Slight overshoot for bounce effect
-	var end_scale = target_scale * 1.05
+	# Scale animation: 0.3x -> 1.2x peak -> settle at target
+	var peak_scale = target_scale * 1.2  # Bigger overshoot for punchier feel
+	var end_scale = target_scale
 	
 	# Scale up to peak (with ease out)
 	_tween.tween_property(self, "scale", Vector2(peak_scale, peak_scale), animation_duration * 0.3).set_ease(Tween.EASE_OUT)
