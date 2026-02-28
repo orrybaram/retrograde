@@ -9,7 +9,9 @@ const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 # Orbital parameters (passed to OrbitalMotion component)
 @export var orbital_distance: float = 500.0  # Distance from parent planet center
 @export_range(0, 100) var orbital_speed: float = 5.0  # Orbital speed scale (0 = static, 100 = fastest)
-@export var initial_angle: float = 0.0  # Starting angle in radians
+@export_range(0, 360) var initial_angle_degrees: float = 0.0  # Starting angle in degrees
+var initial_angle: float:
+	get: return deg_to_rad(initial_angle_degrees)
 @export var eccentricity: float = 0.0  # 0.0 for circular, >0.0 for elliptical (0.0-1.0)
 @export var enable_orbiting: bool = true  # Toggle to enable/disable orbiting
 

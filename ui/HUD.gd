@@ -67,9 +67,9 @@ func _process(_dt: float) -> void:
 
 func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	if gs == null: return
-	var cargo_scrap = InventoryManager.get_quantity("scrap")
+	var cargo_weight = InventoryManager.get_total_weight()
 	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 5
-	current_cargo_label.text = "%d" % cargo_scrap
+	current_cargo_label.text = "%d" % int(cargo_weight)
 	max_cargo_label.text = "/%d" % max_cargo
 
 	if ship and is_instance_valid(ship):

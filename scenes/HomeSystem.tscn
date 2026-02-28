@@ -94,6 +94,7 @@ color = Color(0.9, 0.8, 0.6, 1)
 massMultiplier = 5000.0
 planet_type = 1
 collision_radius_ratio = 0.3
+gravity_radius_multiplier = 2.0
 orbital_distance = 380000.0
 orbital_speed = 1.0
 initial_angle = 3.8
@@ -104,7 +105,7 @@ position = Vector2(10047, 0)
 planet_name = "Moon 1"
 radius = 1600.0
 color = Color(0.6, 0.6, 0.6, 1)
-massMultiplier = 35.0
+massMultiplier = 55.0
 planet_type = 7
 gravity_radius_multiplier = 2.7
 orbital_distance = 20000.0
@@ -124,7 +125,7 @@ orbital_speed = 10.0
 position = Vector2(2263, 74)
 orbital_distance = 6000.0
 orbital_speed = 20.0
-initial_angle = 180.0
+initial_angle_degrees = 180.0
 
 [node name="Neptune" parent="Sun" unique_id=926371594 instance=ExtResource("1")]
 position = Vector2(134672, 0)

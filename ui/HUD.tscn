@@ -5,6 +5,7 @@
 [ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="3_jd13s"]
 [ext_resource type="PackedScene" uid="uid://0qhwlfdltlfp" path="res://ui/minimap/Minimap.tscn" id="4_minimap"]
 [ext_resource type="Script" uid="uid://brkyb1x4rjpsu" path="res://ui/HullSegmentBar.gd" id="5_hull"]
+[ext_resource type="Texture2D" uid="uid://csjqvgr2iq0n3" path="res://assets/icons/trolley-icon.png" id="6_pfnlp"]
 
 [node name="HUD" type="Control" unique_id=441189887]
 layout_mode = 3
@@ -107,9 +108,16 @@ layout_direction = 2
 layout_mode = 2
 size_flags_horizontal = 0
 
+[node name="TrolleyIcon" type="Sprite2D" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=987357832]
+position = Vector2(9, 16)
+rotation = -0.003259629
+scale = Vector2(0.08277519, 0.082775176)
+texture = ExtResource("6_pfnlp")
+
 [node name="CurrentCargoLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1658296246]
 layout_mode = 0
-offset_right = 28.0
+offset_left = 21.0
+offset_right = 49.0
 offset_bottom = 29.0
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(1, 0.75, 0, 1)
@@ -118,10 +126,10 @@ text = "0"
 
 [node name="MaxCargoLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1592758723]
 layout_mode = 0
-offset_left = 25.0
-offset_top = 13.0
-offset_right = 53.0
-offset_bottom = 28.0
+offset_left = 47.0
+offset_top = 12.0
+offset_right = 75.0
+offset_bottom = 27.0
 size_flags_vertical = 8
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(0.37, 0.28, 0, 1)
