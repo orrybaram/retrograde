@@ -17,6 +17,7 @@ signal ui_closed()
 var resource_kind: String = "Scrap"
 var resource_amount: int = 10
 var input_action: String = "action"
+var is_trophy: bool = false
 
 # Scanner mechanics
 @export var scanner_speed: float = 1  # Speed of scanner movement (units per second)

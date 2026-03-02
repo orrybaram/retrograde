@@ -33,7 +33,10 @@ func process(delta: float) -> void:
 
 		var tier: TierData.Tier
 		if harvest_amount > 0:
-			tier = TierData.roll_tier(RNG.rng)
+			if mini_game.is_trophy:
+				tier = TierData.roll_tier_trophy(RNG.rng)
+			else:
+				tier = TierData.roll_tier(RNG.rng)
 		else:
 			# Botched — force Slag
 			tier = TierData.Tier.SLAG

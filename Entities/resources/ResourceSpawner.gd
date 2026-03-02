@@ -266,6 +266,7 @@ func _on_resources_refresh_requested() -> void:
 			scrap.amount = 1
 			scrap.max_amount = 1
 			scrap.harvest_rate = RNG.rng.randf_range(3.0, 8.0)
+
 			if not scrap.resource_depleted.is_connected(_on_resource_depleted):
 				scrap.resource_depleted.connect(_on_resource_depleted.bind(scrap))
 

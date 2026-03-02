@@ -12,6 +12,12 @@ signal can_harvest_changed(can_harvest: bool)
 @export var max_amount: int = 1
 @export var harvest_rate: float = 5.0
 
+@export var is_trophy: bool = false:
+	set(value):
+		is_trophy = value
+		if is_node_ready() and is_trophy:
+			_activate_trophy()
+
 var _harvesting: bool = false
 var _accum: float = 0.0
 var _ship_in_range: Ship = null
@@ -19,6 +25,8 @@ var _is_depleted: bool = false
 var _indicator_target = null
 var _indicator_manager = null
 var _can_harvest: bool = false
+var _trophy_sparkles: SparkleParticles = null
+var _trophy_pulse_tween: Tween = null
 
 # Mini-game integration
 var _mini_game: HarvestMiniGame = null
@@ -48,6 +56,10 @@ func _ready() -> void:
 	# Initialize max_amount if not set
 	if max_amount == 0:
 		max_amount = amount
+
+	# Trophy roll for pre-placed (non-pooled) nodes. Pooled nodes roll in on_spawn().
+	if not has_meta("pool_variant"):
+		is_trophy = RNG.rng.randi() % 10 == 0
 
 
 func _register_with_minimap() -> void:
@@ -215,9 +227,16 @@ func _deplete_resource() -> void:
 	resource_depleted.emit()
 	_unregister_indicator()
 
-	# Disable collision immediately so ship can't interact during fade-out
+	# Disable all collision so ship can't interact.
+	# Also disconnect body_entered — Godot can fire it during reparent even with monitoring=false,
+	# which would trigger the bounce code and kick the ship.
 	monitoring = false
 	monitorable = false
+	if _collision_area_cached:
+		_collision_area_cached.monitoring = false
+		_collision_area_cached.monitorable = false
+		if _collision_area_cached.body_entered.is_connected(_on_collision_area_entered):
+			_collision_area_cached.body_entered.disconnect(_on_collision_area_entered)
 
 	EventBus.unregister_resource_node(self)
 
@@ -234,52 +253,19 @@ func _deplete_resource() -> void:
 		_harvesting = false
 		harvest_stopped.emit()
 
-	_start_fade_out()
-
-	await get_tree().create_timer(5.0).timeout
+	# Visual is already hidden by the pop animation — return to pool immediately
 	returned_to_pool.emit()
 
-func _start_fade_out() -> void:
-	var fade_duration = 2.0
-	var elapsed = 0.0
-
-	var visual = _find_visual_node()
-	if not visual:
-		return
-
-	var start_alpha: float = 1.0
-	if visual is Polygon2D:
-		start_alpha = (visual as Polygon2D).color.a
-	elif visual is ColorRect:
-		start_alpha = (visual as ColorRect).modulate.a
-	elif "modulate" in visual:
-		start_alpha = visual.modulate.a
-
-	while elapsed < fade_duration:
-		elapsed += get_process_delta_time()
-		var fade_progress = elapsed / fade_duration
-		var current_alpha = lerp(start_alpha, 0.0, fade_progress)
-		current_alpha = clamp(current_alpha, 0.0, 1.0)
-
-		if visual:
-			if visual is Polygon2D:
-				var polygon = visual as Polygon2D
-				var original_color = polygon.color
-				polygon.color = Color(original_color.r, original_color.g, original_color.b, current_alpha)
-			elif visual is ColorRect:
-				var color_rect = visual as ColorRect
-				color_rect.modulate = Color(color_rect.modulate.r, color_rect.modulate.g, color_rect.modulate.b, current_alpha)
-			elif "modulate" in visual:
-				var current_modulate = visual.modulate
-				visual.modulate = Color(current_modulate.r, current_modulate.g, current_modulate.b, current_alpha)
-
-		await get_tree().process_frame
 
 func on_spawn() -> void:
 	super.on_spawn()
 
 	monitoring = true
 	monitorable = true
+
+	# Reconnect collision handler (disconnected on depletion to prevent reparent physics artifacts)
+	if _collision_area_cached and not _collision_area_cached.body_entered.is_connected(_on_collision_area_entered):
+		_collision_area_cached.body_entered.connect(_on_collision_area_entered)
 
 	if not is_in_group("resource_nodes"):
 		add_to_group("resource_nodes")
@@ -292,6 +278,9 @@ func on_spawn() -> void:
 		var main = get_tree().get_first_node_in_group("main")
 		if main:
 			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
+
+	# Trophy roll for pooled nodes
+	is_trophy = RNG.rng.randi() % 10 == 0
 
 func on_despawn() -> void:
 	# Unregister from EventBus
@@ -320,6 +309,15 @@ func on_despawn() -> void:
 	_mini_game_ui = null
 	_indicator_target = null
 
+	# Reset trophy state
+	if _trophy_pulse_tween:
+		_trophy_pulse_tween.kill()
+		_trophy_pulse_tween = null
+	if _trophy_sparkles:
+		_trophy_sparkles.is_trophy = false
+		_trophy_sparkles = null
+	is_trophy = false
+
 	# Reset resource amounts
 	amount = 0
 	max_amount = 0
@@ -347,6 +345,7 @@ func _start_mini_game() -> void:
 	_mini_game.harvest_success.connect(_on_mini_game_harvest_success)
 	_mini_game.harvest_failed.connect(_on_mini_game_harvest_failed)
 	_mini_game.ui_closed.connect(_on_mini_game_ui_closed)
+	_mini_game.is_trophy = is_trophy
 
 	_setup_mini_game_ui()
 
@@ -457,6 +456,20 @@ func _spawn_harvest_particles() -> void:
 		if is_instance_valid(particles):
 			particles.queue_free()
 	)
+
+func _activate_trophy() -> void:
+	_trophy_sparkles = get_node_or_null("SparkleParticles") as SparkleParticles
+	if not _trophy_sparkles:
+		return
+
+	_trophy_sparkles.is_trophy = true
+
+	# Subtle scale pulse to catch the eye
+	var visual = _find_visual_node()
+	if visual:
+		_trophy_pulse_tween = create_tween().set_loops()
+		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale * 1.15, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 
 func _on_mini_game_harvest_failed() -> void:
 	# Small screen shake on failure

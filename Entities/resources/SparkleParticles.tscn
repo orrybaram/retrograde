@@ -1,5 +1,7 @@
 [gd_scene format=3 uid="uid://cllg0id2e6pvy"]
 
+[ext_resource type="Script" uid="uid://dq8hto3dgdof" path="res://entities/resources/SparkleParticles.gd" id="1"]
+
 [sub_resource type="Curve" id="Curve_alpha"]
 _data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.03574848), 0.0, 0.0, 0, 0]
 point_count = 2
@@ -33,3 +35,4 @@ amount = 4
 lifetime = 1.2
 local_coords = true
 process_material = SubResource("ParticleProcessMaterial_sparkle")
+script = ExtResource("1")
