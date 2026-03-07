@@ -32,20 +32,28 @@ func process(delta: float) -> void:
 		harvest_calculated = true
 
 		var tier: TierData.Tier
-		if harvest_amount > 0:
+		if harvest_amount == 2:
+			# Perfect hit — guaranteed Salvage+, flash special burst
+			tier = TierData.roll_tier_trophy(RNG.rng)
+			if mini_game.ui:
+				mini_game.ui.flash_perfect(
+					mini_game.get_vertical_line_position(),
+					mini_game.get_horizontal_line_position()
+				)
+			await mini_game.get_tree().create_timer(0.1).timeout
+		elif harvest_amount == 1:
 			if mini_game.is_trophy:
 				tier = TierData.roll_tier_trophy(RNG.rng)
 			else:
 				tier = TierData.roll_tier(RNG.rng)
+			await mini_game.get_tree().create_timer(0.05).timeout
 		else:
 			# Botched — force Slag
 			tier = TierData.Tier.SLAG
+			await mini_game.get_tree().create_timer(0.05).timeout
 
 		var tier_item_id = TierData.get_item_id(tier)
 		var tier_name = TierData.get_display_name(tier)
-
-		# Hitstop: brief pause before emitting success
-		await mini_game.get_tree().create_timer(0.05).timeout
 		mini_game.harvest_success.emit(tier_item_id, tier_name)
 
 func handle_input(_action: String) -> void:

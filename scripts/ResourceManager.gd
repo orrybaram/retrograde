@@ -74,4 +74,14 @@ func show_gain_indicator(amount: int, kind: String, position: Vector2, tier_name
 
 	# Wait for next frame to ensure _ready() is called and @onready vars are set
 	await get_tree().process_frame
-	indicator.show_gain(amount, kind, position, tier_name)
+	indicator.show_gain(amount, kind, position, tier_name, _tier_color_for_name(tier_name))
+
+func _tier_color_for_name(tier_name: String) -> Color:
+	match tier_name:
+		"Slag":      return Color(0.533, 0.533, 0.533)  # #888888 dim grey
+		"Scrap":     return Color(1.0,   0.749, 0.0)    # #FFBF00 amber
+		"Salvage":   return Color(1.0,   0.843, 0.0)    # #FFD700 yellow
+		"Component": return Color(0.0,   1.0,   0.533)  # #00FF88 teal-green
+		"Mil-Spec":  return Color(0.0,   0.8,   1.0)    # #00CCFF cyan
+		"Artifact":  return Color(1.0,   1.0,   1.0)    # #FFFFFF white-gold
+	return Color(1.0, 0.749, 0.0)  # amber fallback

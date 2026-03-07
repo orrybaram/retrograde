@@ -384,6 +384,11 @@ func _stop_mini_game() -> void:
 		_mini_game.queue_free()
 		_mini_game = null
 
+const TIER_SHAKE_MULT := {
+	"slag": 0.3, "scrap": 1.0, "salvage": 1.4,
+	"component": 1.8, "mil_spec": 2.5, "artifact": 3.5
+}
+
 func _on_mini_game_harvest_success(tier_item_id: String, tier_name: String) -> void:
 	var max_cargo = 5.0
 	if _ship_in_range and is_instance_valid(_ship_in_range):
@@ -399,13 +404,14 @@ func _on_mini_game_harvest_success(tier_item_id: String, tier_name: String) -> v
 
 	resource_harvested.emit(1, kind, global_position, tier_name)
 
-	# Trigger harvest screen shake on the ship
+	# Tier-scaled screen shake
 	if _ship_in_range and is_instance_valid(_ship_in_range):
+		var mult = TIER_SHAKE_MULT.get(tier_item_id, 1.0)
 		_ship_in_range.damage_shake_time = _ship_in_range.harvest_shake_duration
-		_ship_in_range.damage_shake_current_intensity = _ship_in_range.harvest_shake_intensity
+		_ship_in_range.damage_shake_current_intensity = _ship_in_range.harvest_shake_intensity * mult
 
-	# Spawn harvest particle burst
-	_spawn_harvest_particles()
+	# Spawn harvest particle burst with tier color
+	_spawn_harvest_particles(tier_item_id)
 
 	amount = 0
 
@@ -427,7 +433,17 @@ func _finish_depletion() -> void:
 		_deplete_resource()
 	_stop_mini_game()
 
-func _spawn_harvest_particles() -> void:
+func _tier_particle_color(tier_item_id: String) -> Color:
+	match tier_item_id:
+		"slag":      return Color(0.533, 0.533, 0.533)  # dim grey
+		"scrap":     return Colors.PRIMARY               # amber
+		"salvage":   return Color(1.0,   0.843, 0.0)    # yellow
+		"component": return Color(0.0,   1.0,   0.533)  # teal-green
+		"mil_spec":  return Color(0.0,   0.8,   1.0)    # cyan
+		"artifact":  return Color(1.0,   1.0,   1.0)    # white-gold
+	return Colors.PRIMARY
+
+func _spawn_harvest_particles(tier_item_id: String = "") -> void:
 	var particles = GPUParticles2D.new()
 	particles.amount = 30
 	particles.lifetime = 0.6
@@ -443,7 +459,7 @@ func _spawn_harvest_particles() -> void:
 	material.gravity = Vector3.ZERO
 	material.scale_min = 1.0
 	material.scale_max = 3.0
-	material.color = Colors.PRIMARY
+	material.color = _tier_particle_color(tier_item_id)
 	material.damping_min = 20.0
 	material.damping_max = 40.0
 

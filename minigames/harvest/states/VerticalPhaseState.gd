@@ -53,7 +53,10 @@ func update_visuals(ui: HarvestMiniGameUI) -> void:
 		ui.vertical_scanner_bar.modulate.a = 0.8
 	
 	ui.vertical_scanner_bar.visible = true
-	
+
+	# Proximity glow on resource squares
+	ui.update_resource_proximity(mini_game.get_vertical_line_position(), true)
+
 	# Hide horizontal bar in vertical phase
 	if ui.horizontal_scanner_bar:
 		ui.horizontal_scanner_bar.visible = false

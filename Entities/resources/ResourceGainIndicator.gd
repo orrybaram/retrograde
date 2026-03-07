@@ -57,7 +57,7 @@ func _world_to_screen(world_pos: Vector2) -> Vector2:
 	return screen_pos
 
 ## Show the gain indicator animation
-func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "") -> void:
+func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "", tier_color: Color = Color(1.0, 0.75, 0.0)) -> void:
 	# Ensure nodes are ready (in case called before _ready)
 	if not amount_label:
 		amount_label = get_node_or_null("AmountLabel") as Label
@@ -78,10 +78,21 @@ func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tie
 		amount_label.text = "+%d %s" % [amount, tier_name]
 	else:
 		amount_label.text = "+%d" % amount
-	
+
+	# Apply tier color to label (keeps fade animation on self.modulate)
+	amount_label.modulate = tier_color
+
+	# Tier-based scale bonus
+	var tier_scale_bonus := 0.0
+	match tier_name:
+		"Salvage": tier_scale_bonus = 0.1
+		"Component": tier_scale_bonus = 0.2
+		"Mil-Spec": tier_scale_bonus = 0.3
+		"Artifact": tier_scale_bonus = 0.5
+
 	# Calculate scale based on amount
-	var target_scale = base_scale + (amount * scale_multiplier)
-	target_scale = clamp(target_scale, base_scale, base_scale * 1.3)  # Cap at 2x base scale
+	var target_scale = base_scale + (amount * scale_multiplier) + tier_scale_bonus
+	target_scale = clamp(target_scale, base_scale, base_scale * 1.8)  # Cap at 1.8x base scale
 	
 	# Convert world position to screen position
 	var screen_pos = _world_to_screen(world_position)
@@ -97,24 +108,32 @@ func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tie
 	set_process(true)  # Enable processing to track camera movement
 
 	# Start animation
-	_animate_text(target_scale)
+	_animate_text(target_scale, tier_name)
 
-func _animate_text(target_scale: float) -> void:
+func _animate_text(target_scale: float, tier_name: String = "") -> void:
 	if _tween:
 		_tween.kill()
-	
+
 	_tween = create_tween()
 	_tween.set_parallel(true)
-	
-	# Scale animation: 0.3x -> 1.2x peak -> settle at target
-	var peak_scale = target_scale * 1.2  # Bigger overshoot for punchier feel
+
 	var end_scale = target_scale
-	
+	var is_artifact = tier_name == "Artifact"
+
+	# Artifact: extra overshoot to 1.5x before settling
+	var peak_scale = target_scale * (1.5 if is_artifact else 1.2)
+
 	# Scale up to peak (with ease out)
 	_tween.tween_property(self, "scale", Vector2(peak_scale, peak_scale), animation_duration * 0.3).set_ease(Tween.EASE_OUT)
-	
-	# Scale back slightly (with ease in)
-	_tween.tween_property(self, "scale", Vector2(end_scale, end_scale), animation_duration * 0.2).set_delay(animation_duration * 0.3).set_ease(Tween.EASE_IN)
+
+	# Artifact: second bounce — dip below then settle
+	if is_artifact:
+		var dip_scale = end_scale * 0.85
+		_tween.tween_property(self, "scale", Vector2(dip_scale, dip_scale), animation_duration * 0.15).set_delay(animation_duration * 0.3).set_ease(Tween.EASE_IN)
+		_tween.tween_property(self, "scale", Vector2(end_scale, end_scale), animation_duration * 0.1).set_delay(animation_duration * 0.45).set_ease(Tween.EASE_OUT)
+	else:
+		# Scale back slightly (with ease in)
+		_tween.tween_property(self, "scale", Vector2(end_scale, end_scale), animation_duration * 0.2).set_delay(animation_duration * 0.3).set_ease(Tween.EASE_IN)
 	
 	# Fade in
 	_tween.tween_property(self, "modulate:a", 1.0, animation_duration * 0.2)

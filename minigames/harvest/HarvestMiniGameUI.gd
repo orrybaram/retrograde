@@ -122,6 +122,36 @@ func _clear_resource_squares() -> void:
 			square.queue_free()
 	resource_squares.clear()
 
+## Update resource square color and scale based on scanner bar proximity
+func update_resource_proximity(bar_pos_normalized: float, is_vertical: bool) -> void:
+	if not mini_game or resource_squares.is_empty() or not resource_squares_container:
+		return
+
+	var grid_cells = mini_game.grid_cells
+	var bar_grid_pos = bar_pos_normalized * grid_cells
+	var amber = Color(1.0, 0.75, 0.0)
+	var white = Color(1.0, 1.0, 1.0)
+
+	for i in range(mini_game.resource_positions.size()):
+		if i >= resource_squares.size():
+			continue
+
+		var resource_pos = mini_game.resource_positions[i]
+		var resource_center: float
+		if is_vertical:
+			resource_center = float(resource_pos.x) + 0.5
+		else:
+			resource_center = float(resource_pos.y) + 0.5
+
+		var distance = abs(bar_grid_pos - resource_center)
+		var proximity = 1.0 - clamp(distance / mini_game.max_harvest_distance, 0.0, 1.0)
+
+		var square = resource_squares[i]
+		square.color = amber.lerp(white, proximity)
+		square.pivot_offset = square.size / 2.0
+		var sq_scale = lerp(1.0, 1.3, proximity)
+		square.scale = Vector2(sq_scale, sq_scale)
+
 ## Flash a scanner bar white→green with a width punch on line lock
 func flash_line_lock(bar: ColorRect, is_vertical: bool) -> void:
 	if _line_flash_tween and _line_flash_tween.is_valid():
@@ -174,6 +204,37 @@ func flash_intersection(v_pos: float, h_pos: float) -> void:
 	_intersection_tween.tween_property(ring, "scale", Vector2(4.0, 4.0), 0.4).set_ease(Tween.EASE_OUT)
 	_intersection_tween.tween_property(ring, "modulate:a", 0.0, 0.4).set_ease(Tween.EASE_IN)
 	_intersection_tween.tween_callback(ring.queue_free).set_delay(0.4)
+
+## Flash both bars + spawn a large white burst ring at intersection (perfect hit)
+func flash_perfect(v_pos: float, h_pos: float) -> void:
+	# Flash both scanner bars simultaneously
+	if vertical_scanner_bar:
+		flash_line_lock(vertical_scanner_bar, true)
+	if horizontal_scanner_bar:
+		flash_line_lock(horizontal_scanner_bar, false)
+
+	if not scanner_container:
+		return
+
+	var container_width = scanner_container.size.x
+	var container_height = scanner_container.size.y
+	var x = v_pos * container_width
+	var y = h_pos * container_height
+
+	# Larger, brighter burst ring: white → amber, fades as it expands
+	var ring = ColorRect.new()
+	ring.size = Vector2(12, 12)
+	ring.position = Vector2(x - 6, y - 6)
+	ring.color = Color(1.0, 1.0, 1.0, 1.0)
+	ring.pivot_offset = ring.size / 2.0
+	ring.scale = Vector2(1.0, 1.0)
+	scanner_container.add_child(ring)
+
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(ring, "scale", Vector2(6.0, 6.0), 0.5).set_ease(Tween.EASE_OUT)
+	tween.tween_property(ring, "color", Color(1.0, 0.75, 0.0, 0.0), 0.5).set_ease(Tween.EASE_IN)
+	tween.tween_callback(ring.queue_free).set_delay(0.5)
 
 ## Flash scanner bars red on failure
 func flash_fail() -> void:

@@ -23,6 +23,7 @@ var is_trophy: bool = false
 @export var scanner_speed: float = 1  # Speed of scanner movement (units per second)
 @export var grid_cells: int = 10  # Number of grid cells (square grid)
 @export var max_harvest_distance: float = 3.0  # Maximum distance for harvesting (in grid cells)
+@export var perfect_distance: float = 1.0  # Distance threshold for a perfect hit (in grid cells)
 
 # State machine
 var current_state: HarvestMiniGameState
@@ -62,6 +63,7 @@ func change_state(new_state: HarvestMiniGameState) -> void:
 	if current_state:
 		current_state.enter()
 
+## Returns 2 = perfect hit, 1 = normal hit, 0 = miss
 func calculate_harvest_amount() -> int:
 	if resource_positions.is_empty():
 		return 0
@@ -70,7 +72,6 @@ func calculate_harvest_amount() -> int:
 	var intersection_x = vertical_line_position * grid_cells
 	var intersection_y = horizontal_line_position * grid_cells
 
-	# Check if intersection is close enough to any resource position
 	for resource_pos in resource_positions:
 		var resource_x = float(resource_pos.x) + 0.5  # Center of cell
 		var resource_y = float(resource_pos.y) + 0.5  # Center of cell
@@ -79,6 +80,8 @@ func calculate_harvest_amount() -> int:
 		var dy = resource_y - intersection_y
 		var distance = sqrt(dx * dx + dy * dy)
 
+		if distance <= perfect_distance:
+			return 2
 		if distance <= max_harvest_distance:
 			return 1
 

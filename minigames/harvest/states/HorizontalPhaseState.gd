@@ -15,14 +15,15 @@ func process(delta: float) -> void:
 	if mini_game.horizontal_locked:
 		return
 	
-	# Move horizontal line continuously
+	# Move horizontal line — 1.4x speed for escalating tension in phase 2
+	var speed = mini_game.scanner_speed * 1.4
 	if mini_game.horizontal_moving_down:
-		mini_game.horizontal_line_position += mini_game.scanner_speed * delta
+		mini_game.horizontal_line_position += speed * delta
 		if mini_game.horizontal_line_position >= 1.0:
 			mini_game.horizontal_line_position = 1.0
 			mini_game.horizontal_moving_down = false
 	else:
-		mini_game.horizontal_line_position -= mini_game.scanner_speed * delta
+		mini_game.horizontal_line_position -= speed * delta
 		if mini_game.horizontal_line_position <= 0.0:
 			mini_game.horizontal_line_position = 0.0
 			mini_game.horizontal_moving_down = true
@@ -59,4 +60,7 @@ func update_visuals(ui: HarvestMiniGameUI) -> void:
 	ui.horizontal_scanner_bar.color = Color(1.0, 0.75, 0.0, 0.8)  # Amber when moving
 	ui.horizontal_scanner_bar.modulate.a = 0.8
 	ui.horizontal_scanner_bar.visible = true
+
+	# Proximity glow on resource squares
+	ui.update_resource_proximity(mini_game.get_horizontal_line_position(), false)
 
