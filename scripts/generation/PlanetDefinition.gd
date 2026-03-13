@@ -5,6 +5,7 @@ class_name PlanetDefinition
 
 @export var planet_name: String = "Planet"
 @export var planet_type: Planet.PlanetType = Planet.PlanetType.ROCKY
+@export var planet_role: Planet.PlanetRole = Planet.PlanetRole.NONE
 
 @export_group("Size & Mass")
 @export var radius: float = 300.0

@@ -5,6 +5,9 @@ const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 
 ## Planet types that determine appearance and behavior
 enum PlanetType {SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARREN}
+
+## Planet roles that determine lore/cultural significance
+enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
  
 @export var planet_name: String = "Unnamed Planet" ## Name of zthe planet for identification
 @export var radius: float = 160.0
@@ -14,6 +17,7 @@ enum PlanetType {SUN, GAS_GIANT, ICE_GIANT, EARTH_LIKE, ROCKY, WATER, ICE, BARRE
 
 # Planet type properties
 @export var planet_type: PlanetType = PlanetType.ROCKY
+@export var planet_role: PlanetRole = PlanetRole.NONE
 @export_range(0.0, 1.0) var habitability: float = 0.0 ## 0.0 = uninhabitable, 1.0 = ideal for life
 @export_range(0.0, 1.0) var collision_radius_ratio: float = 1.0 ## Collision radius as ratio of visual radius (gas giants have smaller cores)
 @export var gravity_radius_multiplier: float = 3.0 ## How far the gravity field extends (multiplier of planet radius)

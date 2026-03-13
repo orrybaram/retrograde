@@ -20,7 +20,7 @@ enum SpawnMode { NEAR_PLANET, NEAR_SUN, AT_POSITION }
 @export_group("Ship Spawn")
 @export var spawn_mode: SpawnMode = SpawnMode.NEAR_PLANET
 ## Name of the planet to spawn near (only used if spawn_mode is NEAR_PLANET)
-@export var spawn_planet_name: String = "Earth"
+@export var spawn_planet_name: String = "Veld"
 ## Explicit spawn position (only used if spawn_mode is AT_POSITION)
 @export var spawn_position: Vector2 = Vector2.ZERO
 ## Distance offset from planet surface or sun surface

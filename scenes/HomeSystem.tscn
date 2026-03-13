@@ -8,7 +8,7 @@
 
 [node name="Sun" parent="." unique_id=2093463924 instance=ExtResource("1")]
 planet_name = "Sun"
-radius = 20000.0
+radius = 9000.0
 gravitational_constant = 8.0
 color = Color(1, 0.9, 0.5, 1)
 massMultiplier = 800.0
@@ -19,101 +19,137 @@ orbital_speed = 0.0
 enable_orbiting = false
 show_orbit_path = false
 
-[node name="Mercury" parent="Sun" unique_id=1437977707 instance=ExtResource("1")]
-position = Vector2(35501, 0)
-radius = 1080.0
-color = Color(0.6, 0.5, 0.45, 1)
-massMultiplier = 15.0
-planet_type = 7
-orbital_distance = 50000.0
-eccentricity = 0.05
-
-[node name="Venus" parent="Sun" unique_id=496336881 instance=ExtResource("1")]
-position = Vector2(42733, 0)
-radius = 1920.0
-color = Color(0.85, 0.7, 0.5, 1)
-massMultiplier = 28.0
-habitability = 0.1
-orbital_distance = 75000.0
-orbital_speed = 4.08
-initial_angle = 2.1
-eccentricity = 0.02
-
-[node name="Earth" parent="Sun" unique_id=1142076191 instance=ExtResource("1")]
-position = Vector2(52916, 0)
-radius = 2100.0
-color = Color(0.2, 0.5, 0.8, 1)
-massMultiplier = 500.0
+[node name="TERRA-0" parent="Sun" unique_id=200000001 instance=ExtResource("1")]
+position = Vector2(50000, 0)
+planet_name = "TERRA-0"
+radius = 4400.0
+color = Color(0.25, 0.55, 0.45, 1)
+massMultiplier = 450.0
 planet_type = 3
-habitability = 0.9
-orbital_distance = 112500.0
-orbital_speed = 3.335
-initial_angle = 4.2
-eccentricity = 0.02
-
-[node name="Luna" parent="Sun/Earth" unique_id=797776579 instance=ExtResource("1")]
-position = Vector2(4132, 0)
-radius = 567.0
-color = Color(0.6, 0.6, 0.6, 1)
-massMultiplier = 5.0
-planet_type = 7
-orbital_distance = 10500.0
-orbital_speed = 50.0
-eccentricity = 0.05
-show_gravity_rings = false
-
-[node name="Mars" parent="Sun" unique_id=511975100 instance=ExtResource("1")]
-position = Vector2(61844, 0)
-radius = 1320.0
-color = Color(0.75, 0.35, 0.2, 1)
-massMultiplier = 18.0
-habitability = 0.2
-orbital_distance = 168750.0
-orbital_speed = 2.72
+planet_role = 5
+orbital_distance = 50000.0
+orbital_speed = 0.5
 initial_angle = 1.0
-eccentricity = 0.05
+eccentricity = 0.01
 
-[node name="Jupiter" parent="Sun" unique_id=1442963267 instance=ExtResource("1")]
-position = Vector2(78594, 0)
-planet_name = "Jupiter"
-radius = 7200.0
-color = Color(0.8, 0.7, 0.55, 1)
-massMultiplier = 120.0
-planet_type = 1
-collision_radius_ratio = 0.3
-orbital_distance = 253125.0
-orbital_speed = 2.22
-initial_angle = 5.5
+[node name="Roke" parent="Sun" unique_id=200000002 instance=ExtResource("1")]
+position = Vector2(75000, 0)
+planet_name = "Roke"
+radius = 2800.0
+color = Color(0.45, 0.3, 0.25, 1)
+massMultiplier = 22.0
+planet_type = 7
+planet_role = 4
+orbital_distance = 75000.0
+orbital_speed = 0.41
+initial_angle = 2.8
 eccentricity = 0.04
 
-[node name="Saturn" parent="Sun" unique_id=459937283 instance=ExtResource("1")]
-position = Vector2(103945, 0)
-planet_name = "Saturn"
-radius = 6000.0
-color = Color(0.9, 0.8, 0.6, 1)
-massMultiplier = 5000.0
+[node name="Cairn" parent="Sun/Roke" unique_id=200000003 instance=ExtResource("1")]
+position = Vector2(10500, 0)
+planet_name = "Cairn"
+radius = 448.0
+color = Color(0.52, 0.5, 0.48, 1)
+massMultiplier = 3.0
+planet_type = 7
+orbital_distance = 10500.0
+orbital_speed = 14.3
+initial_angle = 4.7
+eccentricity = 0.01
+show_gravity_rings = false
+
+[node name="Sonder" parent="Sun" unique_id=200000004 instance=ExtResource("1")]
+position = Vector2(112500, 0)
+planet_name = "Sonder"
+radius = 6400.0
+color = Color(0.35, 0.4, 0.65, 1)
+massMultiplier = 380.0
 planet_type = 1
+planet_role = 3
 collision_radius_ratio = 0.3
-gravity_radius_multiplier = 2.0
-orbital_distance = 380000.0
-orbital_speed = 1.0
-initial_angle = 3.8
+orbital_distance = 112500.0
+orbital_speed = 0.33
+initial_angle = 5.2
 eccentricity = 0.03
 
-[node name="Moon" parent="Sun/Saturn" unique_id=769120327 instance=ExtResource("1")]
-position = Vector2(10047, 0)
-planet_name = "Moon 1"
+[node name="Char" parent="Sun/Sonder" unique_id=200000005 instance=ExtResource("1")]
+position = Vector2(21600, 0)
+planet_name = "Char"
+radius = 1280.0
+color = Color(0.28, 0.22, 0.2, 1)
+massMultiplier = 6.0
+planet_type = 7
+orbital_distance = 21600.0
+orbital_speed = 6.9
+initial_angle = 2.1
+eccentricity = 0.06
+show_gravity_rings = false
+
+[node name="Crom" parent="Sun" unique_id=200000006 instance=ExtResource("1")]
+position = Vector2(168750, 0)
+planet_name = "Crom"
+radius = 3200.0
+color = Color(0.55, 0.45, 0.35, 1)
+massMultiplier = 30.0
+planet_role = 2
+orbital_distance = 168750.0
+orbital_speed = 0.27
+initial_angle = 0.3
+eccentricity = 0.05
+
+[node name="Dross" parent="Sun/Crom" unique_id=200000007 instance=ExtResource("1")]
+position = Vector2(8400, 0)
+planet_name = "Dross"
+radius = 704.0
+color = Color(0.5, 0.4, 0.28, 1)
+massMultiplier = 8.0
+planet_type = 7
+orbital_distance = 8400.0
+orbital_speed = 17.9
+initial_angle = 0.5
+eccentricity = 0.03
+show_gravity_rings = false
+
+[node name="Barrow" parent="Sun/Crom" unique_id=200000008 instance=ExtResource("1")]
+position = Vector2(13200, 0)
+planet_name = "Barrow"
+radius = 576.0
+color = Color(0.42, 0.38, 0.33, 1)
+massMultiplier = 5.0
+planet_type = 7
+orbital_distance = 13200.0
+orbital_speed = 11.4
+initial_angle = 3.8
+eccentricity = 0.02
+show_gravity_rings = false
+
+[node name="Veld" parent="Sun" unique_id=200000009 instance=ExtResource("1")]
+position = Vector2(253125, 0)
+planet_name = "Veld"
+radius = 2400.0
+color = Color(0.7, 0.8, 0.95, 1)
+massMultiplier = 14.0
+planet_type = 6
+planet_role = 1
+orbital_distance = 253125.0
+orbital_speed = 0.22
+initial_angle = 3.5
+eccentricity = 0.06
+
+[node name="Rook" parent="Sun/Veld" unique_id=200000010 instance=ExtResource("1")]
+position = Vector2(7200, 0)
+planet_name = "Rook"
 radius = 1600.0
-color = Color(0.6, 0.6, 0.6, 1)
+color = Color(0.45, 0.42, 0.4, 1)
 massMultiplier = 55.0
 planet_type = 7
 gravity_radius_multiplier = 2.7
 orbital_distance = 20000.0
 orbital_speed = 20.0
 initial_angle = 180.0
-eccentricity = 0.05
+eccentricity = 0.04
 
-[node name="OrbitalRingSpawner" parent="Sun/Saturn/Moon" unique_id=1314295804 instance=ExtResource("2_vpsiu")]
+[node name="OrbitalRingSpawner" parent="Sun/Veld/Rook" unique_id=1314295804 instance=ExtResource("2_vpsiu")]
 max_resources = 200
 debris_ratio = 0.93
 inner_radius = 800.0
@@ -121,20 +157,8 @@ outer_radius = 2000.0
 density_gradient = 1.814
 orbital_speed = 10.0
 
-[node name="SpaceStation" parent="Sun/Saturn/Moon" unique_id=1245345729 instance=ExtResource("2")]
-position = Vector2(2263, 74)
+[node name="SpaceStation" parent="Sun/Veld/Rook" unique_id=1245345729 instance=ExtResource("2")]
+position = Vector2(3165, 0)
 orbital_distance = 6000.0
 orbital_speed = 20.0
 initial_angle_degrees = 180.0
-
-[node name="Neptune" parent="Sun" unique_id=926371594 instance=ExtResource("1")]
-position = Vector2(134672, 0)
-radius = 3900.0
-color = Color(0.3, 0.5, 0.85, 1)
-massMultiplier = 55.0
-planet_type = 2
-collision_radius_ratio = 0.4
-orbital_distance = 570000.0
-orbital_speed = 1.48
-initial_angle = 0.5
-eccentricity = 0.01

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MoonDefinition" format=3 uid="uid://dovh4ne4oklah"]
+
+[ext_resource type="Script" uid="uid://cglvbte5x3cm2" path="res://scripts/generation/MoonDefinition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+moon_name = "Cairn"
+radius_ratio = 0.16
+mass_multiplier = 3.0
+color = Color(0.52, 0.5, 0.48, 1)
+orbital_distance_multiplier = 5.0
+eccentricity = 0.01
+initial_angle = 4.7
