@@ -1,7 +1,7 @@
 extends ScrapNodeState
 class_name ScrapInRangeState
 
-## Ship is within harvest range. Owns the velocity check, can_harvest indicator,
+## Ship is within harvest cone. Owns the velocity check, can_harvest indicator,
 ## action prompt, and the decision to begin harvesting.
 
 var _can_harvest: bool = false
@@ -21,6 +21,14 @@ func exit() -> void:
 func process(_delta: float) -> void:
 	var ship := scrap_node._ship_in_range
 	if not ship or not is_instance_valid(ship):
+		scrap_node._state_machine.change_state("ScrapIdleState")
+		return
+
+	# If lock persisted through harvest but cone has since moved away, return to idle
+	var cone: HarvestCone = ship.get_node_or_null("HarvestCone") as HarvestCone
+	if cone and not cone.has_scrap(scrap_node):
+		scrap_node._ship_in_range = null
+		scrap_node._state_machine.change_state("ScrapIdleState")
 		return
 
 	var new_can_harvest := false
@@ -39,11 +47,6 @@ func process(_delta: float) -> void:
 func _try_start_harvest() -> void:
 	var ship := scrap_node._ship_in_range
 	if not ship or not is_instance_valid(ship):
-		return
-
-	# Don't start if ship is already in a HarvestingState
-	var ship_sm := ship.get_node_or_null("StateMachine") as StateMachine
-	if ship_sm and ship_sm.current_state and ship_sm.current_state is HarvestingState:
 		return
 
 	if InventoryManager.get_remaining_capacity(ship.max_cargo_weight) <= 0:

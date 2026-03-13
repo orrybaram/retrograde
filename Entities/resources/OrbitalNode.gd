@@ -180,7 +180,6 @@ func _go_to_sleep() -> void:
 	_is_sleeping = true
 	_cached_in_range = false
 	if _uses_harvest_detection:
-		monitoring = false
 		monitorable = false
 	if _collision_area_cached:
 		_collision_area_cached.monitoring = false
@@ -190,7 +189,6 @@ func _go_to_sleep() -> void:
 func _wake_up() -> void:
 	_is_sleeping = false
 	if _uses_harvest_detection:
-		monitoring = true
 		monitorable = true
 	visible = true
 
@@ -205,7 +203,6 @@ func on_spawn() -> void:
 	_cached_in_range = false
 
 	if _uses_harvest_detection:
-		monitoring = true
 		monitorable = true
 
 	# Recache collision area

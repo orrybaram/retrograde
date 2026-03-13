@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://wcorfxm65hls"]
+
+[ext_resource type="Script" uid="uid://ck07wd8n11gg8" path="res://entities/Ship/HarvestCone.gd" id="1"]
+
+[node name="HarvestCone" type="Area2D" unique_id=213942230]
+script = ExtResource("1")
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="." unique_id=251545976]
+rotation = -0.0019044849
+scale = Vector2(3.7997777, 3.7997777)
+polygon = PackedVector2Array(15, -5, 0, 0, 15, 5)
+
+[node name="VisualPolygon" type="Polygon2D" parent="." unique_id=492144426]
+rotation = -0.0019044849
+scale = Vector2(3.7997777, 3.7997777)
+color = Color(1, 0.780392, 0, 0.14902)
+polygon = PackedVector2Array(0, 0, 15, 5, 15, -5)

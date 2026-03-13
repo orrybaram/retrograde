@@ -1,94 +1,77 @@
 extends ShipState
 class_name HarvestingState
 
-## Handles velocity locking behavior when the ship is harvesting a resource node.
+## Handles velocity locking when the ship is harvesting resource nodes.
+## Multiple scraps may be harvested simultaneously; velocity locks to the nearest one.
 
-var locked_resource_node: ScrapNode = null
+var locked_resource_nodes: Array[ScrapNode] = []
 var velocity_tween_start: Vector2 = Vector2.ZERO
 var velocity_tween_time: float = 0.0
 var velocity_tween_duration: float = 2.0
-var last_target_velocity: Vector2 = Vector2.ZERO
-var camera_zoom_in = Vector2(1.5, 1.5)
 var _shake_grace_time: float = 0.0
+var camera_zoom_in: Vector2 = Vector2(1.5, 1.5)
 
 func enter() -> void:
 	super.enter()
-	
+
 	if not is_ship_valid():
 		return
-	
+
 	ship.camera.zoom_camera_in(camera_zoom_in)
 
-	# Lock-on screen shake impulse
 	ship.damage_shake_time = ship.harvest_lockon_shake_duration
 	ship.damage_shake_current_intensity = ship.harvest_lockon_shake_intensity
 	_shake_grace_time = ship.harvest_lockon_shake_duration
 
+	var cone := _get_cone()
+	if cone:
+		cone.set_harvesting(true)
 
-	# Use the same logic as IndicatorManager to find which resource to lock to
-	# First, try to get the resource that IndicatorManager is currently highlighting
-	var indicator_manager = ship.get_tree().get_first_node_in_group("indicator_manager") as IndicatorManager
-	var target_resource: ScrapNode = null
-	
-	if indicator_manager and indicator_manager.current_target:
-		var current_target = indicator_manager.current_target
-		if current_target is ResourceIndicatorTarget:
-			var resource_target = current_target as ResourceIndicatorTarget
-			var resource = resource_target.resource_node
-			# Only lock if this resource is being harvested
-			if resource and is_instance_valid(resource) and resource.is_harvesting():
-				target_resource = resource
-	
-	if target_resource and is_instance_valid(target_resource):
-		locked_resource_node = target_resource
-		# Initialize velocity tween from current ship velocity
-		if is_ship_valid():
-			velocity_tween_start = ship.linear_velocity
-			velocity_tween_time = 0.0
-			last_target_velocity = locked_resource_node.get_orbital_velocity()
-	else:
-		# No resource being harvested, go back to flying
+	velocity_tween_start = ship.linear_velocity
+	velocity_tween_time = 0.0
+
+	_cleanup_locked_nodes()
+	if locked_resource_nodes.is_empty():
 		_exit_to_flying()
 
 func exit() -> void:
 	super.exit()
-	locked_resource_node = null
+	locked_resource_nodes.clear()
 	velocity_tween_time = 0.0
 	velocity_tween_start = Vector2.ZERO
-	last_target_velocity = Vector2.ZERO
-	
+
 	ship.camera.zoom_camera_out()
+
+	var cone := _get_cone()
+	if cone:
+		cone.set_harvesting(false)
+
+func add_locked_node(scrap: ScrapNode) -> void:
+	if not locked_resource_nodes.has(scrap):
+		locked_resource_nodes.append(scrap)
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
 		return
-	
-	# Sample input to check if player wants to move
+
 	ship.want_thrust = Input.is_action_pressed("thrust")
 	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
-	
-	# Release lock if thrusting - transition back to FlyingState
+
 	if ship.want_thrust or ship.want_reverse_thrust:
 		_exit_to_flying()
 		return
-	
-	# Check if resource node is still valid and being harvested
-	if not locked_resource_node or not is_instance_valid(locked_resource_node):
+
+	_cleanup_locked_nodes()
+
+	if locked_resource_nodes.is_empty():
 		_exit_to_flying()
 		return
-	
-	if not locked_resource_node.is_harvesting():
-		_exit_to_flying()
-		return
-	
-	# Update velocity tween time
+
 	velocity_tween_time += delta
 
-	# Allow shake grace period (for lock-on bump) before resetting
 	if _shake_grace_time > 0.0:
 		_shake_grace_time -= delta
 	else:
-		# Reset camera shake after grace period
 		if ship.camera:
 			ship.camera_shake_time = 0.0
 			ship.damage_shake_time = 0.0
@@ -97,27 +80,47 @@ func physics_process(delta: float) -> void:
 				ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, delta * 5.0)
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
-	if not is_ship_valid() or not locked_resource_node or not is_instance_valid(locked_resource_node):
+	if not is_ship_valid() or locked_resource_nodes.is_empty():
 		return
-	
-	# Calculate resource node's velocity
-	var resource_velocity = _get_resource_velocity()
-	
-	# Smoothly tween from start velocity to target velocity over 2 seconds
-	var tween_progress = min(velocity_tween_time / velocity_tween_duration, 1.0)
-	var new_velocity = velocity_tween_start.lerp(resource_velocity, tween_progress)
-	
-	state.linear_velocity = new_velocity
+
+	var primary := _get_nearest_locked_node()
+	if not primary:
+		return
+
+	var resource_velocity: Vector2 = primary.get_orbital_velocity()
+	var tween_progress: float = minf(velocity_tween_time / velocity_tween_duration, 1.0)
+	state.linear_velocity = velocity_tween_start.lerp(resource_velocity, tween_progress)
 	state.angular_velocity = 0.0
 
-func _get_resource_velocity() -> Vector2:
-	if not locked_resource_node or not is_instance_valid(locked_resource_node):
-		return Vector2.ZERO
-	
-	# Get orbital velocity from resource node
-	return locked_resource_node.get_orbital_velocity()
+func _cleanup_locked_nodes() -> void:
+	var cleaned: Array[ScrapNode] = []
+	for n in locked_resource_nodes:
+		if is_instance_valid(n) and n.is_harvesting():
+			cleaned.append(n)
+	locked_resource_nodes = cleaned
+
+func _get_nearest_locked_node() -> ScrapNode:
+	if locked_resource_nodes.is_empty():
+		return null
+	if not is_ship_valid():
+		return locked_resource_nodes[0]
+	var nearest: ScrapNode = null
+	var nearest_dist := INF
+	for node in locked_resource_nodes:
+		if not is_instance_valid(node):
+			continue
+		var d := ship.global_position.distance_squared_to(node.global_position)
+		if d < nearest_dist:
+			nearest_dist = d
+			nearest = node
+	return nearest
+
+func _get_cone() -> HarvestCone:
+	if not is_ship_valid():
+		return null
+	return ship.get_node_or_null("HarvestCone") as HarvestCone
 
 func _exit_to_flying() -> void:
-	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
+	var state_machine: StateMachine = ship.get_node_or_null("StateMachine") as StateMachine
 	if state_machine and state_machine.has_state("FlyingState"):
 		state_machine.change_state("FlyingState")

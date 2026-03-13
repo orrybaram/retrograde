@@ -3,38 +3,40 @@ class_name ScrapHarvestingState
 
 ## Active harvesting: beam fires, HP drains, ship velocity is locked.
 ## Transitions to ScrapInRangeState on action release, or ScrapDepletedState on HP zero.
+## Ship's HarvestingState manages its own exit; this state does not force it.
 
 func enter() -> void:
 	super.enter()
 	scrap_node.harvest_started.emit()
-	scrap_node._start_harvest_beam()
 	scrap_node.health_component.died.connect(_on_depleted)
+	var sparkles := scrap_node.get_node_or_null("SparkleParticles") as SparkleParticles
+	if sparkles and is_instance_valid(sparkles):
+		sparkles.set_harvesting(scrap_node._ship_in_range, scrap_node.color, scrap_node.health_component)
 
 	var ship := scrap_node._ship_in_range
 	if ship and is_instance_valid(ship):
-		var ship_sm := ship.get_node_or_null("StateMachine") as StateMachine
+		var ship_sm: StateMachine = ship.get_node_or_null("StateMachine") as StateMachine
 		if ship_sm and ship_sm.has_state("HarvestingState"):
-			ship_sm.change_state("HarvestingState")
+			var harvesting_state: HarvestingState = ship_sm.states.get("HarvestingState") as HarvestingState
+			if harvesting_state:
+				harvesting_state.add_locked_node(scrap_node)
+				if not ship_sm.current_state is HarvestingState:
+					ship_sm.change_state("HarvestingState")
 
 func exit() -> void:
 	if scrap_node.health_component.died.is_connected(_on_depleted):
 		scrap_node.health_component.died.disconnect(_on_depleted)
 
-	scrap_node._stop_harvest_beam()
+	var sparkles := scrap_node.get_node_or_null("SparkleParticles") as SparkleParticles
+	if sparkles and is_instance_valid(sparkles):
+		sparkles.set_idle()
 	scrap_node.harvest_stopped.emit()
-
-	var ship := scrap_node._ship_in_range
-	if ship and is_instance_valid(ship):
-		var ship_sm := ship.get_node_or_null("StateMachine") as StateMachine
-		if ship_sm and ship_sm.has_state("FlyingState"):
-			ship_sm.change_state("FlyingState")
-
+	# Ship's HarvestingState polls its own locked_resource_nodes and exits when all done.
 	super.exit()
 
 func process(delta: float) -> void:
 	if Input.is_action_pressed("action"):
 		scrap_node.health_component.take_damage(scrap_node.harvest_rate * delta)
-		scrap_node._update_harvest_beam()
 		scrap_node._update_visual()
 	else:
 		scrap_node._state_machine.change_state("ScrapInRangeState")
@@ -66,6 +68,8 @@ func _on_depleted() -> void:
 		ship.damage_shake_time = ship.harvest_shake_duration
 		ship.damage_shake_current_intensity = ship.harvest_shake_intensity * mult
 
-	scrap_node._spawn_harvest_particles(tier_item_id)
+	var sparkles := scrap_node.get_node_or_null("SparkleParticles") as SparkleParticles
+	if sparkles and is_instance_valid(sparkles):
+		sparkles.pop(tier_item_id)
 	scrap_node.amount = 0
 	scrap_node._state_machine.change_state("ScrapDepletedState")

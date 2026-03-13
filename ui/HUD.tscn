@@ -103,33 +103,29 @@ layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_hull")
 
-[node name="CargoRow" type="Control" parent="DashboardAnchor/HBox/RightColumn" unique_id=1185582045]
-layout_direction = 2
+[node name="CargoRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=1185582045]
 layout_mode = 2
 size_flags_horizontal = 0
+theme_override_constants/separation = 2
 
-[node name="TrolleyIcon" type="Sprite2D" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=987357832]
-position = Vector2(9, 16)
-rotation = -0.003259629
-scale = Vector2(0.08277519, 0.082775176)
+[node name="TrolleyIcon" type="TextureRect" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=987357832]
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+size_flags_vertical = 4
 texture = ExtResource("6_pfnlp")
+stretch_mode = 5
+expand_mode = 1
 
 [node name="CurrentCargoLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1658296246]
-layout_mode = 0
-offset_left = 21.0
-offset_right = 49.0
-offset_bottom = 29.0
+layout_mode = 2
+size_flags_vertical = 4
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(1, 0.75, 0, 1)
 theme_override_font_sizes/font_size = 28
 text = "0"
 
 [node name="MaxCargoLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1592758723]
-layout_mode = 0
-offset_left = 47.0
-offset_top = 12.0
-offset_right = 75.0
-offset_bottom = 27.0
+layout_mode = 2
 size_flags_vertical = 8
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(0.37, 0.28, 0, 1)

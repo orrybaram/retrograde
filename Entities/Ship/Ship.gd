@@ -46,6 +46,7 @@ var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (p
 
 # State machine reference
 @onready var state_machine: StateMachine = $"StateMachine"
+@onready var harvest_cone: HarvestCone = $"HarvestCone"
 
 @onready var thruster_particles: GPUParticles2D = $"ThrusterParticles"
 @onready var boost_particles: GPUParticles2D = $"BoostParticles"

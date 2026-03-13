@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://b051ln2ytsesm"]
+[gd_scene format=3 uid="uid://b051ln2ytsesm"]
 
 [ext_resource type="Script" uid="uid://cx5ba1vmbwqiy" path="res://entities/Ship/Ship.gd" id="1"]
 [ext_resource type="Script" uid="uid://coqh8cu6dte0k" path="res://scripts/StateMachine.gd" id="2"]
@@ -7,7 +7,8 @@
 [ext_resource type="Script" uid="uid://cfyoann2rnq0w" path="res://entities/Ship/states/LandedState.gd" id="4"]
 [ext_resource type="Script" uid="uid://br1pdbv2ka45p" path="res://entities/Ship/states/DestroyedState.gd" id="5"]
 [ext_resource type="Script" uid="uid://c52gah6pxgdju" path="res://entities/Ship/states/HarvestingState.gd" id="6"]
-[ext_resource type="Script" path="res://entities/Ship/states/StrandedState.gd" id="7"]
+[ext_resource type="Script" uid="uid://cl0sr554oon" path="res://entities/Ship/states/StrandedState.gd" id="7"]
+[ext_resource type="PackedScene" uid="uid://wcorfxm65hls" path="res://entities/Ship/HarvestCone.tscn" id="9_vnnms"]
 
 [sub_resource type="Gradient" id="Gradient_1"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -74,81 +75,84 @@ scale_max = 8.0
 color = Color(0.7983666, 0.7983663, 0.79836595, 1)
 color_ramp = SubResource("GradientTexture1D_3")
 
-[node name="Ship" type="RigidBody2D"]
+[node name="Ship" type="RigidBody2D" unique_id=545618992]
 position = Vector2(2, 0)
 mass = 50000.0
 gravity_scale = 0.0
 center_of_mass_mode = 1
 script = ExtResource("1")
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1461028405]
 zoom = Vector2(0.6, 0.6)
 rotation_smoothing_enabled = true
 script = ExtResource("2_0tak2")
 
-[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="." unique_id=407222782]
 position = Vector2(0, -4.7683716e-07)
 scale = Vector2(1.0416666, 0.99999994)
 polygon = PackedVector2Array(7.680001, 5.000001, 3.8400004, 7.0000014, -12.480001, 9.000002, -12.480001, -9, 3.8400004, -7.0000005, 7.680001, -5, 9.600001, 4.768372e-07)
 
-[node name="ThrusterParticles" type="GPUParticles2D" parent="."]
+[node name="ThrusterParticles" type="GPUParticles2D" parent="." unique_id=1511933614]
 position = Vector2(-14, 0)
 emitting = false
 amount = 50
 lifetime = 1.5
 process_material = SubResource("ParticleProcessMaterial_1")
 
-[node name="BoostParticles" type="GPUParticles2D" parent="."]
+[node name="BoostParticles" type="GPUParticles2D" parent="." unique_id=869370798]
 position = Vector2(-10, 0)
 emitting = false
 amount = 100
 lifetime = 1.64
 process_material = SubResource("ParticleProcessMaterial_2")
 
-[node name="SideThrusterParticles" type="GPUParticles2D" parent="."]
+[node name="SideThrusterParticles" type="GPUParticles2D" parent="." unique_id=1412774742]
 emitting = false
 amount = 10
 process_material = SubResource("ParticleProcessMaterial_3")
 
-[node name="Body" type="Node2D" parent="."]
+[node name="HarvestCone" parent="." unique_id=1751023026 instance=ExtResource("9_vnnms")]
+position = Vector2(9, 0)
 
-[node name="Polygon2D" type="Polygon2D" parent="Body"]
+[node name="Body" type="Node2D" parent="." unique_id=195505946]
+
+[node name="Polygon2D" type="Polygon2D" parent="Body" unique_id=1821442219]
 position = Vector2(0, -4.7683716e-07)
 scale = Vector2(1.0416666, 0.99999994)
 polygon = PackedVector2Array(7.680001, 5.000001, 3.8400004, 7.0000014, -9.600001, 8.000002, -9.600001, -8, 3.8400004, -7.0000005, 7.680001, -5, 11.520001, 4.768372e-07)
 
-[node name="Polygon2D3" type="Polygon2D" parent="Body"]
+[node name="Polygon2D3" type="Polygon2D" parent="Body" unique_id=1388711776]
 position = Vector2(-1.0000002, 4)
 scale = Vector2(1.0850694, 0.9999999)
 color = Color(0.56667995, 0.56668025, 0.56668013, 1)
 polygon = PackedVector2Array(-9.6, -1.0000001, -11.0592, 0, -11.0592, -8.000001, -9.6, -7.000001, 3.6864, -6.000001, 7.3728, -4.0000005, 3.6864, -2.0000002)
 
-[node name="Polygon2D4" type="Polygon2D" parent="Body"]
+[node name="Polygon2D4" type="Polygon2D" parent="Body" unique_id=1754740653]
 position = Vector2(-1.0000004, -7)
 scale = Vector2(1.0850694, 0.9999999)
 color = Color(0.56667995, 0.56668025, 0.56668013, 1)
 polygon = PackedVector2Array(-11.0592, 0, -11.0592, -1, -11.059199, -2, -10.1376, -2, -10.1376, -1, -8.294399, -1, -8.294399, 0)
 
-[node name="Polygon2D5" type="Polygon2D" parent="Body"]
+[node name="Polygon2D5" type="Polygon2D" parent="Body" unique_id=1809306228]
 position = Vector2(-1.0000001, 9)
 scale = Vector2(1.0850694, 0.9999999)
 color = Color(0.56667995, 0.56668025, 0.56668013, 1)
 polygon = PackedVector2Array(-11.0592, 0, -11.0592, -1, -11.059199, -2, -10.1376, -2, -8.294399, -2, -8.294399, -1, -10.1376, -1, -10.1376, 0)
 
-[node name="StateMachine" type="Node" parent="."]
+[node name="StateMachine" type="Node" parent="." unique_id=1960471019]
 script = ExtResource("2")
 
-[node name="FlyingState" type="Node" parent="StateMachine"]
+[node name="FlyingState" type="Node" parent="StateMachine" unique_id=593654084]
 script = ExtResource("3")
 
-[node name="LandedState" type="Node" parent="StateMachine"]
+[node name="LandedState" type="Node" parent="StateMachine" unique_id=2013158335]
 script = ExtResource("4")
 
-[node name="HarvestingState" type="Node" parent="StateMachine"]
+[node name="HarvestingState" type="Node" parent="StateMachine" unique_id=1148346028]
 script = ExtResource("6")
 
-[node name="StrandedState" type="Node" parent="StateMachine"]
+[node name="StrandedState" type="Node" parent="StateMachine" unique_id=847347397]
 script = ExtResource("7")
 
-[node name="DestroyedState" type="Node" parent="StateMachine"]
+[node name="DestroyedState" type="Node" parent="StateMachine" unique_id=754737936]
 script = ExtResource("5")

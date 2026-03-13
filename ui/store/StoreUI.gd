@@ -55,11 +55,12 @@ func _ready() -> void:
 		gs.upgrade_level_changed.connect(_on_upgrade_level_changed)
 
 func _build_ui() -> void:
-	# Background
+	# Background (covers full screen, added to root not store window)
 	_bg_rect = ColorRect.new()
 	_bg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_bg_rect.color = Color(0, 0, 0, 0.98)
-	_store_window.add_child(_bg_rect)
+	add_child(_bg_rect)
+	move_child(_bg_rect, 0)
 
 	# Border panel
 	_border_panel = Panel.new()
@@ -233,8 +234,13 @@ func _move_selection(direction: int) -> void:
 		return
 
 	if _mode == Mode.BUY or _mode == Mode.SELL:
-		# Allow selecting disabled items to view descriptions
-		_selected_index = (_selected_index + direction + _menu_items.size()) % _menu_items.size()
+		# Allow selecting disabled items to view descriptions, but skip separators
+		var new_index = (_selected_index + direction + _menu_items.size()) % _menu_items.size()
+		var attempts = 0
+		while attempts < _menu_items.size() and _menu_items[new_index].get("is_separator", false):
+			new_index = (new_index + direction + _menu_items.size()) % _menu_items.size()
+			attempts += 1
+		_selected_index = new_index
 	else:
 		var new_index = _selected_index
 		var attempts = 0
@@ -345,12 +351,6 @@ func _update_character_display() -> void:
 	elif _dialogue_label:
 		_typewriter.show_immediate("")
 
-	_menu_items.append({
-		"enabled": true,
-		"action": _switch_to_buy,
-		"label": "BUY",
-	})
-
 	if store and store.can_sell_resources():
 		var inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
 		var has_items = inventory_manager and not inventory_manager.get_all_items().is_empty()
@@ -359,6 +359,12 @@ func _update_character_display() -> void:
 			"action": _switch_to_sell,
 			"label": "SELL",
 		})
+
+	_menu_items.append({
+		"enabled": true,
+		"action": _switch_to_buy,
+		"label": "BUY",
+	})
 
 	_menu_items.append({
 		"enabled": npc != null and npc.talk_topics.size() > 0,
@@ -589,6 +595,8 @@ func _update_buy_menu_display() -> void:
 		var cost_text = item.get("cost_text", "")
 
 		var row = children[i]
+		if not row is HBoxContainer:
+			continue
 		if row.get_child_count() < 1:
 			continue
 
@@ -653,6 +661,31 @@ func _update_sell_display() -> void:
 		_switch_to_character()
 		return
 
+	# SELL ALL row (top)
+	var sell_all_value = store.get_sell_value()
+	_menu_items.append({
+		"enabled": true,
+		"action": _on_sell_all_pressed,
+		"label": "SELL ALL",
+		"cost_text": "%d CR" % sell_all_value,
+		"description": "Sell entire cargo for %d CR" % sell_all_value,
+	})
+	_store_items_container.add_child(_make_buy_row())
+
+	# Spacer between SELL ALL and individual items
+	_menu_items.append({
+		"enabled": false,
+		"action": null,
+		"label": "",
+		"cost_text": "",
+		"description": "",
+		"is_separator": true,
+	})
+	var sell_sep = HSeparator.new()
+	sell_sep.add_theme_color_override("separator", Colors.AMBER)
+	sell_sep.add_theme_constant_override("separation", 4)
+	_store_items_container.add_child(sell_sep)
+
 	# Add a row for each resource in inventory
 	for item_id in all_items.keys():
 		var quantity = all_items[item_id] as int
@@ -670,17 +703,6 @@ func _update_sell_display() -> void:
 			"description": "%d x %d CR = %d CR" % [quantity, unit_price, total_value],
 		})
 		_store_items_container.add_child(_make_buy_row())
-
-	# SELL ALL row
-	var sell_all_value = store.get_sell_value()
-	_menu_items.append({
-		"enabled": true,
-		"action": _on_sell_all_pressed,
-		"label": "SELL ALL",
-		"cost_text": "%d CR" % sell_all_value,
-		"description": "Sell entire cargo for %d CR" % sell_all_value,
-	})
-	_store_items_container.add_child(_make_buy_row())
 
 	# BACK row
 	_menu_items.append({
