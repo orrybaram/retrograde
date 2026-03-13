@@ -15,21 +15,26 @@ var states: Dictionary = {}
 ## Reference to the parent entity (set automatically)
 var entity: Node = null
 
+## Optional: override the initial state name. Falls back to FlyingState, then first discovered state.
+@export var initial_state_name: String = ""
+
 func _ready() -> void:
 	# Get reference to parent entity
 	entity = get_parent()
-	
+
 	# Auto-discover child state nodes
 	_discover_states()
-	
+
 	# Set entity reference on all states
 	for state in states.values():
 		if state is State:
 			state.entity = entity
-	
-	# Start with FlyingState if available, otherwise first state
+
+	# Start with initial_state_name if set, FlyingState if available, otherwise first state
 	if not states.is_empty():
-		if states.has("FlyingState"):
+		if initial_state_name != "" and states.has(initial_state_name):
+			change_state(initial_state_name)
+		elif states.has("FlyingState"):
 			change_state("FlyingState")
 		else:
 			var first_state_name = states.keys()[0]

@@ -18,3 +18,7 @@
 - Action rows: `>` prefix for selected, dimmed `#5f4700` for unavailable
 
 For detailed patterns and examples, see `@.claude/PATTERNS.md`.
+
+## Scene Inspection
+
+**Never read `.tscn` files directly** — use `mcp__gdcli__scene_inspect` instead. It returns a structured summary at a fraction of the token cost.
