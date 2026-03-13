@@ -10,7 +10,9 @@ signal can_harvest_changed(can_harvest: bool)
 @export var kind: String = "Scrap"
 @export var amount: int = 1
 @export var max_amount: int = 1
-@export var harvest_rate: float = 5.0
+@export var harvest_rate: float = 10.0  # DPS applied to scrap HP during harvesting
+@export var base_hp: float = 30.0
+@export var trophy_hp_multiplier: float = 2.0
 
 @export var is_trophy: bool = false:
 	set(value):
@@ -27,15 +29,18 @@ var _indicator_manager = null
 var _can_harvest: bool = false
 var _trophy_sparkles: SparkleParticles = null
 var _trophy_pulse_tween: Tween = null
-
-# Mini-game integration
-var _mini_game: HarvestMiniGame = null
-var _mini_game_ui: HarvestMiniGameUI = null
-var _mini_game_ui_scene: PackedScene = preload("res://minigames/harvest/HarvestMiniGameUI.tscn")
+var _harvest_beam: GPUParticles2D = null
+var health_component: HealthComponent
 
 func _ready() -> void:
 	_uses_harvest_detection = true
 	super._ready()
+
+	health_component = HealthComponent.new()
+	health_component.name = "HealthComponent"
+	health_component.max_hp = base_hp
+	add_child(health_component)
+	health_component.died.connect(_complete_harvest)
 
 	add_to_group("resource_nodes")
 
@@ -90,11 +95,8 @@ func _on_harvest_area_exited(body: Node2D) -> void:
 			EventBus.action_message_changed.emit("")
 		_unregister_indicator()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not _ship_in_range:
-		return
-
-	if _mini_game and not _mini_game.is_idle():
 		return
 
 	var new_can_harvest = false
@@ -111,9 +113,16 @@ func _process(_delta: float) -> void:
 		can_harvest_changed.emit(_can_harvest)
 
 	if _ship_in_range and amount > 0 and not _is_depleted:
-		if Input.is_action_just_pressed("action"):
-			if not _harvesting:
+		if not _harvesting:
+			if Input.is_action_just_pressed("action"):
 				start_harvest()
+		else:
+			if Input.is_action_pressed("action"):
+				health_component.take_damage(harvest_rate * delta)
+				_update_harvest_beam()
+				_update_visual()
+			else:
+				stop_harvest()
 	else:
 		if _harvesting:
 			stop_harvest()
@@ -150,14 +159,13 @@ func start_harvest() -> void:
 		if state_machine and state_machine.has_state("HarvestingState"):
 			state_machine.change_state("HarvestingState")
 
-	_start_mini_game()
+	_start_harvest_beam()
 
 func stop_harvest() -> void:
 	if not _harvesting:
 		return
 
-	if _mini_game:
-		_stop_mini_game()
+	_stop_harvest_beam()
 
 	_harvesting = false
 	_accum = 0.0
@@ -179,7 +187,7 @@ func _update_visual() -> void:
 	if not visual:
 		return
 
-	var depletion_ratio = float(amount) / float(max_amount) if max_amount > 0 else 1.0
+	var depletion_ratio = health_component.get_hp_ratio() if health_component else 1.0
 
 	if visual is ColorRect:
 		var color_rect = visual as ColorRect
@@ -246,9 +254,6 @@ func _deplete_resource() -> void:
 			minimap.unregister_target(minimap_target)
 		minimap_target = null
 
-	if _mini_game:
-		_stop_mini_game()
-
 	if _harvesting:
 		_harvesting = false
 		harvest_stopped.emit()
@@ -279,6 +284,9 @@ func on_spawn() -> void:
 		if main:
 			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
 
+	# Restore harvest rate (zeroed on despawn)
+	harvest_rate = 10.0
+
 	# Trophy roll for pooled nodes
 	is_trophy = RNG.rng.randi() % 10 == 0
 
@@ -293,11 +301,8 @@ func on_despawn() -> void:
 	if is_in_group("resource_nodes"):
 		remove_from_group("resource_nodes")
 
-	# Stop mini-game if active
-	if _mini_game:
-		_stop_mini_game()
-
 	# Stop harvesting
+	_stop_harvest_beam()
 	_harvesting = false
 
 	# Reset state variables
@@ -305,8 +310,6 @@ func on_despawn() -> void:
 	_is_depleted = false
 	_ship_in_range = null
 	_can_harvest = false
-	_mini_game = null
-	_mini_game_ui = null
 	_indicator_target = null
 
 	# Reset trophy state
@@ -318,10 +321,12 @@ func on_despawn() -> void:
 		_trophy_sparkles = null
 	is_trophy = false
 
-	# Reset resource amounts
+	# Reset resource amounts and HP
 	amount = 0
 	max_amount = 0
 	harvest_rate = 0.0
+	health_component.max_hp = base_hp
+	health_component.reset()
 
 	super.on_despawn()
 
@@ -338,70 +343,32 @@ func _unregister_indicator() -> void:
 		_indicator_manager.unregister_target(_indicator_target)
 		_indicator_target = null
 
-func _start_mini_game() -> void:
-	_mini_game = HarvestMiniGame.new()
-	add_child(_mini_game)
-
-	_mini_game.harvest_success.connect(_on_mini_game_harvest_success)
-	_mini_game.harvest_failed.connect(_on_mini_game_harvest_failed)
-	_mini_game.ui_closed.connect(_on_mini_game_ui_closed)
-	_mini_game.is_trophy = is_trophy
-
-	_setup_mini_game_ui()
-
-	_mini_game.open_ui(kind, amount)
-
-func _setup_mini_game_ui() -> void:
-	var main = get_tree().get_first_node_in_group("main")
-	var canvas_layer: CanvasLayer = null
-
-	if main:
-		canvas_layer = main.get_node_or_null("CanvasLayer")
-
-	if not canvas_layer:
-		canvas_layer = get_tree().root.find_child("CanvasLayer", true, false) as CanvasLayer
-
-	if not canvas_layer:
-		push_error("Could not find CanvasLayer for mini-game UI")
-		return
-
-	if _mini_game_ui_scene:
-		_mini_game_ui = _mini_game_ui_scene.instantiate() as HarvestMiniGameUI
-		if _mini_game_ui:
-			canvas_layer.add_child(_mini_game_ui)
-			_mini_game_ui.setup(_mini_game)
-
-func _stop_mini_game() -> void:
-	if _mini_game:
-		_mini_game.close_ui()
-
-	if _mini_game_ui:
-		_mini_game_ui.cleanup()
-		_mini_game_ui.queue_free()
-		_mini_game_ui = null
-
-	if _mini_game:
-		_mini_game.queue_free()
-		_mini_game = null
-
 const TIER_SHAKE_MULT := {
 	"slag": 0.3, "scrap": 1.0, "salvage": 1.4,
 	"component": 1.8, "mil_spec": 2.5, "artifact": 3.5
 }
 
-func _on_mini_game_harvest_success(tier_item_id: String, tier_name: String) -> void:
+func _complete_harvest() -> void:
 	var max_cargo = 5.0
 	if _ship_in_range and is_instance_valid(_ship_in_range):
 		max_cargo = _ship_in_range.max_cargo_weight
 
+	var tier: TierData.Tier
+	if is_trophy:
+		tier = TierData.roll_tier_trophy(RNG.rng)
+	else:
+		tier = TierData.roll_tier(RNG.rng)
+
+	var tier_item_id = TierData.get_item_id(tier)
+	var tier_name = TierData.get_display_name(tier)
+
 	if not InventoryManager.can_add_item(tier_item_id, 1, max_cargo):
 		EventBus.action_message_changed.emit("Cargo full!")
-		_stop_mini_game()
+		health_component.reset()  # Allow retry once cargo clears
 		stop_harvest()
 		return
 
 	InventoryManager.add_item(tier_item_id, 1)
-
 	resource_harvested.emit(1, kind, global_position, tier_name)
 
 	# Tier-scaled screen shake
@@ -410,13 +377,57 @@ func _on_mini_game_harvest_success(tier_item_id: String, tier_name: String) -> v
 		_ship_in_range.damage_shake_time = _ship_in_range.harvest_shake_duration
 		_ship_in_range.damage_shake_current_intensity = _ship_in_range.harvest_shake_intensity * mult
 
-	# Spawn harvest particle burst with tier color
 	_spawn_harvest_particles(tier_item_id)
-
 	amount = 0
-
-	# Pop effect: scale up then shrink to 0 before depletion
+	stop_harvest()
 	_pop_and_deplete()
+
+func _start_harvest_beam() -> void:
+	if _harvest_beam:
+		return
+
+	_harvest_beam = GPUParticles2D.new()
+	_harvest_beam.amount = 12
+	_harvest_beam.lifetime = 0.7
+	_harvest_beam.one_shot = false
+	_harvest_beam.emitting = true
+	_harvest_beam.position = Vector2.ZERO
+
+	var mat = ParticleProcessMaterial.new()
+	mat.spread = 15.0
+	mat.initial_velocity_min = 80.0
+	mat.initial_velocity_max = 150.0
+	mat.gravity = Vector3.ZERO
+	mat.scale_min = 1.5
+	mat.scale_max = 3.0
+	mat.color = Colors.PRIMARY
+	mat.damping_min = 5.0
+	mat.damping_max = 15.0
+	_harvest_beam.process_material = mat
+
+	add_child(_harvest_beam)
+
+func _update_harvest_beam() -> void:
+	if not _harvest_beam or not _ship_in_range or not is_instance_valid(_ship_in_range):
+		return
+
+	var to_ship = (_ship_in_range.global_position - global_position).normalized()
+	var mat = _harvest_beam.process_material as ParticleProcessMaterial
+	if mat:
+		mat.direction = Vector3(to_ship.x, to_ship.y, 0.0)
+		var progress = 1.0 - health_component.get_hp_ratio()
+		_harvest_beam.amount = int(lerp(8.0, 35.0, progress))
+
+func _stop_harvest_beam() -> void:
+	if not _harvest_beam:
+		return
+	_harvest_beam.emitting = false
+	var beam = _harvest_beam
+	_harvest_beam = null
+	get_tree().create_timer(0.8).timeout.connect(func():
+		if is_instance_valid(beam):
+			beam.queue_free()
+	)
 
 func _pop_and_deplete() -> void:
 	var visual = _find_visual_node()
@@ -431,7 +442,6 @@ func _pop_and_deplete() -> void:
 func _finish_depletion() -> void:
 	if not _is_depleted:
 		_deplete_resource()
-	_stop_mini_game()
 
 func _tier_particle_color(tier_item_id: String) -> Color:
 	match tier_item_id:
@@ -480,19 +490,13 @@ func _activate_trophy() -> void:
 
 	_trophy_sparkles.is_trophy = true
 
+	# Trophies are tougher to harvest
+	health_component.max_hp = base_hp * trophy_hp_multiplier
+	health_component.reset()
+
 	# Subtle scale pulse to catch the eye
 	var visual = _find_visual_node()
 	if visual:
 		_trophy_pulse_tween = create_tween().set_loops()
 		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale * 1.15, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
-
-func _on_mini_game_harvest_failed() -> void:
-	# Small screen shake on failure
-	if _ship_in_range and is_instance_valid(_ship_in_range):
-		_ship_in_range.damage_shake_time = 0.2
-		_ship_in_range.damage_shake_current_intensity = 0.8
-	_stop_mini_game()
-
-func _on_mini_game_ui_closed() -> void:
-	stop_harvest()

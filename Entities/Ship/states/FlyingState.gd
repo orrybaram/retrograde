@@ -54,30 +54,26 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	
 	# Handle collision damage
 	if state.get_contact_count() > 0:
-		var current_time = Time.get_ticks_msec() / 1000.0
-		
-		if current_time - ship.last_damage_time >= ship.damage_cooldown:
-			for i in state.get_contact_count():
-				var collider := state.get_contact_collider_object(i)
-				var collision_normal = state.get_contact_local_normal(i)
-				
-				if collider == null or collider == ship:
-					continue
-				if not (collider is RigidBody2D):
-					continue
+		for i in state.get_contact_count():
+			var collider := state.get_contact_collider_object(i)
+			var collision_normal = state.get_contact_local_normal(i)
 
-				var ship_speed = state.get_contact_local_velocity_at_position(i)
+			if collider == null or collider == ship:
+				continue
+			if not (collider is RigidBody2D):
+				continue
 
-				var collider_speed = collider.linear_velocity
-				var relative_velocity = ship_speed - collider_speed
-				var speed_along_normal = relative_velocity.dot(collision_normal)
-				var impact_speed: int = abs(speed_along_normal)
-				
-				if impact_speed > ship.damage_threshold:
-					var damage: float = (impact_speed - ship.damage_threshold) * ship.crash_damage_multiplier
-					ship.take_damage(damage)
-					ship.last_damage_time = current_time
-					break
+			var ship_speed = state.get_contact_local_velocity_at_position(i)
+
+			var collider_speed = collider.linear_velocity
+			var relative_velocity = ship_speed - collider_speed
+			var speed_along_normal = relative_velocity.dot(collision_normal)
+			var impact_speed: int = abs(speed_along_normal)
+
+			if impact_speed > ship.damage_threshold:
+				var damage: float = (impact_speed - ship.damage_threshold) * ship.crash_damage_multiplier
+				ship.take_damage(damage)
+				break
 	
 	# Handle movement controls
 	if ship.want_turn_left:

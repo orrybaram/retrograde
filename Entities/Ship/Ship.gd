@@ -32,10 +32,14 @@ var want_thrust := false
 var want_reverse_thrust := false
 var want_boost := false
 var gs: GameState = null
-var hull_strength: float = 100.0
+var health_component: HealthComponent
+var hull_strength: float:
+	get:
+		return health_component.current_hp if health_component else 0.0
+	set(value):
+		if health_component:
+			health_component.current_hp = clamp(value, 0.0, health_component.max_hp)
 var fuel: float = 100.0
-var last_damage_time: float = 0.0
-var damage_cooldown: float = 0.1  # Minimum time between damage applications (seconds)
 
 # Landing lock system
 var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
@@ -88,9 +92,16 @@ func _ready() -> void:
 	base_max_hull = max_hull
 	base_max_fuel = max_fuel
 	base_max_cargo_weight = max_cargo_weight
-	
-	# Initialize hull and fuel
-	hull_strength = max_hull
+
+	# Create HealthComponent
+	health_component = HealthComponent.new()
+	health_component.name = "HealthComponent"
+	health_component.max_hp = max_hull
+	health_component.damage_cooldown = 0.1
+	add_child(health_component)
+	health_component.died.connect(explode)
+
+	# Initialize fuel
 	fuel = max_fuel
 	
 	# Store initial mass as base_mass for cargo calculations
@@ -136,19 +147,14 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 
 
 func take_damage(amount: float) -> void:
-	# Check if already destroyed by checking current state
-	if state_machine and state_machine.current_state is DestroyedState:
+	if is_destroyed():
 		return
-	
-	hull_strength -= amount
-	hull_strength = max(0.0, hull_strength)
-	
+
 	# Trigger camera shake on damage
 	damage_shake_time = damage_shake_duration
 	damage_shake_current_intensity = damage_shake_intensity
-	
-	if hull_strength <= 0.0:
-		explode()
+
+	health_component.take_damage(amount)
 
 func explode() -> void:
 	# Trigger intense camera shake on explosion
@@ -257,7 +263,8 @@ func reapply_all_upgrades(game_state: GameState) -> void:
 						pass
 	
 	# Update hull and fuel to match new max values
-	hull_strength = min(hull_strength, max_hull)
+	health_component.max_hp = max_hull
+	health_component.current_hp = min(health_component.current_hp, max_hull)
 	fuel = min(fuel, max_fuel)
 	
 	# Update cargo signal
@@ -296,7 +303,8 @@ func reset_to_initial_state() -> void:
 	max_cargo_weight = base_max_cargo_weight
 
 	# Reset current values to full
-	hull_strength = max_hull
+	health_component.max_hp = max_hull
+	health_component.reset()
 	fuel = max_fuel
 
 	# Reset physics
