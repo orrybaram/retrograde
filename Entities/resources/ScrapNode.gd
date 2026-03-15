@@ -1,6 +1,11 @@
 extends OrbitalNode
 class_name ScrapNode
 
+## Harvestable resource node. Extends OrbitalNode with HP, tier, kind, and amount.
+## Four-state machine: ScrapIdleState → ScrapInRangeState → ScrapHarvestingState → ScrapDepletedState.
+## Emits resource_harvested(amount, kind, position, tier_name) when fully depleted.
+## Returns to pool via ResourceNodePool after the depletion animation completes.
+
 signal harvest_started
 signal harvest_stopped
 signal resource_depleted

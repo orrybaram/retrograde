@@ -1,6 +1,9 @@
 extends Node
 class_name HealthComponent
 
+## Reusable HP component. Tracks current_hp, emits hp_changed / damaged / died.
+## Optional damage_cooldown (seconds) prevents rapid multi-hits (e.g., asteroid grazes).
+
 signal hp_changed(current: float, max_hp: float)
 signal damaged(amount: float)
 signal died()

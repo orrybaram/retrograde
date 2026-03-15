@@ -1,6 +1,9 @@
 extends Node2D
 class_name OrbitVisual
 
+## Draws a circular orbit path for a planet's orbit around its parent.
+## Reads radius from the parent Planet's OrbitalMotion each frame.
+
 var planet: Planet = null
 @export var show_orbit: bool = true : set = _set_show_orbit
 @export var orbit_color: Color = Color(0.2, 0.5, 1.0, 0.3) : set = _set_orbit_color

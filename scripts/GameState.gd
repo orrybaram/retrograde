@@ -1,6 +1,10 @@
 extends Node
 class_name GameState
 
+## Global singleton holding persistent player progression: credits, upgrade levels,
+## and death count. Populated by Save.load() at game start; serialized by Save.save()
+## on dock/game-over. Emits credits_changed and upgrade_level_changed signals.
+
 signal credits_changed
 signal upgrade_level_changed(path: String, level: int)
 

@@ -1,6 +1,10 @@
 extends Area2D
 class_name OrbitalNode
 
+## Base class for all pooled orbital resource nodes (ScrapNode, DebrisNode).
+## Manages three-tier distance-based sleep (active / medium / sleep), OrbitalMotion,
+## ship collision damage, and minimap registration.
+
 const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 
 signal returned_to_pool

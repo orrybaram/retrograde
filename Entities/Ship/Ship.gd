@@ -1,6 +1,11 @@
 extends RigidBody2D
 class_name Ship
 
+## Player ship entity. Owns fuel, hull (via HealthComponent), cargo weight, and
+## input intent flags. Behavior is delegated to states via StateMachine:
+## FlyingState → LandedState / HarvestingState / StrandedState / DestroyedState.
+## Signals: fuel_changed, fuel_depleted, cargo_changed.
+
 @export var thrust_power: float = 350.0
 @export var turn_speed: float = 5
 @export var fuel_consumption_rate: float = 5.0  # Fuel consumed per second when thrusting

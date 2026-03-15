@@ -1,6 +1,10 @@
 extends Control
 class_name GameOverMenu
 
+## Terminal-style game-over screen shown on ship destruction or stranding.
+## Fades in from black, runs a typewriter boot sequence, then waits for ENTER to
+## emit relaunch_game. Receives a reason string and death_count from Main.
+
 signal relaunch_game
 
 @onready var fade_overlay: ColorRect = $"FadeOverlay"

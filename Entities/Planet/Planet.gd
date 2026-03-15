@@ -1,6 +1,10 @@
 extends RigidBody2D
 class_name Planet
 
+## Planet entity with OrbitalMotion, gravity field (Area2D), visual rendering,
+## and minimap tracking. parent_planet reference enables moon orbits.
+## PlanetType drives appearance; PlanetRole drives lore/trade context.
+
 const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 
 ## Planet types that determine appearance and behavior

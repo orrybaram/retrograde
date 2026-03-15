@@ -1,5 +1,8 @@
 extends Control
 
+## In-game HUD: fuel bar, hull segment bar, cargo weight, velocity readout,
+## and transient action messages. Subscribes to ship signals and EventBus.action_message_changed.
+
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
 @onready var fuel_progress_bar: ProgressBarWidget = $"DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar"
 @onready var hull_segment_bar: HullSegmentBar = $"DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar"

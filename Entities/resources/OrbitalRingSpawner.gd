@@ -1,6 +1,10 @@
 extends Node2D
 class_name OrbitalRingSpawner
 
+## Spawns a ring of ScrapNodes and DebrisNodes orbiting a parent Planet or SpaceStation.
+## Supports inner/outer radius, density gradient, and a configurable debris_ratio.
+## Nodes are drawn from ResourceNodePool for pooled reuse.
+
 @export var resource_scene: PackedScene  # Optional: single resource scene (for backward compatibility)
 @export var scrap_scenes: Array[PackedScene] = [
 	preload("res://entities/resources/Scrap1.tscn"),

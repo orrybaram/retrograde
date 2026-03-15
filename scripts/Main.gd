@@ -1,5 +1,9 @@
 extends Node2D
 
+## Root scene controller. Owns the MainGameState enum (MENU / PLAYING / GAME_OVER)
+## and orchestrates transitions between StartMenu, active gameplay, PauseMenu,
+## and GameOverMenu. Connects ship signals (fuel_depleted) and EventBus events.
+
 enum MainGameState {
 	MENU,
 	PLAYING,

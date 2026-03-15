@@ -1,6 +1,9 @@
 extends Node
 class_name NodeUtils
 
+## Static utilities for traversing the scene tree upward.
+## Used to find a typed ancestor node without manual casting chains.
+
 static func find_parent_of_type(node: Node, type_script: Script) -> Node:
 	var n := node.get_parent()
 	while n:

@@ -1,5 +1,8 @@
 extends CollisionShape2D
 
+## Sets the planet's CollisionShape2D radius from Planet.radius * collision_radius_ratio on ready.
+## Gas giants use a ratio < 1.0 so ships pass through the visual envelope before hitting the core.
+
 func _ready() -> void:
 	# This CollisionShape2D is a direct child of Planet
 	var planet = get_parent() as Planet

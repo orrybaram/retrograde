@@ -2,6 +2,9 @@
 extends GPUParticles2D
 class_name SparkleParticles
 
+## GPU particle effect for the harvesting beam. Switches between IDLE (ambient sparkle)
+## and HARVESTING (directed arc toward ship) states. Trophy nodes emit yellow arcs.
+
 const TROPHY_COLOR = Colors.YELLOW
 
 enum State { IDLE, HARVESTING }

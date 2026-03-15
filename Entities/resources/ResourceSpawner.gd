@@ -1,6 +1,10 @@
 extends Node2D
 class_name ResourceSpawner
 
+## Simpler alternative to OrbitalRingSpawner — scatters ScrapNodes and DebrisNodes
+## at random distances around a parent Planet or SpaceStation. No ring shape or
+## density gradient; nodes are drawn from ResourceNodePool.
+
 @export var resource_scene: PackedScene = preload("res://entities/resources/Scrap.tscn")
 @export var debris_scenes: Array[PackedScene] = [
 	preload("res://entities/resources/Debris1.tscn"),

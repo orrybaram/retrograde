@@ -1,7 +1,8 @@
 extends Node
 
-# Global Random Number Generator singleton
-# Access via RNG.rng throughout the project
+## Global seeded random number generator singleton. Access via RNG.rng.
+## Supports per-purpose isolated RNGs via get_seeded_rng(offset) to avoid
+## global sequence pollution when generating deterministic sub-systems.
 
 var rng: RandomNumberGenerator
 @export var seed_value: int = 12345

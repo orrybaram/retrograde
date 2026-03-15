@@ -1,5 +1,8 @@
 extends CollisionShape2D
 
+## Sets the gravity-field Area2D collision radius from Planet.radius * gravity_radius_multiplier.
+## Applies gravitational pull to any Ship inside the field each physics tick.
+
 var planet: Planet = null
 var gravity_field: Area2D = null
 

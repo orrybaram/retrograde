@@ -1,6 +1,10 @@
 extends Node2D
 class_name GravityFieldVisual
 
+## Draws concentric gravity-field rings around a planet using inverse-square falloff.
+## Ring count, outline color, and width are exported. Radius and base strength are
+## read from the parent Planet at draw time.
+
 var planet: Planet = null
 @export var base_color: Color = Color(0, 0, 0, 0.0): set = _set_base_color
 @export var outline_width: float = 3.0: set = _set_outline_width

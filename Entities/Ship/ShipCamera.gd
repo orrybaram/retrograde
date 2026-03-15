@@ -1,6 +1,9 @@
 extends Camera2D
 class_name ShipCamera
 
+## Camera2D extension with smooth zoom-in / zoom-out via tweens.
+## States own the zoom level (e.g., LandedState calls zoom_camera_in on dock).
+
 var original_zoom: Vector2 = Vector2.ONE
 var zoom_tween: Tween = null
 

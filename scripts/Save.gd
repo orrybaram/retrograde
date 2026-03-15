@@ -1,6 +1,10 @@
 extends Node
 class_name Save
 
+## Static save/load helpers using ConfigFile (user://save.cfg).
+## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
+## InventoryManager contents, and planet orbital angles.
+
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "credits", gs.credits)
