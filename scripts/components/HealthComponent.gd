@@ -33,10 +33,6 @@ func take_damage(amount: float) -> void:
 	if current_hp <= 0.0:
 		died.emit()
 
-func heal(amount: float) -> void:
-	current_hp = min(max_hp, current_hp + amount)
-	hp_changed.emit(current_hp, max_hp)
-
 func is_dead() -> bool:
 	return current_hp <= 0.0
 

@@ -10,7 +10,6 @@ var credits: int = 0 :
 		credits_changed.emit()
 
 var has_drone_bay: bool = false
-var drones_active: int = 0
 
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
@@ -47,7 +46,6 @@ func reset_all_state() -> void:
 	# Reset all state variables
 	credits = 0
 	has_drone_bay = false
-	drones_active = 0
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()
