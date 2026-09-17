@@ -364,8 +364,9 @@ func _draw_range_rings(c: Control, rect: Rect2) -> void:
 	# Distance rings from the sun at round intervals, labelled on the way out
 	var center := _map_pos(_sun_pos())
 	var step := _nice_step(150.0 / scale_factor)
-	var ring_color := Color(grid_color, 0.09)
-	var label_color := Color(grid_color, 0.22)
+	# Hairline rings: sub-pixel width, antialiased so they stay a whisper
+	var ring_color := Color(grid_color, 0.045)
+	var label_color := Color(grid_color, 0.14)
 	# Keep ring labels out of the border, where the title and hints live
 	var label_rect := rect.grow_individual(-10.0, -28.0, -10.0, -28.0)
 
@@ -378,7 +379,7 @@ func _draw_range_rings(c: Control, rect: Rect2) -> void:
 				break
 			continue
 		var ring_points := clampi(int(radius * arc.y / 6.0), 8, 192)
-		c.draw_arc(center, radius, arc.x, arc.x + arc.y, ring_points, ring_color, 1.0, true)
+		c.draw_arc(center, radius, arc.x, arc.x + arc.y, ring_points, ring_color, 0.7, true)
 		var label_pos := center + Vector2.from_angle(-PI / 4.0) * (radius + 4.0)
 		if label_rect.has_point(label_pos):
 			c.draw_string(_font, label_pos, _format_distance(distance), HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE, label_color)
