@@ -36,7 +36,8 @@ extends Node
 ##
 ## Expressions are Godot `Expression`s with these names bound:
 ##   ship, main, gs (GameState), inv (InventoryManager), bus (EventBus),
-##   pt (this node: pt.state_name(), pt.item_count(), pt.visible_ui(), pt.screen_text(), pt.nearest(group), pt.node(group))
+##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
+##       pt.screen_text(), pt.nearest(group), pt.node(group))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
@@ -47,6 +48,7 @@ var active := false
 var out_dir := ""
 var failures: Array[String] = []
 var staged: ScrapNode = null  # last node picked by stage_harvest, for expressions: pt.staged
+var last_drops: Array[String] = []  # gem ids from the most recent harvest hit: pt.last_drops
 
 var _held: Dictionary = {}  # keycode -> true
 var _action_message := ""
@@ -67,8 +69,11 @@ func _ready() -> void:
 	# Never touch the player's real save.
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	EventBus.action_message_changed.connect(func(msg: String): _action_message = msg)
-	EventBus.harvest_finished.connect(func(_s, grade: HarvestTiming.Grade, tier: String):
-		_emit({"event": "harvest_finished", "grade": HarvestTiming.Grade.keys()[grade], "tier": tier}))
+	EventBus.harvest_hit.connect(func(_s, grade: HarvestTiming.Grade, gems: Array[String], final: bool):
+		last_drops = gems
+		_emit({"event": "harvest_hit", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "final": final}))
+	EventBus.gem_collected.connect(func(id: String, _pos): _emit({"event": "gem_collected", "gem": id}))
+	EventBus.hold_cashed_in.connect(func(cr: int): _emit({"event": "hold_cashed_in", "credits": cr}))
 
 	# Watchdog: a stuck scenario must never hang the caller.
 	var timeout := float(_arg_value("--playtest-timeout", "0" if target == "serve" else "300"))
@@ -387,7 +392,7 @@ func _stage_harvest(dist: float, trophy: bool, reply: Dictionary) -> void:
 		reply["error"] = "stage_harvest: scrap is %s, expected ScrapInRangeState" % reply["scrap_state"]
 
 func _on_staged_event(sig: String, scrap: ScrapNode) -> void:
-	_emit({"event": sig, "t": Time.get_ticks_msec(), "hp": snappedf(scrap.health_component.current_hp, 0.1),
+	_emit({"event": sig, "t": Time.get_ticks_msec(), "hits_left": scrap.hits_left,
 		"action_pressed": Input.is_action_pressed("action"),
 		"dist": snappedf(scrap.global_position.distance_to(get_tree().get_first_node_in_group("ship").global_position), 0.1)})
 
@@ -463,6 +468,8 @@ func snapshot() -> Dictionary:
 		"credits": gs.credits if gs else null,
 		"upgrades": gs.upgrade_levels if gs else {},
 		"inventory": InventoryManager.get_all_items(),
+		"hold_value": InventoryManager.get_total_value(),
+		"loose_gems": Gem.active.size(),
 	}
 	if ship:
 		s["ship"] = {
@@ -500,7 +507,25 @@ func snapshot() -> Dictionary:
 func node(group: String) -> Node:
 	return get_tree().get_first_node_in_group(group)
 
-## Total number of items in cargo across all stacks.
+## Loose gems floating in space.
+func gem_count() -> int:
+	return Gem.active.size()
+
+## Drop a loose gem `offset` px from the ship, moving at the ship's velocity plus `rel_velocity`.
+func spawn_gem(id: String, offset: Vector2, rel_velocity := Vector2.ZERO) -> Gem:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	return Gem.spawn(ship.get_parent(), id, ship.global_position + offset, ship.linear_velocity + rel_velocity, Vector2.ZERO)
+
+## Pickup popups shown so far, summed per gem id: {"gem": 3, ...}. Compare with inv.get_all_items().
+func popup_counts() -> Dictionary:
+	var counts := {}
+	for line in get_tree().get_first_node_in_group("resource_manager").shown:
+		if GemData.is_gem(line["style"]):
+			assert(line["color"] == GemData.color_of(line["style"]))
+			counts[line["style"]] = counts.get(line["style"], 0) + line["amount"]
+	return counts
+
+## Total number of gems in the hold across all stacks.
 func item_count() -> int:
 	var total := 0
 	for q in InventoryManager.get_all_items().values():

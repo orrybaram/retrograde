@@ -69,7 +69,7 @@ func set_idle() -> void:
 		)
 	_apply_state()
 
-func pop(tier_item_id: String = "", intensity: float = 1.0) -> void:
+func pop(burst_color: Color = Colors.PRIMARY, intensity: float = 1.0) -> void:
 	var burst := GPUParticles2D.new()
 	burst.amount = maxi(int(30 * intensity), 8)
 	burst.lifetime = 0.6
@@ -85,7 +85,7 @@ func pop(tier_item_id: String = "", intensity: float = 1.0) -> void:
 	mat.gravity = Vector3.ZERO
 	mat.scale_min = 1.0
 	mat.scale_max = 3.0
-	mat.color = tier_color(tier_item_id)
+	mat.color = burst_color
 	mat.damping_min = 20.0
 	mat.damping_max = 40.0
 
@@ -97,16 +97,6 @@ func pop(tier_item_id: String = "", intensity: float = 1.0) -> void:
 		if is_instance_valid(burst):
 			burst.queue_free()
 	)
-
-static func tier_color(tier_item_id: String) -> Color:
-	match tier_item_id:
-		"slag":      return Colors.TIER_SLAG
-		"scrap":     return Colors.TIER_SCRAP
-		"salvage":   return Colors.TIER_SALVAGE
-		"component": return Colors.TIER_COMPONENT
-		"mil_spec":  return Colors.TIER_MIL_SPEC
-		"artifact":  return Colors.TIER_ARTIFACT
-	return Colors.PRIMARY
 
 func _spawn_arc_particle() -> void:
 	if not _arc_root or not _harvest_target or not is_instance_valid(_harvest_target):

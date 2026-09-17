@@ -23,7 +23,7 @@ For detailed patterns and examples, see `@.claude/PATTERNS.md`.
 
 Godot 4.6 CLI is `godot` (symlink to `/Applications/Godot.app/Contents/MacOS/Godot`).
 
-- `tools/test.sh` — run all gdUnit4 suites in `test/` headless (exit 0 = pass). Single suite: `tools/test.sh -a res://test/TierDataTest.gd`
+- `tools/test.sh` — run all gdUnit4 suites in `test/` headless (exit 0 = pass). Single suite: `tools/test.sh -a res://test/GemDataTest.gd`
 - `tools/smoke.sh [frames]` — boot main scene headless, fails on any ERROR or path case mismatch
 - `tools/play.sh playtests/launch.play` — play the real game from a scenario (key input, asserts, screenshots in `.playtest/`). `tools/play.sh serve` + `tools/playctl <cmd>` to drive it live. See `.claude/skills/playtest/SKILL.md`.
 - `godot --headless --path . --import` — reimport after adding files / `class_name`s

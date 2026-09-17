@@ -1,6 +1,6 @@
 extends Node
-## Singleton responsible for managing player inventory.
-## Replaces the cargo dictionary in GameState with a more advanced inventory system.
+## Singleton for the ship's hold: gem quantities keyed by item_id. An item's weight is
+## the hold space it takes (see GemData). The hold is cashed in for credits on docking.
 
 signal inventory_changed(item_id: String, new_quantity: int)
 ## Emitted when an item's quantity changes in the inventory.
@@ -9,42 +9,17 @@ signal cargo_weight_changed(total_weight: float)
 ## Emitted when the total cargo weight changes.
 
 var _inventory: Dictionary = {}  # Maps item_id to quantity
-var _item_registry: Dictionary = {}  # Maps item_id to Item scene path
 var _item_weights: Dictionary = {}  # Cache of item_id to weight
 
 func _ready() -> void:
 	add_to_group("inventory_manager")
-	# Register default items
-	register_item("scrap", "res://entities/resources/items/ScrapItem.tscn")
-	# Register all tier items (lightweight — no scene file needed)
-	for tier in TierData.TIERS.keys():
-		var tier_data = TierData.TIERS[tier]
-		register_item_data(tier_data["item_id"], tier_data["weight"])
+	for tier in GemData.TIERS:
+		var id := GemData.item_id(tier)
+		register_item_data(id, GemData.space_of(id))
 
-## Register an item type with the inventory system.
-## item_id: Unique identifier for the item (e.g., "scrap")
-## item_scene_path: Path to the Item scene file
-func register_item(item_id: String, item_scene_path: String) -> void:
-	_item_registry[item_id] = item_scene_path
-	# Cache the item weight from the scene
-	var scene = load(item_scene_path) as PackedScene
-	if scene:
-		var instance = scene.instantiate() as Item
-		if instance:
-			_item_weights[item_id] = instance.weight
-			instance.queue_free()
-
-## Register an item type with just weight data (no scene file required).
-## Useful for items that don't need a visual representation (e.g., tiered resources).
+## Register an item type's weight (hold space per unit).
 func register_item_data(item_id: String, weight: float) -> void:
 	_item_weights[item_id] = weight
-
-## Get the PackedScene for an item by its item_id.
-## Returns null if the item is not registered.
-func get_item_scene(item_id: String) -> PackedScene:
-	if not _item_registry.has(item_id):
-		return null
-	return load(_item_registry[item_id]) as PackedScene
 
 ## Add items to inventory.
 ## item_id: The unique identifier of the item
@@ -144,6 +119,16 @@ func can_add_item(item_id: String, amount: int, max_cargo_weight: float) -> bool
 	var additional_weight = amount * item_weight
 	var new_total = get_total_weight() + additional_weight
 	return new_total <= max_cargo_weight
+
+## Credits the hold is worth right now.
+func get_total_value() -> int:
+	return GemData.hold_value(_inventory)
+
+## Empty the hold and return its credit value (the caller banks it).
+func cash_in() -> int:
+	var value := get_total_value()
+	clear_inventory()
+	return value
 
 ## Get the remaining cargo capacity.
 func get_remaining_capacity(max_cargo_weight: float) -> float:

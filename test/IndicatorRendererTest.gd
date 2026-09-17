@@ -31,7 +31,7 @@ func test_update_info_box_updates_text_and_removes_extra_lines() -> void:
 	var box: Control = IndicatorRenderer.create_info_box({
 		"title": "Scrap",
 		"lines": [
-			{"text": "* RARE SIGNAL *", "color": Colors.PRIMARY},
+			{"text": "HOLD FULL", "color": Colors.DANGER},
 			{"text": "TIME  3.0s", "color": Colors.TEXT},
 		],
 	})

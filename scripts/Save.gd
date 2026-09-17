@@ -85,14 +85,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 		var cargo_section = cfg.get_section_keys("cargo")
 		if cargo_section:
 			for k in cargo_section:
-				var value = int(cfg.get_value("cargo", k, 0))
-				# Backward compatibility: convert old "Scrap" to "scrap"
-				var item_id = k.to_lower() if k == "Scrap" else k
-				# Merge quantities if both old and new keys exist
-				if inventory_dict.has(item_id):
-					inventory_dict[item_id] += value
-				else:
-					inventory_dict[item_id] = value
+				# Items from the retired tier system (scrap, salvage, ...) are dropped.
+				if GemData.is_gem(k):
+					inventory_dict[k] = int(cfg.get_value("cargo", k, 0))
 	InventoryManager.set_inventory_dict(inventory_dict)
 
 	# Load upgrades FIRST

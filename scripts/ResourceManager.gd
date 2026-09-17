@@ -1,19 +1,25 @@
 extends Node
 class_name ResourceManager
 
-# Resource gain indicator scene (preloaded at parse time)
+## Floating "+N" text over the ship: every gem pickup, shown as a count in that gem's
+## color, and the credits earned when the hold is cashed in at a port. Pickups within
+## BATCH_WINDOW merge into one line per tier, and lines still on screen push new ones
+## upward so they never overlap.
+
 var _gain_indicator_scene: PackedScene = preload("res://entities/resources/ResourceGainIndicator.tscn")
-var _connected_nodes: Array[ScrapNode] = []
-var _node_check_timer: Timer = null
+
+const BATCH_WINDOW := 0.35
+const STACK_BASE := 30.0  # start above the ship, clear of the harvest meter below it
+const STACK_SPACING := 16.0
+
+var _pending: Dictionary = {}  # item_id -> count collected this window
+var shown: Array[Dictionary] = []  # every line shown: {amount, color, style} (read by playtests)
+var _live: Array[ResourceGainIndicator] = []
 
 func _ready() -> void:
 	add_to_group("resource_manager")
-
-	# Connect to existing resource nodes
-	_connect_to_resource_nodes()
-
-	# Set up periodic check for new resource nodes (handles dynamically spawned nodes)
-	_check_for_new_nodes()
+	EventBus.gem_collected.connect(_on_gem_collected)
+	EventBus.hold_cashed_in.connect(_on_hold_cashed_in)
 
 func spawn_all_resources() -> void:
 	# Manually trigger spawning on all ResourceSpawners (useful if auto_spawn is disabled)
@@ -22,33 +28,29 @@ func spawn_all_resources() -> void:
 		if spawner.has_method("spawn_cluster"):
 			spawner.spawn_cluster()
 
-func _connect_to_resource_nodes() -> void:
-	var resource_nodes = get_tree().get_nodes_in_group("resource_nodes")
+func _on_gem_collected(item_id: String, _world_position: Vector2) -> void:
+	if _pending.is_empty():
+		get_tree().create_timer(BATCH_WINDOW).timeout.connect(_flush_pending)
+	_pending[item_id] = _pending.get(item_id, 0) + 1
 
-	# Clean up disconnected nodes
-	_connected_nodes = _connected_nodes.filter(func(node): return is_instance_valid(node))
+func _flush_pending() -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Node2D
+	# Best tier first so it sits lowest, closest to the ship.
+	var tiers := GemData.TIERS.keys()
+	tiers.reverse()
+	for tier in tiers:
+		var id := GemData.item_id(tier)
+		if _pending.has(id) and ship:
+			show_gain_indicator(_pending[id], ship.global_position, "", GemData.color_of(id), id)
+	_pending.clear()
 
-	for node in resource_nodes:
-		if node is ScrapNode:
-			var scrap_node = node as ScrapNode
-			# Skip if already connected
-			if scrap_node in _connected_nodes:
-				continue
+func _on_hold_cashed_in(credits: int) -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Node2D
+	if ship:
+		show_gain_indicator(credits, ship.global_position, "CR", Colors.PRIMARY, "CR")
 
-			# Connect signal
-			if not scrap_node.resource_harvested.is_connected(show_gain_indicator):
-				scrap_node.resource_harvested.connect(show_gain_indicator)
-				_connected_nodes.append(scrap_node)
-
-func _check_for_new_nodes() -> void:
-	# Check for new resource nodes periodically
-	_node_check_timer = Timer.new()
-	add_child(_node_check_timer)
-	_node_check_timer.wait_time = 1.0  # Check every second
-	_node_check_timer.timeout.connect(_connect_to_resource_nodes)
-	_node_check_timer.start()  # Explicitly start the timer
-
-func show_gain_indicator(amount: int, kind: String, position: Vector2, tier_name: String = "") -> void:
+## `label` is the unit shown after the amount ("" for just the number); `style` picks the pop.
+func show_gain_indicator(amount: int, position: Vector2, label: String, color: Color, style: String = "") -> void:
 	# Find CanvasLayer to add indicator to
 	var main = get_tree().get_first_node_in_group("main")
 	var canvas_layer: CanvasLayer = null
@@ -64,24 +66,19 @@ func show_gain_indicator(amount: int, kind: String, position: Vector2, tier_name
 		push_error("Could not find CanvasLayer for resource gain indicator")
 		return
 
-	# Instantiate indicator
 	var indicator = _gain_indicator_scene.instantiate() as ResourceGainIndicator
 	if not indicator:
 		push_error("Failed to instantiate ResourceGainIndicator")
 		return
 
+	# Pickups and cash-ins happen at the ship, which keeps flying: pin the text to it.
+	indicator.follow = get_tree().get_first_node_in_group("ship") as Node2D
+	shown.append({"amount": amount, "color": color, "style": style})
+	_live = _live.filter(func(i): return is_instance_valid(i))
+	indicator.stack_offset = STACK_BASE + STACK_SPACING * _live.size()
+	_live.append(indicator)
 	canvas_layer.add_child(indicator)
 
 	# Wait for next frame to ensure _ready() is called and @onready vars are set
 	await get_tree().process_frame
-	indicator.show_gain(amount, kind, position, tier_name, _tier_color_for_name(tier_name))
-
-func _tier_color_for_name(tier_name: String) -> Color:
-	match tier_name:
-		"Slag":      return Colors.TIER_SLAG
-		"Scrap":     return Colors.TIER_SCRAP
-		"Salvage":   return Colors.TIER_SALVAGE
-		"Component": return Colors.TIER_COMPONENT
-		"Mil-Spec":  return Colors.TIER_MIL_SPEC
-		"Artifact":  return Colors.TIER_ARTIFACT
-	return Colors.PRIMARY
+	indicator.show_gain(amount, "", position, label, color, style)

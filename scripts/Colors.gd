@@ -5,7 +5,7 @@ extends Node
 ## Palette rules:
 ## - Faded mustard (PRIMARY) is the one UI color. Dim mustard marks unavailable rows.
 ## - The world is warm: olive-black space, khaki/umber hulls, dusty orange planets.
-## - BLUE is navigation (minimap, waypoints, orbits, Mil-Spec loot).
+## - BLUE is navigation (minimap, waypoints, orbits).
 ## - PURPLE is reserved for the Titan and Artifacts. Don't use it as decoration.
 
 # =============================================================================
@@ -84,13 +84,11 @@ const OUTLINE = WHITE_FADED
 const EXPLOSION = ORANGE
 const DEBRIS = HULL_MID
 
-# --- Resource tiers ---
-const TIER_SLAG = HULL_LIGHT
-const TIER_SCRAP = MUSTARD_PALE
-const TIER_SALVAGE = MUSTARD
-const TIER_COMPONENT = ORANGE
-const TIER_MIL_SPEC = BLUE
-const TIER_ARTIFACT = PURPLE
+# --- Gem tiers (currency) ---
+const GEM_SHARD = MUSTARD_PALE
+const GEM_GEM = MUSTARD
+const GEM_CRYSTAL = CREAM
+const GEM_ARTIFACT = PURPLE
 
 # Fuel bar colors (quarter thresholds)
 const FUEL_EMPTY = RUST_RED                                   # (0%)

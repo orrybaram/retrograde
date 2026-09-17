@@ -24,6 +24,20 @@ func test_zone_stays_inside_the_bar() -> void:
 		assert_float(t.perfect_end()).is_less(t.zone_end)
 
 
+func test_zone_is_always_in_the_right_half() -> void:
+	for s in 500:
+		var t := _timing(s % 2 == 0, s)
+		assert_float(t.zone_start).is_greater_equal(0.5)
+		assert_float(t.zone_end).is_less_equal(HarvestTiming.ZONE_MAX_END)
+
+
+func test_unseeded_zones_vary() -> void:
+	var starts := {}
+	for i in 20:
+		starts[snappedf(HarvestTiming.new().zone_start, 0.001)] = true
+	assert_int(starts.size()).is_greater(10)
+
+
 func test_trophy_is_slower_and_tighter() -> void:
 	var normal := _timing(false)
 	var trophy := _timing(true)
@@ -73,25 +87,3 @@ func test_decay_drains_progress_but_not_below_zero() -> void:
 	t.decay(100.0)
 	assert_float(t.progress).is_equal(0.0)
 
-
-func test_grade_rolls() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	for i in 300:
-		assert_int(TierData.roll_for_grade(G.OVERLOAD, false, rng)).is_equal(TierData.Tier.SLAG)
-		assert_int(TierData.roll_for_grade(G.LATE, true, rng)).is_equal(TierData.Tier.SLAG)
-		assert_int(TierData.roll_for_grade(G.GOOD, false, rng)).is_greater_equal(TierData.Tier.SCRAP)
-		assert_int(TierData.roll_for_grade(G.GOOD, true, rng)).is_greater_equal(TierData.Tier.SALVAGE)
-		assert_int(TierData.roll_for_grade(G.PERFECT, false, rng)).is_greater_equal(TierData.Tier.SALVAGE)
-		assert_int(TierData.roll_for_grade(G.PERFECT, true, rng)).is_greater_equal(TierData.Tier.SALVAGE)
-
-
-func test_perfect_trophy_rolls_skew_higher_than_good() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 11
-	var good := 0
-	var perfect := 0
-	for i in 2000:
-		good += TierData.roll_for_grade(G.GOOD, true, rng)
-		perfect += TierData.roll_for_grade(G.PERFECT, true, rng)
-	assert_int(perfect).is_greater(good)

@@ -1,7 +1,8 @@
 extends RefCounted
 class_name HarvestTiming
 
-## Hold-and-release timing for one scrap extraction.
+## Hold-and-release timing for one scrap hit. The sweet zone lands somewhere new in
+## the right half of the bar every time (unseeded, so it differs between sessions).
 ## Holding `action` sweeps progress 0 -> 1 over `duration`. Releasing inside the
 ## sweet zone completes the harvest (its centre slice is PERFECT). Releasing before
 ## the zone keeps progress, which decays while idle. Releasing after the zone, or
@@ -14,7 +15,7 @@ const TROPHY_DURATION := 2.0
 const NORMAL_ZONE_WIDTH := 0.2
 const TROPHY_ZONE_WIDTH := 0.13
 const PERFECT_FRACTION := 0.34  # centre slice of the zone that grades PERFECT
-const ZONE_MIN_START := 0.45
+const ZONE_MIN_START := 0.5
 const ZONE_MAX_END := 0.92
 const DECAY_PER_SEC := 0.35
 
@@ -23,11 +24,18 @@ var zone_start: float
 var zone_end: float
 var progress := 0.0
 
+static var _session_rng: RandomNumberGenerator = null
+
 func _init(rng: RandomNumberGenerator = null, trophy := false) -> void:
 	duration = TROPHY_DURATION if trophy else NORMAL_DURATION
 	var width := TROPHY_ZONE_WIDTH if trophy else NORMAL_ZONE_WIDTH
 	var max_start := ZONE_MAX_END - width
-	zone_start = rng.randf_range(ZONE_MIN_START, max_start) if rng else (ZONE_MIN_START + max_start) / 2.0
+	if not rng:
+		if not _session_rng:
+			_session_rng = RandomNumberGenerator.new()
+			_session_rng.randomize()
+		rng = _session_rng
+	zone_start = rng.randf_range(ZONE_MIN_START, max_start)
 	zone_end = zone_start + width
 
 ## Advance while held. Returns OVERLOAD once the bar is full, NONE otherwise.

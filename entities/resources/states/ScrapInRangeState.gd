@@ -49,10 +49,12 @@ func process(delta: float) -> void:
 	if _can_harvest and Input.is_action_just_pressed("action") and _is_primary_target(ship, cone):
 		_try_start_harvest()
 
-## One extraction at a time: only the nearest live scrap in the cone answers the press.
+## One extraction at a time. While the ship is focused on a live scrap, only that scrap
+## answers the press; otherwise the nearest live scrap in the cone does.
 func _is_primary_target(ship: Ship, cone: HarvestCone) -> bool:
-	if ship.state_machine and ship.state_machine.current_state is HarvestingState:
-		return false
+	var harvesting := ship.state_machine.current_state as HarvestingState if ship.state_machine else null
+	if harvesting and harvesting._focus_alive():
+		return harvesting.focus == scrap_node
 	if not cone:
 		return true
 	var best: ScrapNode = null
@@ -70,9 +72,5 @@ func _try_start_harvest() -> void:
 	var ship := scrap_node._ship_in_range
 	if not ship or not is_instance_valid(ship):
 		return
-
-	if InventoryManager.get_remaining_capacity(ship.max_cargo_weight) <= 0:
-		EventBus.report_cargo_full()
-		return
-
+	# A full hold doesn't block harvesting: loose gems wait in space.
 	scrap_node._state_machine.change_state("ScrapHarvestingState")

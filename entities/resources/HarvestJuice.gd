@@ -1,56 +1,57 @@
 extends RefCounted
 class_name HarvestJuice
 
-## Payoff effects for a finished extraction, scaled by tier and timing grade:
-## hitstop, camera shake, particle burst, a shockwave ring on PERFECT, and the
-## loot chip flying into the HUD cargo readout.
+## Payoff effects for a harvest hit, scaled by the best gem dropped, timing grade,
+## and whether the hit broke the scrap: hitstop, camera shake, particle burst, and a
+## shockwave ring on PERFECT or on the final break.
 
-## hitstop: seconds of near-frozen time. burst: particle intensity multiplier.
+## hitstop: seconds of near-frozen time. burst: particle intensity. shake: camera multiplier.
 const TIER_JUICE := {
-	"slag":      {"hitstop": 0.0,  "burst": 0.5},
-	"scrap":     {"hitstop": 0.03, "burst": 0.8},
-	"salvage":   {"hitstop": 0.05, "burst": 1.0},
-	"component": {"hitstop": 0.07, "burst": 1.4},
-	"mil_spec":  {"hitstop": 0.10, "burst": 1.8},
-	"artifact":  {"hitstop": 0.16, "burst": 2.6},
+	"shard":    {"hitstop": 0.0,  "burst": 0.5, "shake": 0.5},
+	"gem":      {"hitstop": 0.03, "burst": 0.8, "shake": 0.9},
+	"crystal":  {"hitstop": 0.07, "burst": 1.4, "shake": 1.6},
+	"artifact": {"hitstop": 0.14, "burst": 2.4, "shake": 3.0},
 }
 const PERFECT_HITSTOP_BONUS := 0.05
+const FINAL_HITSTOP_BONUS := 0.04
+const FINAL_BURST_MULT := 1.6
 const HITSTOP_TIME_SCALE := 0.05
 
 static var _hitstop_restore := -1.0
 
-static func play(ship: Ship, scrap: ScrapNode, grade: HarvestTiming.Grade, tier_item_id: String) -> void:
-	var juice: Dictionary = TIER_JUICE.get(tier_item_id, TIER_JUICE["scrap"])
+static func play(ship: Ship, scrap: ScrapNode, grade: HarvestTiming.Grade, gem_id: String, final: bool) -> void:
+	var juice: Dictionary = TIER_JUICE.get(gem_id, TIER_JUICE["shard"])
 	var perfect := grade == HarvestTiming.Grade.PERFECT
 	var botched := grade == HarvestTiming.Grade.LATE or grade == HarvestTiming.Grade.OVERLOAD
-	var color := SparkleParticles.tier_color(tier_item_id)
+	var color := GemData.color_of(gem_id)
 
 	var sparkles := scrap.get_node_or_null("SparkleParticles") as SparkleParticles
 	if sparkles:
-		sparkles.pop(tier_item_id, juice["burst"] * (1.4 if perfect else 1.0))
+		var intensity: float = juice["burst"] * (1.4 if perfect else 1.0) * (FINAL_BURST_MULT if final else 1.0)
+		sparkles.pop(color, intensity)
 
 	if ship and is_instance_valid(ship):
-		var mult: float = ScrapNode.TIER_SHAKE_MULT.get(tier_item_id, 1.0)
+		var mult: float = juice["shake"]
 		if botched:
 			mult = 0.6
 		elif perfect:
 			mult *= 1.3
+		if final:
+			mult *= 1.4
 		ship.damage_shake_time = ship.harvest_shake_duration
 		ship.damage_shake_current_intensity = ship.harvest_shake_intensity * mult
 
 		var world := ship.get_parent()
-		if perfect:
-			ring(world, scrap.global_position, color, 70.0)
-		elif botched:
-			ring(world, scrap.global_position, Colors.DANGER, 30.0)
+		# Scrap keeps orbiting, so the ring drifts with it to stay centred.
+		var drift := scrap.get_orbital_velocity()
+		if botched:
+			ring(world, scrap.global_position, Colors.DANGER, 30.0, drift)
+		elif perfect or final:
+			ring(world, scrap.global_position, color, 90.0 if final else 70.0, drift)
 
-	var stop: float = juice["hitstop"] + (PERFECT_HITSTOP_BONUS if perfect else 0.0)
+	var stop: float = juice["hitstop"] + (PERFECT_HITSTOP_BONUS if perfect else 0.0) + (FINAL_HITSTOP_BONUS if final else 0.0)
 	if stop > 0.0:
 		hitstop(scrap.get_tree(), stop)
-
-	var hud := scrap.get_tree().get_first_node_in_group("hud")
-	if hud and hud.has_method("fly_item_to_cargo"):
-		hud.fly_item_to_cargo(scrap.global_position, color, tier_item_id != "slag" and tier_item_id != "scrap")
 
 ## Briefly slow the whole game. Overlapping calls extend rather than stack.
 static func hitstop(tree: SceneTree, seconds: float) -> void:
@@ -62,8 +63,8 @@ static func hitstop(tree: SceneTree, seconds: float) -> void:
 			Engine.time_scale = _hitstop_restore
 			_hitstop_restore = -1.0)
 
-## Expanding shockwave circle at a world position.
-static func ring(parent: Node, world_pos: Vector2, color: Color, radius: float) -> void:
+## Expanding shockwave circle at a world position, moving at `velocity` (px/s).
+static func ring(parent: Node, world_pos: Vector2, color: Color, radius: float, velocity := Vector2.ZERO) -> void:
 	if not parent:
 		return
 	var line := Line2D.new()
@@ -81,4 +82,5 @@ static func ring(parent: Node, world_pos: Vector2, color: Color, radius: float) 
 	tween.tween_property(line, "scale", Vector2(s, s), 0.45).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	tween.tween_property(line, "width", 0.15, 0.45)
 	tween.tween_property(line, "modulate:a", 0.0, 0.45).set_ease(Tween.EASE_IN)
+	tween.tween_method(func(t: float): line.global_position = world_pos + velocity * t, 0.0, 0.45, 0.45)
 	tween.chain().tween_callback(line.queue_free)

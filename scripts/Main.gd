@@ -162,6 +162,7 @@ func _on_quit_to_menu() -> void:
 func start_game() -> void:
 	if start_menu:
 		start_menu.visible = false
+	Gem.clear_all()
 
 	# Reset all game state for new game
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
@@ -214,6 +215,7 @@ func start_game() -> void:
 func load_game() -> void:
 	if start_menu:
 		start_menu.visible = false
+	Gem.clear_all()
 
 	# Hide ship while respawning to prevent showing at wrong location
 	if ship and ship.ship_polygon:
@@ -288,6 +290,7 @@ func show_game_over(reason: String) -> void:
 
 func reset_game() -> void:
 	game_over_pending = false
+	Gem.clear_all()  # loose gems stay behind at the wreck
 	
 	# Calculate relaunch costs before resetting ship
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState

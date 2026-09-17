@@ -3,13 +3,14 @@ class_name ScrapHarvestingState
 
 ## Active extraction: beam fires while `action` is held and HarvestTiming sweeps.
 ## Releasing grades the attempt: EARLY returns to ScrapInRangeState with progress kept;
-## anything else finishes the harvest and moves to ScrapDepletedState.
-## Ship's HarvestingState manages its own exit; this state does not force it.
+## anything else is a hit that knocks gems loose. The last hit breaks the scrap and
+## moves to ScrapDepletedState; earlier hits arm a fresh timing and return to InRange.
+## Ship's HarvestingState stays focused on this scrap between hits and manages its own exit.
 
 func enter() -> void:
 	super.enter()
 	if not scrap_node.timing:
-		scrap_node.timing = HarvestTiming.new(RNG.rng, scrap_node.is_trophy)
+		scrap_node.timing = HarvestTiming.new(null, scrap_node.is_trophy)
 	scrap_node.harvest_started.emit()
 	var sparkles := scrap_node.get_node_or_null("SparkleParticles") as SparkleParticles
 	if sparkles and is_instance_valid(sparkles):
@@ -21,7 +22,7 @@ func enter() -> void:
 		if ship_sm and ship_sm.has_state("HarvestingState"):
 			var harvesting_state: HarvestingState = ship_sm.states.get("HarvestingState") as HarvestingState
 			if harvesting_state:
-				harvesting_state.add_locked_node(scrap_node)
+				harvesting_state.focus_on(scrap_node)
 				if not ship_sm.current_state is HarvestingState:
 					ship_sm.change_state("HarvestingState")
 	EventBus.harvest_began.emit(scrap_node)
@@ -40,34 +41,31 @@ func process(delta: float) -> void:
 		var grade := timing.hold(delta)
 		scrap_node.sync_harvest_visual()
 		if grade == HarvestTiming.Grade.OVERLOAD:
-			_finish(grade)
+			_hit(grade)
 		return
 
 	var grade := timing.release()
 	if grade == HarvestTiming.Grade.EARLY:
 		scrap_node._state_machine.change_state("ScrapInRangeState")
 	else:
-		_finish(grade)
+		_hit(grade)
 
-func _finish(grade: HarvestTiming.Grade) -> void:
+func _hit(grade: HarvestTiming.Grade) -> void:
 	var ship := scrap_node._ship_in_range
-	var max_cargo := ship.max_cargo_weight if ship and is_instance_valid(ship) else 5.0
+	scrap_node.hits_left -= 1
+	var final := scrap_node.hits_left <= 0
+	var drops := GemData.drops_for_hit(grade, final, scrap_node.is_trophy, RNG.rng)
 
-	var tier := TierData.roll_for_grade(grade, scrap_node.is_trophy, RNG.rng)
-	var tier_item_id := TierData.get_item_id(tier)
-	var tier_name := TierData.get_display_name(tier)
+	var world: Node = ship.get_parent() if ship and is_instance_valid(ship) else scrap_node.get_tree().current_scene
+	Gem.burst(world, scrap_node.global_position, scrap_node.get_orbital_velocity(), drops, final, RNG.rng)
+	EventBus.harvest_hit.emit(scrap_node, grade, drops, final)
+	HarvestJuice.play(ship, scrap_node, grade, GemData.best_of(drops), final)
 
-	if not InventoryManager.can_add_item(tier_item_id, 1, max_cargo):
-		EventBus.report_cargo_full()
-		scrap_node.timing.progress = 0.0
-		scrap_node.sync_harvest_visual()
-		scrap_node._state_machine.change_state("ScrapInRangeState")
+	if final:
+		scrap_node.amount = 0
+		scrap_node._state_machine.change_state("ScrapDepletedState")
 		return
-
-	EventBus.harvest_finished.emit(scrap_node, grade, tier_item_id)
-	InventoryManager.add_item(tier_item_id, 1)
-	scrap_node.resource_harvested.emit(1, scrap_node.kind, scrap_node.global_position, tier_name)
-	HarvestJuice.play(ship, scrap_node, grade, tier_item_id)
-
-	scrap_node.amount = 0
-	scrap_node._state_machine.change_state("ScrapDepletedState")
+	# A fresh sweep (new zone) for the next hit; hold the key again to swing.
+	scrap_node.timing = HarvestTiming.new(null, scrap_node.is_trophy)
+	scrap_node.sync_harvest_visual()
+	scrap_node._state_machine.change_state("ScrapInRangeState")

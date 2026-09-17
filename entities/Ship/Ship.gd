@@ -18,12 +18,12 @@ class_name Ship
 
 @export var max_fuel: float = 200.0  # Maximum fuel capacity
 
-@export var max_cargo_weight: float = 5.0  # Maximum cargo weight capacity
+@export var max_cargo_weight: float = 160.0  # Hold space (gems take 1-3 units each)
 
 # Base stats (stored at initialization, never modified by upgrades)
 var base_max_hull: float = 100.0
 var base_max_fuel: float = 200.0
-var base_max_cargo_weight: float = 5.0
+var base_max_cargo_weight: float = 160.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
 @export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
 
@@ -113,6 +113,10 @@ func _ready() -> void:
 	low_fuel_effect = LowFuelEffect.new()
 	low_fuel_effect.name = "LowFuelEffect"
 	add_child(low_fuel_effect)
+
+	var magnet := GemMagnet.new()
+	magnet.name = "GemMagnet"
+	add_child(magnet)
 
 	# Store initial mass as base_mass for cargo calculations
 	base_mass = mass

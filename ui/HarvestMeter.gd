@@ -3,7 +3,7 @@ class_name HarvestMeter
 
 ## Terminal-style extraction meter drawn just under the ship while harvesting.
 ## Shows the HarvestTiming sweep: sweet zone, PERFECT slice, and the moving marker,
-## then flashes the grade when the extraction resolves. Added to the HUD at runtime.
+## then flashes the grade when a hit lands. Added to the HUD at runtime.
 
 const BAR_SIZE := Vector2(150, 10)
 const OFFSET_Y := 46.0
@@ -29,19 +29,21 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	EventBus.harvest_began.connect(_on_harvest_began)
-	EventBus.harvest_finished.connect(_on_harvest_finished)
+	EventBus.harvest_hit.connect(_on_harvest_hit)
 
 func _on_harvest_began(scrap: ScrapNode) -> void:
 	_scrap = scrap
 	_result_text = ""
 	_result_time = 0.0
 
-func _on_harvest_finished(scrap: ScrapNode, grade: HarvestTiming.Grade, tier_item_id: String) -> void:
+func _on_harvest_hit(scrap: ScrapNode, grade: HarvestTiming.Grade, gem_ids: Array[String], final: bool) -> void:
 	if scrap != _scrap:
 		return
 	_result_text = GRADE_TEXT.get(grade, "")
+	if final:
+		_result_text += "   B R E A K"
 	var botched := grade == HarvestTiming.Grade.LATE or grade == HarvestTiming.Grade.OVERLOAD
-	_result_color = Colors.DANGER if botched else SparkleParticles.tier_color(tier_item_id)
+	_result_color = Colors.DANGER if botched else GemData.color_of(GemData.best_of(gem_ids))
 	_result_time = RESULT_HOLD
 	_scrap = null
 
@@ -76,10 +78,7 @@ func _draw() -> void:
 
 	if _active():
 		var t := _scrap.timing
-		var trophy := _scrap.is_trophy
-		var header := "S I G N A L  ?" if trophy else "E X T R A C T"
-		var header_color := Colors.SUN if trophy else Colors.PRIMARY
-		draw_string(font, _anchor + Vector2(0, -4), header, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, _c(header_color, a))
+		draw_string(font, _anchor + Vector2(0, -4), "E X T R A C T", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, _c(Colors.PRIMARY, a))
 
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 90.0) if t.in_zone() else 0.0
 		draw_rect(Rect2(rect.position, Vector2(BAR_SIZE.x * t.progress, BAR_SIZE.y)), _c(Colors.PRIMARY_SUBTLE, a))

@@ -10,54 +10,33 @@ class_name ResourceGainIndicator
 @export var scale_multiplier: float = 0.1  # Scale factor based on amount
 @export var base_scale: float = 1.0
 @export var upward_movement: float = 20.0  # Pixels to move upward during animation
+var stack_offset: float = 0.0  # Screen px to start above the anchor, so live indicators don't overlap
 
 var _tween: Tween = null
-var _camera: Camera2D = null
 var _world_position: Vector2 = Vector2.ZERO  # Store world position for tracking
+var follow: Node2D = null  # When set, the text tracks this node instead of a fixed world point
+var _rise := 0.0  # Animated upward drift in screen px
 
 func _ready() -> void:
 	visible = false
 	modulate.a = 0.0
-	
-	# Find camera for world-to-screen conversion
-	_find_camera()
 
 func _process(_delta: float) -> void:
-	# Update screen position based on camera movement
-	if visible and _world_position != Vector2.ZERO:
-		var screen_pos = _world_to_screen(_world_position)
-		# Only update x position (y is animated upward)
-		position.x = screen_pos.x
+	# Re-project every frame: the camera (and a followed node) keep moving.
+	if visible:
+		_place()
 
-func _find_camera() -> void:
-	var ship = get_tree().get_first_node_in_group("ship")
-	if ship:
-		_camera = ship.get_node_or_null("Camera2D") as Camera2D
-	
-	if not _camera:
-		# Fallback: find any Camera2D in scene
-		_camera = get_tree().get_first_node_in_group("camera") as Camera2D
+func _place() -> void:
+	var anchor := follow.global_position if follow and is_instance_valid(follow) else _world_position
+	position = _world_to_screen(anchor) - Vector2(0, stack_offset + _rise)
 
-## Convert world position to screen position
+## Convert world position to screen position (includes camera offset, smoothing and zoom)
 func _world_to_screen(world_pos: Vector2) -> Vector2:
-	if not _camera:
-		_find_camera()
-	
-	if not _camera:
-		# Fallback: return world position if no camera found
-		return world_pos
-	
-	var viewport_size = get_viewport_rect().size
-	var screen_center = viewport_size / 2.0
-	var camera_pos = _camera.global_position
-	var camera_zoom = _camera.zoom
-	
-	# Convert world to screen: (world - camera) * zoom + screen_center
-	var screen_pos = (world_pos - camera_pos) * camera_zoom + screen_center
-	return screen_pos
+	return get_viewport().get_canvas_transform() * world_pos
 
-## Show the gain indicator animation
-func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "", tier_color: Color = Colors.PRIMARY) -> void:
+## `tier_name` is the unit after the number ("" shows just "+N"). `style` picks the
+## pop: "crystal" / "artifact" gem ids or "CR" for a cash-in.
+func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "", tier_color: Color = Colors.PRIMARY, style: String = "") -> void:
 	# Ensure nodes are ready (in case called before _ready)
 	if not amount_label:
 		amount_label = get_node_or_null("AmountLabel") as Label
@@ -69,48 +48,38 @@ func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tie
 	# Store world position for tracking
 	_world_position = world_position
 	
-	# Ensure camera is found
-	if not _camera:
-		_find_camera()
-	
 	# Set text
 	if tier_name != "":
 		amount_label.text = "+%d %s" % [amount, tier_name]
 	else:
 		amount_label.text = "+%d" % amount
 
-	# Apply tier color to label (keeps fade animation on self.modulate)
-	amount_label.modulate = tier_color
+	# Set the font color itself: modulate would multiply with the scene's mustard font color.
+	amount_label.add_theme_color_override("font_color", tier_color)
 
 	# Tier-based scale bonus
 	var tier_scale_bonus := 0.0
-	match tier_name:
-		"Salvage": tier_scale_bonus = 0.1
-		"Component": tier_scale_bonus = 0.2
-		"Mil-Spec": tier_scale_bonus = 0.3
-		"Artifact": tier_scale_bonus = 0.5
+	match style:
+		"crystal": tier_scale_bonus = 0.2
+		"artifact": tier_scale_bonus = 0.5
+		"CR": tier_scale_bonus = 0.3
 
 	# Calculate scale based on amount
 	var target_scale = base_scale + (amount * scale_multiplier) + tier_scale_bonus
 	target_scale = clamp(target_scale, base_scale, base_scale * 1.8)  # Cap at 1.8x base scale
 	
-	# Convert world position to screen position
-	var screen_pos = _world_to_screen(world_position)
-	
-	if not _camera:
-		push_warning("ResourceGainIndicator: Camera not found, using world position")
-	
 	# Set initial state — start smaller for bigger pop
 	scale = Vector2(0.3, 0.3)
 	modulate.a = 0.0
-	position = screen_pos
+	_rise = 0.0
+	_place()
 	visible = true
 	set_process(true)  # Enable processing to track camera movement
 
 	# Start animation
-	_animate_text(target_scale, tier_name)
+	_animate_text(target_scale, style)
 
-func _animate_text(target_scale: float, tier_name: String = "") -> void:
+func _animate_text(target_scale: float, style: String = "") -> void:
 	if _tween:
 		_tween.kill()
 
@@ -118,7 +87,7 @@ func _animate_text(target_scale: float, tier_name: String = "") -> void:
 	_tween.set_parallel(true)
 
 	var end_scale = target_scale
-	var is_artifact = tier_name == "Artifact"
+	var is_artifact = style == "artifact"
 
 	# Artifact: extra overshoot to 1.5x before settling
 	var peak_scale = target_scale * (1.5 if is_artifact else 1.2)
@@ -139,9 +108,7 @@ func _animate_text(target_scale: float, tier_name: String = "") -> void:
 	_tween.tween_property(self, "modulate:a", 1.0, animation_duration * 0.2)
 	
 	# Move upward
-	var start_y = position.y
-	var end_y = start_y - upward_movement
-	_tween.tween_property(self, "position:y", end_y, animation_duration)
+	_tween.tween_property(self, "_rise", upward_movement, animation_duration)
 	
 	# Fade out (starts after peak)
 	_tween.tween_property(self, "modulate:a", 0.0, animation_duration * 0.7).set_delay(animation_duration * 0.3)

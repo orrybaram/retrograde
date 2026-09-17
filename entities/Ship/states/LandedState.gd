@@ -57,15 +57,20 @@ func enter() -> void:
 	if ship.camera:
 		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
 	
-	# Auto-refuel and refresh resources when docking at a space port
+	var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
+
+	# Space ports: auto-refuel, cash in the hold, and refresh resources
 	if locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
 		ship.fuel = ship.max_fuel
 		ship.fuel_changed.emit()
+		var earned := InventoryManager.cash_in()
+		if earned > 0 and gs:
+			gs.credits += earned
+			EventBus.hold_cashed_in.emit(earned)
 		EventBus.resources_refresh_requested.emit()
 
 	# Auto-save on landing (wait a frame to ensure position is set)
 	await ship.get_tree().process_frame
-	var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
 	if gs and ship:
 		# Show saving indicator
 		var hud = ship.get_tree().get_first_node_in_group("hud") as Control

@@ -105,9 +105,6 @@ func _update_upgrades() -> void:
 	upgrades_label.text = upgrades_text
 
 
-func _format_item_name(item_id: String) -> String:
-	return TierData.get_display_name_for_item_id(item_id)
-
 func _update_cargo() -> void:
 	if not cargo_label or not inventory_manager:
 		return
@@ -118,12 +115,12 @@ func _update_cargo() -> void:
 	if all_items.is_empty():
 		cargo_text = "    No cargo"
 	else:
-		for item_id in all_items.keys():
-			var quantity = all_items[item_id] as int
-			var item_display = _format_item_name(item_id)
-			cargo_text += "    %s: %d\n" % [item_display, quantity]
-		# Remove trailing newline
-		cargo_text = cargo_text.trim_suffix("\n")
+		for tier in GemData.TIERS:
+			var item_id := GemData.item_id(tier)
+			var quantity := int(all_items.get(item_id, 0))
+			if quantity > 0:
+				cargo_text += "    %s: %d  (%d CR)\n" % [GemData.display_name(item_id), quantity, quantity * GemData.value_of(item_id)]
+		cargo_text += "    Hold value: %d CR" % GemData.hold_value(all_items)
 
 	cargo_label.text = cargo_text
 

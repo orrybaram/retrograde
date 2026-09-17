@@ -1,9 +1,10 @@
-# Isolated harvest loop: boot -> depart -> park next to scrap -> timed extractions.
+# Isolated harvest loop: boot -> depart -> park next to scrap -> timed hits -> gems.
 # Skips all flying so harvest feel can be iterated on quickly.
 # Run: tools/play.sh playtests/harvest.play             (burst frames land in .playtest/harvest_*.png)
 #      tools/play.sh --headless playtests/harvest.play  (logic only)
-# .playtest/transcript.jsonl logs harvest_started / harvest_finished {grade, tier} / harvest_stopped events.
-# Timing: hold `action` to sweep pt.staged.timing.progress; release inside the zone.
+# .playtest/transcript.jsonl logs harvest_hit {grade, gems, final} / gem_collected / hold_cashed_in events.
+# Timing: hold `action` to sweep pt.staged.timing.progress; release inside the zone. Each release is a hit;
+# scrap takes 3 hits (5 for trophies) and every hit gets a fresh zone.
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
@@ -16,44 +17,84 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 
-# --- A: PERFECT release on a normal node (with burst frames) ---
+# --- A: three PERFECT hits break a normal node (with burst frames) ---
 stage_harvest 40
+assert pt.staged.hits_left == 3 "normal scrap takes 3 hits"
 screenshot harvest_a_before
 down action
-wait_until pt.state_name() == "HarvestingState" 2
-burst harvest_a 5 0.2
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged._state_machine.get_current_state_name() == "ScrapInRangeState" 2
+assert pt.staged.hits_left == 2 "first hit lands"
+wait 0.6
+assert pt.state_name() == "HarvestingState" "ship stays focused between hits"
+assert ship.camera.zoom.x > 1.4 "camera stays zoomed between hits"
+assert pt.last_drops.size() >= 2 and pt.last_drops.size() <= 4 "perfect chip drops 2-4 gems"
+burst harvest_a_chip 5 0.1
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged.hits_left == 1 2
+down action
 wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
 up action
 wait_until pt.staged._state_machine.get_current_state_name() == "ScrapDepletedState" 2
-assert pt.item_count() == 1 "perfect release yields an item"
-assert inv.get_quantity("slag") == 0 and inv.get_quantity("scrap") == 0 "perfect never rolls below salvage"
-burst harvest_a_payoff 6 0.08
-wait 1.5
-screenshot harvest_a_clear
+assert pt.last_drops.size() >= 7 "final perfect break drops a big burst"
+burst harvest_a_break 8 0.08
+assert pt.state_name() == "HarvestingState" "zoom lingers briefly after the break"
+wait_until pt.state_name() == "FlyingState" 2
+wait_until pt.item_count() > 0 5
+screenshot harvest_a_magnet
+wait 2
+screenshot harvest_a_after
 
-# --- B: early release keeps progress, re-hold finishes (trophy) ---
+# --- B: early release keeps progress and isn't a hit (trophy) ---
 stage_harvest 40 trophy
+assert pt.staged.hits_left == 5 "trophy takes 5 hits"
 down action
 wait_until pt.staged.timing != null and pt.staged.timing.progress >= 0.25 3
 up action
 wait_until pt.staged._state_machine.get_current_state_name() == "ScrapInRangeState" 2
+assert pt.staged.hits_left == 5 "early release is not a hit"
 assert pt.staged.timing.progress > 0.15 "early release keeps (decaying) progress"
-screenshot harvest_b_early
 down action
 wait_until pt.staged.timing.progress >= pt.staged.timing.zone_start 3
 up action
-wait_until pt.staged._state_machine.get_current_state_name() == "ScrapDepletedState" 2
-assert pt.item_count() == 2 "clean release on a trophy yields an item"
-wait 1.5
+wait_until pt.staged.hits_left == 4 2
+assert not pt.last_drops.has("shard") "clean trophy hit never drops shards"
 
-# --- C: holding through the zone overloads into Slag ---
+# --- C: holding through the zone overloads: still a hit, shards only ---
 stage_harvest 40
 down action
 wait_until pt.staged.timing != null and pt.staged.timing.progress > pt.staged.timing.zone_end 3
 screenshot harvest_c_late
-wait_until pt.staged._state_machine.get_current_state_name() == "ScrapDepletedState" 3
+wait_until pt.staged._state_machine.get_current_state_name() == "ScrapInRangeState" 3
 up action
-assert inv.get_quantity("slag") == 1 "overload yields slag"
-screenshot harvest_c_after
+assert pt.last_drops.count("shard") == pt.last_drops.size() "overload drops only shards"
 
+# --- D: flying out of range drops focus (and zooms out) ---
+stage_harvest 40
+down action
+wait_until pt.staged.timing != null and pt.staged.timing.progress >= pt.staged.timing.zone_start 3
+up action
+wait_until pt.staged._state_machine.get_current_state_name() == "ScrapInRangeState" 2
+assert pt.state_name() == "HarvestingState" "focused after a hit"
+hold reverse_thrust 0.2
+assert pt.state_name() == "HarvestingState" "a short burst of thrust keeps focus while in range"
+hold reverse_thrust 1.5
+wait_until pt.state_name() == "FlyingState" 5
+
+# --- E: pickup popups add up to what's in the hold ---
+wait 3
+eval pt.popup_counts()
+eval inv.get_all_items()
+assert pt.popup_counts() == inv.get_all_items() "popup numbers match collected gems"
+
+# --- F: docking at a port cashes the hold in ---
+eval inv.add_item("gem", 1)
+assert gs.credits == 0 and inv.get_total_value() > 0 "fresh game: no credits, gems in hold"
+eval ship.set_meta("pending_dockable", pt.node("space_ports"))
+eval ship.state_machine.change_state("LandedState")
+frames 2
+assert inv.get_total_value() == 0 and gs.credits > 0 "dock converts the hold into credits"
 state

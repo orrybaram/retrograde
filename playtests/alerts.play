@@ -1,4 +1,4 @@
-# Low-fuel vapor + engine sputter, cargo-full HUD, plus omnidirectional harvest range.
+# Low-fuel vapor + engine sputter, full-hold HUD (gems left floating), plus omnidirectional harvest range.
 # Run: tools/play.sh playtests/alerts.play   (frames land in .playtest/alert_*.png)
 
 press enter
@@ -28,15 +28,18 @@ wait 0.2
 assert not ship.low_fuel_effect.is_coughing() "cough clears above threshold"
 wait 2.2
 assert ship.low_fuel_effect._puffs.is_empty() "vapor dissipates"
-eval inv.add_item("scrap", 5)
+eval inv.add_item("shard", int(ship.max_cargo_weight))
 wait 0.3
 screenshot alert_cargo_full
 assert ship.is_cargo_full() "hold is full"
 stage_harvest 40
-wait 0.2
-press action
-wait 0.2
-assert pt.item_count() == 5 "full hold refuses harvest"
+down action
+wait_until pt.staged.timing != null and pt.staged.timing.progress >= pt.staged.timing.zone_start 3
+up action
+wait_until pt.gem_count() > 0 2
+wait 1.5
+assert pt.gem_count() > 0 "full hold leaves gems floating"
+assert pt.item_count() == int(ship.max_cargo_weight) "magnet ignores gems that don't fit"
 screenshot alert_cargo_blocked
 eval inv.clear_inventory()
 stage_harvest 40

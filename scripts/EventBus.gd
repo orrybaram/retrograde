@@ -29,11 +29,17 @@ signal game_unpaused(pause_duration: float)
 signal harvest_began(scrap: ScrapNode)
 ## Emitted when the player starts (or resumes) holding the beam on a scrap node.
 
-signal harvest_finished(scrap: ScrapNode, grade: HarvestTiming.Grade, tier_item_id: String)
-## Emitted when an extraction resolves, just before the item is added to cargo.
-## EARLY releases do not finish a harvest and are not reported here.
+signal harvest_hit(scrap: ScrapNode, grade: HarvestTiming.Grade, gem_ids: Array[String], final: bool)
+## Emitted when a timed release lands a hit and gems break off. `final` is the hit that
+## destroys the scrap. EARLY releases are not hits and are not reported here.
 
-const CARGO_FULL_MESSAGE := "Cargo full - dock at a port to sell"
+signal gem_collected(item_id: String, world_position: Vector2)
+## Emitted when the ship picks up a loose gem (after it is added to the hold).
+
+signal hold_cashed_in(credits: int)
+## Emitted when docking at a port converts the hold into credits.
+
+const CARGO_FULL_MESSAGE := "Hold full - dock at a port to cash in"
 
 var _harvestable_nodes: Dictionary = {}  # Track ScrapNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ScrapNodes and their callables
@@ -83,17 +89,15 @@ func _check_harvest_state() -> void:
 
 	action_message_changed.emit(harvest_prompt() if can_harvest else "")
 
-## Prompt shown while scrap is harvestable; swaps to a sell hint when the hold is full.
+## Prompt shown while scrap is harvestable. A full hold doesn't block harvesting
+## (gems wait in space), but the prompt says so.
 func harvest_prompt() -> String:
+	var action_key = InputUtils.get_action_key_name("action")
+	var prompt := 'Press "%s" to harvest' % [action_key]
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if ship and ship.is_cargo_full():
-		return CARGO_FULL_MESSAGE
-	var action_key = InputUtils.get_action_key_name("action")
-	return 'Press "%s" to harvest' % [action_key]
-
-## Report a harvest refused for lack of cargo space.
-func report_cargo_full() -> void:
-	action_message_changed.emit(CARGO_FULL_MESSAGE)
+		return "%s - %s" % [prompt, CARGO_FULL_MESSAGE]
+	return prompt
 
 func _cleanup_invalid_nodes() -> void:
 	for node in _harvestable_nodes.keys():

@@ -5,7 +5,7 @@ class_name StoreUI
 ## Modes: Character (greeting + BUY/TALK/EXIT), Talk (topics), Buy (store items).
 ## Always shows NPC ASCII art at top.
 
-enum Mode { CHARACTER, TALK, BUY, SELL }
+enum Mode { CHARACTER, TALK, BUY }
 
 signal dialogue_closed
 
@@ -233,7 +233,7 @@ func _move_selection(direction: int) -> void:
 	if _menu_items.is_empty():
 		return
 
-	if _mode == Mode.BUY or _mode == Mode.SELL:
+	if _mode == Mode.BUY:
 		# Allow selecting disabled items to view descriptions, but skip separators
 		var new_index = (_selected_index + direction + _menu_items.size()) % _menu_items.size()
 		var attempts = 0
@@ -267,8 +267,6 @@ func _on_escape() -> void:
 		Mode.TALK:
 			_switch_to_character()
 		Mode.BUY:
-			_switch_to_character()
-		Mode.SELL:
 			_switch_to_character()
 
 func open_dialogue(target_store: Store) -> void:
@@ -350,15 +348,6 @@ func _update_character_display() -> void:
 		_typewriter.type_text(("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color]") % npc.greeting)
 	elif _dialogue_label:
 		_typewriter.show_immediate("")
-
-	if store and store.can_sell_resources():
-		var inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
-		var has_items = inventory_manager and not inventory_manager.get_all_items().is_empty()
-		_menu_items.append({
-			"enabled": has_items,
-			"action": _switch_to_sell,
-			"label": "SELL",
-		})
 
 	_menu_items.append({
 		"enabled": true,
@@ -558,7 +547,7 @@ func _make_buy_row() -> HBoxContainer:
 	return row
 
 func _update_menu_display() -> void:
-	if _mode == Mode.BUY or _mode == Mode.SELL:
+	if _mode == Mode.BUY:
 		_update_buy_menu_display()
 		return
 
@@ -633,102 +622,6 @@ func _update_buy_menu_display() -> void:
 				_flavor_typewriter.show_immediate("")
 		else:
 			_flavor_typewriter.show_immediate("")
-
-func _switch_to_sell() -> void:
-	_mode = Mode.SELL
-	_selected_index = 0
-	_dialogue_label.visible = false
-	_store_items_container.visible = true
-	_menu_container.visible = false
-	_buy_info_label.visible = true
-	_update_sell_display()
-
-func _update_sell_display() -> void:
-	if not store:
-		return
-
-	_menu_items.clear()
-	_clear_container(_store_items_container)
-	_update_credits()
-
-	var inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
-	if not inventory_manager:
-		_switch_to_character()
-		return
-
-	var all_items = inventory_manager.get_all_items()
-	if all_items.is_empty():
-		_switch_to_character()
-		return
-
-	# SELL ALL row (top)
-	var sell_all_value = store.get_sell_value()
-	_menu_items.append({
-		"enabled": true,
-		"action": _on_sell_all_pressed,
-		"label": "SELL ALL",
-		"cost_text": "%d CR" % sell_all_value,
-		"description": "Sell entire cargo for %d CR" % sell_all_value,
-	})
-	_store_items_container.add_child(_make_buy_row())
-
-	# Spacer between SELL ALL and individual items
-	_menu_items.append({
-		"enabled": false,
-		"action": null,
-		"label": "",
-		"cost_text": "",
-		"description": "",
-		"is_separator": true,
-	})
-	var sell_sep = HSeparator.new()
-	sell_sep.add_theme_color_override("separator", Colors.PRIMARY)
-	sell_sep.add_theme_constant_override("separation", 4)
-	_store_items_container.add_child(sell_sep)
-
-	# Add a row for each resource in inventory
-	for item_id in all_items.keys():
-		var quantity = all_items[item_id] as int
-		if quantity <= 0:
-			continue
-		var unit_price = Economy.get_resource_price(item_id)
-		var display_name = TierData.get_display_name_for_item_id(item_id).to_upper()
-		var total_value = quantity * unit_price
-
-		_menu_items.append({
-			"enabled": true,
-			"action": _on_sell_one_pressed.bind(item_id),
-			"label": "%s x%d" % [display_name, quantity],
-			"cost_text": "%d CR" % unit_price,
-			"description": "%d x %d CR = %d CR" % [quantity, unit_price, total_value],
-		})
-		_store_items_container.add_child(_make_buy_row())
-
-	# BACK row
-	_menu_items.append({
-		"enabled": true,
-		"action": _switch_to_character,
-		"label": "BACK",
-		"cost_text": "",
-		"description": "",
-	})
-	_store_items_container.add_child(_make_buy_row())
-
-	if _selected_index >= _menu_items.size():
-		_selected_index = 0
-
-	_update_menu_display()
-
-func _on_sell_one_pressed(item_id: String) -> void:
-	if store:
-		store.sell_resource(item_id, 1)
-		_update_sell_display()
-
-func _on_sell_all_pressed() -> void:
-	if store:
-		store.sell_all_resources()
-		# sell_all clears inventory, so return to character
-		_switch_to_character()
 
 func _make_menu_label() -> RichTextLabel:
 	var rtl = RichTextLabel.new()

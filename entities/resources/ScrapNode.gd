@@ -1,23 +1,24 @@
 extends OrbitalNode
 class_name ScrapNode
 
-## Harvestable resource node. Extends OrbitalNode with HP, tier, kind, and amount.
+## Harvestable scrap. Extends OrbitalNode with hits, trophy status, kind, and amount.
 ## Four-state machine: ScrapIdleState → ScrapInRangeState → ScrapHarvestingState → ScrapDepletedState.
-## Extraction is a hold-and-release timing check (see HarvestTiming); HP mirrors its progress for visuals.
-## Emits resource_harvested(amount, kind, position, tier_name) when fully depleted.
+## Each hit is a hold-and-release timing check (see HarvestTiming) that knocks gems loose;
+## the last hit breaks the scrap into a bigger burst. HP mirrors hits left for visuals.
 ## Returns to pool via ResourceNodePool after the depletion animation completes.
 
 signal harvest_started
 signal harvest_stopped
 signal resource_depleted
-signal resource_harvested(amount: int, kind: String, position: Vector2, tier_name: String)
 signal can_harvest_changed(can_harvest: bool)
 
 @export var kind: String = "Scrap"
 @export var amount: int = 1
 @export var max_amount: int = 1
 @export var base_hp: float = 30.0
-@export var trophy_hp_multiplier: float = 2.0
+
+const NORMAL_HITS := 3
+const TROPHY_HITS := 5
 
 @export var is_trophy: bool = false:
 	set(value):
@@ -35,6 +36,7 @@ var _state_machine: StateMachine
 var health_component: HealthComponent
 var _shape_instance: Node2D = null
 var timing: HarvestTiming = null  # created lazily when a harvest starts; null = untouched
+var hits_left: int = NORMAL_HITS
 
 const _SHAPE_SCENES := [
 	preload("res://entities/resources/ScrapShapes/ScrapShape0.tscn"),
@@ -236,6 +238,7 @@ func on_spawn() -> void:
 			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
 
 	timing = null
+	hits_left = NORMAL_HITS
 
 	# Trophy roll for pooled nodes
 	is_trophy = RNG.rng.randi() % 10 == 0
@@ -277,6 +280,7 @@ func on_despawn() -> void:
 	amount = 0
 	max_amount = 0
 	timing = null
+	hits_left = NORMAL_HITS
 	health_component.max_hp = base_hp
 	health_component.reset()
 
@@ -295,10 +299,8 @@ func _unregister_indicator() -> void:
 		_indicator_manager.unregister_target(_indicator_target)
 		_indicator_target = null
 
-const TIER_SHAKE_MULT := {
-	"slag": 0.3, "scrap": 1.0, "salvage": 1.4,
-	"component": 1.8, "mil_spec": 2.5, "artifact": 3.5
-}
+func max_hits() -> int:
+	return TROPHY_HITS if is_trophy else NORMAL_HITS
 
 func _pop_and_deplete() -> void:
 	var visual = _find_visual_node()
@@ -314,11 +316,11 @@ func _finish_depletion() -> void:
 	if not _is_depleted:
 		_deplete_resource()
 
-## Mirror extraction progress into HP (drives shrink/fade and sparkles) and shake the
-## shape harder as the bar fills.
+## Mirror hits left (minus the current hit's progress) into HP, which drives
+## shrink/fade and sparkles, and shake the shape harder as the bar fills.
 func sync_harvest_visual() -> void:
 	var progress := timing.progress if timing else 0.0
-	health_component.current_hp = health_component.max_hp * (1.0 - progress)
+	health_component.current_hp = health_component.max_hp * (hits_left - progress) / max_hits()
 	_update_visual()
 	var visual := _find_visual_node()
 	if not visual:
@@ -337,8 +339,8 @@ func _activate_trophy() -> void:
 
 	sparkle_particles.is_trophy = true
 
-	# Trophies are tougher to harvest
-	health_component.max_hp = base_hp * trophy_hp_multiplier
+	# Trophies take more hits (and drop more gems)
+	hits_left = TROPHY_HITS
 	health_component.reset()
 
 	# Subtle scale pulse to catch the eye

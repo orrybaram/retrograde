@@ -16,7 +16,6 @@ var gs: Node = null
 var ship: Ship = null
 var _last_cargo_weight: float = 0.0
 var _cargo_punch_tween: Tween = null
-var _pending_cargo_flights := 0  # loot chips still flying; cargo punch waits for them
 
 func _ready() -> void:
 	add_to_group("hud")
@@ -52,10 +51,10 @@ func _on_action_message_changed(message: String) -> void:
 func _on_inventory_changed(item_id: String = "", new_quantity: int = 0) -> void:
 	_update_labels(item_id, new_quantity)
 	var new_weight = InventoryManager.get_total_weight()
-	if new_weight > _last_cargo_weight and _pending_cargo_flights == 0:
+	if new_weight > _last_cargo_weight:
 		_punch_cargo_label()
-	# Hold just filled: stop the harvest prompt inviting a harvest that can't happen.
-	var max_cargo := ship.max_cargo_weight if ship and is_instance_valid(ship) else 5.0
+	# Hold just filled: the harvest prompt adds a cash-in hint.
+	var max_cargo := ship.max_cargo_weight if ship and is_instance_valid(ship) else 160.0
 	if new_weight >= max_cargo and _last_cargo_weight < max_cargo and EventBus.is_harvest_available():
 		_on_action_message_changed(EventBus.harvest_prompt())
 	_last_cargo_weight = new_weight
@@ -75,38 +74,6 @@ func show_saving_indicator() -> void:
 func hide_saving_indicator() -> void:
 	if save_indicator_label:
 		save_indicator_label.visible = false
-
-## Fly a loot chip from a world position into the cargo readout, then punch it.
-func fly_item_to_cargo(world_pos: Vector2, color: Color, big: bool) -> void:
-	if not current_cargo_label:
-		return
-	var canvas_to_local := get_global_transform_with_canvas().affine_inverse()
-	var from := canvas_to_local * (get_viewport().get_canvas_transform() * world_pos)
-	var to := canvas_to_local * (current_cargo_label.get_global_transform_with_canvas() * (current_cargo_label.size / 2.0))
-	var chip := ColorRect.new()
-	var side := 9.0 if big else 6.0
-	chip.size = Vector2(side, side)
-	chip.pivot_offset = chip.size / 2.0
-	chip.color = color
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.position = from - chip.pivot_offset
-	add_child(chip)
-	_pending_cargo_flights += 1
-
-	# Arc out sideways first, then dive into the readout.
-	var control := from.lerp(to, 0.3) + (from - to).orthogonal().normalized() * 60.0
-	var tween := create_tween()
-	tween.tween_interval(0.08)
-	tween.tween_method(func(t: float):
-		var p := from.lerp(control, t).lerp(control.lerp(to, t), t)
-		chip.position = p - chip.pivot_offset
-		chip.rotation = t * TAU
-		chip.scale = Vector2.ONE * lerpf(1.4, 0.6, t)
-	, 0.0, 1.0, 0.55).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	tween.tween_callback(func():
-		chip.queue_free()
-		_pending_cargo_flights -= 1
-		_punch_cargo_label())
 
 func _punch_cargo_label() -> void:
 	if not current_cargo_label:
@@ -138,10 +105,11 @@ func _process(_dt: float) -> void:
 func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	if gs == null: return
 	var cargo_weight = InventoryManager.get_total_weight()
-	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 5
+	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 160
 	current_cargo_label.text = "%d" % int(cargo_weight)
 	var cargo_full: bool = cargo_weight >= max_cargo
-	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo
+	var value_text := "  %d CR" % InventoryManager.get_total_value()
+	max_cargo_label.text = ("/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo) + value_text
 	var cargo_color := Colors.DANGER if cargo_full else Colors.PRIMARY
 	current_cargo_label.add_theme_color_override("font_color", cargo_color)
 	max_cargo_label.add_theme_color_override("font_color", Colors.DANGER if cargo_full else Colors.PRIMARY_DIM)

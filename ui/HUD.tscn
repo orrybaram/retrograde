@@ -106,7 +106,7 @@ script = ExtResource("5_hull")
 [node name="CargoRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=1185582045]
 layout_mode = 2
 size_flags_horizontal = 0
-theme_override_constants/separation = 2
+theme_override_constants/separation = 6
 
 [node name="TrolleyIcon" type="TextureRect" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=987357832]
 custom_minimum_size = Vector2(18, 18)
@@ -130,7 +130,7 @@ size_flags_vertical = 8
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(0.42, 0.353, 0.204, 1)
 theme_override_font_sizes/font_size = 14
-text = "/5"
+text = "/160"
 
 [node name="ActionMessageLabel" type="Label" parent="." unique_id=583314362]
 layout_mode = 1

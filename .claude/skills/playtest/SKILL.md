@@ -39,7 +39,7 @@ successful live exploration into one. A scenario stops at the first failing non-
 | `hold <key\|action> <sec>` / `down` / `up` / `release_all` | sustained input |
 | `face <group> [tol]` | steer with turn keys toward nearest node in group (`planets`, `space_ports`, `space_stations`, `resource_nodes`) |
 | `wait <sec>` / `frames <n>` / `timescale <n>` | advance time (wait is game time) |
-| `stage_harvest [dist] [trophy]` | park the flying ship `dist`px (default 40; harvest circle radius 60) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_harvested`/`harvest_stopped` events |
+| `stage_harvest [dist] [trophy]` | park the flying ship `dist`px (default 40; harvest circle radius 60) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_depleted`/`harvest_stopped` events |
 | `burst <name> <n> <sec>` | n screenshots `sec` apart → `<name>_00.png…` (for judging motion/feel) |
 | `wait_until <expr> [timeout]` | poll expression |
 | `assert <expr> ["message"]` | record failure if falsy |
@@ -47,7 +47,7 @@ successful live exploration into one. A scenario stops at the first failing non-
 
 Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv` (InventoryManager), `bus`
 (EventBus), `pt` (driver: `pt.state_name()`, `pt.visible_ui()`, `pt.screen_text()`, `pt.nearest(group)`,
-`pt.node(group)`, `pt.item_count()`, `pt.staged`), and `self` = driver so `get_tree()` works.
+`pt.node(group)`, `pt.item_count()` (gems in hold), `pt.gem_count()` (loose gems), `pt.spawn_gem(id, offset, [rel_vel])`, `pt.last_drops`, `pt.staged`), and `self` = driver so `get_tree()` works.
 `main.current_game_state`: 0 MENU, 1 PLAYING, 2 GAME_OVER.
 
 ## Game flow cheatsheet
@@ -57,12 +57,18 @@ Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv`
 - `esc` closes the dock dialogue without pausing.
 
 ## Harvest iteration
-`tools/play.sh playtests/harvest.play` skips all flying: boot → depart → `stage_harvest`, then three timed
-extractions (PERFECT release, early release + re-hold on a trophy, OVERLOAD). Release timing is driven with
-`wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start()` (also `zone_start`, `zone_end`).
-Frames land in `.playtest/harvest_*.png`; the transcript logs `harvest_finished {grade, tier}` events.
+`tools/play.sh playtests/harvest.play` skips all flying: boot → depart → `stage_harvest`, then timed hits
+(three PERFECT hits breaking a node, early release + re-hold on a trophy, OVERLOAD) and a dock cash-in.
+Scrap takes 3 hits (trophy 5); each hit is a release and re-arms a fresh zone, and `pt.staged.hits_left` counts down.
+The ship stays in `HarvestingState` (zoomed, velocity-locked) between hits; it returns to `FlyingState` ~0.8s after
+the break or once it leaves harvest range (flight input releases the lock but keeps focus).
+Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start()`
+(also `zone_start`, `zone_end`). Frames land in `.playtest/harvest_*.png`; the transcript logs
+`harvest_hit {grade, gems, final}`, `gem_collected {gem}` and `hold_cashed_in {credits}` events.
 
-`playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter and cargo HUD (`.playtest/alert_*.png`).
+`playtests/magnet.play` drops gems around the flying ship and checks the magnet pulls them in (range, fly-by, full hold).
+
+`playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).
 
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.

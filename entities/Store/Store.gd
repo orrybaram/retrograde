@@ -2,17 +2,15 @@ extends Node
 class_name Store
 
 ## Store component that can be attached to any entity.
-## Handles buying upgrades and selling resources.
+## Handles buying upgrades. (The hold is cashed in automatically on docking.)
 
 signal purchase_completed(upgrade: UpgradeItem)
-signal resources_sold(total_value: int)
 
 @export var store_data: StoreData = null
 ## The store configuration resource
 
 var _game_state: GameState = null
 var _ship: Ship = null
-var _inventory_manager: InventoryManager = null
 
 
 func _ready() -> void:
@@ -23,8 +21,6 @@ func _ready() -> void:
 func _cache_references() -> void:
 	_game_state = get_tree().get_first_node_in_group("game_state") as GameState
 	_ship = get_tree().get_first_node_in_group("ship") as Ship
-	# InventoryManager is an autoload singleton
-	_inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
 
 
 ## Get the store's display name.
@@ -123,80 +119,3 @@ func purchase_upgrade(upgrade: UpgradeItem) -> bool:
 	
 	purchase_completed.emit(upgrade)
 	return true
-
-
-## Check if this store allows selling resources.
-func can_sell_resources() -> bool:
-	if store_data:
-		return store_data.can_sell_resources
-	return false
-
-
-## Calculate the total value of all resources the player can sell.
-func get_sell_value() -> int:
-	if not _inventory_manager:
-		_cache_references()
-	if not _inventory_manager:
-		return 0
-	
-	var total_value: int = 0
-	var all_items = _inventory_manager.get_all_items()
-	
-	for item_id in all_items.keys():
-		var quantity = all_items[item_id] as int
-		var price = Economy.get_resource_price(item_id)
-		total_value += quantity * price
-	
-	return total_value
-
-
-## Sell a specific resource from the player's inventory.
-## Returns the credits earned.
-func sell_resource(item_id: String, amount: int = 1) -> int:
-	if not can_sell_resources():
-		return 0
-
-	if not _inventory_manager:
-		_cache_references()
-	if not _inventory_manager or not _game_state:
-		return 0
-
-	var quantity = _inventory_manager.get_quantity(item_id)
-	if quantity <= 0 or amount <= 0:
-		return 0
-
-	var sell_amount = min(amount, quantity) as int
-	var price = Economy.get_resource_price(item_id)
-	var total = sell_amount * price
-
-	if _inventory_manager.remove_item(item_id, sell_amount):
-		_game_state.credits += total
-		resources_sold.emit(total)
-		return total
-
-	return 0
-
-
-## Sell all resources in the player's inventory.
-## Returns the total credits earned.
-func sell_all_resources() -> int:
-	if not can_sell_resources():
-		return 0
-	
-	if not _inventory_manager:
-		_cache_references()
-	if not _inventory_manager or not _game_state:
-		return 0
-	
-	var total_value = get_sell_value()
-	
-	if total_value > 0:
-		# Add credits
-		_game_state.credits += total_value
-		
-		# Clear inventory
-		_inventory_manager.clear_inventory()
-		
-		resources_sold.emit(total_value)
-	
-	return total_value

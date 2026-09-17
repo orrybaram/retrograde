@@ -1,0 +1,40 @@
+# Magnet in open flight: loose gems near the ship get pulled in and collected.
+# Run: tools/play.sh playtests/magnet.play   (frames land in .playtest/magnet_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+assert ship.max_cargo_weight == 160.0 "base hold is 160"
+
+# --- A: gems drifting alongside at the edge of the field get pulled in ---
+eval pt.spawn_gem("gem", Vector2(62, 0))
+eval pt.spawn_gem("crystal", Vector2(0, -58))
+eval pt.spawn_gem("shard", Vector2(-50, 25))
+eval pt.spawn_gem("artifact", Vector2(40, 40))
+frames 2
+burst magnet_pull 5 0.06
+wait_until pt.gem_count() == 0 4
+assert pt.item_count() == 4 "all four collected"
+
+# --- B: gems out of range stay put ---
+eval pt.spawn_gem("gem", Vector2(120, 0))
+wait 1
+assert pt.gem_count() == 1 "gem outside the field is not pulled"
+
+# --- C: gems left behind while flying past (stationary in world) still get grabbed ---
+eval inv.clear_inventory()
+eval pt.spawn_gem("gem", Vector2(30, 40), -ship.linear_velocity)
+wait_until inv.get_quantity("gem") == 1 3
+
+# --- D: a full hold ignores gems ---
+eval inv.add_item("shard", int(ship.max_cargo_weight) - 1)
+eval pt.spawn_gem("gem", Vector2(30, 0))
+wait 1
+assert pt.item_count() == int(ship.max_cargo_weight) "full hold: nothing collected"

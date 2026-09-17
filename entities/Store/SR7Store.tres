@@ -17,6 +17,5 @@
 script = ExtResource("1")
 store_name = "SR-7 Supply"
 upgrades = Array[ExtResource("2_47uo8")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11")])
-can_sell_resources = true
 can_repair = true
 npc_data = ExtResource("12")
