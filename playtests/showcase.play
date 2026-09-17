@@ -6,7 +6,7 @@ press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
-wait_until pt.state_name() == "LandedState" 5
+wait_until pt.state_name() == "LandedState" 20
 eval gs.set("credits", 100)
 eval pt.caption("PLANETARY SCANNER  //  buy it at the home station")
 wait 1.5
@@ -65,8 +65,8 @@ wait 3
 eval pt.caption("Slow, nose up, on plain ground by the ore: touchdown")
 eval pt.park_near_planet("Rook", 2600, 30)
 frames 5
-eval pt.hover_over_ore("Rook", 90)
-land Rook 20 20
+eval pt.hover_over_ore("Rook", 70)
+land Rook 20 30
 wait 1.2
 eval pt.caption("Landed: riding the orbit, no fuel burn")
 wait 2.5
@@ -99,8 +99,8 @@ wait 2.5
 eval pt.caption("A spent seam refuses the drill until it refills")
 eval pt.park_near_planet("Rook", 2600, 30)
 frames 5
-eval pt.hover_over_ore("Rook", 90)
-land Rook 20 20
+eval pt.hover_over_ore("Rook", 70)
+land Rook 20 30
 wait 1.0
 hold action 1.2
 wait 2.0
