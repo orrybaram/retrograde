@@ -3,7 +3,10 @@ class_name Save
 
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
-## InventoryManager contents, and planet orbital angles.
+## InventoryManager contents, planet orbital angles, and which radio tips were seen.
+
+const RADIO_SECTION := "radio"
+const RADIO_SEEN_KEY := "seen"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -49,7 +52,26 @@ static func save(gs: GameState, ship: Ship) -> void:
 					if planet_key != "":
 						cfg.set_value("planets", planet_key, planet.orbital_angle)
 
+	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, RobotRadio.seen_ids())
+
 	cfg.save(Playtest.save_path())
+
+## Writes only the radio show-once flags into an existing save, keeping the rest.
+## With no save yet this does nothing (a flags-only file would enable CONTINUE);
+## the next full save() writes them. `path` defaults to the game save.
+static func save_radio_seen(ids: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, ids)
+	cfg.save(file)
+
+static func load_radio_seen(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(RADIO_SECTION, RADIO_SEEN_KEY, PackedStringArray()))
 
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
@@ -78,6 +100,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	
 	gs.credits = int(cfg.get_value("stats", "credits", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
+	RobotRadio.load_seen(load_radio_seen())
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}

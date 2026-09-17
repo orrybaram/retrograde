@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Ooh, scrap! Get close, then hold {key:action} to lock your cutting beam on."
+expression = &"happy"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Let go while the marker is in the sweet zone. A few clean cuts crack it open."
+expression = &"neutral"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "Old wreckage like that is perfectly s-s-safe to cut. Perfectly. Safe."
+expression = &"glitch"
+glitch = true
+
+[sub_resource type="Resource" id="line_4"]
+script = ExtResource("2_line")
+text = "Fly near the gems that break off and your magnet reels them in!"
+expression = &"happy"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"first_scrap"
+priority = 1
+once = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4")])

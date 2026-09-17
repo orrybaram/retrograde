@@ -155,6 +155,7 @@ func _on_rescue_beacon_deployed() -> void:
 
 func _on_quit_to_menu() -> void:
 	current_game_state = MainGameState.MENU
+	RobotRadio.silence()
 	if start_menu:
 		start_menu.show_menu()
 	get_tree().paused = true
@@ -168,6 +169,7 @@ func start_game() -> void:
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
 		gs.reset_all_state()
+	RobotRadio.reset()
 
 	# Reset ship to initial state
 	if ship:
@@ -282,6 +284,7 @@ func show_game_over(reason: String) -> void:
 		if gs:
 			gs.death_count += 1
 
+	RobotRadio.silence()
 	# Don't pause - physics should continue during game over
 	if game_over_menu:
 		game_over_menu.show_menu(reason)
