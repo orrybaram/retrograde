@@ -1,0 +1,80 @@
+# Robot radio: departing the dock opens a transmission from the guide robot. ENTER finishes
+# the typing, radio_next (TAB) steps through lines, finished lines auto-dismiss, a low-fuel
+# warning plays later, the scrap tip shows while harvesting, and menus hide the panel.
+# Run: tools/play.sh playtests/radio.play   (frames land in .playtest/radio_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+assert not pt.node("radio_panel").visible "radio quiet while docked"
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+assert not pt.node("radio_panel").visible "no transmission before departure"
+
+# Departure -> basic controls
+hold thrust 0.6
+wait_until pt.state_name() == "FlyingState" 3
+wait_until pt.node("radio_panel").visible 2
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_departure" "departure tip on air"
+wait 0.6
+screenshot radio_01_typing
+assert pt.node("radio_panel").is_typing() "message types out"
+assert pt.node("radio_panel").robot.talking "robot talks while typing"
+assert pt.node("radio_panel").robot.expression == "hello" "line sets the robot's face"
+press enter
+frames 2
+assert not pt.node("radio_panel").is_typing() "ENTER finishes the typing"
+assert not pt.node("radio_panel").robot.talking "robot stops talking once the line is out"
+assert pt.node("radio_panel").message_text().contains("Hold UP to burn") "key names filled in"
+assert pt.state_name() == "FlyingState" "ENTER doesn't touch the ship"
+screenshot radio_02_full_line
+
+# Non-blocking: steering still works with the panel up
+eval pt.set_meta("rot", ship.rotation)
+hold turn_left 0.5
+assert abs(ship.rotation - pt.get_meta("rot")) > 0.1 "ship turns while the robot talks"
+assert pt.node("radio_panel").visible "panel stays up while flying"
+
+press radio_next
+wait 0.4
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "TAB advances to the next line"
+screenshot radio_03_next_line
+press radio_next 2
+wait 0.5
+assert not pt.node("radio_panel").visible "TAB on the last line closes the transmission"
+assert get_tree().root.get_node("RobotRadio").has_seen("first_departure") "departure tip marked seen"
+
+# Low fuel warning, left alone to auto-dismiss
+eval ship.set("fuel", 30.0)
+hold thrust 0.2
+wait_until pt.node("radio_panel").visible 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_low_fuel" "low-fuel warning on air"
+wait 1.2
+screenshot radio_04_low_fuel
+wait_until not pt.node("radio_panel").visible 30
+assert not get_tree().root.get_node("RobotRadio").is_active() "warning auto-dismissed"
+
+# Scrap tip while harvesting; the glitchy line
+eval ship.set("fuel", 150.0)
+stage_harvest 40
+wait_until pt.node("radio_panel").visible 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_scrap" "scrap tip on air"
+wait 1.5
+screenshot radio_05_scrap_tip
+press radio_next 2
+wait_until pt.node("radio_panel").robot.expression == "glitch" 2
+wait 0.8
+screenshot radio_06_glitch_line
+
+# Menus push the panel aside and it comes back
+press i
+wait_until pt.visible_ui().has("InventoryUI") 2
+frames 2
+assert not pt.node("radio_panel").visible "radio hides behind menus"
+press i
+wait_until pt.node("radio_panel").visible 2
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_scrap" "transmission resumes after the menu"
+quit

@@ -70,6 +70,8 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).
 
+`playtests/radio.play` departs the dock and checks the guide robot's transmission: typing, ENTER skip, TAB (`press radio_next`) advance/close, low-fuel auto-dismiss, the scrap tip while harvesting, and hiding behind menus (`.playtest/radio_*.png`). The panel is `pt.node("radio_panel")`; the queue is `get_tree().root.get_node("RobotRadio")`. Expressions can't use `&"..."` literals — compare StringNames to plain strings.
+
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.
 - Screenshots need a window (not `--headless`). Read the PNG to actually look at it.

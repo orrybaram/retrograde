@@ -28,3 +28,16 @@ Action rows:
    ACTION NAME                    COST/VALUE    (unselected)
    ACTION NAME                    COST/VALUE    (unavailable/owned: Colors.PRIMARY_DIM #6B5A34)
 ```
+
+## Robot Radio (guide robot help messages)
+
+```
+EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + show-once flags) -> RadioPanel (HUD)
+```
+
+- Data: `RadioConversation` (id, priority, once, lines) of `RadioLine` (speaker, text, expression, glitch).
+  Bundled messages live in `entities/Robot/radio/messages/*.tres`. `{key:<action>}` in text becomes the bound key.
+- Higher priority interrupts (the interrupted one replays after); otherwise queued by priority, FIFO.
+- `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
+- Built-in triggers in `scripts/RobotRadio.gd`: undock, low fuel, hold full, scrap in range.
+- Keys: `radio_next` (TAB) advances/dismisses, ENTER finishes typing. Lines auto-dismiss after `RadioLine.read_time()`.
