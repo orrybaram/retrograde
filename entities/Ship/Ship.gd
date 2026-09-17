@@ -18,12 +18,12 @@ class_name Ship
 
 @export var max_fuel: float = 150.0  # Maximum fuel capacity
 
-@export var max_cargo_weight: float = 80.0  # Hold space (gems take 1-3 units each)
+@export var max_cargo_weight: float = 50.0  # Hold space (gems take 1-3 units each)
 
 # Base stats (stored at initialization, never modified by upgrades)
 var base_max_hull: float = 100.0
 var base_max_fuel: float = 150.0
-var base_max_cargo_weight: float = 80.0
+var base_max_cargo_weight: float = 50.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
 @export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
 
