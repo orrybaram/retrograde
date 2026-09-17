@@ -1,0 +1,54 @@
+# Store screen: UNIT-7 runs the shop. Services -> upgrades -> buy -> talk.
+# Run: tools/play.sh playtests/store.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+eval gs.set("credits", 120)
+eval ship.set("hull_strength", 70.0)
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press enter
+wait_until pt.visible_ui().has("StoreUI") 2
+wait 2.5
+screenshot store_services
+assert str(pt.screen_text()["StoreUI"]).contains("UNIT-7") "robot runs the store"
+
+# Upgrades list
+press enter
+wait 1.5
+screenshot store_buy
+# Repair (30 CR), then buy Hull Plating I (30 CR)
+press enter
+wait_until ship.hull_strength == ship.max_hull 2
+assert gs.credits == 90 "repair charged 30 CR"
+press down
+press enter
+wait_until gs.get_upgrade_level("hull") == 1 3
+assert ship.hull_strength == ship.max_hull and ship.max_hull == 105 "hull upgrade heals to the new max"
+eval gs.set("credits", 20)
+wait 1.5
+screenshot store_bought
+# Cargo hold is unaffordable at 20 CR: selecting it shows why
+press down
+press down
+wait 0.5
+screenshot store_blocked
+
+# Talk
+press escape
+wait 0.3
+press down
+press enter
+wait 0.3
+press enter
+wait 2.5
+screenshot store_talk
+press escape
+press escape
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+assert not pt.visible_ui().has("StoreUI") "ESC backs out to the dock menu"

@@ -101,7 +101,7 @@ func _apply_add_stat(ship: Ship) -> void:
 		"max_hull":
 			if ship:
 				ship.max_hull += int(effect_value)
-				ship.hull_strength = ship.max_hull  # Heal to new max
+				_heal_to_max(ship)
 		"max_fuel":
 			if ship:
 				ship.max_fuel += effect_value
@@ -114,12 +114,19 @@ func _apply_add_stat(ship: Ship) -> void:
 			push_warning("UpgradeItem: Unknown ADD_STAT target: %s" % effect_target)
 
 
+## Raise the health cap first; hull_strength clamps to it.
+func _heal_to_max(ship: Ship) -> void:
+	if ship.health_component:
+		ship.health_component.max_hp = ship.max_hull
+	ship.hull_strength = ship.max_hull
+
+
 func _apply_multiply_stat(ship: Ship) -> void:
 	match effect_target:
 		"max_hull":
 			if ship:
 				ship.max_hull = int(ship.max_hull * effect_value)
-				ship.hull_strength = ship.max_hull
+				_heal_to_max(ship)
 		"max_fuel":
 			if ship:
 				ship.max_fuel *= effect_value

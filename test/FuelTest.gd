@@ -19,10 +19,10 @@ func test_level_critical_at_tenth_and_empty() -> void:
 	assert_int(LowFuelEffect.level_for(5.0, 0.0)).is_equal(LowFuelEffect.Level.CRITICAL)
 
 
-func test_base_tank_is_200() -> void:
+func test_base_tank_is_150() -> void:
 	var ship := auto_free(load("res://entities/Ship/Ship.gd").new()) as Ship
-	assert_float(ship.max_fuel).is_equal(200.0)
-	assert_float(ship.base_max_fuel).is_equal(200.0)
+	assert_float(ship.max_fuel).is_equal(150.0)
+	assert_float(ship.base_max_fuel).is_equal(150.0)
 
 
 func test_fuel_tank_upgrades_scale_with_base() -> void:

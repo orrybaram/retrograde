@@ -1,13 +1,27 @@
 extends Control
 class_name StoreUI
 
-## Combined NPC character interaction + store UI.
-## Modes: Character (greeting + BUY/TALK/EXIT), Talk (topics), Buy (store items).
-## Always shows NPC ASCII art at top.
+## Port store run by UNIT-7. The robot card sits on the left and does the talking;
+## the right column lists services, talk topics or upgrades.
+## Modes: Character (BUY/TALK/EXIT), Talk (topics), Buy (repair + next tier per upgrade path).
+## UP/DOWN select, ENTER/SPACE confirm, ESC backs out. Built in code; the .tscn is just the root.
 
 enum Mode { CHARACTER, TALK, BUY }
 
 signal dialogue_closed
+
+const WINDOW_SIZE := Vector2(880, 440)
+const TEXT_SIZE := TerminalWindow.TEXT_SIZE
+const SMALL_SIZE := TerminalWindow.SMALL_SIZE
+const ROW_HEIGHT := 26.0
+const PIPS_WIDTH := 48.0
+const COST_WIDTH := 80.0
+## Ship stat each upgrade target changes, and how to label it.
+const STAT_LABELS := {
+	"max_hull": "HULL",
+	"max_fuel": "FUEL",
+	"max_cargo_weight": "HOLD",
+}
 
 var store: Store = null
 var gs: GameState = null
@@ -17,198 +31,109 @@ var _mode: Mode = Mode.CHARACTER
 var _menu_items: Array[Dictionary] = []
 var _selected_index: int = 0
 
-# Scene node
-@onready var _store_window: Control = $StoreWindow
+var _frame: TerminalWindow
+var _card: RobotCard
+var _section: Label
+var _rows: VBoxContainer
+var _detail: VBoxContainer
+var _detail_effect: Label
+var _detail_note: Label
 
-# Built nodes
-var _bg_rect: ColorRect = null
-var _border_panel: Panel = null
-var _title_label: Label = null
-var _credits_label: Label = null
-var _ascii_label: RichTextLabel = null
-var _dialogue_label: RichTextLabel = null
-var _store_items_container: VBoxContainer = null
-var _menu_container: VBoxContainer = null
-var _buy_info_label: RichTextLabel = null
-var _typewriter: Typewriter = null
-var _flavor_typewriter: Typewriter = null
 
 func _ready() -> void:
 	visible = false
 	add_to_group("store_ui")
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	_ship = get_tree().get_first_node_in_group("ship") as Ship
-
 	_build_ui()
 
-	_typewriter = Typewriter.new()
-	_typewriter.setup(_dialogue_label)
-	add_child(_typewriter)
-
-	_flavor_typewriter = Typewriter.new()
-	_flavor_typewriter.setup(_buy_info_label)
-	add_child(_flavor_typewriter)
-
-	if gs and gs.has_signal("credits_changed"):
+	if gs:
 		gs.credits_changed.connect(_on_credits_changed)
-	if gs and gs.has_signal("upgrade_level_changed"):
 		gs.upgrade_level_changed.connect(_on_upgrade_level_changed)
 
+
+# --- Layout ------------------------------------------------------------------
+
 func _build_ui() -> void:
-	# Background (covers full screen, added to root not store window)
-	_bg_rect = ColorRect.new()
-	_bg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_bg_rect.color = Color(Colors.SPACE_BG, 0.98)
-	add_child(_bg_rect)
-	move_child(_bg_rect, 0)
+	_frame = TerminalWindow.new(WINDOW_SIZE, "/ S T O R E /", "")
+	add_child(_frame)
 
-	# Border panel
-	_border_panel = Panel.new()
-	_border_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var border_style = StyleBoxFlat.new()
-	border_style.draw_center = false
-	border_style.border_width_left = 2
-	border_style.border_width_top = 2
-	border_style.border_width_right = 2
-	border_style.border_width_bottom = 2
-	border_style.border_color = Colors.PRIMARY
-	_border_panel.add_theme_stylebox_override("panel", border_style)
-	_store_window.add_child(_border_panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 24)
+	_frame.body.add_child(row)
+	_card = RobotCard.new("S H O P", "PORT QUARTERMASTER")
+	row.add_child(_card)
+	row.add_child(TerminalWindow.rule(true))
 
-	# Title label (top-right corner)
-	_title_label = Label.new()
-	_title_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_title_label.offset_left = -180.0
-	_title_label.offset_top = -10.0
-	_title_label.offset_right = -15.0
-	_title_label.offset_bottom = 13.0
-	_title_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_title_label.add_theme_color_override("font_color", Colors.PRIMARY)
-	var title_bg = StyleBoxFlat.new()
-	title_bg.bg_color = Colors.UI_BACKGROUND_SOLID
-	_title_label.add_theme_stylebox_override("normal", title_bg)
-	_title_label.text = "/ S T O R E /"
-	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_border_panel.add_child(_title_label)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 10)
+	row.add_child(col)
 
-	# Credits label (top-left corner)
-	_credits_label = Label.new()
-	_credits_label.offset_left = 15.0
-	_credits_label.offset_top = -10.0
-	_credits_label.offset_right = 100.0
-	_credits_label.offset_bottom = 13.0
-	_credits_label.add_theme_color_override("font_color", Colors.PRIMARY)
-	var credits_bg = StyleBoxFlat.new()
-	credits_bg.bg_color = Colors.UI_BACKGROUND_SOLID
-	_credits_label.add_theme_stylebox_override("normal", credits_bg)
-	_credits_label.text = "[ CR: 0 ]"
-	_border_panel.add_child(_credits_label)
+	_section = TerminalWindow.header("")
+	col.add_child(_section)
+	_rows = VBoxContainer.new()
+	_rows.add_theme_constant_override("separation", 2)
+	col.add_child(_rows)
+	col.add_child(TerminalWindow.filler())
 
-	# Main margin container
-	var margin = MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 15)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_right", 15)
-	margin.add_theme_constant_override("margin_bottom", 15)
-	_store_window.add_child(margin)
+	# Selected upgrade: what it changes and why it can't be bought
+	_detail = VBoxContainer.new()
+	_detail.add_theme_constant_override("separation", 8)
+	_detail.add_child(TerminalWindow.rule())
+	_detail_effect = TerminalWindow.label("", TEXT_SIZE, Colors.TEXT)
+	_detail.add_child(_detail_effect)
+	_detail_note = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
+	_detail.add_child(_detail_note)
+	col.add_child(_detail)
 
-	var main_vbox = VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 4)
-	margin.add_child(main_vbox)
 
-	# ASCII art area (top portion)
-	_ascii_label = RichTextLabel.new()
-	_ascii_label.bbcode_enabled = true
-	_ascii_label.fit_content = false
-	_ascii_label.scroll_active = false
-	_ascii_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_ascii_label.size_flags_stretch_ratio = 0.4
-	_ascii_label.add_theme_color_override("default_color", Colors.PRIMARY)
-	main_vbox.add_child(_ascii_label)
+## One selectable row: `> LABEL ..... [pips] right-text`, highlighted when selected.
+func _make_row(item: Dictionary, selected: bool) -> Control:
+	var enabled: bool = item["enabled"]
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size.y = ROW_HEIGHT
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg := TerminalWindow.box(Colors.PRIMARY_GHOST if selected else Color.TRANSPARENT, Colors.PRIMARY_DIM, 0)
+	if selected:
+		bg.border_width_left = 2
+		bg.border_color = Colors.PRIMARY
+	bg.content_margin_left = 10
+	bg.content_margin_right = 10
+	panel.add_theme_stylebox_override("panel", bg)
 
-	# Separator
-	var sep = HSeparator.new()
-	sep.add_theme_color_override("separator", Colors.PRIMARY)
-	sep.add_theme_constant_override("separation", 4)
-	main_vbox.add_child(sep)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	panel.add_child(row)
 
-	# Bottom half: left panel + right panel
-	var bottom_hbox = HBoxContainer.new()
-	bottom_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bottom_hbox.size_flags_stretch_ratio = 0.6
-	bottom_hbox.add_theme_constant_override("separation", 10)
-	main_vbox.add_child(bottom_hbox)
+	var text_color := Colors.PRIMARY if enabled else Colors.PRIMARY_DIM
+	var caret := TerminalWindow.label(">" if selected else " ", TEXT_SIZE, Colors.PRIMARY)
+	caret.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(caret)
+	var name_label := TerminalWindow.label(item["label"], TEXT_SIZE, text_color)
+	name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(name_label)
+	row.add_child(TerminalWindow.spacer())
 
-	# Left panel: dialogue text OR store items
-	var left_panel = PanelContainer.new()
-	left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_panel.size_flags_stretch_ratio = 0.6
-	var left_style = StyleBoxFlat.new()
-	left_style.draw_center = false
-	left_style.border_width_left = 1
-	left_style.border_width_top = 1
-	left_style.border_width_right = 1
-	left_style.border_width_bottom = 1
-	left_style.border_color = Colors.PRIMARY
-	left_style.content_margin_left = 8
-	left_style.content_margin_top = 8
-	left_style.content_margin_right = 8
-	left_style.content_margin_bottom = 8
-	left_panel.add_theme_stylebox_override("panel", left_style)
-	bottom_hbox.add_child(left_panel)
+	if item.has("tier"):
+		var pips := SegmentGauge.new()
+		pips.custom_minimum_size.x = PIPS_WIDTH
+		var max_tier: int = item["max_tier"]
+		pips.set_fill(float(item["tier"]) / max_tier, Colors.PRIMARY, max_tier)
+		row.add_child(pips)
 
-	_dialogue_label = RichTextLabel.new()
-	_dialogue_label.bbcode_enabled = true
-	_dialogue_label.fit_content = false
-	_dialogue_label.scroll_active = false
-	_dialogue_label.add_theme_color_override("default_color", Colors.PRIMARY)
-	left_panel.add_child(_dialogue_label)
+	var right: String = item.get("right", "")
+	if right != "":
+		var right_label := TerminalWindow.label(right, TEXT_SIZE, item.get("right_color", text_color))
+		right_label.custom_minimum_size.x = COST_WIDTH
+		right_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		right_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(right_label)
+	return panel
 
-	_store_items_container = VBoxContainer.new()
-	_store_items_container.add_theme_constant_override("separation", 2)
-	_store_items_container.visible = false
-	left_panel.add_child(_store_items_container)
 
-	# Right panel: menu OR buy info
-	var right_panel = PanelContainer.new()
-	right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_panel.size_flags_stretch_ratio = 0.4
-	var right_style = StyleBoxFlat.new()
-	right_style.draw_center = false
-	right_style.border_width_left = 1
-	right_style.border_width_top = 1
-	right_style.border_width_right = 1
-	right_style.border_width_bottom = 1
-	right_style.border_color = Colors.PRIMARY
-	right_style.content_margin_left = 8
-	right_style.content_margin_top = 8
-	right_style.content_margin_right = 8
-	right_style.content_margin_bottom = 8
-	right_panel.add_theme_stylebox_override("panel", right_style)
-	bottom_hbox.add_child(right_panel)
-
-	var right_vbox = VBoxContainer.new()
-	right_vbox.add_theme_constant_override("separation", 4)
-	right_panel.add_child(right_vbox)
-
-	_menu_container = VBoxContainer.new()
-	_menu_container.add_theme_constant_override("separation", 2)
-	_menu_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right_vbox.add_child(_menu_container)
-
-	_buy_info_label = RichTextLabel.new()
-	_buy_info_label.bbcode_enabled = true
-	_buy_info_label.fit_content = false
-	_buy_info_label.scroll_active = false
-	_buy_info_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_buy_info_label.add_theme_color_override("default_color", Colors.PRIMARY)
-	_buy_info_label.visible = false
-	right_vbox.add_child(_buy_info_label)
-
-func _format_spaced_title(text: String) -> String:
-	var spaced = " ".join(text.to_upper().split(""))
-	return "/ %s /" % spaced
+# --- Input -------------------------------------------------------------------
 
 func _input(event: InputEvent) -> void:
 	if not visible:
@@ -229,438 +154,296 @@ func _input(event: InputEvent) -> void:
 				_on_escape()
 				get_viewport().set_input_as_handled()
 
+
 func _move_selection(direction: int) -> void:
 	if _menu_items.is_empty():
 		return
+	# In BUY, disabled rows stay selectable so their descriptions can be read.
+	var n := _menu_items.size()
+	var index := _selected_index
+	for attempt in n:
+		index = (index + direction + n) % n
+		if _mode == Mode.BUY or _menu_items[index]["enabled"]:
+			_selected_index = index
+			break
+	_refresh_rows()
 
-	if _mode == Mode.BUY:
-		# Allow selecting disabled items to view descriptions, but skip separators
-		var new_index = (_selected_index + direction + _menu_items.size()) % _menu_items.size()
-		var attempts = 0
-		while attempts < _menu_items.size() and _menu_items[new_index].get("is_separator", false):
-			new_index = (new_index + direction + _menu_items.size()) % _menu_items.size()
-			attempts += 1
-		_selected_index = new_index
-	else:
-		var new_index = _selected_index
-		var attempts = 0
-		while attempts < _menu_items.size():
-			new_index = (new_index + direction + _menu_items.size()) % _menu_items.size()
-			if _menu_items[new_index]["enabled"]:
-				break
-			attempts += 1
-		if _menu_items[new_index]["enabled"]:
-			_selected_index = new_index
-
-	_update_menu_display()
 
 func _activate_selection() -> void:
 	if _selected_index >= 0 and _selected_index < _menu_items.size():
 		var item = _menu_items[_selected_index]
 		if item["enabled"] and item["action"]:
 			item["action"].call()
+		elif _mode == Mode.BUY:
+			_card.say(item.get("blocked", "Can't do that one yet, pilot."), &"worried")
+
 
 func _on_escape() -> void:
-	match _mode:
-		Mode.CHARACTER:
-			close_dialogue()
-		Mode.TALK:
-			_switch_to_character()
-		Mode.BUY:
-			_switch_to_character()
+	if _mode == Mode.CHARACTER:
+		close_dialogue()
+	else:
+		_switch_to_character()
+
+
+# --- Open / close ------------------------------------------------------------
 
 func open_dialogue(target_store: Store) -> void:
 	store = target_store
 	_ship = get_tree().get_first_node_in_group("ship") as Ship
 	_selected_index = 0
 	visible = true
-
-	# Set title from store name
-	if _title_label and store and store.store_data:
-		_title_label.text = _format_spaced_title(store.store_data.store_name)
-
-	# Show NPC ASCII art
-	_update_ascii_art()
-
+	if store and store.store_data:
+		_frame.set_title(TerminalWindow.spaced_title(store.store_data.store_name))
+	_card.set_status("OPEN", Colors.SUCCESS)
+	_update_credits()
+	_frame.animate_in()
+	_card.robot.glitch_burst(0.3)
 	_switch_to_character()
+
 
 func close_dialogue() -> void:
 	visible = false
+	_card.hush()
 	store = null
 	dialogue_closed.emit()
+
 
 func _get_npc() -> NPCData:
 	if store and store.store_data and store.store_data.npc_data:
 		return store.store_data.npc_data
 	return null
 
-func _update_ascii_art() -> void:
-	var npc = _get_npc()
-	if _ascii_label and npc:
-		_ascii_label.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color]") % npc.ascii_art
-	elif _ascii_label:
-		_ascii_label.text = ""
+
+## NPC text is written as "* line" bullets; the card wants a paragraph.
+static func _as_speech(text: String) -> String:
+	var lines := PackedStringArray()
+	for line in text.split("\n", false):
+		lines.append(line.strip_edges().trim_prefix("* ").trim_prefix("*"))
+	return " ".join(lines)
+
 
 func _update_credits() -> void:
-	if _credits_label and gs:
-		_credits_label.text = "[ CR: %d ]" % gs.credits
+	if gs:
+		_card.set_credits(gs.credits)
+
+
+# --- Modes -------------------------------------------------------------------
 
 func _switch_to_character() -> void:
 	_mode = Mode.CHARACTER
 	_selected_index = 0
-	_dialogue_label.visible = true
-	_store_items_container.visible = false
-	_menu_container.visible = true
-	_buy_info_label.visible = false
-	_update_character_display()
+	_section.text = "S E R V I C E S"
+	_frame.set_hint("UP/DN SELECT   ENTER CONFIRM   ESC LEAVE")
+	var npc := _get_npc()
+	_card.say(_as_speech(npc.greeting) if npc else "Welcome aboard, pilot.", &"happy")
 
-func _switch_to_talk() -> void:
-	_mode = Mode.TALK
-	_selected_index = 0
-	_dialogue_label.visible = true
-	_store_items_container.visible = false
-	_menu_container.visible = true
-	_buy_info_label.visible = false
-	_update_talk_display()
-
-func _switch_to_buy() -> void:
-	_mode = Mode.BUY
-	_selected_index = 0
-	_dialogue_label.visible = false
-	_store_items_container.visible = true
-	_menu_container.visible = false
-	_buy_info_label.visible = true
-	_update_buy_display()
-
-func _clear_container(container) -> void:
-	while container.get_child_count() > 0:
-		var child = container.get_child(0)
-		container.remove_child(child)
-		child.free()
-
-func _update_character_display() -> void:
 	_menu_items.clear()
-	_update_credits()
-
-	var npc = _get_npc()
-
-	if _dialogue_label and npc:
-		_typewriter.type_text(("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color]") % npc.greeting)
-	elif _dialogue_label:
-		_typewriter.show_immediate("")
-
-	_menu_items.append({
-		"enabled": true,
-		"action": _switch_to_buy,
-		"label": "BUY",
-	})
-
+	_menu_items.append({"enabled": true, "action": _switch_to_buy, "label": "BUY", "right": "UPGRADES"})
 	_menu_items.append({
 		"enabled": npc != null and npc.talk_topics.size() > 0,
 		"action": _switch_to_talk,
 		"label": "TALK",
+		"right": "CHAT",
 	})
+	_menu_items.append({"enabled": true, "action": close_dialogue, "label": "EXIT", "right": "UNDOCK MENU"})
+	_refresh_rows()
 
-	_menu_items.append({
-		"enabled": true,
-		"action": close_dialogue,
-		"label": "EXIT",
-	})
 
-	_clear_container(_menu_container)
-	for i in range(_menu_items.size()):
-		_menu_container.add_child(_make_menu_label())
-
-	_update_menu_display()
-
-func _update_talk_display() -> void:
-	_menu_items.clear()
-	_update_credits()
-
-	var npc = _get_npc()
+func _switch_to_talk() -> void:
+	var npc := _get_npc()
 	if not npc:
 		_switch_to_character()
 		return
-
-	for topic in npc.talk_topics:
-		_menu_items.append({
-			"enabled": true,
-			"action": _on_topic_selected.bind(topic),
-			"label": topic,
-		})
-
-	_menu_items.append({
-		"enabled": true,
-		"action": _switch_to_character,
-		"label": "BACK",
-	})
-
-	_clear_container(_menu_container)
-	for i in range(_menu_items.size()):
-		_menu_container.add_child(_make_menu_label())
-
-	_update_menu_display()
-
-func _update_buy_display() -> void:
-	if not store:
-		return
+	_mode = Mode.TALK
+	_selected_index = 0
+	_section.text = "T A L K"
+	_frame.set_hint("UP/DN SELECT   ENTER ASK   ESC BACK")
+	_card.say("What's on your mind?", &"neutral")
 
 	_menu_items.clear()
-	_clear_container(_store_items_container)
-	_update_credits()
+	for topic in npc.talk_topics:
+		_menu_items.append({"enabled": true, "action": _on_topic_selected.bind(topic), "label": topic.to_upper()})
+	_menu_items.append({"enabled": true, "action": _switch_to_character, "label": "BACK"})
+	_refresh_rows()
 
-	# Add repair row if supported
+
+func _switch_to_buy() -> void:
+	_mode = Mode.BUY
+	_selected_index = 0
+	_section.text = "U P G R A D E S"
+	_frame.set_hint("UP/DN SELECT   ENTER BUY   ESC BACK")
+	_rebuild_buy_items()
+
+
+func _rebuild_buy_items() -> void:
+	if not store:
+		return
+	_menu_items.clear()
 	if store.store_data and store.store_data.can_repair:
-		_add_buy_repair_item()
+		_menu_items.append(_repair_item())
+	for entry in _get_next_upgrades():
+		_menu_items.append(_upgrade_item(entry["upgrade"], entry["current"], entry["max_tier"]))
+	_menu_items.append({"enabled": true, "action": _switch_to_character, "label": "BACK", "description": "Anything else, pilot?"})
+	_selected_index = clampi(_selected_index, 0, _menu_items.size() - 1)
+	_refresh_rows()
 
-	# Add upgrade rows (next tier per path)
-	var next_upgrades = _get_next_upgrades()
-	for entry in next_upgrades:
-		_add_buy_upgrade_item(entry["upgrade"], entry["maxed"])
 
-	# Add BACK
-	_menu_items.append({
-		"enabled": true,
-		"action": _switch_to_character,
-		"label": "BACK",
-		"cost_text": "",
-		"description": "",
-	})
-	_store_items_container.add_child(_make_buy_row())
+func _refresh_rows() -> void:
+	for child in _rows.get_children():
+		_rows.remove_child(child)
+		child.queue_free()
+	for i in _menu_items.size():
+		_rows.add_child(_make_row(_menu_items[i], i == _selected_index))
 
-	if _selected_index >= _menu_items.size():
-		_selected_index = 0
+	var item: Dictionary = _menu_items[_selected_index] if not _menu_items.is_empty() else {}
+	_detail.visible = _mode == Mode.BUY and (item.has("effect") or item.has("blocked"))
+	_detail_effect.text = item.get("effect", "")
+	_detail_effect.visible = _detail_effect.text != ""
+	_detail_note.text = item.get("blocked", "")
+	_detail_note.add_theme_color_override("font_color", item.get("blocked_color", Colors.PRIMARY_DIM))
+	_detail_note.visible = _detail_note.text != ""
+	if _mode == Mode.BUY and item.has("description"):
+		_card.say(item["description"], &"neutral")
 
-	_update_menu_display()
 
+# --- Buy items ---------------------------------------------------------------
+
+## Next tier per upgrade path (or the top tier if maxed), in store order.
 func _get_next_upgrades() -> Array[Dictionary]:
-	var paths_seen: Dictionary = {}
 	var result: Array[Dictionary] = []
-	var upgrades = store.get_all_upgrades()
-
+	var paths_seen: Dictionary = {}
+	var upgrades := store.get_all_upgrades()
 	for upgrade in upgrades:
-		var path = upgrade.upgrade_path
+		var path := upgrade.upgrade_path
 		if path in paths_seen:
 			continue
-
-		var current_tier = gs.get_upgrade_level(path) if gs else 0
-		var next_upgrade: UpgradeItem = null
-		var max_tier: int = 0
-
+		paths_seen[path] = true
+		var current := gs.get_upgrade_level(path) if gs else 0
+		var max_tier := 0
+		var next: UpgradeItem = null
+		var top: UpgradeItem = null
 		for u in upgrades:
-			if u.upgrade_path == path:
-				max_tier = max(max_tier, u.tier)
-				if u.tier == current_tier + 1:
-					next_upgrade = u
-
-		var maxed = current_tier >= max_tier
-		if maxed:
-			for u in upgrades:
-				if u.upgrade_path == path and u.tier == max_tier:
-					next_upgrade = u
-					break
-
-		if next_upgrade:
-			result.append({"upgrade": next_upgrade, "maxed": maxed})
-			paths_seen[path] = true
-
+			if u.upgrade_path != path:
+				continue
+			if u.tier > max_tier:
+				max_tier = u.tier
+				top = u
+			if u.tier == current + 1:
+				next = u
+		var shown := next if current < max_tier else top
+		if shown:
+			result.append({"upgrade": shown, "current": current, "max_tier": max_tier})
 	return result
 
-func _add_buy_repair_item() -> void:
-	var repair_cost = 0
-	var repair_needed = false
-	var repair_affordable = false
 
-	if _ship and is_instance_valid(_ship) and gs:
-		var hull = _ship.hull_strength
-		var max_hull = _ship.max_hull
-		repair_cost = int((max_hull - hull) * Economy.REPAIR_COST_PER_POINT)
-		repair_needed = repair_cost > 0
-		repair_affordable = gs.credits >= repair_cost
-
-	var cost_text: String
-	var enabled: bool
-	if not repair_needed:
-		cost_text = "FULL"
-		enabled = false
-	elif repair_affordable:
-		cost_text = "%d CR" % repair_cost
-		enabled = true
-	else:
-		cost_text = "%d CR" % repair_cost
-		enabled = false
-
-	_menu_items.append({
-		"enabled": enabled,
+func _repair_item() -> Dictionary:
+	var cost := 0
+	if _ship and is_instance_valid(_ship):
+		cost = int((_ship.max_hull - _ship.hull_strength) * Economy.REPAIR_COST_PER_POINT)
+	var item := {
 		"action": _on_repair_pressed,
 		"label": "REPAIR HULL",
-		"cost_text": cost_text,
 		"description": "Patch the holes, seal the cracks. Good as new... mostly.",
-	})
-	_store_items_container.add_child(_make_buy_row())
+	}
+	if cost <= 0:
+		item["enabled"] = false
+		item["right"] = "FULL"
+		item["blocked"] = "Hull is already at full strength."
+		return item
+	var affordable := gs != null and gs.credits >= cost
+	item["enabled"] = affordable
+	item["right"] = "%d CR" % cost
+	item["effect"] = "HULL  %d -> %d" % [ceili(_ship.hull_strength), int(_ship.max_hull)]
+	if not affordable:
+		item["right_color"] = Colors.DANGER
+		item["blocked"] = "Need %d more CR." % (cost - gs.credits)
+		item["blocked_color"] = Colors.DANGER
+	return item
 
-func _add_buy_upgrade_item(upgrade: UpgradeItem, maxed: bool) -> void:
-	var cost_text: String
-	var enabled: bool
 
-	if maxed:
-		cost_text = "MAX"
-		enabled = false
-	elif store.can_purchase(upgrade):
-		cost_text = "%d CR" % upgrade.cost
-		enabled = true
-	else:
-		cost_text = "%d CR" % upgrade.cost
-		enabled = false
-
-	_menu_items.append({
-		"enabled": enabled,
+func _upgrade_item(upgrade: UpgradeItem, current: int, max_tier: int) -> Dictionary:
+	var maxed := current >= max_tier
+	var item := {
+		"enabled": not maxed and store.can_purchase(upgrade),
 		"action": _on_upgrade_pressed.bind(upgrade),
-		"label": upgrade.display_name.to_upper(),
-		"cost_text": cost_text,
+		"label": _track_name(upgrade),
+		"tier": current,
+		"max_tier": max_tier,
 		"description": upgrade.description,
-	})
-	_store_items_container.add_child(_make_buy_row())
+	}
+	if maxed:
+		item["right"] = "MAX"
+		item["blocked"] = "Fully upgraded."
+		return item
+	item["right"] = "%d CR" % upgrade.cost
+	item["effect"] = "%s  %s" % [upgrade.display_name.to_upper(), _effect_text(upgrade)]
+	var reason := store.get_purchase_block_reason(upgrade)
+	if reason == "Insufficient credits" and gs:
+		item["right_color"] = Colors.DANGER
+		item["blocked"] = "Need %d more CR." % (upgrade.cost - gs.credits)
+		item["blocked_color"] = Colors.DANGER
+	elif reason != "":
+		item["blocked"] = reason
+	return item
 
-func _make_buy_row() -> HBoxContainer:
-	var row = HBoxContainer.new()
 
-	var name_label = RichTextLabel.new()
-	name_label.bbcode_enabled = true
-	name_label.fit_content = true
-	name_label.scroll_active = false
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_color_override("default_color", Colors.PRIMARY)
-	var indent = StyleBoxEmpty.new()
-	indent.content_margin_left = 8.0
-	name_label.add_theme_stylebox_override("normal", indent)
-	row.add_child(name_label)
+## "Cargo Hold II" -> "CARGO HOLD"
+func _track_name(upgrade: UpgradeItem) -> String:
+	var words := upgrade.display_name.to_upper().split(" ")
+	if words.size() > 1 and words[-1].lstrip("IVX") == "":
+		words.remove_at(words.size() - 1)
+	return " ".join(words)
 
-	var cost_label = RichTextLabel.new()
-	cost_label.bbcode_enabled = true
-	cost_label.fit_content = true
-	cost_label.scroll_active = false
-	cost_label.custom_minimum_size = Vector2(80, 0)
-	cost_label.add_theme_color_override("default_color", Colors.PRIMARY)
-	row.add_child(cost_label)
 
-	return row
+## "+80  HOLD 80 -> 160" for stat upgrades on the current ship.
+func _effect_text(upgrade: UpgradeItem) -> String:
+	var stat: String = STAT_LABELS.get(upgrade.effect_target, "")
+	if stat == "" or upgrade.effect_type != UpgradeItem.EffectType.ADD_STAT:
+		return ""
+	var text := "+%d" % int(upgrade.effect_value)
+	if _ship and is_instance_valid(_ship) and upgrade.effect_target in _ship:
+		var now := float(_ship.get(upgrade.effect_target))
+		text += "   %s %d -> %d" % [stat, int(now), int(now + upgrade.effect_value)]
+	else:
+		text += " " + stat
+	return text
 
-func _update_menu_display() -> void:
-	if _mode == Mode.BUY:
-		_update_buy_menu_display()
-		return
 
-	var labels = _menu_container.get_children()
-	for i in range(_menu_items.size()):
-		if i >= labels.size():
-			break
-		var rtl = labels[i] as RichTextLabel
-		if not rtl:
-			continue
-
-		var item = _menu_items[i]
-		var is_selected = (i == _selected_index)
-		var is_enabled = item["enabled"]
-		var label_text = item["label"]
-
-		if is_selected and is_enabled:
-			rtl.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] %s") % label_text
-		elif is_enabled:
-			rtl.text = "  %s" % label_text
-		else:
-			rtl.text = ("  [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label_text
-
-func _update_buy_menu_display() -> void:
-	var children = _store_items_container.get_children()
-	for i in range(_menu_items.size()):
-		if i >= children.size():
-			break
-
-		var item = _menu_items[i]
-		var is_selected = (i == _selected_index)
-		var is_enabled = item["enabled"]
-		var label_text = item["label"]
-		var cost_text = item.get("cost_text", "")
-
-		var row = children[i]
-		if not row is HBoxContainer:
-			continue
-		if row.get_child_count() < 1:
-			continue
-
-		var name_label = row.get_child(0) as RichTextLabel
-		var cost_label = row.get_child(1) as RichTextLabel if row.get_child_count() > 1 else null
-
-		if name_label:
-			if is_selected and is_enabled:
-				name_label.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] %s") % label_text
-			elif is_selected:
-				name_label.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label_text
-			elif is_enabled:
-				name_label.text = "  %s" % label_text
-			else:
-				name_label.text = ("  [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label_text
-
-		if cost_label:
-			if cost_text == "":
-				cost_label.text = ""
-			elif is_enabled:
-				cost_label.text = "[right]%s" % cost_text
-			elif cost_text == "MAX" or cost_text == "FULL":
-				cost_label.text = ("[right][color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % cost_text
-			else:
-				cost_label.text = ("[right][color=#" + Colors.hex(Colors.DANGER) + "]%s[/color]") % cost_text
-
-	# Update info panel with selected item description
-	if _buy_info_label:
-		if _selected_index >= 0 and _selected_index < _menu_items.size():
-			var desc = _menu_items[_selected_index].get("description", "")
-			if desc != "":
-				_flavor_typewriter.type_text(("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color]") % desc)
-			else:
-				_flavor_typewriter.show_immediate("")
-		else:
-			_flavor_typewriter.show_immediate("")
-
-func _make_menu_label() -> RichTextLabel:
-	var rtl = RichTextLabel.new()
-	rtl.bbcode_enabled = true
-	rtl.fit_content = true
-	rtl.scroll_active = false
-	rtl.add_theme_color_override("default_color", Colors.PRIMARY)
-	var indent = StyleBoxEmpty.new()
-	indent.content_margin_left = 20.0
-	rtl.add_theme_stylebox_override("normal", indent)
-	return rtl
+# --- Actions -----------------------------------------------------------------
 
 func _on_topic_selected(topic: String) -> void:
-	if _dialogue_label:
-		_typewriter.type_text(("[color=#" + Colors.hex(Colors.PRIMARY) + "]* ...%s, you ask?\n* Hmm, that's a good question.\n* Maybe another time.[/color]") % topic)
+	_card.say("%s Hmm, good question. Ask me again another time." % topic, &"neutral")
+
 
 func _on_repair_pressed() -> void:
 	if not _ship or not is_instance_valid(_ship) or not gs:
 		return
+	var cost := int((_ship.max_hull - _ship.hull_strength) * Economy.REPAIR_COST_PER_POINT)
+	if cost > 0 and gs.credits >= cost:
+		gs.credits -= cost
+		_ship.hull_strength = _ship.max_hull
+		_rebuild_buy_items()
+		_card.say("All patched up. Try not to hit anything.", &"happy")
+		_card.robot.glitch_burst(0.2)
 
-	var max_hull = _ship.max_hull
-	var hull = _ship.hull_strength
-	var repair_cost = int((max_hull - hull) * Economy.REPAIR_COST_PER_POINT)
-
-	if repair_cost > 0 and gs.credits >= repair_cost:
-		gs.credits -= repair_cost
-		_ship.hull_strength = max_hull
-		_update_buy_display()
 
 func _on_upgrade_pressed(upgrade: UpgradeItem) -> void:
-	if store:
-		var success = await store.purchase_upgrade(upgrade)
-		if success:
-			_update_buy_display()
+	if not store:
+		return
+	var success := await store.purchase_upgrade(upgrade)
+	if success and visible:
+		_rebuild_buy_items()
+		_card.say("%s installed! She's running better already." % upgrade.display_name, &"happy")
+		_card.robot.glitch_burst(0.2)
+
 
 func _on_credits_changed() -> void:
 	if visible:
 		_update_credits()
+		if _mode == Mode.BUY:
+			_rebuild_buy_items()
+
 
 func _on_upgrade_level_changed(_path: String, _level: int) -> void:
 	if visible and _mode == Mode.BUY:
-		_update_buy_display()
+		_rebuild_buy_items()

@@ -18,10 +18,15 @@ script = ExtResource("2_line")
 text = "Lost? Press M for the system map. Any port will top off your tank."
 expression = &"wink"
 
+[sub_resource type="Resource" id="line_4"]
+script = ExtResource("2_line")
+text = "Now let's go find some scrap! Salvage out here sells for good credits at port."
+expression = &"happy"
+
 [resource]
 script = ExtResource("1_conv")
 id = &"first_departure"
 priority = 1
 once = true
 pause_game = true
-lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4")])

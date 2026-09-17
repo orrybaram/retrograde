@@ -50,7 +50,7 @@ assert pt.state_name() == "FlyingState" "starts in flight above the pad"
 land Rook 15 15
 assert pt.state_name() == "PlanetLandedState" "touched down"
 assert get_node("/root/NavSystem").is_tracking_home() "arriving drops the site target"
-assert str(pt.snapshot().action_message).contains("lift off") "landed prompt"
+assert str(pt.snapshot().action_message).contains("LIFT OFF") "landed prompt"
 wait 0.6
 screenshot landing_2_landed
 eval pt.set_meta("landed_fuel", ship.fuel)

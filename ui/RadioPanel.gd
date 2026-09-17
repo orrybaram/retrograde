@@ -18,6 +18,7 @@ const SMALL_SIZE := 10
 const CHARS_PER_SECOND := 40.0
 const FADE_TIME := 0.15
 ## Menus that sit in the same CanvasLayer as the HUD but never block the radio.
+## Transient overlays (gem pickup popups) opt out with the "hud_overlay" group.
 const NON_BLOCKING := [&"HUD", &"IndicatorManager"]
 
 var robot: RobotView
@@ -306,6 +307,7 @@ func _is_blocked() -> bool:
 	if layer == null:
 		return false
 	for c in layer.get_children():
-		if c != hud and c is CanvasItem and c.visible and not (c.name in NON_BLOCKING):
+		if c != hud and c is CanvasItem and c.visible and not (c.name in NON_BLOCKING) \
+				and not c.is_in_group("hud_overlay"):
 			return true
 	return false

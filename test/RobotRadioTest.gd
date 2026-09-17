@@ -290,6 +290,44 @@ func test_pause_follows_whatever_is_on_air() -> void:
 	assert_bool(radio.is_pausing()).is_false()
 
 
+func test_pausing_tip_waits_for_the_player_to_back_off() -> void:
+	var radio := _radio()
+	var tutorial := _conv(&"hold_full", Priority.HINT, 1, true)
+	tutorial.pause_game = true
+	Input.action_press("action")  # mid-harvest
+	assert_int(radio.request(tutorial)).is_equal(Result.QUEUED)
+	assert_int(radio.request(tutorial)).is_equal(Result.QUEUED)  # re-triggers don't stack
+	assert_bool(radio.is_active()).is_false()
+	assert_bool(radio.is_pausing()).is_false()
+	radio.poll_deferred(10.0)
+	Input.action_release("action")
+	radio.poll_deferred(10.5)  # let go, but not for long enough
+	assert_bool(radio.is_active()).is_false()
+	radio.poll_deferred(11.1)
+	assert_object(radio.queue.current).is_same(tutorial)
+	assert_bool(radio.is_pausing()).is_true()
+	assert_int(radio.queue.pending_count()).is_equal(0)
+
+
+func test_non_pausing_tip_plays_even_while_busy() -> void:
+	var radio := _radio()
+	Input.action_press("thrust")
+	assert_int(radio.request(_conv(&"tip"))).is_equal(Result.STARTED)
+	Input.action_release("thrust")
+
+
+func test_silence_drops_held_back_tips() -> void:
+	var radio := _radio()
+	var tutorial := _conv(&"tutorial")
+	tutorial.pause_game = true
+	Input.action_press("action")
+	radio.request(tutorial)
+	Input.action_release("action")
+	radio.silence()
+	radio.poll_deferred(1000.0)
+	assert_bool(radio.is_active()).is_false()
+
+
 func test_confirming_a_paused_call_unpauses() -> void:
 	var radio := _radio()
 	radio.request(_confirm_conv(&"relaunch", true))
@@ -359,6 +397,7 @@ func test_bundled_messages_are_valid() -> void:
 			assert_bool(shown.contains("{")).override_failure_message(shown).is_false()
 	for conv: RadioConversation in TIPS:
 		assert_bool(conv.once).is_true()
+		assert_bool(conv.pause_game).override_failure_message("tutorial %s must pause" % conv.id).is_true()
 		for line in conv.lines:
 			assert_bool(line.is_confirm()).is_false()
 
@@ -375,14 +414,14 @@ func test_confirm_calls_end_on_a_confirm_line() -> void:
 func test_tutorials_and_game_over_pause_but_beacon_offer_does_not() -> void:
 	assert_bool(RADIO_SCRIPT.MSG_DEPARTURE.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_CARGO_FULL.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SHIP_DESTROYED.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SHIP_ABANDONED.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_TRACTOR_RESCUE.pause_game).is_true()
 	# Stranded pilots may still be drifting into the tractor beam
 	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL.pause_game).is_false()
 	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL_BEAM.pause_game).is_false()
-	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_false()
-	assert_bool(RADIO_SCRIPT.MSG_CARGO_FULL.pause_game).is_false()
 
 
 func test_low_fuel_outranks_tips() -> void:

@@ -2,6 +2,8 @@ extends Control
 class_name IndicatorManager
 
 ## Central manager that tracks all indicator targets and displays a single indicator at a time.
+## Also shows the current action prompt (EventBus.action_message_changed) in context:
+## tucked under the scrap callout while harvesting is possible, otherwise just below the ship.
 
 @export var indicator_color: Color = Colors.INDICATOR
 @export var info_box_offset: Vector2 = Vector2(150, -80)  # Offset from bracket to info box
@@ -12,10 +14,34 @@ var info_box: Control = null
 var ship: Ship = null
 var camera: Camera2D = null
 
+const PROMPT_FONT_SIZE := 8
+const PROMPT_GAP := 6.0
+const PROMPT_SHIP_OFFSET := 26.0  # below the ship's center, in screen px
+const PROMPT_ALPHA := 0.7
+
+var _prompt: Label
+var _prompt_text := ""
+
 func _ready() -> void:
 	add_to_group("indicator_manager")
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Always process so indicators work when paused
 	mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block mouse input
+
+	_prompt = Label.new()
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prompt.add_theme_font_size_override("font_size", PROMPT_FONT_SIZE)
+	_prompt.add_theme_color_override("font_color", Colors.PRIMARY)
+	_prompt.visible = false
+	add_child(_prompt)
+	EventBus.action_message_changed.connect(_on_action_message_changed)
+	if EventBus.is_harvest_available():
+		_on_action_message_changed(EventBus.harvest_prompt())
+
+func _on_action_message_changed(message: String) -> void:
+	_prompt_text = message
+	if _prompt.text != message:
+		_prompt.text = message
+		_prompt.reset_size()
 
 func _process(_delta: float) -> void:
 	# Find ship and camera if not set
@@ -44,8 +70,35 @@ func _process(_delta: float) -> void:
 	elif current_target and info_box:
 		IndicatorRenderer.update_info_box(info_box, current_target.get_indicator_info())
 	
+	_place_prompt()
+
 	# Update indicator display
 	queue_redraw()
+
+## Harvest prompt hangs under the scrap callout; anything else sits under the ship.
+func _place_prompt() -> void:
+	var shown := _prompt_text != "" and camera != null and is_instance_valid(ship) and not get_tree().paused
+	# Full hold: the scrap callout already says so, don't nag to harvest
+	if shown and ship.is_cargo_full() and _prompt_text == EventBus.harvest_prompt():
+		shown = false
+	_prompt.visible = shown
+	if not shown:
+		return
+	# Soft breathing so it reads as a hint, not a banner
+	_prompt.modulate.a = PROMPT_ALPHA * (0.75 + 0.25 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 0.6))
+	var viewport_size := get_viewport_rect().size
+	var pos: Vector2
+	if info_box and current_target and EventBus.is_harvest_available():
+		pos = _info_box_screen_pos() + Vector2(IndicatorRenderer.INFO_BOX_PADDING, info_box.size.y + PROMPT_GAP)
+	else:
+		var ship_screen := (ship.global_position - camera.global_position) * camera.zoom + viewport_size / 2.0
+		pos = ship_screen + Vector2(-_prompt.size.x / 2.0, PROMPT_SHIP_OFFSET)
+	_prompt.position = pos.clamp(Vector2.ZERO, (viewport_size - _prompt.size).max(Vector2.ZERO)).round()
+
+func _info_box_screen_pos() -> Vector2:
+	var viewport_size := get_viewport_rect().size
+	var screen_pos := (current_target.get_indicator_position() - camera.global_position) * camera.zoom + viewport_size / 2.0
+	return (screen_pos + info_box_offset).clamp(Vector2.ZERO, (viewport_size - info_box.size).max(Vector2.ZERO))
 
 func _compare_targets(a: IndicatorTarget, b: IndicatorTarget) -> bool:
 	var priority_a = a.get_indicator_priority()

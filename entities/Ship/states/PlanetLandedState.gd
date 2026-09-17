@@ -112,7 +112,7 @@ func physics_process(delta: float) -> void:
 func lift_off() -> void:
 	var cost := liftoff_cost()
 	if ship.fuel < cost:
-		EventBus.action_message_changed.emit("NOT ENOUGH FUEL TO LIFT OFF - ENGINES BURNED OUT")
+		EventBus.action_message_changed.emit("NOT ENOUGH FUEL - ENGINES DRY")
 		ship.consume_fuel(ship.fuel)
 		return
 	ship.consume_fuel(cost)
@@ -159,23 +159,25 @@ func _update_prompt() -> void:
 		_prompt = prompt
 		EventBus.action_message_changed.emit(prompt)
 
-## What the HUD tells the player to do next.
+## What the prompt under the ship offers next.
 func prompt_text() -> String:
-	var liftoff := '"%s" lift off (%d fuel)' % [InputUtils.get_action_key_name("thrust"), ceili(liftoff_cost())]
-	var action_key := InputUtils.get_action_key_name("action")
+	var liftoff := EventBus.key_prompt("thrust", "LIFT OFF (%d FUEL)" % ceili(liftoff_cost()))
 	match drill.phase:
 		SiteDrill.Phase.READY:
-			return 'LANDED - hold "%s" to drill - %s' % [action_key, liftoff]
+			return "%s   %s" % [EventBus.action_prompt("DRILL"), liftoff]
 		SiteDrill.Phase.DIGGING:
 			if drill.is_holding():
 				return ""
 			if drill.can_bank():
-				return '"%s" drill deeper (%d/%d) - "%s" bank' % [action_key, drill.layer + 1, drill.layer_count(), InputUtils.get_action_key_name("reverse_thrust")]
-			return 'hold "%s" to drill - %s' % [action_key, liftoff]
+				return "%s   %s" % [
+					EventBus.action_prompt("DRILL %d/%d" % [drill.layer + 1, drill.layer_count()]),
+					EventBus.key_prompt("reverse_thrust", "BANK"),
+				]
+			return "%s   %s" % [EventBus.action_prompt("DRILL"), liftoff]
 	if drill.end_reason == "spent":
 		var left := ceili(site.regrow_left())
-		return "SITE SPENT - regrows in %d:%02d - %s" % [left / 60, left % 60, liftoff]
-	return "DIG COMPLETE - %s" % liftoff
+		return "SITE SPENT %d:%02d   %s" % [left / 60, left % 60, liftoff]
+	return "DIG COMPLETE   %s" % liftoff
 
 func _flying() -> FlyingState:
 	return ship.state_machine.states.get("FlyingState") as FlyingState

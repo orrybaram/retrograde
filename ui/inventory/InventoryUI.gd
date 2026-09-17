@@ -1,128 +1,335 @@
 extends Control
 class_name InventoryUI
 
-## Inventory UI showing ship systems, upgrades, and cargo.
-## Opens/closes with "i" key.
+## Inventory screen: UNIT-7 on the left with a status readout, ship gauges, the hold
+## and upgrade tiers on the right. Opens/closes with "I" (ESC also closes; see Main).
+## Built in code from TerminalWindow + RobotCard; the .tscn is just the root.
 
 signal dialogue_closed
 
-@onready var systems_label: Label = $InventoryWindow/MarginContainer/VBoxContainer/SystemsContent
-@onready var upgrades_label: Label = $InventoryWindow/MarginContainer/VBoxContainer/ScrollContainer/UpgradesContent
-@onready var cargo_label: Label = $InventoryWindow/MarginContainer/VBoxContainer/CargoContent
+const WINDOW_SIZE := Vector2(880, 440)
+const TEXT_SIZE := TerminalWindow.TEXT_SIZE
+const SMALL_SIZE := TerminalWindow.SMALL_SIZE
+const STAT_LABEL_WIDTH := 64.0
+const STAT_VALUE_WIDTH := 96.0
+const MAX_TIER := 3
+## Known upgrade tracks in display order. Paths bought but not listed here still show.
+const UPGRADE_TRACKS := [
+	["hull", "HULL PLATING"],
+	["fuel_tank", "FUEL TANK"],
+	["cargo", "CARGO HOLD"],
+]
 
 var ship: Ship = null
 var gs: GameState = null
 var inventory_manager: InventoryManager = null
 
+var _frame: TerminalWindow
+var _card: RobotCard
+var _hull_gauge: SegmentGauge
+var _hull_value: Label
+var _fuel_gauge: SegmentGauge
+var _fuel_value: Label
+var _hold_gauge: SegmentGauge
+var _hold_value: Label
+var _flight_stats: Label
+var _cargo_rows: VBoxContainer
+var _hold_total: Label
+var _upgrade_rows: VBoxContainer
+
 
 func _ready() -> void:
 	visible = false
 	add_to_group("inventory_ui")
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build()
 	ship = get_tree().get_first_node_in_group("ship") as Ship
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
 
-	# Connect to signals for live updates
+	# Live updates while open
 	if gs:
-		if gs.has_signal("credits_changed"):
-			gs.credits_changed.connect(_update_display)
-		if gs.has_signal("upgrade_level_changed"):
-			gs.upgrade_level_changed.connect(_update_display)
+		gs.credits_changed.connect(_update_display)
+		gs.upgrade_level_changed.connect(_update_display)
 	if ship and ship.has_signal("fuel_changed"):
 		ship.fuel_changed.connect(_update_display)
-	if inventory_manager and inventory_manager.has_signal("inventory_changed"):
+	if inventory_manager:
 		inventory_manager.inventory_changed.connect(_update_display)
 
 
 func open_inventory() -> void:
+	# The ship respawns on death, so re-resolve it each time.
+	var current := get_tree().get_first_node_in_group("ship") as Ship
+	if current and current != ship:
+		ship = current
+		if ship.has_signal("fuel_changed") and not ship.fuel_changed.is_connected(_update_display):
+			ship.fuel_changed.connect(_update_display)
 	visible = true
 	_update_display()
-	
-	if ship and ship.camera:
-		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
+	_greet()
+	_frame.animate_in()
+	_card.robot.glitch_burst(0.3)
 
 
 func close_inventory() -> void:
 	visible = false
-
-	# Only zoom out if not docked (LandedState manages zoom when docked)
-	if ship and ship.camera:
-		var is_docked = ship.is_locked_to_planet()
-		if ship.is_landed_on_planet():
-			ship.camera.zoom_camera_in(PlanetLandedState.CAMERA_ZOOM)
-		elif not is_docked:
-			ship.camera.zoom_camera_out()
-
+	_card.hush()
 	dialogue_closed.emit()
 
 
-func _update_display(_item_id: String = "", _new_quantity: int = 0) -> void:
-	# Parameters are optional for compatibility with signals that may or may not pass arguments
-	if not ship or not gs:
+# --- Layout ------------------------------------------------------------------
+
+func _build() -> void:
+	_frame = TerminalWindow.new(WINDOW_SIZE, "/ I N V E N T O R Y /", "[I] / [ESC]  CLOSE")
+	add_child(_frame)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 24)
+	_frame.body.add_child(row)
+	_card = RobotCard.new("C R E W", "SALVAGE ASSIST UNIT")
+	row.add_child(_card)
+	row.add_child(TerminalWindow.rule(true))
+	row.add_child(_build_readout())
+
+
+## Right column: gauges, the hold, upgrades.
+func _build_readout() -> Control:
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 10)
+
+	col.add_child(TerminalWindow.header("S Y S T E M S"))
+	var hull := _gauge_row("HULL")
+	_hull_gauge = hull[0]
+	_hull_value = hull[1]
+	col.add_child(hull[2])
+	var fuel := _gauge_row("FUEL")
+	_fuel_gauge = fuel[0]
+	_fuel_value = fuel[1]
+	col.add_child(fuel[2])
+	var hold := _gauge_row("HOLD")
+	_hold_gauge = hold[0]
+	_hold_value = hold[1]
+	col.add_child(hold[2])
+	_flight_stats = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
+	col.add_child(_flight_stats)
+
+	var gap := Control.new()
+	gap.custom_minimum_size.y = 6
+	col.add_child(gap)
+	col.add_child(TerminalWindow.header("C A R G O"))
+	_cargo_rows = VBoxContainer.new()
+	_cargo_rows.add_theme_constant_override("separation", 6)
+	col.add_child(_cargo_rows)
+	col.add_child(TerminalWindow.rule())
+	var total := HBoxContainer.new()
+	total.add_child(TerminalWindow.label("HOLD VALUE", TEXT_SIZE, Colors.PRIMARY_DIM))
+	total.add_child(TerminalWindow.spacer())
+	_hold_total = TerminalWindow.label("", TEXT_SIZE, Colors.PRIMARY)
+	total.add_child(_hold_total)
+	col.add_child(total)
+
+	col.add_child(TerminalWindow.filler())
+	col.add_child(TerminalWindow.header("U P G R A D E S"))
+	_upgrade_rows = VBoxContainer.new()
+	_upgrade_rows.add_theme_constant_override("separation", 6)
+	col.add_child(_upgrade_rows)
+	return col
+
+
+## [gauge, value label, row]
+func _gauge_row(title: String) -> Array:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var name_label := TerminalWindow.label(title, TEXT_SIZE, Colors.PRIMARY)
+	name_label.custom_minimum_size.x = STAT_LABEL_WIDTH
+	row.add_child(name_label)
+	var gauge := SegmentGauge.new()
+	gauge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(gauge)
+	var value := TerminalWindow.label("", TEXT_SIZE, Colors.TEXT)
+	value.custom_minimum_size.x = STAT_VALUE_WIDTH
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(value)
+	return [gauge, value, row]
+
+
+# --- Content -----------------------------------------------------------------
+
+func _update_display(_a: Variant = null, _b: Variant = null) -> void:
+	# Signal args vary; ignore them.
+	if not visible or not is_instance_valid(ship) or not gs:
 		return
-	
 	_update_systems()
-	_update_upgrades()
 	_update_cargo()
+	_update_upgrades()
+	_card.set_credits(gs.credits)
 
 
 func _update_systems() -> void:
-	if not systems_label or not ship:
-		return
+	var hull_ratio := ship.hull_strength / ship.max_hull if ship.max_hull > 0 else 0.0
+	_hull_gauge.set_fill(hull_ratio, _hull_color(hull_ratio), int(ceil(ship.max_hull / 10.0)))
+	_hull_value.text = "%d / %d" % [ceili(ship.hull_strength), int(ship.max_hull)]
 
-	var hull_percent = (ship.hull_strength / ship.max_hull * 100.0) if ship.max_hull > 0 else 0.0
-	var fuel_percent = (ship.fuel / ship.max_fuel * 100.0) if ship.max_fuel > 0 else 0.0
+	var fuel_ratio := ship.fuel / ship.max_fuel if ship.max_fuel > 0 else 0.0
+	var fuel_level := LowFuelEffect.level_for(ship.fuel, ship.max_fuel)
+	_fuel_gauge.set_fill(fuel_ratio, _fuel_color(fuel_ratio), 20, fuel_level != LowFuelEffect.Level.OK)
+	_fuel_value.text = "%d / %d" % [int(ship.fuel), int(ship.max_fuel)]
 
-	var systems_text = ""
-	systems_text += "    Hull:         %.0f / %.0f  (%.0f%%)\n" % [ship.hull_strength, ship.max_hull, hull_percent]
-	systems_text += "    Fuel:         %.0f / %.0f  (%.0f%%)\n" % [ship.fuel, ship.max_fuel, fuel_percent]
-	systems_text += "    Thrust:       %.0f\n" % ship.thrust_power
-	systems_text += "    Turn Speed:   %.1f\n" % ship.turn_speed
-	systems_text += "    Fuel Usage:   %.1f/s\n" % ship.fuel_consumption_rate
-	systems_text += "    Boost:        %.1fx\n" % ship.boost_power_multiplier
+	var weight := inventory_manager.get_total_weight() if inventory_manager else 0.0
+	var hold_ratio := weight / ship.max_cargo_weight if ship.max_cargo_weight > 0 else 0.0
+	_hold_gauge.set_fill(hold_ratio, _hold_color(hold_ratio), 20, hold_ratio >= 1.0)
+	_hold_value.text = "%d / %d" % [int(weight), int(ship.max_cargo_weight)]
 
-	if gs:
-		systems_text += "    Credits:      %d CR\n" % gs.credits
-		systems_text += "    Drone Bay:    %s" % ("Enabled" if gs.has_drone_bay else "Disabled")
-
-	systems_label.text = systems_text
-
-
-func _update_upgrades() -> void:
-	if not upgrades_label or not gs:
-		return
-
-	var upgrades_text = ""
-
-	if gs.upgrade_levels.is_empty():
-		upgrades_text = "    No upgrades purchased"
-	else:
-		for path in gs.upgrade_levels.keys():
-			var tier = gs.upgrade_levels[path]
-			var path_display = path.capitalize()
-			upgrades_text += "    %s: Tier %d\n" % [path_display, tier]
-		# Remove trailing newline
-		upgrades_text = upgrades_text.trim_suffix("\n")
-
-	upgrades_label.text = upgrades_text
+	_flight_stats.text = "THRUST %d   TURN %.1f   BOOST %.1fx   BURN %.1f/s" % [
+		ship.thrust_power, ship.turn_speed, ship.boost_power_multiplier, ship.fuel_consumption_rate]
 
 
 func _update_cargo() -> void:
-	if not cargo_label or not inventory_manager:
-		return
+	_clear(_cargo_rows)
+	var items := inventory_manager.get_all_items() if inventory_manager else {}
+	for tier in GemData.TIERS:
+		var item_id := GemData.item_id(tier)
+		var qty := int(items.get(item_id, 0))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var color := _gem_color(tier) if qty > 0 else Colors.PRIMARY_DIM
+		var icon := GemIcon.new()
+		icon.color = color
+		row.add_child(icon)
+		var name_label := TerminalWindow.label(GemData.display_name(item_id).to_upper(), TEXT_SIZE, color)
+		name_label.custom_minimum_size.x = STAT_LABEL_WIDTH + 24
+		row.add_child(name_label)
+		row.add_child(TerminalWindow.label("x%d" % qty, TEXT_SIZE, Colors.TEXT if qty > 0 else Colors.PRIMARY_DIM))
+		row.add_child(TerminalWindow.spacer())
+		row.add_child(TerminalWindow.label("%d CR ea" % GemData.value_of(item_id), SMALL_SIZE, Colors.PRIMARY_DIM))
+		var worth := TerminalWindow.label("%d CR" % (qty * GemData.value_of(item_id)), TEXT_SIZE, Colors.PRIMARY if qty > 0 else Colors.PRIMARY_DIM)
+		worth.custom_minimum_size.x = STAT_VALUE_WIDTH
+		worth.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(worth)
+		_cargo_rows.add_child(row)
+	_hold_total.text = "%d CR" % GemData.hold_value(items)
 
-	var cargo_text = ""
-	var all_items = inventory_manager.get_all_items()
 
-	if all_items.is_empty():
-		cargo_text = "    No cargo"
-	else:
-		for tier in GemData.TIERS:
-			var item_id := GemData.item_id(tier)
-			var quantity := int(all_items.get(item_id, 0))
-			if quantity > 0:
-				cargo_text += "    %s: %d  (%d CR)\n" % [GemData.display_name(item_id), quantity, quantity * GemData.value_of(item_id)]
-		cargo_text += "    Hold value: %d CR" % GemData.hold_value(all_items)
+func _update_upgrades() -> void:
+	_clear(_upgrade_rows)
+	var tracks := UPGRADE_TRACKS.duplicate()
+	for path in gs.upgrade_levels:
+		if not UPGRADE_TRACKS.any(func(t: Array) -> bool: return t[0] == path):
+			tracks.append([path, String(path).capitalize().to_upper()])
+	for track in tracks:
+		var level := gs.get_upgrade_level(track[0])
+		var lit := Colors.PRIMARY if level > 0 else Colors.PRIMARY_DIM
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var name_label := TerminalWindow.label(track[1], TEXT_SIZE, lit)
+		name_label.custom_minimum_size.x = STAT_LABEL_WIDTH + 60
+		row.add_child(name_label)
+		var pips := SegmentGauge.new()
+		pips.custom_minimum_size.x = 60
+		pips.set_fill(float(level) / MAX_TIER, Colors.PRIMARY, MAX_TIER)
+		row.add_child(pips)
+		row.add_child(TerminalWindow.spacer())
+		var tier_label := TerminalWindow.label(tier_name(level, MAX_TIER), SMALL_SIZE, lit)
+		tier_label.custom_minimum_size.x = STAT_VALUE_WIDTH
+		tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(tier_label)
+		_upgrade_rows.add_child(row)
 
-	cargo_label.text = cargo_text
 
+static func tier_name(level: int, max_tier: int) -> String:
+	if level <= 0:
+		return "STOCK"
+	if level >= max_tier:
+		return "MAX"
+	return "TIER %s" % "I".repeat(level)
+
+
+func _clear(box: Container) -> void:
+	for child in box.get_children():
+		box.remove_child(child)
+		child.queue_free()
+
+
+## The robot sizes up the ship and says one thing about it.
+func _greet() -> void:
+	var line := _assessment()
+	_card.set_status(line[1], line[2])
+	_card.say(line[3], line[0])
+
+
+## [expression, status, status color, quip]
+func _assessment() -> Array:
+	if not is_instance_valid(ship):
+		return [&"sleep", "OFFLINE", Colors.PRIMARY_DIM, "..."]
+	var fuel_level := LowFuelEffect.level_for(ship.fuel, ship.max_fuel)
+	var weight := inventory_manager.get_total_weight() if inventory_manager else 0.0
+	var hull_ratio := ship.hull_strength / ship.max_hull if ship.max_hull > 0 else 1.0
+	if fuel_level == LowFuelEffect.Level.CRITICAL:
+		return [&"worried", "ALERT", Colors.DANGER, "Tank's nearly dry, pilot. Head for a port now."]
+	if hull_ratio < 0.3:
+		return [&"worried", "ALERT", Colors.DANGER, "Hull's in bad shape. One more hit and we're scrap."]
+	if weight >= ship.max_cargo_weight:
+		return [&"happy", "HOLD FULL", Colors.SUCCESS, "Hold's packed! Dock and cash in."]
+	if fuel_level == LowFuelEffect.Level.LOW:
+		return [&"worried", "LOW FUEL", Colors.FUEL_HALF, "Fuel's getting low. Keep a port in range."]
+	if weight <= 0.0:
+		return [&"neutral", "NOMINAL", Colors.SUCCESS, "Hold's empty. Plenty of scrap out there."]
+	return [&"happy", "NOMINAL", Colors.SUCCESS, "Haul's coming along nicely, pilot."]
+
+
+func _gem_color(tier: GemData.Tier) -> Color:
+	match tier:
+		GemData.Tier.SHARD: return Colors.GEM_SHARD
+		GemData.Tier.CRYSTAL: return Colors.GEM_CRYSTAL
+		GemData.Tier.ARTIFACT: return Colors.GEM_ARTIFACT
+	return Colors.GEM_GEM
+
+
+func _hull_color(ratio: float) -> Color:
+	if ratio < 0.1:
+		return Colors.FUEL_EMPTY
+	if ratio < 0.3:
+		return Colors.FUEL_QUARTER
+	if ratio < 0.6:
+		return Colors.FUEL_HALF
+	return Colors.PRIMARY
+
+
+func _fuel_color(ratio: float) -> Color:
+	if ratio <= 0.125:
+		return Colors.FUEL_EIGHTH
+	if ratio <= 0.25:
+		return Colors.FUEL_QUARTER
+	if ratio <= 0.5:
+		return Colors.FUEL_HALF
+	if ratio <= 0.75:
+		return Colors.FUEL_THREE_QUARTERS
+	return Colors.FUEL_FULL
+
+
+func _hold_color(ratio: float) -> Color:
+	if ratio >= 0.9:
+		return Colors.CARGO_FULL
+	if ratio >= 0.75:
+		return Colors.CARGO_THREE_QUARTERS
+	if ratio >= 0.5:
+		return Colors.CARGO_HALF
+	return Colors.CARGO_EMPTY
+
+
+## Small diamond marking a gem tier.
+class GemIcon extends Control:
+	const SIZE := 10.0
+
+	var color := Colors.PRIMARY
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(SIZE, SIZE)
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var h := SIZE / 2.0
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(h, 0), Vector2(SIZE, h), Vector2(h, SIZE), Vector2(0, h)]), color)

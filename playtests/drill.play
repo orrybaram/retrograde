@@ -21,7 +21,7 @@ wait_until gs.is_planet_scanned("Veld/Rook") 6
 eval pt.hover_over_site("Rook", 60)
 land Rook 15 15
 wait 0.5
-assert str(pt.snapshot().action_message).contains("to drill") "landed prompt offers the drill"
+assert str(pt.snapshot().action_message).contains("DRILL") "landed prompt offers the drill"
 
 # --- A: four PERFECT layers dig to bedrock; the gems reach the hold ---
 assert pt.drill().layer_count() == 4 "rich site digs 4 layers"
@@ -32,7 +32,7 @@ up action
 wait_until pt.drill().layer == 1 2
 assert pt.last_drops.size() >= 3 "perfect layer drops 3+ gems"
 burst drill_a_layer 5 0.1
-assert str(pt.snapshot().action_message).contains("drill deeper (2/4)") "between layers: drill deeper or bank"
+assert str(pt.snapshot().action_message).contains("DRILL 2/4") and str(pt.snapshot().action_message).contains("BANK") "between layers: drill deeper or bank"
 down action
 wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start() 3
 up action

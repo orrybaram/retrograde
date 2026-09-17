@@ -8,8 +8,8 @@ signal harvest_available_changed(can_harvest: bool)
 ## True if at least one ScrapNode can be harvested, false otherwise.
 
 signal action_message_changed(message: String)
-## Emitted when an action message should be displayed or cleared.
-## Empty string clears/hides the message. Components provide full formatted messages.
+## Emitted when an action prompt should be displayed or cleared.
+## Empty string clears it. IndicatorManager shows it next to what it's about.
 
 signal ship_respawned()
 ## Emitted when the ship respawns after game over or reset.
@@ -52,8 +52,6 @@ signal dig_ended(site: LandingSite, reason: String, layers: int)
 
 signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
-
-const CARGO_FULL_MESSAGE := "Hold full - dock at a port to cash in"
 
 var _harvestable_nodes: Dictionary = {}  # Track ScrapNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ScrapNodes and their callables
@@ -104,14 +102,17 @@ func _check_harvest_state() -> void:
 	action_message_changed.emit(harvest_prompt() if can_harvest else "")
 
 ## Prompt shown while scrap is harvestable. A full hold doesn't block harvesting
-## (gems wait in space), but the prompt says so.
+## (gems wait in space); the scrap callout says the hold is full.
 func harvest_prompt() -> String:
-	var action_key = InputUtils.get_action_key_name("action")
-	var prompt := 'Press "%s" to harvest' % [action_key]
-	var ship := get_tree().get_first_node_in_group("ship") as Ship
-	if ship and ship.is_cargo_full():
-		return "%s - %s" % [prompt, CARGO_FULL_MESSAGE]
-	return prompt
+	return action_prompt("HARVEST")
+
+## "[SPACE] HARVEST": the bound action key, then what it does.
+func action_prompt(verb: String) -> String:
+	return key_prompt("action", verb)
+
+## The same for any other action: "[UP] LIFT OFF".
+func key_prompt(action: String, verb: String) -> String:
+	return "[%s] %s" % [InputUtils.get_action_key_name(action).to_upper(), verb]
 
 func _cleanup_invalid_nodes() -> void:
 	for node in _harvestable_nodes.keys():

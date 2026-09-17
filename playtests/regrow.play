@@ -80,7 +80,7 @@ eval pt.hover_over_site("Rook", 60)
 land Rook 15 15
 wait 0.5
 screenshot regrow_3_regrown
-assert str(pt.snapshot().action_message).contains("to drill") "drill offered again"
+assert str(pt.snapshot().action_message).contains("DRILL") "drill offered again"
 down action
 wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start 3
 up action
