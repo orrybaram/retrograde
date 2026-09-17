@@ -266,8 +266,8 @@ func load_game() -> void:
 	EventBus.ship_respawned.emit()
 
 func _show_game_over_delayed(reason: String) -> void:
-	# Wait 2 seconds before showing game over menu
-	await get_tree().create_timer(2.0).timeout
+	# Let the explosion play out before showing game over menu
+	await get_tree().create_timer(3.2).timeout
 	show_game_over(reason)
 
 func show_game_over(reason: String) -> void:
