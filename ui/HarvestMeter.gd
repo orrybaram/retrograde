@@ -75,30 +75,33 @@ func _draw() -> void:
 	var a := _alpha
 
 	draw_rect(rect, _c(Colors.UI_BACKGROUND, a))
-
 	if _active():
-		var t := _scrap.timing
 		draw_string(font, _anchor + Vector2(0, -4), "E X T R A C T", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, _c(Colors.PRIMARY, a))
-
-		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 90.0) if t.in_zone() else 0.0
-		draw_rect(Rect2(rect.position, Vector2(BAR_SIZE.x * t.progress, BAR_SIZE.y)), _c(Colors.PRIMARY_SUBTLE, a))
-		draw_rect(_span(rect, t.zone_start, t.zone_end), _c(Colors.PRIMARY_MEDIUM, a * (1.0 + pulse)))
-		draw_rect(_span(rect, t.perfect_start(), t.perfect_end()), _c(Colors.PRIMARY, a * (0.55 + 0.45 * pulse)))
-
-		var x := rect.position.x + BAR_SIZE.x * t.progress
-		var marker_color := Colors.TEXT
-		if t.progress > t.zone_end:
-			marker_color = Colors.DANGER
-		draw_line(Vector2(x, rect.position.y - 4), Vector2(x, rect.end.y + 4), _c(marker_color, a), 2.0)
+		draw_sweep(self, rect, _scrap.timing, a)
 	elif _result_text != "":
-		var fade := clampf(_result_time / 0.3, 0.0, 1.0)
-		draw_string(font, _anchor + Vector2(0, -4), _result_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, _c(_result_color, a * fade))
-		draw_rect(rect, _c(_result_color, a * 0.35 * fade))
+		draw_result(self, rect, font, _result_text, _result_color, a * clampf(_result_time / 0.3, 0.0, 1.0))
 
 	draw_rect(rect, _c(Colors.UI_BORDER, a), false, 1.0)
 
-func _span(rect: Rect2, from: float, to: float) -> Rect2:
+## The timing bar inside `rect`: progress, sweet zone, PERFECT slice and the marker.
+## Shared with DrillMeter.
+static func draw_sweep(canvas: CanvasItem, rect: Rect2, t: HarvestTiming, a: float) -> void:
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 90.0) if t.in_zone() else 0.0
+	canvas.draw_rect(Rect2(rect.position, Vector2(rect.size.x * t.progress, rect.size.y)), _c(Colors.PRIMARY_SUBTLE, a))
+	canvas.draw_rect(_span(rect, t.zone_start, t.zone_end), _c(Colors.PRIMARY_MEDIUM, a * (1.0 + pulse)))
+	canvas.draw_rect(_span(rect, t.perfect_start(), t.perfect_end()), _c(Colors.PRIMARY, a * (0.55 + 0.45 * pulse)))
+
+	var x := rect.position.x + rect.size.x * t.progress
+	var marker_color := Colors.DANGER if t.progress > t.zone_end else Colors.TEXT
+	canvas.draw_line(Vector2(x, rect.position.y - 4), Vector2(x, rect.end.y + 4), _c(marker_color, a), 2.0)
+
+## The graded result flashed over the bar after a hit.
+static func draw_result(canvas: CanvasItem, rect: Rect2, font: Font, text: String, color: Color, a: float) -> void:
+	canvas.draw_string(font, rect.position + Vector2(0, -4), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, _c(color, a))
+	canvas.draw_rect(rect, _c(color, a * 0.35))
+
+static func _span(rect: Rect2, from: float, to: float) -> Rect2:
 	return Rect2(rect.position + Vector2(rect.size.x * from, 0), Vector2(rect.size.x * (to - from), rect.size.y))
 
-func _c(c: Color, a: float) -> Color:
+static func _c(c: Color, a: float) -> Color:
 	return Color(c.r, c.g, c.b, c.a * clampf(a, 0.0, 1.0))

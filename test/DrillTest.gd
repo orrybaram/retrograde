@@ -1,0 +1,222 @@
+extends GdUnitTestSuite
+
+## Tests for drilling a landing site: depth / PERFECT gem tiers, the layer sequence,
+## early release, banking, overload kickback, and gems reaching the hold.
+
+const GOOD := HarvestTiming.Grade.GOOD
+const PERFECT := HarvestTiming.Grade.PERFECT
+const LATE := HarvestTiming.Grade.LATE
+
+var _gs: GameState
+var _events: Array = []
+
+
+func before_test() -> void:
+	_gs = auto_free(GameState.new()) as GameState
+	add_child(_gs)
+	_events.clear()
+	EventBus.drill_struck.connect(_on_struck)
+	EventBus.dig_ended.connect(_on_ended)
+	InventoryManager.clear_inventory()
+
+
+func after_test() -> void:
+	EventBus.drill_struck.disconnect(_on_struck)
+	EventBus.dig_ended.disconnect(_on_ended)
+	InventoryManager.clear_inventory()
+	Gem.clear_all()
+
+
+func _on_struck(_site, grade, gems, layer, final) -> void:
+	_events.append({"type": "struck", "grade": grade, "gems": gems, "layer": layer, "final": final})
+
+
+func _on_ended(_site, reason, layers) -> void:
+	_events.append({"type": "ended", "reason": reason, "layers": layers})
+
+
+func _seeded(seed_value := 7) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	return rng
+
+
+func _mean_tier(depth: int, perfect: bool) -> float:
+	var rng := _seeded(depth)
+	var total := 0
+	for i in 2000:
+		total += GemData.drill_roll(depth, perfect, rng)
+	return total / 2000.0
+
+
+func test_deeper_layers_roll_better_gems() -> void:
+	for depth in GemData.DRILL_DEPTH_WEIGHTS.size() - 1:
+		assert_float(_mean_tier(depth + 1, false)).is_greater(_mean_tier(depth, false))
+
+
+func test_perfect_bumps_a_layer_one_tier() -> void:
+	for depth in GemData.DRILL_DEPTH_WEIGHTS.size():
+		for s in 50:
+			var clean := GemData.drill_roll(depth, false, _seeded(s))
+			var perfect := GemData.drill_roll(depth, true, _seeded(s))
+			assert_int(perfect).is_equal(mini(clean + 1, GemData.Tier.ARTIFACT))
+
+
+func test_layer_drop_counts_and_late_cracks() -> void:
+	var rng := _seeded()
+	for i in 50:
+		assert_int(GemData.drill_drops(1, GOOD, rng).size()).is_between(GemData.DRILL_MIN, GemData.DRILL_MAX)
+		assert_int(GemData.drill_drops(1, PERFECT, rng).size()).is_between(GemData.DRILL_MIN + 1, GemData.DRILL_MAX + 1)
+		var late := GemData.drill_drops(4, LATE, rng)
+		assert_int(late.count("shard")).is_equal(late.size())
+
+
+func _site(rich := false) -> LandingSite:
+	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	add_child(planet)
+	var site := LandingSite.new()
+	site.rich = rich
+	planet.add_child(site)
+	return site
+
+
+func _drill(site: LandingSite, ship: Ship = null) -> SiteDrill:
+	var drill: SiteDrill
+	if ship:
+		drill = SiteDrill.attach(ship, site)
+	else:
+		drill = auto_free(SiteDrill.new()) as SiteDrill
+		drill.site = site
+		add_child(drill)
+	drill.rng = _seeded()
+	return drill
+
+
+## Hold the key, then let go with the sweep at `at` (a timing fraction).
+func _release_at(drill: SiteDrill, at: float) -> void:
+	drill.tick(0.0, true)
+	drill.timing.progress = at
+	drill.tick(0.0, false)
+
+
+func test_a_dig_starts_on_hold_and_breaks_layers_in_the_zone() -> void:
+	var drill := _drill(_site())
+	drill.tick(1.0, false)
+	assert_int(drill.phase).is_equal(SiteDrill.Phase.READY)
+	_release_at(drill, 0.0)
+	assert_int(drill.phase).is_equal(SiteDrill.Phase.DIGGING)
+	var first := drill.timing
+	_release_at(drill, first.perfect_start())
+	assert_int(drill.layer).is_equal(1)
+	assert_object(drill.timing).is_not_same(first)
+	assert_array(drill.dug).is_not_empty()
+	assert_int(_events[0]["grade"]).is_equal(PERFECT)
+	assert_array(_events[0]["gems"]).is_equal(drill.dug)
+
+
+func test_early_release_keeps_progress_and_is_not_a_layer() -> void:
+	var drill := _drill(_site())
+	drill.tick(0.0, true)
+	drill.tick(drill.timing.duration * 0.25, true)
+	drill.tick(0.0, false)
+	assert_int(drill.layer).is_equal(0)
+	assert_float(drill.timing.progress).is_greater(0.2)
+	drill.tick(0.1, false)
+	assert_float(drill.timing.progress).is_less(0.25)
+	assert_array(_events).is_empty()
+
+
+func test_normal_sites_bottom_out_after_three_layers_rich_after_four() -> void:
+	for rich in [false, true]:
+		_events.clear()
+		var drill := _drill(_site(rich))
+		_release_at(drill, 0.0)  # starts the dig
+		for i in (SiteDrill.RICH_LAYERS if rich else SiteDrill.LAYERS):
+			assert_int(drill.phase).is_equal(SiteDrill.Phase.DIGGING)
+			_release_at(drill, drill.timing.zone_start)
+		assert_int(drill.phase).is_equal(SiteDrill.Phase.DONE)
+		assert_str(drill.end_reason).is_equal("bottom")
+		assert_bool(_events[-2]["final"]).is_true()
+		assert_dict(_events[-1]).is_equal({"type": "ended", "reason": "bottom", "layers": drill.layer_count()})
+
+
+func test_deep_layers_get_the_narrow_zone() -> void:
+	var drill := _drill(_site(true))
+	_release_at(drill, 0.0)
+	var width := drill.timing.zone_end - drill.timing.zone_start
+	assert_float(width).is_equal_approx(HarvestTiming.NORMAL_ZONE_WIDTH, 0.0001)
+	_release_at(drill, drill.timing.zone_start)
+	_release_at(drill, drill.timing.zone_start)
+	assert_int(drill.depth()).is_equal(SiteDrill.TROPHY_DEPTH)
+	width = drill.timing.zone_end - drill.timing.zone_start
+	assert_float(width).is_equal_approx(HarvestTiming.TROPHY_ZONE_WIDTH, 0.0001)
+
+
+func test_bank_between_layers_keeps_the_haul() -> void:
+	var drill := _drill(_site())
+	_release_at(drill, 0.0)
+	assert_bool(drill.can_bank()).is_false()
+	drill.bank()
+	assert_int(drill.phase).is_equal(SiteDrill.Phase.READY)
+	_release_at(drill, 0.0)
+	_release_at(drill, drill.timing.zone_start)
+	drill.tick(0.0, true)
+	assert_bool(drill.can_bank()).is_false()
+	drill.tick(0.0, false)
+	var dug := drill.dug.duplicate()
+	assert_bool(drill.can_bank()).is_true()
+	drill.bank()
+	assert_int(drill.phase).is_equal(SiteDrill.Phase.DONE)
+	assert_str(drill.end_reason).is_equal("bank")
+	assert_array(drill.dug).is_equal(dug)
+	drill.tick(1.0, true)
+	assert_int(drill.layer).is_equal(1)
+
+
+func _ship() -> Ship:
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	add_child(ship)
+	return ship
+
+
+func test_overload_ends_the_dig_with_kickback() -> void:
+	var ship := _ship()
+	var drill := _drill(_site(), ship)
+	_release_at(drill, 0.0)
+	_release_at(drill, drill.timing.zone_start)
+	var dug := drill.dug.duplicate()
+	var hull := ship.hull_strength
+	drill.tick(0.0, true)
+	drill.tick(drill.timing.duration, true)
+	assert_int(drill.phase).is_equal(SiteDrill.Phase.DONE)
+	assert_str(drill.end_reason).is_equal("overload")
+	assert_float(ship.hull_strength).is_equal(hull - SiteDrill.KICKBACK_DAMAGE)
+	assert_array(drill.dug).is_equal(dug)
+	assert_dict(_events[-1]).is_equal({"type": "ended", "reason": "overload", "layers": 1})
+
+
+func test_liftoff_mid_dig_ends_it() -> void:
+	var drill := _drill(_site())
+	_release_at(drill, 0.0)
+	drill.abort()
+	assert_int(drill.phase).is_equal(SiteDrill.Phase.READY)
+	_release_at(drill, 0.0)
+	_release_at(drill, drill.timing.zone_start)
+	drill.abort()
+	assert_str(drill.end_reason).is_equal("liftoff")
+
+
+func test_dug_gems_fly_into_the_hold() -> void:
+	var ship := _ship()
+	var site := _site()
+	ship.global_position = site.global_position + Vector2(PlanetLandedState.LANDED_HEIGHT, 0)
+	var drill := _drill(site, ship)
+	_release_at(drill, 0.0)
+	_release_at(drill, drill.timing.perfect_start())
+	var dug := drill.dug.size()
+	assert_int(Gem.active.size()).is_equal(dug)
+	await await_millis(2500)
+	var held := 0
+	for q in InventoryManager.get_all_items().values():
+		held += int(q)
+	assert_int(held).is_equal(dug)

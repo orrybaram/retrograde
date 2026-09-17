@@ -42,7 +42,7 @@ extends Node
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
 ##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
 ##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
-##       pt.site(planet), pt.hover_over_site(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet))
+##       pt.site(planet), pt.hover_over_site(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.drill())
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
@@ -79,6 +79,10 @@ func _ready() -> void:
 		_emit({"event": "harvest_hit", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "final": final}))
 	EventBus.gem_collected.connect(func(id: String, _pos): _emit({"event": "gem_collected", "gem": id}))
 	EventBus.hold_cashed_in.connect(func(cr: int): _emit({"event": "hold_cashed_in", "credits": cr}))
+	EventBus.drill_struck.connect(func(_s, grade: HarvestTiming.Grade, gems: Array[String], layer: int, final: bool):
+		last_drops = gems
+		_emit({"event": "drill_struck", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "layer": layer, "final": final}))
+	EventBus.dig_ended.connect(func(_s, reason: String, layers: int): _emit({"event": "dig_ended", "reason": reason, "layers": layers}))
 
 	# Watchdog: a stuck scenario must never hang the caller.
 	var timeout := float(_arg_value("--playtest-timeout", "0" if target == "serve" else "300"))
@@ -614,6 +618,11 @@ func hover_over_site(planet_name: String, height: float, tilt_deg := 0.0, descen
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
 	ship.global_position = pos
 	ship.rotation = rot
+
+## The landed ship's drill (pt.drill().timing, .layer, .phase), or null.
+func drill() -> SiteDrill:
+	var ship := get_tree().get_first_node_in_group("ship")
+	return ship.get_node_or_null("SiteDrill") if ship else null
 
 ## The first landing site on a planet.
 func site(planet_name: String) -> LandingSite:

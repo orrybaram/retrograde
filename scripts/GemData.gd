@@ -28,6 +28,18 @@ const PERFECT_BREAK_BONUS := 2
 const TROPHY_BREAK_BONUS := 3
 const WRECK_SHARE := 0.7  # of the hold left floating where the ship blew up
 
+## Drilling a landing site: gem odds per depth (layer index, +1 on rich sites).
+const DRILL_DEPTH_WEIGHTS := [
+	{Tier.SHARD: 60, Tier.GEM: 35, Tier.CRYSTAL: 5},
+	{Tier.SHARD: 30, Tier.GEM: 50, Tier.CRYSTAL: 18, Tier.ARTIFACT: 2},
+	{Tier.GEM: 45, Tier.CRYSTAL: 45, Tier.ARTIFACT: 10},
+	{Tier.GEM: 20, Tier.CRYSTAL: 55, Tier.ARTIFACT: 25},
+	{Tier.CRYSTAL: 60, Tier.ARTIFACT: 40},
+]
+const DRILL_MIN := 2
+const DRILL_MAX := 3
+const PERFECT_DRILL_BONUS := 1
+
 ## Item ids for one hit. Botched timing (LATE / OVERLOAD) still breaks off gems, but only shards.
 static func drops_for_hit(grade: HarvestTiming.Grade, final: bool, trophy: bool, rng: RandomNumberGenerator) -> Array[String]:
 	var perfect := grade == HarvestTiming.Grade.PERFECT
@@ -57,6 +69,24 @@ static func roll(grade: HarvestTiming.Grade, trophy: bool, rng: RandomNumberGene
 		HarvestTiming.Grade.GOOD:
 			return item_id(_weighted(TROPHY_ROLL_WEIGHTS if trophy else ROLL_WEIGHTS, rng))
 	return item_id(Tier.SHARD)
+
+## Item ids dug out of one drill layer at `depth` (see DRILL_DEPTH_WEIGHTS). PERFECT adds
+## a gem and bumps every roll one tier; a LATE release only cracks off shards.
+static func drill_drops(depth: int, grade: HarvestTiming.Grade, rng: RandomNumberGenerator) -> Array[String]:
+	var perfect := grade == HarvestTiming.Grade.PERFECT
+	var count := rng.randi_range(DRILL_MIN, DRILL_MAX) + (PERFECT_DRILL_BONUS if perfect else 0)
+	var drops: Array[String] = []
+	for i in count:
+		if grade == HarvestTiming.Grade.LATE:
+			drops.append(item_id(Tier.SHARD))
+		else:
+			drops.append(item_id(drill_roll(depth, perfect, rng)))
+	return drops
+
+## One gem tier from a drill layer at `depth`; `perfect` bumps it one tier.
+static func drill_roll(depth: int, perfect: bool, rng: RandomNumberGenerator) -> Tier:
+	var tier := _weighted(DRILL_DEPTH_WEIGHTS[clampi(depth, 0, DRILL_DEPTH_WEIGHTS.size() - 1)], rng)
+	return mini(tier + 1, Tier.ARTIFACT) as Tier if perfect else tier
 
 static func _weighted(weights: Dictionary, rng: RandomNumberGenerator) -> Tier:
 	var total := 0

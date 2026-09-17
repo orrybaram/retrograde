@@ -4,9 +4,10 @@ class_name PlanetLandedState
 ## The ship sitting on a LandingSite's pad. (LandedState is docking at a port.)
 ## Entered from FlyingState on a gentle touchdown (see Touchdown). The ship settles onto
 ## the pad and then locks to the planet, riding its orbit; engines are off, so no fuel
-## burns. Thrust lifts off, burning Touchdown.liftoff_cost() in one go: with too
-## little fuel the engines burn out and the ship is stranded.
-## Owns the landed camera zoom and the landed action prompt.
+## burns. `action` drills the site (SiteDrill), reverse thrust banks between layers.
+## Thrust lifts off, burning Touchdown.liftoff_cost() in one go: with too little fuel
+## the engines burn out and the ship is stranded.
+## Owns the landed camera zoom, the drill and the landed action prompt.
 
 const CAMERA_ZOOM := Vector2(1.5, 1.5)
 const LANDED_HEIGHT := 13.0  # ship centre above the surface (tail length)
@@ -15,12 +16,14 @@ const LIFTOFF_SPEED := 110.0
 const LIFTOFF_CLEARANCE := 3.0
 
 var site: LandingSite = null
+var drill: SiteDrill = null
 
 var _offset := Vector2.ZERO  # locked position relative to the planet centre
 var _start_offset := Vector2.ZERO
 var _start_rotation := 0.0
 var _settle := 0.0
 var _launching := false
+var _prompt := ""
 
 func enter() -> void:
 	super.enter()
@@ -51,12 +54,19 @@ func enter() -> void:
 	# Arrived: the tracker goes back to home base
 	if NavSystem.get_target() == site.tracking_target():
 		NavSystem.track_home()
-	_show_prompt()
+	drill = SiteDrill.attach(ship, site)
+	_prompt = ""
+	_update_prompt()
 
 func exit() -> void:
 	super.exit()
+	if is_instance_valid(drill):
+		drill.abort()
+		drill.queue_free()
+	drill = null
 	site = null
 	_launching = false
+	_prompt = ""
 	EventBus.action_message_changed.emit("")
 	ship.camera.zoom_camera_out()
 
@@ -81,6 +91,15 @@ func physics_process(delta: float) -> void:
 		return
 	if Input.is_action_pressed("thrust"):
 		lift_off()
+		return
+	if Input.is_action_just_pressed("reverse_thrust"):
+		drill.bank()
+	# A dig starts on a fresh press, not a key still held from flying
+	var holding := Input.is_action_pressed("action")
+	if drill.phase == SiteDrill.Phase.READY:
+		holding = Input.is_action_just_pressed("action")
+	drill.tick(delta, holding)
+	_update_prompt()
 
 ## Burn the liftoff fuel and launch. Too little fuel burns the tank dry instead.
 func lift_off() -> void:
@@ -90,6 +109,7 @@ func lift_off() -> void:
 		ship.consume_fuel(ship.fuel)
 		return
 	ship.consume_fuel(cost)
+	drill.abort()
 	_launching = true
 	ship.thruster_particles.emitting = true
 
@@ -112,9 +132,26 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = planet.linear_velocity
 	state.angular_velocity = 0.0
 
-func _show_prompt() -> void:
-	var key := InputUtils.get_action_key_name("thrust")
-	EventBus.action_message_changed.emit('LANDED - "%s" to lift off (%d fuel)' % [key, ceili(liftoff_cost())])
+func _update_prompt() -> void:
+	var prompt := prompt_text()
+	if prompt != _prompt:
+		_prompt = prompt
+		EventBus.action_message_changed.emit(prompt)
+
+## What the HUD tells the player to do next.
+func prompt_text() -> String:
+	var liftoff := '"%s" lift off (%d fuel)' % [InputUtils.get_action_key_name("thrust"), ceili(liftoff_cost())]
+	var action_key := InputUtils.get_action_key_name("action")
+	match drill.phase:
+		SiteDrill.Phase.READY:
+			return 'LANDED - hold "%s" to drill - %s' % [action_key, liftoff]
+		SiteDrill.Phase.DIGGING:
+			if drill.is_holding():
+				return ""
+			if drill.can_bank():
+				return '"%s" drill deeper (%d/%d) - "%s" bank' % [action_key, drill.layer + 1, drill.layer_count(), InputUtils.get_action_key_name("reverse_thrust")]
+			return 'hold "%s" to drill - %s' % [action_key, liftoff]
+	return "DIG COMPLETE - %s" % liftoff
 
 func _flying() -> FlyingState:
 	return ship.state_machine.states.get("FlyingState") as FlyingState

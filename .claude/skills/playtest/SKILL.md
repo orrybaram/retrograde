@@ -87,10 +87,13 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/landing.play` lands on Rook's site (`PlanetLandedState`, not `LandedState`, which is docking): hidden sites refuse, a fast drop bounces and hurts, sideways doesn't land, `land Rook` touches down, the landed ship rides the orbit with no fuel burn, thrust lifts off for `liftoff_cost()` (gravity x cargo), and too little fuel burns out into `StrandedState` (`.playtest/landing_*.png`). Helpers: `pt.site(planet)`, `pt.hover_over_site(planet, height, [tilt_deg], [descent])`, `pt.altitude(planet)`, `pt.rel_speed(planet)`. Teleporting straight off a pad can re-use its contact for a frame: park away and wait a few frames first.
 
+`playtests/drill.play` lands on Rook's rich site and drills: four PERFECT layers to bedrock with the gems reaching the hold, banking (`press reverse_thrust`) after one layer, and an OVERLOAD kickback (`.playtest/drill_*.png`). Drive layers like harvest hits: `down action`, `wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start()`, `up action`. `pt.drill()` has `.layer`, `.layer_count()`, `.phase` (0 READY, 1 DIGGING, 2 DONE), `.end_reason`, `.dug`; the transcript logs `drill_struck` and `dig_ended`.
+
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.
 - Screenshots need a window (not `--headless`). Read the PNG to actually look at it.
 - If a session wedges: `kill $(cat .playtest/godot.pid)`. Log: `.playtest/godot.log`.
 - Scenario runs have a 300s real-time watchdog (`--timeout S` to change).
+- Flight keys are read in physics ticks: headless runs uncapped, so a `press thrust` tap can fall between ticks. Use `hold thrust 0.1`.
 - Expressions can't assign: use `eval gs.set("credits", 100)`. Start coroutines with `eval main.call_deferred("load_game")`.
 - After adding driver commands, update the doc comment at the top of `scripts/Playtest.gd` and this file.

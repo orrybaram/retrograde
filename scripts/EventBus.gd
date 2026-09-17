@@ -43,6 +43,13 @@ signal hold_cashed_in(credits: int)
 signal planet_scanned(planet: Planet)
 ## Emitted when the Planetary Scanner finishes mapping a planet (once per planet).
 
+signal drill_struck(site: LandingSite, grade: HarvestTiming.Grade, gem_ids: Array[String], layer: int, final: bool)
+## Emitted when a drill layer is graded (GOOD / PERFECT / LATE) and its gems break loose.
+## `layer` counts from 1; `final` is the bottom layer.
+
+signal dig_ended(site: LandingSite, reason: String, layers: int)
+## Emitted when a dig stops: "bottom", "bank", "overload" or "liftoff", after `layers` layers.
+
 signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
 

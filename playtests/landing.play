@@ -68,7 +68,7 @@ screenshot landing_3_riding
 eval inv.add_item("crystal", 20)
 eval pt.set_meta("cost", ship.state_machine.current_state.liftoff_cost())
 assert pt.get_meta("cost") > 8 * pt.planet("Rook").surface_gravity() "cargo raises the liftoff cost"
-press thrust
+hold thrust 0.1
 wait_until pt.state_name() == "FlyingState" 2
 assert pt.get_meta("landed_fuel") - ship.fuel >= pt.get_meta("cost") "liftoff burned its fee"
 burst landing_4_liftoff 4 0.15
@@ -80,7 +80,7 @@ eval pt.hover_over_site("Rook", 60)
 land Rook 15 15
 wait 0.5
 eval ship.set("fuel", 5.0)
-press thrust
+hold thrust 0.1
 wait_until pt.state_name() == "StrandedState" 3
 assert ship.fuel == 0 "tank burned dry"
 state
