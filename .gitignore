@@ -4,3 +4,6 @@
 
 # gdUnit4 test reports
 reports/
+
+# Agent playtest output
+.playtest/

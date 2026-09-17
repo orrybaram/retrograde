@@ -1,0 +1,31 @@
+#!/bin/bash
+# Send one command to a live playtest session (started with `tools/play.sh serve`)
+# and print the JSON reply. See scripts/Playtest.gd for the command list.
+#
+#   tools/playctl state
+#   tools/playctl press enter
+#   tools/playctl hold thrust 1.5
+#   tools/playctl 'eval ship.fuel'
+#
+# PLAYTEST_PORT overrides the port (default 7777).
+set -uo pipefail
+port="${PLAYTEST_PORT:-7777}"
+[[ $# -gt 0 ]] || { echo "usage: tools/playctl <command...>" >&2; exit 2; }
+python3 - "$port" "$*" <<'PY'
+import socket, sys, json
+port, cmd = int(sys.argv[1]), sys.argv[2]
+try:
+    s = socket.create_connection(("127.0.0.1", port), timeout=5)
+except OSError as e:
+    print(json.dumps({"ok": False, "error": f"no playtest session on port {port}: {e}"})); sys.exit(3)
+s.settimeout(None)  # commands like `hold`/`wait` can take a while
+s.sendall((cmd + "\n").encode())
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk: break
+    buf += chunk
+reply = json.loads(buf or b'{"ok": false, "error": "connection closed"}')
+print(json.dumps(reply, indent=1))
+sys.exit(0 if reply.get("ok") else 1)
+PY

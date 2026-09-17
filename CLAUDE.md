@@ -25,6 +25,7 @@ Godot 4.6 CLI is `godot` (symlink to `/Applications/Godot.app/Contents/MacOS/God
 
 - `tools/test.sh` — run all gdUnit4 suites in `test/` headless (exit 0 = pass). Single suite: `tools/test.sh -a res://test/TierDataTest.gd`
 - `tools/smoke.sh [frames]` — boot main scene headless, fails on any ERROR or path case mismatch
+- `tools/play.sh playtests/launch.play` — play the real game from a scenario (key input, asserts, screenshots in `.playtest/`). `tools/play.sh serve` + `tools/playctl <cmd>` to drive it live. See `.claude/skills/playtest/SKILL.md`.
 - `godot --headless --path . --import` — reimport after adding files / `class_name`s
 - New tests: `test/<Name>Test.gd`, `extends GdUnitTestSuite`, `func test_*()`. Use `auto_free()` for nodes.
 - `res://` paths are case-sensitive on export — the folder is `entities/`, never `Entities/`.

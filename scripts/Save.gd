@@ -49,7 +49,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 					if planet_key != "":
 						cfg.set_value("planets", planet_key, planet.orbital_angle)
 
-	cfg.save("user://save.cfg")
+	cfg.save(Playtest.save_path())
 
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
@@ -73,7 +73,7 @@ static func _get_planet_key(planet: Planet) -> String:
 
 static func load_into(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load("user://save.cfg") != OK:
+	if cfg.load(Playtest.save_path()) != OK:
 		return
 	
 	gs.credits = int(cfg.get_value("stats", "credits", 0))
@@ -123,7 +123,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 static func load_planet_angles() -> Dictionary:
 	var planet_angles: Dictionary = {}
 	var cfg := ConfigFile.new()
-	if cfg.load("user://save.cfg") != OK:
+	if cfg.load(Playtest.save_path()) != OK:
 		return planet_angles
 
 	if cfg.has_section("planets"):
@@ -139,7 +139,7 @@ static func load_planet_angles() -> Dictionary:
 ## Returns Vector2.ZERO if no save file or no spawn position saved
 static func load_spawn_position() -> Vector2:
 	var cfg := ConfigFile.new()
-	if cfg.load("user://save.cfg") != OK:
+	if cfg.load(Playtest.save_path()) != OK:
 		return Vector2.ZERO
 	
 	var x = float(cfg.get_value("stats", "spawn_position_x", 0.0))
@@ -150,7 +150,7 @@ static func load_spawn_position() -> Vector2:
 ## Returns 0.0 if no save file or no rotation saved
 static func load_spawn_rotation() -> float:
 	var cfg := ConfigFile.new()
-	if cfg.load("user://save.cfg") != OK:
+	if cfg.load(Playtest.save_path()) != OK:
 		return 0.0
 	
 	return float(cfg.get_value("stats", "spawn_rotation", 0.0))
@@ -209,7 +209,7 @@ static func _get_dockable_key(dockable: Node2D) -> String:
 ## Returns empty string if no save file or no dockable saved
 static func load_dockable_key() -> String:
 	var cfg := ConfigFile.new()
-	if cfg.load("user://save.cfg") != OK:
+	if cfg.load(Playtest.save_path()) != OK:
 		return ""
 	
 	return str(cfg.get_value("stats", "docked_at", ""))
@@ -272,7 +272,7 @@ static func _find_dockable_in_node(root: Node, path_parts: Array) -> Node2D:
 ## Check if a save file exists
 static func save_exists() -> bool:
 	var cfg := ConfigFile.new()
-	return cfg.load("user://save.cfg") == OK
+	return cfg.load(Playtest.save_path()) == OK
 
 ## Restore planet orbital angles from saved data
 ## Should be called after planets are generated
