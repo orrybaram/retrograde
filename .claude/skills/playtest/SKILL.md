@@ -80,9 +80,12 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/radio.play` departs the dock and checks the guide robot's transmission: typing, ENTER skip, TAB (`press radio_next`) advance/close, low-fuel auto-dismiss, the paused scrap tutorial, the out-of-fuel abandon-ship confirm, the abandon and explosion relaunch calls, and hiding behind menus (`.playtest/radio_*.png`). The controls (on undock) and scrap tutorials pause the game, so other scenarios first run `eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")` / `("first_scrap")`. `press space` (or `enter`/`radio_next`) finishes a line, then moves on. Game over is a radio call now: confirm it the same way (no GameOverMenu). The panel is `pt.node("radio_panel")`; the queue is `get_tree().root.get_node("RobotRadio")`. Expressions can't use `&"..."` literals — compare StringNames to plain strings.
 
+`playtests/scanner.play` checks the Planetary Scanner: nothing scans without it, buying it at the home store (`gs.has_planet_scanner`), holding in Rook's gravity field fills the meter (leaving resets it), the typed survey readout (`pt.node("scan_panel").body_text()`), the sweep (`.playtest/scanner_4_sweep_*.png`) and the scan surviving a reload. Helpers: `pt.planet(name)`, `pt.park_near_planet(name, dist, [angle_deg])` (parks riding along with the planet, nose away), `pt.scanner()` (`.progress()`, `.target()`), `pt.redock()` (warp to the home port and dock).
+
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.
 - Screenshots need a window (not `--headless`). Read the PNG to actually look at it.
 - If a session wedges: `kill $(cat .playtest/godot.pid)`. Log: `.playtest/godot.log`.
 - Scenario runs have a 300s real-time watchdog (`--timeout S` to change).
+- Expressions can't assign: use `eval gs.set("credits", 100)`. Start coroutines with `eval main.call_deferred("load_game")`.
 - After adding driver commands, update the doc comment at the top of `scripts/Playtest.gd` and this file.

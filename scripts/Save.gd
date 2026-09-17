@@ -3,10 +3,12 @@ class_name Save
 
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
-## InventoryManager contents, planet orbital angles, and which radio tips were seen.
+## InventoryManager contents, planet orbital angles, scanned planets, and which radio tips were seen.
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
+const SCAN_SECTION := "scan"
+const SCAN_PLANETS_KEY := "planets"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -58,6 +60,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 						cfg.set_value("planets", planet_key, planet.orbital_angle)
 
 	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, RobotRadio.seen_ids())
+	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray(gs.scanned_planets.keys()))
 
 	cfg.save(Playtest.save_path())
 
@@ -77,6 +80,23 @@ static func load_radio_seen(path: String = "") -> PackedStringArray:
 	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(RADIO_SECTION, RADIO_SEEN_KEY, PackedStringArray()))
+
+## Writes only the scanned-planet keys into an existing save, keeping the rest, so a
+## scan finished mid-flight is kept without saving the ship's position or hold.
+## With no save yet this does nothing; the next full save() writes them.
+static func save_scanned_planets(keys: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, keys)
+	cfg.save(file)
+
+static func load_scanned_planets(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray()))
 
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
@@ -106,6 +126,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.credits = int(cfg.get_value("stats", "credits", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
 	RobotRadio.load_seen(load_radio_seen())
+	gs.scanned_planets.clear()
+	for key in load_scanned_planets():
+		gs.mark_planet_scanned(key)
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}
@@ -118,7 +141,10 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 					inventory_dict[k] = int(cfg.get_value("cargo", k, 0))
 	InventoryManager.set_inventory_dict(inventory_dict)
 
-	# Load upgrades FIRST
+	# Load upgrades FIRST (from a clean slate, so a previous session's unlocks don't leak in)
+	gs.upgrade_levels.clear()
+	gs.has_drone_bay = false
+	gs.has_planet_scanner = false
 	if cfg.has_section("upgrades"):
 		var upgrades_section = cfg.get_section_keys("upgrades")
 		if upgrades_section:

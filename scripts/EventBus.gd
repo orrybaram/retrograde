@@ -40,6 +40,9 @@ signal gem_collected(item_id: String, world_position: Vector2)
 signal hold_cashed_in(credits: int)
 ## Emitted when docking at a port converts the hold into credits.
 
+signal planet_scanned(planet: Planet)
+## Emitted when the Planetary Scanner finishes mapping a planet (once per planet).
+
 signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
 

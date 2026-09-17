@@ -1,0 +1,89 @@
+# Planetary Scanner: nothing scans without it; buy it at the home store, hold inside
+# Rook's gravity field to fill the scan meter (leaving resets it), read the survey,
+# and the scan survives a reload.
+# Run: tools/play.sh playtests/scanner.play   (frames land in .playtest/scanner_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+wait_until pt.state_name() == "LandedState" 5
+assert not gs.has_planet_scanner "new game has no scanner"
+
+# --- Without the scanner, holding in a gravity field does nothing ---
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.park_near_planet("Rook", 2600)
+wait 1
+assert pt.scanner().target() == null and pt.scanner().progress() == 0.0 "no scan without the scanner"
+assert not pt.node("scan_panel").visible "no scan panel without the scanner"
+screenshot scanner_1_minimap_unknown
+
+# --- Redock and buy it ---
+eval pt.redock()
+wait_until pt.visible_ui().has("SpacePortDialogue") 5
+eval gs.set("credits", 100)
+press enter
+wait_until pt.visible_ui().has("StoreUI") 2
+press enter
+press down 4
+wait 0.3
+assert str(pt.screen_text()).contains("PLANETARY SCANNER") "scanner is for sale"
+screenshot scanner_2_store
+press enter
+wait_until gs.has_planet_scanner 3
+assert gs.credits == 60 "scanner costs 40 CR"
+assert gs.get_upgrade_level("planet_scanner") == 1 "upgrade path planet_scanner tier 1"
+press esc
+press esc
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+
+# --- Leaving the field before it completes resets the meter ---
+eval pt.park_near_planet("Rook", 2600)
+wait 1.5
+assert pt.scanner().target() == pt.planet("Rook") "scanning Rook"
+assert pt.scanner().progress() > 0.2 "meter fills"
+assert pt.node("scan_panel").body_text().contains("? ? ?") "unknown target while scanning"
+screenshot scanner_3_scanning
+eval pt.park_near_planet("Rook", 6000)
+frames 3
+assert pt.scanner().target() == null and pt.scanner().progress() == 0.0 "leaving the field resets"
+assert not gs.is_planet_scanned("Veld/Rook") "not scanned yet"
+
+# --- Holding for the full scan completes it ---
+eval pt.park_near_planet("Rook", 2600, 200)
+wait 1.5
+burst scanner_4_sweep 8 0.12
+wait_until gs.is_planet_scanned("Veld/Rook") 4
+assert pt.planet("Rook").is_scanned() "Rook is scanned"
+wait_until not pt.node("scan_panel").is_typing() 5
+assert pt.node("scan_panel").body_text().contains("ROOK") "readout names the planet"
+assert pt.node("scan_panel").body_text().contains("BARREN") "readout shows the planet type"
+assert pt.node("scan_panel").body_text().contains("GRAVITY") "readout shows gravity"
+screenshot scanner_5_readout
+wait 1
+assert pt.scanner().target() == null "a scanned planet isn't scanned again"
+
+# --- Scanned state is saved and survives a reload ---
+eval pt.redock()
+wait_until pt.visible_ui().has("SpacePortDialogue") 5
+press esc
+eval gs.scanned_planets.clear()
+eval gs.set("has_planet_scanner", false)
+eval main.call_deferred("load_game")
+wait_until pt.visible_ui().has("LoadingScreen") 3
+wait_until not pt.visible_ui().has("LoadingScreen") and pt.state_name() == "LandedState" 15
+assert gs.is_planet_scanned("Veld/Rook") "scan restored from the save"
+assert gs.has_planet_scanner "scanner restored from the save"
+state

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeItem" format=3 uid="uid://planetscanner1"]
+
+[ext_resource type="Script" uid="uid://dcolbtjprkcn1" path="res://entities/Upgrades/UpgradeItem.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "planet_scanner_1"
+display_name = "Planetary Scanner"
+description = "A salvaged survey array. Hold position in a planet's gravity well to map it and find landing sites."
+upgrade_path = "planet_scanner"
+cost = 40
+effect_type = 2
+effect_target = "has_planet_scanner"
+effect_value = 1.0

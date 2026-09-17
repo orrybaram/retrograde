@@ -118,6 +118,10 @@ func _ready() -> void:
 	magnet.name = "GemMagnet"
 	add_child(magnet)
 
+	var scanner := PlanetScanner.new()
+	scanner.name = "PlanetScanner"
+	add_child(scanner)
+
 	# Store initial mass as base_mass for cargo calculations
 	base_mass = mass
 	
@@ -286,8 +290,7 @@ func reapply_all_upgrades(game_state: GameState) -> void:
 					UpgradeItem.EffectType.MULTIPLY_STAT:
 						_apply_multiply_stat_from_upgrade(upgrade)
 					UpgradeItem.EffectType.UNLOCK_FEATURE:
-						# Unlock features are handled in GameState, skip here
-						pass
+						upgrade._apply_unlock_feature(game_state)
 	
 	# Update hull and fuel to match new max values
 	health_component.max_hp = max_hull

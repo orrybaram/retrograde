@@ -2,7 +2,7 @@ extends Node
 class_name GameState
 
 ## Global singleton holding persistent player progression: credits, upgrade levels,
-## and death count. Populated by Save.load() at game start; serialized by Save.save()
+## death count and scanned planets. Populated by Save.load() at game start; serialized by Save.save()
 ## on dock/game-over. Emits credits_changed and upgrade_level_changed signals.
 
 signal credits_changed
@@ -14,6 +14,10 @@ var credits: int = 0 :
 		credits_changed.emit()
 
 var has_drone_bay: bool = false
+var has_planet_scanner: bool = false
+
+## Planets the Planetary Scanner has mapped, keyed by Planet.save_key(). Permanent.
+var scanned_planets: Dictionary = {}
 
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
@@ -36,6 +40,12 @@ func set_upgrade_level(path: String, level: int) -> void:
 	upgrade_levels[path] = level
 	upgrade_level_changed.emit(path, level)
 
+func is_planet_scanned(key: String) -> bool:
+	return scanned_planets.has(key)
+
+func mark_planet_scanned(key: String) -> void:
+	scanned_planets[key] = true
+
 ## Compatibility wrapper for clearing cargo.
 ## Now delegates to InventoryManager.clear_inventory()
 func clear_cargo() -> void:
@@ -50,6 +60,8 @@ func reset_all_state() -> void:
 	# Reset all state variables
 	credits = 0
 	has_drone_bay = false
+	has_planet_scanner = false
+	scanned_planets.clear()
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()

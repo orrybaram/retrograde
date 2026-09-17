@@ -37,7 +37,8 @@ extends Node
 ## Expressions are Godot `Expression`s with these names bound:
 ##   ship, main, gs (GameState), inv (InventoryManager), bus (EventBus),
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
-##       pt.screen_text(), pt.nearest(group), pt.node(group))
+##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
+##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock())
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
@@ -538,6 +539,42 @@ func warp_to(pos: Vector2) -> void:
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(ship.rotation, pos))
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
 	ship.global_position = pos
+
+## A planet (or moon) by node name, e.g. pt.planet("Rook").
+func planet(planet_name: String) -> Planet:
+	for n in get_tree().get_nodes_in_group("planets"):
+		if n.name == planet_name:
+			return n
+	return null
+
+## Park the ship `dist` px from a planet's centre at `angle_deg` (0 = +x), riding along
+## with the planet, nose pointing away from it.
+func park_near_planet(planet_name: String, dist: float, angle_deg := 180.0) -> void:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if not p or not ship:
+		return
+	var dir := Vector2.from_angle(deg_to_rad(angle_deg))
+	var pos := p.global_position + dir * dist
+	var rid := ship.get_rid()
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(dir.angle(), pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, p.linear_velocity)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_position = pos
+	ship.rotation = dir.angle()
+
+## Warp back to the home port and dock (as if the player had flown in).
+func redock() -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var port := node("space_ports") as Node2D
+	warp_to(port.get_dock_position())
+	ship.set_meta("pending_dockable", port)
+	ship.state_machine.change_state("LandedState")
+
+## The ship's PlanetScanner (pt.scanner().progress(), .target()).
+func scanner() -> PlanetScanner:
+	var ship := get_tree().get_first_node_in_group("ship")
+	return ship.get_node_or_null("PlanetScanner") if ship else null
 
 ## Abandoned ships in the world.
 func derelict_count() -> int:

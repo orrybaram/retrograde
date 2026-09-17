@@ -38,6 +38,9 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 @onready var orbit_visual: OrbitVisual = $"OrbitVisual"
 @onready var gravity_field_visual: GravityFieldVisual = $GravityField/CollisionShape2D/GravityFieldVisual
 
+## Surface gravity readouts divide by this (px/s^2 per unit mass) to show G.
+const STANDARD_GRAVITY := 50.0
+
 var parent_planet: Planet = null
 var minimap_target: PlanetMinimapTarget = null
 var _orbital_motion = null # Composable orbital component (OrbitalMotion)
@@ -71,6 +74,36 @@ func _set_show_orbit_path(v: bool) -> void:
 
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
+
+## Pull at the surface in G (STANDARD_GRAVITY px/s^2 of gravity force per unit mass).
+func surface_gravity() -> float:
+	return _get_gravity_strength() / (radius * radius) / STANDARD_GRAVITY
+
+## How far the gravity field (and the scanner's reach) extends from the centre.
+func field_radius() -> float:
+	return radius * gravity_radius_multiplier
+
+## Stable key for saves: "Name", or "Parent/Name" for moons.
+func save_key() -> String:
+	return Save._get_planet_key(self)
+
+func is_moon() -> bool:
+	return parent_planet != null and parent_planet.planet_type != PlanetType.SUN
+
+## True once the Planetary Scanner has mapped this planet (the sun is never scanned).
+func is_scanned() -> bool:
+	if not is_inside_tree():
+		return false
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	return gs != null and gs.is_planet_scanned(save_key())
+
+## Landing sites on this planet's surface (revealed once it's scanned).
+func get_landing_sites() -> Array[Node]:
+	var sites: Array[Node] = []
+	for child in get_children():
+		if child.is_in_group("landing_sites"):
+			sites.append(child)
+	return sites
 
 func _ready() -> void:
 	add_to_group("planets")
