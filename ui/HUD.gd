@@ -27,6 +27,9 @@ func _ready() -> void:
 		fuel_progress_bar.bar_color = Colors.FUEL_FULL
 		fuel_progress_bar.background_color = Colors.PRIMARY_DIM
 	add_child(HarvestMeter.new())
+	var tracking := TrackingIndicator.new()
+	tracking.blockers = [dashboard]
+	add_child(tracking)
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
 	_update_labels()

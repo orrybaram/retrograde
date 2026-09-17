@@ -1,0 +1,30 @@
+# Home-base tracking HUD: indicator follows the station as the ship flies away.
+# Run: tools/play.sh playtests/tracking.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+assert get_node("/root/NavSystem").is_tracking_home() "tracks home base by default"
+wait 0.5
+screenshot track_01_docked
+
+hold thrust 3
+wait 4
+assert pt.snapshot().tracking.label == "HOME" "snapshot exposes tracking"
+assert pt.snapshot().tracking.distance > 300 "flew away from home"
+screenshot track_02_away
+
+face space_stations 5
+hold thrust 4
+wait_until pt.snapshot().tracking.closing_speed > 0 5
+screenshot track_03_returning
+
+# Future: waypoints swap the single tracked target.
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(-4000, 1400))
+wait 0.2
+assert pt.snapshot().tracking.label == "WAYPOINT" "waypoint replaces home"
+screenshot track_04_waypoint
+eval get_node("/root/NavSystem").track(null)
+wait 0.2
+assert get_node("/root/NavSystem").is_tracking_home() "clearing returns to home"
+state

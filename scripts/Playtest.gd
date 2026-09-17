@@ -484,6 +484,16 @@ func snapshot() -> Dictionary:
 			"space_station": nearest("space_stations"),
 			"resource": nearest("resource_nodes"),
 		}
+		var target := NavSystem.get_target()
+		if target:
+			var sol := TrackingSolution.solve(ship.global_position, ship.linear_velocity, target.get_position(), target.get_velocity())
+			s["tracking"] = {
+				"label": target.get_label(),
+				"distance": snappedf(sol.distance, 0.1),
+				"closing_speed": snappedf(sol.closing_speed, 0.1),
+				"drift_speed": snappedf(sol.drift_speed, 0.1),
+				"eta": null if is_inf(sol.eta) else snappedf(sol.eta, 0.1),
+			}
 	return s
 
 ## First node in a group, e.g. pt.node("pause_menu").visible

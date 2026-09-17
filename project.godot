@@ -27,6 +27,7 @@ InventoryManager="*res://scripts/InventoryManager.gd"
 Colors="*res://scripts/Colors.gd"
 ResourceNodePool="*res://scripts/ResourceNodePool.gd"
 Playtest="*res://scripts/Playtest.gd"
+NavSystem="*res://scripts/NavSystem.gd"
 
 [display]
 
