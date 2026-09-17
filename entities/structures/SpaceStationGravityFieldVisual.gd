@@ -6,7 +6,7 @@ class_name SpaceStationGravityFieldVisual
 var station: SpaceStation = null
 @export var base_color: Color = Color(0, 0, 0, 0.0) : set = _set_base_color
 @export var outline_width: float = 3.0 : set = _set_outline_width
-@export var outline_color: Color = Color(1, 1, 1, 0.25) : set = _set_outline_color
+@export var outline_color: Color = Colors.OUTLINE : set = _set_outline_color
 @export var ring_count: int = 3 : set = _set_ring_count
 @export var max_radius_multiplier: float = 10.0 : set = _set_max_radius_multiplier
 

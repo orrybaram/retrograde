@@ -24,7 +24,7 @@ initial_velocity_max = 150.0
 gravity = Vector3(0, 0, 0)
 scale_min = 2.0
 scale_max = 5.0
-color = Color(0.8, 0.8, 0.8, 1)
+color = Color(0.949, 0.91, 0.824, 1)
 color_ramp = SubResource("GradientTexture1D_1")
 collision_mode = 1
 collision_friction = 0.5
@@ -32,7 +32,7 @@ collision_bounce = 0.0
 
 [sub_resource type="Gradient" id="Gradient_0tak2"]
 offsets = PackedFloat32Array(0, 0.015806112, 0.24446785, 1)
-colors = PackedColorArray(0.63841236, 0.62294984, 1, 1, 0.9544217, 0.56951314, 0, 1, 0.6689209, 0.66892374, 0.668923, 1, 0.95, 0.95, 0.95, 0.2509804)
+colors = PackedColorArray(0.949, 0.91, 0.824, 1, 0.91, 0.757, 0.439, 1, 0.788, 0.455, 0.227, 1, 0.58, 0.545, 0.451, 0.2509804)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_omoy0"]
 gradient = SubResource("Gradient_0tak2")
@@ -59,7 +59,7 @@ collision_friction = 0.5
 collision_bounce = 0.0
 
 [sub_resource type="Gradient" id="Gradient_3"]
-colors = PackedColorArray(0.6, 0.6, 0.8, 1, 0.6, 0.6, 0.8, 0)
+colors = PackedColorArray(0.8, 0.765, 0.69, 1, 0.8, 0.765, 0.69, 0)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_3"]
 gradient = SubResource("Gradient_3")
@@ -72,7 +72,7 @@ initial_velocity_max = 100.0
 gravity = Vector3(0, 0, 0)
 scale_min = 4.0
 scale_max = 8.0
-color = Color(0.7983666, 0.7983663, 0.79836595, 1)
+color = Color(0.949, 0.91, 0.824, 1)
 color_ramp = SubResource("GradientTexture1D_3")
 
 [node name="Ship" type="RigidBody2D" unique_id=545618992]
@@ -117,6 +117,7 @@ position = Vector2(9, 0)
 [node name="Body" type="Node2D" parent="." unique_id=195505946]
 
 [node name="Polygon2D" type="Polygon2D" parent="Body" unique_id=1821442219]
+color = Color(0.949, 0.91, 0.824, 1)
 position = Vector2(0, -4.7683716e-07)
 scale = Vector2(1.0416666, 0.99999994)
 polygon = PackedVector2Array(7.680001, 5.000001, 3.8400004, 7.0000014, -9.600001, 8.000002, -9.600001, -8, 3.8400004, -7.0000005, 7.680001, -5, 11.520001, 4.768372e-07)
@@ -124,19 +125,19 @@ polygon = PackedVector2Array(7.680001, 5.000001, 3.8400004, 7.0000014, -9.600001
 [node name="Polygon2D3" type="Polygon2D" parent="Body" unique_id=1388711776]
 position = Vector2(-1.0000002, 4)
 scale = Vector2(1.0850694, 0.9999999)
-color = Color(0.56667995, 0.56668025, 0.56668013, 1)
+color = Color(0.58, 0.545, 0.451, 1)
 polygon = PackedVector2Array(-9.6, -1.0000001, -11.0592, 0, -11.0592, -8.000001, -9.6, -7.000001, 3.6864, -6.000001, 7.3728, -4.0000005, 3.6864, -2.0000002)
 
 [node name="Polygon2D4" type="Polygon2D" parent="Body" unique_id=1754740653]
 position = Vector2(-1.0000004, -7)
 scale = Vector2(1.0850694, 0.9999999)
-color = Color(0.56667995, 0.56668025, 0.56668013, 1)
+color = Color(0.58, 0.545, 0.451, 1)
 polygon = PackedVector2Array(-11.0592, 0, -11.0592, -1, -11.059199, -2, -10.1376, -2, -10.1376, -1, -8.294399, -1, -8.294399, 0)
 
 [node name="Polygon2D5" type="Polygon2D" parent="Body" unique_id=1809306228]
 position = Vector2(-1.0000001, 9)
 scale = Vector2(1.0850694, 0.9999999)
-color = Color(0.56667995, 0.56668025, 0.56668013, 1)
+color = Color(0.58, 0.545, 0.451, 1)
 polygon = PackedVector2Array(-11.0592, 0, -11.0592, -1, -11.059199, -2, -10.1376, -2, -8.294399, -2, -8.294399, -1, -10.1376, -1, -10.1376, 0)
 
 [node name="StateMachine" type="Node" parent="." unique_id=1960471019]

@@ -103,11 +103,11 @@ func _update_display() -> void:
 		var label = item["label"]
 
 		if is_selected and is_enabled:
-			button.text = "[color=#ffbf00]>[/color] %s" % label
+			button.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] %s") % label
 		elif is_enabled:
 			button.text = "  %s" % label
 		else:
-			button.text = "  [color=#5f4700]%s[/color]" % label
+			button.text = ("  [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label
 
 func _on_start_pressed() -> void:
 	start_game.emit()

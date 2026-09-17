@@ -49,7 +49,7 @@ func update_visuals(ui: HarvestMiniGameUI) -> void:
 	if mini_game.vertical_locked:
 		ui.vertical_scanner_bar.modulate.a = 1.0
 	else:
-		ui.vertical_scanner_bar.color = Color(1.0, 0.75, 0.0, 0.8)  # Amber when moving
+		ui.vertical_scanner_bar.color = Color(Colors.PRIMARY, 0.8)  # Amber when moving
 		ui.vertical_scanner_bar.modulate.a = 0.8
 	
 	ui.vertical_scanner_bar.visible = true

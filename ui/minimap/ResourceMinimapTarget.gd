@@ -27,7 +27,7 @@ func get_minimap_color() -> Color:
 	if resource and is_instance_valid(resource):
 		# Use the resource's color (ScrapNode has a color property)
 		return resource.color
-	return Color(0.4, 0.9, 0.4)  # Fallback light green
+	return Colors.SUCCESS
 
 func get_minimap_icon() -> String:
 	return "dot"  # Small dot for resources

@@ -17,7 +17,7 @@ script = ExtResource("1")
 layout_mode = 0
 offset_right = 1310.0
 offset_bottom = 744.0
-color = Color(0, 0, 0, 1)
+color = Color(0.078, 0.075, 0.059, 1)
 
 [node name="StoreWindow" type="Control" parent="." unique_id=1989657880]
 layout_mode = 1

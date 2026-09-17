@@ -82,7 +82,7 @@ var original_boost_velocity_min: float = 100.0
 var original_boost_velocity_max: float = 250.0
 var original_boost_scale_min: float = 5.0
 var original_boost_scale_max: float = 10.0
-var original_boost_color: Color = Color(0.71, 0.71, 0.71, 0.5568628)
+var original_boost_color: Color = Color(Colors.CREAM_SOFT, 0.5568628)
 var original_boost_amount: int = 100
 var original_boost_lifetime: float = 1.5
 

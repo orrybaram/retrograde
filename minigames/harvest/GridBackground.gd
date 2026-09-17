@@ -3,8 +3,8 @@ extends Control
 ## Draws a square grid background with equal horizontal and vertical lines.
 
 @export var grid_cells: int = 10  # Number of grid cells (creates grid_cells+1 lines in each direction)
-var grid_color: Color = Color(1.0, 0.75, 0.0, 0.3)  # Terminal amber, semi-transparent
-var background_color: Color = Color(0.1, 0.1, 0.1, 0.8)
+var grid_color: Color = Colors.PRIMARY_MEDIUM  # Terminal amber, semi-transparent
+var background_color: Color = Colors.UI_BACKGROUND_LIGHT
 
 func _draw() -> void:
 	# Draw background

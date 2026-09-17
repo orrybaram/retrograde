@@ -47,7 +47,7 @@ func update_visuals(ui: HarvestMiniGameUI) -> void:
 	ui.vertical_scanner_bar.size.y = container_height
 	ui.vertical_scanner_bar.position.x = vertical_x - ui.vertical_scanner_bar.size.x / 2.0
 	ui.vertical_scanner_bar.position.y = 0.0
-	ui.vertical_scanner_bar.color = Color(0.0, 1.0, 0.0, 0.9)  # Green when locked
+	ui.vertical_scanner_bar.color = Color(Colors.SUCCESS, 0.9)  # Green when locked
 	ui.vertical_scanner_bar.modulate.a = 1.0
 	ui.vertical_scanner_bar.visible = true
 	
@@ -57,7 +57,7 @@ func update_visuals(ui: HarvestMiniGameUI) -> void:
 	ui.horizontal_scanner_bar.size.y = 2.0  # Same thickness as vertical bar
 	ui.horizontal_scanner_bar.position.x = 0.0
 	ui.horizontal_scanner_bar.position.y = horizontal_y - ui.horizontal_scanner_bar.size.y / 2.0
-	ui.horizontal_scanner_bar.color = Color(1.0, 0.75, 0.0, 0.8)  # Amber when moving
+	ui.horizontal_scanner_bar.color = Color(Colors.PRIMARY, 0.8)  # Amber when moving
 	ui.horizontal_scanner_bar.modulate.a = 0.8
 	ui.horizontal_scanner_bar.visible = true
 

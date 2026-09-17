@@ -23,7 +23,7 @@ polygon = PackedVector2Array(9, 12, -15, -28, 9, -68, 57, -68, 81, -28, 57, 12)
 [node name="Polygon2D" type="Polygon2D" parent="." unique_id=2007219254]
 position = Vector2(-9, 7)
 scale = Vector2(0.26509875, 0.26884642)
-color = Color(0.75, 0.78, 0.82, 1)
+color = Color(0.86, 0.82, 0.73, 1)
 polygon = PackedVector2Array(9, 12, -15, -28, 9, -68, 57, -68, 81, -28, 57, 12)
 uv = PackedVector2Array(2, 4, 3, -4, 26, -28, 50, -28, 50, 4, 50, 20, 2, 20)
 

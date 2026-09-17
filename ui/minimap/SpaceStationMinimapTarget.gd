@@ -15,7 +15,7 @@ func get_minimap_position() -> Vector2:
 
 func get_minimap_color() -> Color:
 	# Use a distinct color for space stations (cyan/blue)
-	return Color(0.2, 0.8, 1.0)  # Cyan-blue
+	return Colors.NAV
 
 func get_minimap_icon() -> String:
 	return "square"  # Use square to distinguish from planets

@@ -25,13 +25,18 @@ extends Node
 ##   state                         full JSON snapshot of the game
 ##   screen                        text currently visible on UI layers
 ##   screenshot <name>             save <out>/<name>.png (skipped under --headless)
+##   burst <name> <n> <interval>   n screenshots <interval> game-seconds apart (<name>_00.png ...)
+##   stage_harvest [dist] [trophy] put the flying ship <dist>px (default 40; cone reaches ~66) behind the nearest scrap,
+##                                 nose on it, velocity matched — ready to hold `action`.
+##                                 `trophy` forces the node to be a trophy. Sets pt.staged
+##                                 (its HarvestTiming is pt.staged.timing once a harvest starts).
 ##   timescale <n>                 set Engine.time_scale
 ##   log <text>                    echo text into the transcript
 ##   quit                          end the session
 ##
 ## Expressions are Godot `Expression`s with these names bound:
 ##   ship, main, gs (GameState), inv (InventoryManager), bus (EventBus),
-##   pt (this node: pt.state_name(), pt.visible_ui(), pt.screen_text(), pt.nearest(group), pt.node(group))
+##   pt (this node: pt.state_name(), pt.item_count(), pt.visible_ui(), pt.screen_text(), pt.nearest(group), pt.node(group))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
@@ -41,6 +46,7 @@ const SAVE_PATH := "user://playtest_save.cfg"
 var active := false
 var out_dir := ""
 var failures: Array[String] = []
+var staged: ScrapNode = null  # last node picked by stage_harvest, for expressions: pt.staged
 
 var _held: Dictionary = {}  # keycode -> true
 var _action_message := ""
@@ -61,6 +67,8 @@ func _ready() -> void:
 	# Never touch the player's real save.
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	EventBus.action_message_changed.connect(func(msg: String): _action_message = msg)
+	EventBus.harvest_finished.connect(func(_s, grade: HarvestTiming.Grade, tier: String):
+		_emit({"event": "harvest_finished", "grade": HarvestTiming.Grade.keys()[grade], "tier": tier}))
 
 	# Watchdog: a stuck scenario must never hang the caller.
 	var timeout := float(_arg_value("--playtest-timeout", "0" if target == "serve" else "300"))
@@ -228,6 +236,20 @@ func execute(line: String) -> Dictionary:
 				var p := out_dir.path_join((args[0] if args.size() > 0 else "shot") + ".png")
 				img.save_png(p)
 				reply["path"] = p
+		"burst":
+			if DisplayServer.get_name() == "headless":
+				reply["skipped"] = "headless: no rendered image"
+				return reply
+			var paths := []
+			for i in int(args[1]):
+				await RenderingServer.frame_post_draw
+				var p := out_dir.path_join("%s_%02d.png" % [args[0], i])
+				get_viewport().get_texture().get_image().save_png(p)
+				paths.append(p)
+				await _game_seconds(float(args[2]))
+			reply["paths"] = paths
+		"stage_harvest":
+			await _stage_harvest(float(args[0]) if args.size() > 0 and args[0].is_valid_float() else 40.0, args.has("trophy"), reply)
 		"timescale":
 			Engine.time_scale = float(args[0])
 		"log":
@@ -267,6 +289,22 @@ func _resolve_key(name: String) -> Key:
 		"up": "Up", "down": "Down", "left": "Left", "right": "Right", "shift": "Shift", "tab": "Tab"}
 	return OS.find_keycode_from_string(aliases.get(name.to_lower(), name))
 
+## Godot releases every pressed key when the window loses focus, which would silently
+## end a `down`/`hold` mid-scenario. Re-press whatever we still hold, before game code runs.
+func _notification(what: int) -> void:
+	if active and what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_emit({"event": "focus_out", "held": _held.size()})
+		_repress_held.call_deferred()
+
+func _repress_held() -> void:
+	for keycode in _held.keys():
+		var ev := InputEventKey.new()
+		ev.keycode = keycode
+		ev.physical_keycode = keycode
+		ev.pressed = true
+		Input.parse_input_event(ev)
+	Input.flush_buffered_events()
+
 func _release_all() -> void:
 	for keycode in _held.keys():
 		var ev := InputEventKey.new()
@@ -302,6 +340,56 @@ func _face(group: String, tolerance: float, reply: Dictionary) -> void:
 		reply["ok"] = false
 		reply["error"] = "face timed out at bearing %s" % reply.get("bearing_deg")
 	await _frames(1)
+
+## Skip the flight: park the ship just behind the nearest live scrap node, nose on it,
+## velocity matched, so the next `hold action` starts a harvest.
+func _stage_harvest(dist: float, trophy: bool, reply: Dictionary) -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var scrap: ScrapNode = null
+	var best := INF
+	for n in get_tree().get_nodes_in_group("resource_nodes"):
+		if n is ScrapNode and n.is_visible_in_tree() and not n._is_depleted and n.amount > 0:
+			var d := ship.global_position.distance_squared_to(n.global_position)
+			if d < best:
+				best = d
+				scrap = n
+	if not ship or not scrap:
+		reply["ok"] = false
+		reply["error"] = "stage_harvest: no ship or no live scrap node"
+		return
+	if trophy and not scrap.is_trophy:
+		scrap.is_trophy = true
+	if ship.state_machine.get_current_state_name() != "FlyingState":
+		ship.state_machine.change_state("FlyingState")
+	# Distant nodes only update their orbit every 60 frames; mark it in range so it
+	# ticks every frame, then hold the pose until the cone's area_entered fires.
+	scrap._cached_in_range = true
+	for i in 120:
+		if i > 3 and scrap._state_machine.get_current_state_name() == "ScrapInRangeState":
+			break
+		var vel := scrap.get_orbital_velocity()
+		var approach := vel.normalized() if vel.length() > 1.0 else Vector2.RIGHT
+		var pos := scrap.global_position - approach * dist
+		var xform := Transform2D(approach.angle(), pos)
+		PhysicsServer2D.body_set_state(ship.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, xform)
+		PhysicsServer2D.body_set_state(ship.get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, vel)
+		PhysicsServer2D.body_set_state(ship.get_rid(), PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+		await get_tree().physics_frame
+	staged = scrap
+	if not scrap.harvest_stopped.is_connected(_on_staged_event):
+		for sig in ["harvest_started", "harvest_stopped", "resource_depleted"]:
+			scrap.connect(sig, _on_staged_event.bind(sig, scrap))
+	reply["scrap"] = str(scrap.name)
+	reply["trophy"] = scrap.is_trophy
+	reply["scrap_state"] = scrap._state_machine.get_current_state_name()
+	if reply["scrap_state"] != "ScrapInRangeState":
+		reply["ok"] = false
+		reply["error"] = "stage_harvest: scrap is %s, expected ScrapInRangeState" % reply["scrap_state"]
+
+func _on_staged_event(sig: String, scrap: ScrapNode) -> void:
+	_emit({"event": sig, "t": Time.get_ticks_msec(), "hp": snappedf(scrap.health_component.current_hp, 0.1),
+		"action_pressed": Input.is_action_pressed("action"),
+		"dist": snappedf(scrap.global_position.distance_to(get_tree().get_first_node_in_group("ship").global_position), 0.1)})
 
 func _frames(n: int) -> void:
 	for i in n:
@@ -401,6 +489,13 @@ func snapshot() -> Dictionary:
 ## First node in a group, e.g. pt.node("pause_menu").visible
 func node(group: String) -> Node:
 	return get_tree().get_first_node_in_group(group)
+
+## Total number of items in cargo across all stacks.
+func item_count() -> int:
+	var total := 0
+	for q in InventoryManager.get_all_items().values():
+		total += int(q)
+	return total
 
 func state_name() -> String:
 	var ship := get_tree().get_first_node_in_group("ship")

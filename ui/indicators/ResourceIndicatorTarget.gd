@@ -3,6 +3,8 @@ class_name ResourceIndicatorTarget
 
 ## Wraps ScrapNode to provide indicator interface for resources.
 
+const HP_BAR_CELLS := 10
+
 var resource_node: ScrapNode = null
 
 func _init(node: ScrapNode) -> void:
@@ -80,14 +82,28 @@ func get_indicator_info() -> Dictionary:
 	if not resource_node or not is_instance_valid(resource_node):
 		return {}
 
-	var details: Array[String] = []
-	details.append("Amount: %d / %d" % [resource_node.amount, resource_node.max_amount])
-	details.append("Harvest Rate: %.1f/s" % resource_node.harvest_rate)
+	var lines: Array[Dictionary] = []
+	if resource_node.is_trophy:
+		lines.append({"text": "* RARE SIGNAL *", "color": Colors.PRIMARY})
+
+	var hp := resource_node.health_component
+	if hp:
+		var filled := ceili(hp.get_hp_ratio() * HP_BAR_CELLS)
+		var bar := "#".repeat(filled) + ".".repeat(HP_BAR_CELLS - filled)
+		lines.append({"text": "HP    [%s]" % bar, "color": Colors.TEXT})
+		var action_key := InputUtils.get_action_key_name("action")
+		lines.append({"text": "HOLD %s, RELEASE IN ZONE" % action_key, "color": Colors.TEXT_MUTED})
+
+	var ship := resource_node._ship_in_range
+	if ship and is_instance_valid(ship):
+		if ship.is_cargo_full():
+			lines.append({"text": "CARGO FULL", "color": Colors.DANGER})
+		else:
+			lines.append({"text": "CARGO %d/%d" % [int(ship.get_cargo_weight()), int(ship.max_cargo_weight)], "color": Colors.TEXT_MUTED})
 
 	return {
 		"title": resource_node.kind,
-		"subtitle": "Resource",
-		"details": details
+		"lines": lines,
 	}
 
 func is_indicator_visible() -> bool:

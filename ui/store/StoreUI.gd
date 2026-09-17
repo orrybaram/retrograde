@@ -58,7 +58,7 @@ func _build_ui() -> void:
 	# Background (covers full screen, added to root not store window)
 	_bg_rect = ColorRect.new()
 	_bg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_bg_rect.color = Color(0, 0, 0, 0.98)
+	_bg_rect.color = Color(Colors.SPACE_BG, 0.98)
 	add_child(_bg_rect)
 	move_child(_bg_rect, 0)
 
@@ -71,7 +71,7 @@ func _build_ui() -> void:
 	border_style.border_width_top = 2
 	border_style.border_width_right = 2
 	border_style.border_width_bottom = 2
-	border_style.border_color = Colors.AMBER
+	border_style.border_color = Colors.PRIMARY
 	_border_panel.add_theme_stylebox_override("panel", border_style)
 	_store_window.add_child(_border_panel)
 
@@ -83,9 +83,9 @@ func _build_ui() -> void:
 	_title_label.offset_right = -15.0
 	_title_label.offset_bottom = 13.0
 	_title_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_title_label.add_theme_color_override("font_color", Colors.AMBER)
+	_title_label.add_theme_color_override("font_color", Colors.PRIMARY)
 	var title_bg = StyleBoxFlat.new()
-	title_bg.bg_color = Color(0, 0, 0, 1)
+	title_bg.bg_color = Colors.UI_BACKGROUND_SOLID
 	_title_label.add_theme_stylebox_override("normal", title_bg)
 	_title_label.text = "/ S T O R E /"
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -97,9 +97,9 @@ func _build_ui() -> void:
 	_credits_label.offset_top = -10.0
 	_credits_label.offset_right = 100.0
 	_credits_label.offset_bottom = 13.0
-	_credits_label.add_theme_color_override("font_color", Colors.AMBER)
+	_credits_label.add_theme_color_override("font_color", Colors.PRIMARY)
 	var credits_bg = StyleBoxFlat.new()
-	credits_bg.bg_color = Color(0, 0, 0, 1)
+	credits_bg.bg_color = Colors.UI_BACKGROUND_SOLID
 	_credits_label.add_theme_stylebox_override("normal", credits_bg)
 	_credits_label.text = "[ CR: 0 ]"
 	_border_panel.add_child(_credits_label)
@@ -124,12 +124,12 @@ func _build_ui() -> void:
 	_ascii_label.scroll_active = false
 	_ascii_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_ascii_label.size_flags_stretch_ratio = 0.4
-	_ascii_label.add_theme_color_override("default_color", Colors.AMBER)
+	_ascii_label.add_theme_color_override("default_color", Colors.PRIMARY)
 	main_vbox.add_child(_ascii_label)
 
 	# Separator
 	var sep = HSeparator.new()
-	sep.add_theme_color_override("separator", Colors.AMBER)
+	sep.add_theme_color_override("separator", Colors.PRIMARY)
 	sep.add_theme_constant_override("separation", 4)
 	main_vbox.add_child(sep)
 
@@ -150,7 +150,7 @@ func _build_ui() -> void:
 	left_style.border_width_top = 1
 	left_style.border_width_right = 1
 	left_style.border_width_bottom = 1
-	left_style.border_color = Colors.AMBER
+	left_style.border_color = Colors.PRIMARY
 	left_style.content_margin_left = 8
 	left_style.content_margin_top = 8
 	left_style.content_margin_right = 8
@@ -162,7 +162,7 @@ func _build_ui() -> void:
 	_dialogue_label.bbcode_enabled = true
 	_dialogue_label.fit_content = false
 	_dialogue_label.scroll_active = false
-	_dialogue_label.add_theme_color_override("default_color", Colors.AMBER)
+	_dialogue_label.add_theme_color_override("default_color", Colors.PRIMARY)
 	left_panel.add_child(_dialogue_label)
 
 	_store_items_container = VBoxContainer.new()
@@ -180,7 +180,7 @@ func _build_ui() -> void:
 	right_style.border_width_top = 1
 	right_style.border_width_right = 1
 	right_style.border_width_bottom = 1
-	right_style.border_color = Colors.AMBER
+	right_style.border_color = Colors.PRIMARY
 	right_style.content_margin_left = 8
 	right_style.content_margin_top = 8
 	right_style.content_margin_right = 8
@@ -202,7 +202,7 @@ func _build_ui() -> void:
 	_buy_info_label.fit_content = false
 	_buy_info_label.scroll_active = false
 	_buy_info_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_buy_info_label.add_theme_color_override("default_color", Colors.AMBER)
+	_buy_info_label.add_theme_color_override("default_color", Colors.PRIMARY)
 	_buy_info_label.visible = false
 	right_vbox.add_child(_buy_info_label)
 
@@ -299,7 +299,7 @@ func _get_npc() -> NPCData:
 func _update_ascii_art() -> void:
 	var npc = _get_npc()
 	if _ascii_label and npc:
-		_ascii_label.text = "[color=#ffbf00]%s[/color]" % npc.ascii_art
+		_ascii_label.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color]") % npc.ascii_art
 	elif _ascii_label:
 		_ascii_label.text = ""
 
@@ -347,7 +347,7 @@ func _update_character_display() -> void:
 	var npc = _get_npc()
 
 	if _dialogue_label and npc:
-		_typewriter.type_text("[color=#ffbf00]%s[/color]" % npc.greeting)
+		_typewriter.type_text(("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color]") % npc.greeting)
 	elif _dialogue_label:
 		_typewriter.show_immediate("")
 
@@ -541,7 +541,7 @@ func _make_buy_row() -> HBoxContainer:
 	name_label.fit_content = true
 	name_label.scroll_active = false
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_color_override("default_color", Colors.AMBER)
+	name_label.add_theme_color_override("default_color", Colors.PRIMARY)
 	var indent = StyleBoxEmpty.new()
 	indent.content_margin_left = 8.0
 	name_label.add_theme_stylebox_override("normal", indent)
@@ -552,7 +552,7 @@ func _make_buy_row() -> HBoxContainer:
 	cost_label.fit_content = true
 	cost_label.scroll_active = false
 	cost_label.custom_minimum_size = Vector2(80, 0)
-	cost_label.add_theme_color_override("default_color", Colors.AMBER)
+	cost_label.add_theme_color_override("default_color", Colors.PRIMARY)
 	row.add_child(cost_label)
 
 	return row
@@ -576,11 +576,11 @@ func _update_menu_display() -> void:
 		var label_text = item["label"]
 
 		if is_selected and is_enabled:
-			rtl.text = "[color=#ffbf00]>[/color] %s" % label_text
+			rtl.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] %s") % label_text
 		elif is_enabled:
 			rtl.text = "  %s" % label_text
 		else:
-			rtl.text = "  [color=#5f4700]%s[/color]" % label_text
+			rtl.text = ("  [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label_text
 
 func _update_buy_menu_display() -> void:
 	var children = _store_items_container.get_children()
@@ -605,13 +605,13 @@ func _update_buy_menu_display() -> void:
 
 		if name_label:
 			if is_selected and is_enabled:
-				name_label.text = "[color=#ffbf00]>[/color] %s" % label_text
+				name_label.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] %s") % label_text
 			elif is_selected:
-				name_label.text = "[color=#ffbf00]>[/color] [color=#5f4700]%s[/color]" % label_text
+				name_label.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label_text
 			elif is_enabled:
 				name_label.text = "  %s" % label_text
 			else:
-				name_label.text = "  [color=#5f4700]%s[/color]" % label_text
+				name_label.text = ("  [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label_text
 
 		if cost_label:
 			if cost_text == "":
@@ -619,16 +619,16 @@ func _update_buy_menu_display() -> void:
 			elif is_enabled:
 				cost_label.text = "[right]%s" % cost_text
 			elif cost_text == "MAX" or cost_text == "FULL":
-				cost_label.text = "[right][color=#5f4700]%s[/color]" % cost_text
+				cost_label.text = ("[right][color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % cost_text
 			else:
-				cost_label.text = "[right][color=#aa0000]%s[/color]" % cost_text
+				cost_label.text = ("[right][color=#" + Colors.hex(Colors.DANGER) + "]%s[/color]") % cost_text
 
 	# Update info panel with selected item description
 	if _buy_info_label:
 		if _selected_index >= 0 and _selected_index < _menu_items.size():
 			var desc = _menu_items[_selected_index].get("description", "")
 			if desc != "":
-				_flavor_typewriter.type_text("[color=#ffbf00]%s[/color]" % desc)
+				_flavor_typewriter.type_text(("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color]") % desc)
 			else:
 				_flavor_typewriter.show_immediate("")
 		else:
@@ -682,7 +682,7 @@ func _update_sell_display() -> void:
 		"is_separator": true,
 	})
 	var sell_sep = HSeparator.new()
-	sell_sep.add_theme_color_override("separator", Colors.AMBER)
+	sell_sep.add_theme_color_override("separator", Colors.PRIMARY)
 	sell_sep.add_theme_constant_override("separation", 4)
 	_store_items_container.add_child(sell_sep)
 
@@ -735,7 +735,7 @@ func _make_menu_label() -> RichTextLabel:
 	rtl.bbcode_enabled = true
 	rtl.fit_content = true
 	rtl.scroll_active = false
-	rtl.add_theme_color_override("default_color", Colors.AMBER)
+	rtl.add_theme_color_override("default_color", Colors.PRIMARY)
 	var indent = StyleBoxEmpty.new()
 	indent.content_margin_left = 20.0
 	rtl.add_theme_stylebox_override("normal", indent)
@@ -743,7 +743,7 @@ func _make_menu_label() -> RichTextLabel:
 
 func _on_topic_selected(topic: String) -> void:
 	if _dialogue_label:
-		_typewriter.type_text("[color=#ffbf00]* ...%s, you ask?\n* Hmm, that's a good question.\n* Maybe another time.[/color]" % topic)
+		_typewriter.type_text(("[color=#" + Colors.hex(Colors.PRIMARY) + "]* ...%s, you ask?\n* Hmm, that's a good question.\n* Maybe another time.[/color]") % topic)
 
 func _on_repair_pressed() -> void:
 	if not _ship or not is_instance_valid(_ship) or not gs:

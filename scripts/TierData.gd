@@ -66,6 +66,18 @@ static func roll_tier_trophy(rng: RandomNumberGenerator) -> Tier:
 
 	return Tier.SALVAGE
 
+## Tier for a finished extraction. Botched timing (LATE / OVERLOAD) always yields Slag.
+## PERFECT upgrades the roll: normal nodes roll as trophies, trophies take the best of two.
+static func roll_for_grade(grade: HarvestTiming.Grade, is_trophy: bool, rng: RandomNumberGenerator) -> Tier:
+	match grade:
+		HarvestTiming.Grade.PERFECT:
+			if is_trophy:
+				return maxi(roll_tier_trophy(rng), roll_tier_trophy(rng)) as Tier
+			return roll_tier_trophy(rng)
+		HarvestTiming.Grade.GOOD:
+			return roll_tier_trophy(rng) if is_trophy else roll_tier(rng)
+	return Tier.SLAG
+
 static func get_item_id(tier: Tier) -> String:
 	return TIERS[tier]["item_id"]
 

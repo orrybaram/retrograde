@@ -26,6 +26,13 @@ signal rescue_beacon_deployed()
 signal game_unpaused(pause_duration: float)
 ## Emitted when game resumes from pause with the duration paused in seconds.
 
+signal harvest_began(scrap: ScrapNode)
+## Emitted when the player starts (or resumes) holding the beam on a scrap node.
+
+signal harvest_finished(scrap: ScrapNode, grade: HarvestTiming.Grade, tier_item_id: String)
+## Emitted when an extraction resolves, just before the item is added to cargo.
+## EARLY releases do not finish a harvest and are not reported here.
+
 var _harvestable_nodes: Dictionary = {}  # Track ScrapNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ScrapNodes and their callables
 

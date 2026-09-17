@@ -22,7 +22,7 @@ polygon = PackedVector2Array(-30, 10, -25, -5, -10, -15, 5, -20, 20, -10, 35, 5,
 [node name="Polygon2D" type="Polygon2D" parent="." unique_id=1912284000]
 position = Vector2(-3.5, -3)
 scale = Vector2(0.5, 0.5)
-color = Color(0.72, 0.75, 0.8, 1)
+color = Color(0.82, 0.78, 0.69, 1)
 polygon = PackedVector2Array(-30, 10, -25, -5, -10, -15, 5, -20, 20, -10, 35, 5, 40, 25, 25, 35, 5, 30, -15, 25)
 
 [node name="SparkleParticles" parent="." unique_id=1387864671 instance=ExtResource("2")]

@@ -1,0 +1,59 @@
+# Isolated harvest loop: boot -> depart -> park next to scrap -> timed extractions.
+# Skips all flying so harvest feel can be iterated on quickly.
+# Run: tools/play.sh playtests/harvest.play             (burst frames land in .playtest/harvest_*.png)
+#      tools/play.sh --headless playtests/harvest.play  (logic only)
+# .playtest/transcript.jsonl logs harvest_started / harvest_finished {grade, tier} / harvest_stopped events.
+# Timing: hold `action` to sweep pt.staged.timing.progress; release inside the zone.
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+
+# --- A: PERFECT release on a normal node (with burst frames) ---
+stage_harvest 40
+screenshot harvest_a_before
+down action
+wait_until pt.state_name() == "HarvestingState" 2
+burst harvest_a 5 0.2
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged._state_machine.get_current_state_name() == "ScrapDepletedState" 2
+assert pt.item_count() == 1 "perfect release yields an item"
+assert inv.get_quantity("slag") == 0 and inv.get_quantity("scrap") == 0 "perfect never rolls below salvage"
+burst harvest_a_payoff 6 0.08
+wait 1.5
+screenshot harvest_a_clear
+
+# --- B: early release keeps progress, re-hold finishes (trophy) ---
+stage_harvest 40 trophy
+down action
+wait_until pt.staged.timing != null and pt.staged.timing.progress >= 0.25 3
+up action
+wait_until pt.staged._state_machine.get_current_state_name() == "ScrapInRangeState" 2
+assert pt.staged.timing.progress > 0.15 "early release keeps (decaying) progress"
+screenshot harvest_b_early
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.zone_start 3
+up action
+wait_until pt.staged._state_machine.get_current_state_name() == "ScrapDepletedState" 2
+assert pt.item_count() == 2 "clean release on a trophy yields an item"
+wait 1.5
+
+# --- C: holding through the zone overloads into Slag ---
+stage_harvest 40
+down action
+wait_until pt.staged.timing != null and pt.staged.timing.progress > pt.staged.timing.zone_end 3
+screenshot harvest_c_late
+wait_until pt.staged._state_machine.get_current_state_name() == "ScrapDepletedState" 3
+up action
+assert inv.get_quantity("slag") == 1 "overload yields slag"
+screenshot harvest_c_after
+
+state

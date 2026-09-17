@@ -10,7 +10,7 @@ func get_minimap_position() -> Vector2:
 
 ## Returns the color to use for this target on the minimap
 func get_minimap_color() -> Color:
-	return Color(1.0, 0.75, 0.0)  # Default amber
+	return Colors.PRIMARY
 
 ## Returns the icon type for this target: "dot", "diamond", "triangle", "square"
 func get_minimap_icon() -> String:

@@ -39,13 +39,15 @@ successful live exploration into one. A scenario stops at the first failing non-
 | `hold <key\|action> <sec>` / `down` / `up` / `release_all` | sustained input |
 | `face <group> [tol]` | steer with turn keys toward nearest node in group (`planets`, `space_ports`, `space_stations`, `resource_nodes`) |
 | `wait <sec>` / `frames <n>` / `timescale <n>` | advance time (wait is game time) |
+| `stage_harvest [dist] [trophy]` | park the flying ship `dist`px (default 40; cone reaches ~66) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_harvested`/`harvest_stopped` events |
+| `burst <name> <n> <sec>` | n screenshots `sec` apart → `<name>_00.png…` (for judging motion/feel) |
 | `wait_until <expr> [timeout]` | poll expression |
 | `assert <expr> ["message"]` | record failure if falsy |
 | `eval <expr>` / `state` / `screen` / `screenshot <name>` / `log <text>` / `quit` | observe |
 
 Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv` (InventoryManager), `bus`
 (EventBus), `pt` (driver: `pt.state_name()`, `pt.visible_ui()`, `pt.screen_text()`, `pt.nearest(group)`,
-`pt.node(group)`), and `self` = driver so `get_tree()` works.
+`pt.node(group)`, `pt.item_count()`, `pt.staged`), and `self` = driver so `get_tree()` works.
 `main.current_game_state`: 0 MENU, 1 PLAYING, 2 GAME_OVER.
 
 ## Game flow cheatsheet
@@ -54,7 +56,14 @@ Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv`
 - In flight: `i` inventory, `m` system map, `esc` pause. Ship nose = +X; positive `bearing_deg` = target is to the right.
 - `esc` closes the dock dialogue without pausing.
 
+## Harvest iteration
+`tools/play.sh playtests/harvest.play` skips all flying: boot → depart → `stage_harvest`, then three timed
+extractions (PERFECT release, early release + re-hold on a trophy, OVERLOAD). Release timing is driven with
+`wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start()` (also `zone_start`, `zone_end`).
+Frames land in `.playtest/harvest_*.png`; the transcript logs `harvest_finished {grade, tier}` events.
+
 ## Tips
+- Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.
 - Screenshots need a window (not `--headless`). Read the PNG to actually look at it.
 - If a session wedges: `kill $(cat .playtest/godot.pid)`. Log: `.playtest/godot.log`.
 - Scenario runs have a 300s real-time watchdog (`--timeout S` to change).

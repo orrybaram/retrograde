@@ -16,5 +16,5 @@ polygon = PackedVector2Array(9, 12, -15.559357, -27.228865, 9, -68, 57, -68, 81,
 [node name="Polygon2D" type="Polygon2D" parent="." unique_id=2100825672]
 position = Vector2(-9, 7)
 scale = Vector2(0.26509875, 0.26884642)
-color = Color(0.75, 0.78, 0.82, 1)
+color = Color(0.86, 0.82, 0.73, 1)
 polygon = PackedVector2Array(9, 12, -15.088718, -26.037169, 9, -68, 57, -68, 81, -28, 57, 12)

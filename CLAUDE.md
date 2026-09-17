@@ -4,9 +4,9 @@
 
 ## Critical Rules
 
-1. **Never change the amber color scheme** - Use `Colors` autoload (`Colors.AMBER`, `Colors.PRIMARY`, etc.) defined in `scripts/Colors.gd`. Never hardcode color values.
+1. **Use the "Violet Signal" palette via `Colors`** - Every color comes from the `Colors` autoload (`Colors.PRIMARY`, `Colors.SPACE_BG`, `Colors.NAV`, etc.) in `scripts/Colors.gd`. Never hardcode color values; in BBCode use `Colors.hex(Colors.PRIMARY)`. Faded mustard `#E8C170` is the single UI color. Blue (`Colors.NAV`) is navigation only. Purple (`Colors.TITAN`) is reserved for the Titan and Artifacts, never decoration. In `.tscn` files (which can't reference autoloads) copy the exact values from `Colors.gd`.
 2. **Monospace everything** - Font: Andale Mono. All text should feel like terminal output.
-3. **Black backgrounds** - UI panels use solid black or 80-90% opacity black.
+3. **Dark backgrounds** - Space and UI panels use olive-black `Colors.SPACE_BG` (`#14130F`), solid or 80-90% opacity. Not pure black.
 4. **Arrow key navigation** - All terminal UIs use UP/DOWN + ENTER. No mouse-based UI.
 5. **State machines for complex entities** - Use `StateMachine` + `State` subclasses pattern (see `scripts/StateMachine.gd`). States own their camera zoom, particles, and cleanup.
 
@@ -14,8 +14,8 @@
 
 - State machine pattern: `scripts/StateMachine.gd` -> entity-specific base state -> concrete states
 - UI: `Control` nodes with anchors, `CanvasLayer` for HUD
-- Terminal UI panels: bordered `StyleBoxFlat` (draw_center=false), amber border, spaced letter headers (`S T A T U S`)
-- Action rows: `>` prefix for selected, dimmed `#5f4700` for unavailable
+- Terminal UI panels: bordered `StyleBoxFlat` (draw_center=false), mustard (`Colors.UI_BORDER`) border, spaced letter headers (`S T A T U S`)
+- Action rows: `>` prefix for selected, dimmed `Colors.PRIMARY_DIM` (`#6B5A34`) for unavailable
 
 For detailed patterns and examples, see `@.claude/PATTERNS.md`.
 

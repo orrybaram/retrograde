@@ -41,6 +41,8 @@ func _process(_delta: float) -> void:
 	if current_target != selected_target:
 		current_target = selected_target
 		_update_info_box()
+	elif current_target and info_box:
+		IndicatorRenderer.update_info_box(info_box, current_target.get_indicator_info())
 	
 	# Update indicator display
 	queue_redraw()
@@ -96,6 +98,8 @@ func _draw() -> void:
 	
 	# Calculate info box position (end of dotted line)
 	var info_box_pos = screen_pos + info_box_offset
+	if info_box:
+		info_box_pos = info_box_pos.clamp(Vector2.ZERO, (viewport_size - info_box.size).max(Vector2.ZERO))
 	
 	# Draw dotted line from bracket edge to info box
 	var bracket_edge = screen_bounds.position + Vector2(screen_bounds.size.x / 2, screen_bounds.size.y)

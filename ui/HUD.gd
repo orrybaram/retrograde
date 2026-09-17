@@ -16,6 +16,7 @@ var gs: Node = null
 var ship: Ship = null
 var _last_cargo_weight: float = 0.0
 var _cargo_punch_tween: Tween = null
+var _pending_cargo_flights := 0  # loot chips still flying; cargo punch waits for them
 
 func _ready() -> void:
 	add_to_group("hud")
@@ -25,6 +26,7 @@ func _ready() -> void:
 	if fuel_progress_bar:
 		fuel_progress_bar.bar_color = Colors.FUEL_FULL
 		fuel_progress_bar.background_color = Colors.PRIMARY_DIM
+	add_child(HarvestMeter.new())
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
 	_update_labels()
@@ -48,7 +50,7 @@ func _on_action_message_changed(message: String) -> void:
 func _on_inventory_changed(item_id: String = "", new_quantity: int = 0) -> void:
 	_update_labels(item_id, new_quantity)
 	var new_weight = InventoryManager.get_total_weight()
-	if new_weight > _last_cargo_weight:
+	if new_weight > _last_cargo_weight and _pending_cargo_flights == 0:
 		_punch_cargo_label()
 	_last_cargo_weight = new_weight
 
@@ -67,6 +69,38 @@ func show_saving_indicator() -> void:
 func hide_saving_indicator() -> void:
 	if save_indicator_label:
 		save_indicator_label.visible = false
+
+## Fly a loot chip from a world position into the cargo readout, then punch it.
+func fly_item_to_cargo(world_pos: Vector2, color: Color, big: bool) -> void:
+	if not current_cargo_label:
+		return
+	var canvas_to_local := get_global_transform_with_canvas().affine_inverse()
+	var from := canvas_to_local * (get_viewport().get_canvas_transform() * world_pos)
+	var to := canvas_to_local * (current_cargo_label.get_global_transform_with_canvas() * (current_cargo_label.size / 2.0))
+	var chip := ColorRect.new()
+	var side := 9.0 if big else 6.0
+	chip.size = Vector2(side, side)
+	chip.pivot_offset = chip.size / 2.0
+	chip.color = color
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.position = from - chip.pivot_offset
+	add_child(chip)
+	_pending_cargo_flights += 1
+
+	# Arc out sideways first, then dive into the readout.
+	var control := from.lerp(to, 0.3) + (from - to).orthogonal().normalized() * 60.0
+	var tween := create_tween()
+	tween.tween_interval(0.08)
+	tween.tween_method(func(t: float):
+		var p := from.lerp(control, t).lerp(control.lerp(to, t), t)
+		chip.position = p - chip.pivot_offset
+		chip.rotation = t * TAU
+		chip.scale = Vector2.ONE * lerpf(1.4, 0.6, t)
+	, 0.0, 1.0, 0.55).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	tween.tween_callback(func():
+		chip.queue_free()
+		_pending_cargo_flights -= 1
+		_punch_cargo_label())
 
 func _punch_cargo_label() -> void:
 	if not current_cargo_label:

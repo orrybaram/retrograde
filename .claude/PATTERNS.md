@@ -18,13 +18,13 @@ Don't use state machines for: simple booleans, linear sequences (use await), pur
 
 ## Terminal UI Patterns
 
-Panel: `StyleBoxFlat: draw_center=false, border_width=2, border_color=Amber`
+Panel: `StyleBoxFlat: draw_center=false, border_width=2, border_color=Colors.UI_BORDER`
 
-Title format: `/ S P A C E D  T I T L E /` - top-right corner, black background behind text
+Title format: `/ S P A C E D  T I T L E /` - top-right corner, Colors.UI_BACKGROUND_SOLID behind text
 
 Action rows:
 ```
->  ACTION NAME                    COST/VALUE    (selected: full amber #ffbf00)
+>  ACTION NAME                    COST/VALUE    (selected: Colors.PRIMARY #E8C170)
    ACTION NAME                    COST/VALUE    (unselected)
-   ACTION NAME                    COST/VALUE    (unavailable/owned: #5f4700)
+   ACTION NAME                    COST/VALUE    (unavailable/owned: Colors.PRIMARY_DIM #6B5A34)
 ```

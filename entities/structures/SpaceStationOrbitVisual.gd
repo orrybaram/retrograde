@@ -5,7 +5,7 @@ class_name SpaceStationOrbitVisual
 
 var station: SpaceStation = null
 @export var show_orbit: bool = true : set = _set_show_orbit
-@export var orbit_color: Color = Color(0.2, 0.5, 1.0, 0.3) : set = _set_orbit_color
+@export var orbit_color: Color = Colors.ORBIT : set = _set_orbit_color
 @export var orbit_width: float = 2.0 : set = _set_orbit_width
 
 func _ready() -> void:

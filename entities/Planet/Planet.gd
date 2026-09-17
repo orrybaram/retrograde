@@ -16,7 +16,7 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 @export var planet_name: String = "Unnamed Planet" ## Name of zthe planet for identification
 @export var radius: float = 160.0
 @export var gravitational_constant: float = 4.0 # G constant for scaling
-@export var color: Color = Color(0.15, 0.6, 0.9): set = _set_color
+@export var color: Color = Colors.PLANET_DEFAULT: set = _set_color
 @export var massMultiplier: float = 1.0
 
 # Planet type properties

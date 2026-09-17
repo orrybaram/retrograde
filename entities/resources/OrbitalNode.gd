@@ -9,7 +9,7 @@ const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 
 signal returned_to_pool
 
-@export var color: Color = Color(0.5, 0.5, 0.5, 1.0)
+@export var color: Color = Colors.HULL_LIGHT
 @export var min_scale: float = 0.8
 
 # Performance: Multi-tier distance-based processing

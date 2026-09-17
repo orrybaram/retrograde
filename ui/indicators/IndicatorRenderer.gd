@@ -9,6 +9,9 @@ const BRACKET_THICKNESS: float = 2.0
 const BRACKET_PADDING: float = 10.0  # Padding around the item
 const LINE_DASH_LENGTH: float = 5.0
 const LINE_DASH_GAP: float = 3.0
+const INFO_BOX_PADDING: float = 8.0
+const INFO_TITLE_FONT_SIZE: int = 12
+const INFO_LINE_FONT_SIZE: int = 10
 
 ## Draws corner brackets around the given bounds
 static func draw_bracket(canvas: CanvasItem, bounds: Rect2, color: Color) -> void:
@@ -58,53 +61,61 @@ static func draw_dotted_line(canvas: CanvasItem, from: Vector2, to: Vector2, col
 		if current_pos.distance_to(from) >= distance:
 			break
 
-## Creates an info box Control node with the given data
+## Creates an info box that sizes itself to its content.
+## Data keys: "title" (String) and "lines" (Array of {text, color}). See update_info_box().
 static func create_info_box(data: Dictionary) -> Control:
-	var panel = Panel.new()
-	panel.custom_minimum_size = Vector2(150, 80)
-	
-	var vbox = VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 4)
-	panel.add_child(vbox)
-	
-	# Title
-	if data.has("title"):
-		var title_label = Label.new()
-		title_label.text = str(data["title"])
-		title_label.add_theme_font_size_override("font_size", 16)
-		title_label.add_theme_color_override("font_color", Color.WHITE)
-		vbox.add_child(title_label)
-	
-	# Subtitle
-	if data.has("subtitle"):
-		var subtitle_label = Label.new()
-		subtitle_label.text = str(data["subtitle"])
-		subtitle_label.add_theme_font_size_override("font_size", 12)
-		subtitle_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-		vbox.add_child(subtitle_label)
-	
-	# Details (array of strings)
-	if data.has("details") and data["details"] is Array:
-		for detail in data["details"]:
-			var detail_label = Label.new()
-			detail_label.text = str(detail)
-			detail_label.add_theme_font_size_override("font_size", 11)
-			detail_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-			vbox.add_child(detail_label)
-	
-	# Style the panel
-	var style_box = StyleBoxFlat.new()
-	style_box.bg_color = Color(0.1, 0.1, 0.1, 0.9)
-	style_box.border_color = Color(0.5, 0.5, 0.5)
-	style_box.border_width_left = 2
-	style_box.border_width_top = 2
-	style_box.border_width_right = 2
-	style_box.border_width_bottom = 2
-	style_box.corner_radius_top_left = 4
-	style_box.corner_radius_top_right = 4
-	style_box.corner_radius_bottom_left = 4
-	style_box.corner_radius_bottom_right = 4
+	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var style_box := StyleBoxFlat.new()
+	style_box.bg_color = Colors.UI_BACKGROUND
+	style_box.border_color = Colors.UI_BORDER
+	style_box.set_border_width_all(2)
+	style_box.set_content_margin_all(INFO_BOX_PADDING)
 	panel.add_theme_stylebox_override("panel", style_box)
-	
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "Lines"
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_theme_constant_override("separation", 6)
+	panel.add_child(vbox)
+	# PanelContainer grows on its own but never shrinks back (e.g. once the theme font applies)
+	panel.minimum_size_changed.connect(panel.reset_size)
+
+	update_info_box(panel, data)
 	return panel
+
+## Syncs an existing info box with fresh data. Cheap to call every frame:
+## labels are only touched when their text or color actually changes.
+static func update_info_box(panel: Control, data: Dictionary) -> void:
+	var vbox := panel.get_node_or_null("Lines") as VBoxContainer
+	if not vbox:
+		return
+
+	var rows: Array = []
+	if data.has("title"):
+		var spaced := " ".join(str(data["title"]).to_upper().split(""))
+		rows.append({"text": spaced, "color": Colors.PRIMARY, "size": INFO_TITLE_FONT_SIZE})
+	rows.append_array(data.get("lines", []))
+
+	while vbox.get_child_count() > rows.size():
+		var extra := vbox.get_child(vbox.get_child_count() - 1)
+		vbox.remove_child(extra)
+		extra.queue_free()
+	while vbox.get_child_count() < rows.size():
+		var label := Label.new()
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(label)
+
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		var label := vbox.get_child(i) as Label
+		var text := str(row.get("text", ""))
+		var color: Color = row.get("color", Colors.TEXT)
+		var font_size: int = row.get("size", INFO_LINE_FONT_SIZE)
+		if label.text != text:
+			label.text = text
+		if label.get_theme_color("font_color") != color:
+			label.add_theme_color_override("font_color", color)
+		if label.get_theme_font_size("font_size") != font_size:
+			label.add_theme_font_size_override("font_size", font_size)

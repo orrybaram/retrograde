@@ -78,10 +78,10 @@ func show_gain_indicator(amount: int, kind: String, position: Vector2, tier_name
 
 func _tier_color_for_name(tier_name: String) -> Color:
 	match tier_name:
-		"Slag":      return Color(0.533, 0.533, 0.533)  # #888888 dim grey
-		"Scrap":     return Color(1.0,   0.749, 0.0)    # #FFBF00 amber
-		"Salvage":   return Color(1.0,   0.843, 0.0)    # #FFD700 yellow
-		"Component": return Color(0.0,   1.0,   0.533)  # #00FF88 teal-green
-		"Mil-Spec":  return Color(0.0,   0.8,   1.0)    # #00CCFF cyan
-		"Artifact":  return Color(1.0,   1.0,   1.0)    # #FFFFFF white-gold
-	return Color(1.0, 0.749, 0.0)  # amber fallback
+		"Slag":      return Colors.TIER_SLAG
+		"Scrap":     return Colors.TIER_SCRAP
+		"Salvage":   return Colors.TIER_SALVAGE
+		"Component": return Colors.TIER_COMPONENT
+		"Mil-Spec":  return Colors.TIER_MIL_SPEC
+		"Artifact":  return Colors.TIER_ARTIFACT
+	return Colors.PRIMARY

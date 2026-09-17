@@ -36,7 +36,7 @@ func _build_ui() -> void:
 	# Background
 	_bg_rect = ColorRect.new()
 	_bg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_bg_rect.color = Color(0, 0, 0, 0.95)
+	_bg_rect.color = Color(Colors.SPACE_BG, 0.95)
 	add_child(_bg_rect)
 
 	# Border panel
@@ -48,7 +48,7 @@ func _build_ui() -> void:
 	border_style.border_width_top = 2
 	border_style.border_width_right = 2
 	border_style.border_width_bottom = 2
-	border_style.border_color = Colors.AMBER
+	border_style.border_color = Colors.PRIMARY
 	_border_panel.add_theme_stylebox_override("panel", border_style)
 	add_child(_border_panel)
 
@@ -60,9 +60,9 @@ func _build_ui() -> void:
 	_title_label.offset_right = -15.0
 	_title_label.offset_bottom = 13.0
 	_title_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_title_label.add_theme_color_override("font_color", Colors.AMBER)
+	_title_label.add_theme_color_override("font_color", Colors.PRIMARY)
 	var title_bg = StyleBoxFlat.new()
-	title_bg.bg_color = Color(0, 0, 0, 1)
+	title_bg.bg_color = Colors.UI_BACKGROUND_SOLID
 	_title_label.add_theme_stylebox_override("normal", title_bg)
 	_title_label.text = "/ S P A C E  P O R T /"
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -94,7 +94,7 @@ func _build_ui() -> void:
 
 func _make_header(text: String) -> Label:
 	var label = Label.new()
-	label.add_theme_color_override("font_color", Colors.AMBER)
+	label.add_theme_color_override("font_color", Colors.PRIMARY)
 	var indent = StyleBoxEmpty.new()
 	indent.content_margin_left = 20.0
 	label.add_theme_stylebox_override("normal", indent)
@@ -220,18 +220,18 @@ func _update_menu_display() -> void:
 		var label_text = item["label"]
 
 		if is_selected and is_enabled:
-			rtl.text = "[color=#ffbf00]>[/color] %s" % label_text
+			rtl.text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]>[/color] %s") % label_text
 		elif is_enabled:
 			rtl.text = "  %s" % label_text
 		else:
-			rtl.text = "  [color=#5f4700]%s[/color]" % label_text
+			rtl.text = ("  [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label_text
 
 func _make_menu_label() -> RichTextLabel:
 	var rtl = RichTextLabel.new()
 	rtl.bbcode_enabled = true
 	rtl.fit_content = true
 	rtl.scroll_active = false
-	rtl.add_theme_color_override("default_color", Colors.AMBER)
+	rtl.add_theme_color_override("default_color", Colors.PRIMARY)
 	var indent = StyleBoxEmpty.new()
 	indent.content_margin_left = 20.0
 	rtl.add_theme_stylebox_override("normal", indent)

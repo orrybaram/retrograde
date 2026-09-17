@@ -15,10 +15,10 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 0.75, 0, 1)
+border_color = Color(0.91, 0.757, 0.439, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_title_bg"]
-bg_color = Color(0, 0, 0, 1)
+bg_color = Color(0.078, 0.075, 0.059, 1)
 
 [node name="InventoryUI" type="Control"]
 layout_mode = 3
@@ -37,7 +37,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.5)
+color = Color(0.078, 0.075, 0.059, 0.5)
 
 [node name="InventoryWindow" type="Control" parent="."]
 layout_mode = 1
@@ -57,7 +57,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.98)
+color = Color(0.078, 0.075, 0.059, 0.98)
 
 [node name="BorderPanel" type="Panel" parent="InventoryWindow"]
 layout_mode = 1
@@ -78,7 +78,7 @@ offset_top = -10.0
 offset_right = -15.0
 offset_bottom = 13.0
 grow_horizontal = 0
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_title_bg")
 text = "/ I N V E N T O R Y /"
 horizontal_alignment = 1
@@ -101,12 +101,12 @@ theme_override_constants/separation = 12
 
 [node name="SystemsHeader" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 text = "  S H I P   S Y S T E M S"
 
 [node name="SystemsContent" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 12
 text = "Loading..."
 vertical_alignment = 1
@@ -117,7 +117,7 @@ layout_mode = 2
 
 [node name="UpgradesHeader" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 text = "  U P G R A D E S"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="InventoryWindow/MarginContainer/VBoxContainer"]
@@ -127,7 +127,7 @@ size_flags_vertical = 3
 [node name="UpgradesContent" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 12
 text = "Loading..."
 vertical_alignment = 1
@@ -138,12 +138,12 @@ layout_mode = 2
 
 [node name="CargoHeader" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 text = "  C A R G O"
 
 [node name="CargoContent" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 12
 text = "Loading..."
 vertical_alignment = 1
@@ -154,7 +154,7 @@ layout_mode = 2
 
 [node name="ActionsHeader" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 text = "  A C T I O N S"
 
 [node name="CloseRow" type="HBoxContainer" parent="InventoryWindow/MarginContainer/VBoxContainer"]
@@ -163,5 +163,5 @@ layout_mode = 2
 [node name="CloseButton" type="Label" parent="InventoryWindow/MarginContainer/VBoxContainer/CloseRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 text = "    CLOSE [ESC]"

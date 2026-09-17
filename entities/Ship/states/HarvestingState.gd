@@ -23,9 +23,7 @@ func enter() -> void:
 	ship.damage_shake_current_intensity = ship.harvest_lockon_shake_intensity
 	_shake_grace_time = ship.harvest_lockon_shake_duration
 
-	var cone := _get_cone()
-	if cone:
-		cone.set_harvesting(true)
+	_get_pulse().emitting = Input.is_action_pressed("action")
 
 	velocity_tween_start = ship.linear_velocity
 	velocity_tween_time = 0.0
@@ -42,9 +40,7 @@ func exit() -> void:
 
 	ship.camera.zoom_camera_out()
 
-	var cone := _get_cone()
-	if cone:
-		cone.set_harvesting(false)
+	_get_pulse().emitting = false
 
 func add_locked_node(scrap: ScrapNode) -> void:
 	if not locked_resource_nodes.has(scrap):
@@ -67,6 +63,7 @@ func physics_process(delta: float) -> void:
 		_exit_to_flying()
 		return
 
+	_get_pulse().emitting = Input.is_action_pressed("action")
 	velocity_tween_time += delta
 
 	if _shake_grace_time > 0.0:
@@ -115,10 +112,13 @@ func _get_nearest_locked_node() -> ScrapNode:
 			nearest = node
 	return nearest
 
-func _get_cone() -> HarvestCone:
-	if not is_ship_valid():
-		return null
-	return ship.get_node_or_null("HarvestCone") as HarvestCone
+func _get_pulse() -> HarvestPulse:
+	var pulse := ship.get_node_or_null("HarvestPulse") as HarvestPulse
+	if not pulse:
+		pulse = HarvestPulse.new()
+		pulse.name = "HarvestPulse"
+		ship.add_child(pulse)
+	return pulse
 
 func _exit_to_flying() -> void:
 	var state_machine: StateMachine = ship.get_node_or_null("StateMachine") as StateMachine

@@ -10,7 +10,7 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 0.75, 0, 1)
+border_color = Color(0.91, 0.757, 0.439, 1)
 
 [node name="HarvestMiniGameUI" type="Control"]
 layout_mode = 3
@@ -60,13 +60,13 @@ theme_override_constants/separation = 12
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 16
 text = "SCANNER"
 
 [node name="ResourceLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 14
 text = "Resource: Scrap"
 
@@ -107,7 +107,7 @@ offset_right = -135.0
 offset_bottom = 105.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(1, 0.75, 0, 0.8)
+color = Color(0.91, 0.757, 0.439, 0.8)
 
 [node name="HorizontalScannerBar" type="ColorRect" parent="MarginContainer/VBoxContainer/ScannerContainer"]
 layout_mode = 1
@@ -122,4 +122,4 @@ offset_right = 137.0
 offset_bottom = -113.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(1, 0.75, 0, 0.8)
+color = Color(0.91, 0.757, 0.439, 0.8)

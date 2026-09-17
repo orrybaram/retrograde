@@ -16,10 +16,10 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 0.75, 0, 1)
+border_color = Color(0.91, 0.757, 0.439, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_title_bg"]
-bg_color = Color(0, 0, 0, 1)
+bg_color = Color(0.078, 0.075, 0.059, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_indent"]
 content_margin_left = 20.0
@@ -41,7 +41,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 1)
+color = Color(0.078, 0.075, 0.059, 1)
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=1257734415]
 layout_mode = 1
@@ -57,7 +57,7 @@ theme_override_constants/separation = 40
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1346268088]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 8
 text = " ███████████   ██████████ ███████████ ███████████      ███████      █████████  ███████████     █████████   ██████████   ██████████
 ░░███░░░░░███ ░░███░░░░░█░█░░░███░░░█░░███░░░░░███   ███░░░░░███   ███░░░░░███░░███░░░░░███   ███░░░░░███ ░░███░░░░███ ░░███░░░░░█
@@ -79,7 +79,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.95)
+color = Color(0.078, 0.075, 0.059, 0.95)
 
 [node name="BorderPanel" type="Panel" parent="CenterContainer/VBoxContainer/MenuPanel" unique_id=402690520]
 layout_mode = 1
@@ -100,7 +100,7 @@ offset_top = -10.0
 offset_right = -15.0
 offset_bottom = 13.0
 grow_horizontal = 0
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_title_bg")
 text = "/ M E N U /"
 horizontal_alignment = 1
@@ -111,7 +111,7 @@ offset_left = 15.0
 offset_top = -10.0
 offset_right = 70.0
 offset_bottom = 13.0
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_title_bg")
 text = "v0.1"
 horizontal_alignment = 1
@@ -139,7 +139,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
-theme_override_colors/default_color = Color(1, 0.75, 0, 1)
+theme_override_colors/default_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 bbcode_enabled = true
 text = "> CONTINUE"
@@ -152,7 +152,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
-theme_override_colors/default_color = Color(1, 0.75, 0, 1)
+theme_override_colors/default_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 bbcode_enabled = true
 text = "  NEW GAME"
@@ -169,7 +169,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
-theme_override_colors/default_color = Color(1, 0.75, 0, 1)
+theme_override_colors/default_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 bbcode_enabled = true
 text = "  QUIT"
@@ -177,7 +177,7 @@ fit_content = true
 
 [node name="FooterLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1857111809]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.37, 0.28, 0, 1)
+theme_override_colors/font_color = Color(0.42, 0.353, 0.204, 1)
 theme_override_font_sizes/font_size = 10
 text = "// USE ARROW KEYS TO SELECT, ENTER TO CONFIRM //"
 horizontal_alignment = 1

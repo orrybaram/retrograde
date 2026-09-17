@@ -82,7 +82,7 @@ func _add_terminal_line(message: String, progress: int) -> void:
 		return
 	
 	var padded_message = message.rpad(50, '.')
-	var line_text = "[color=#FFBF00]%s[/color][color=#00FF00][%d%%][/color]" % [padded_message, progress]
+	var line_text = ("[color=#" + Colors.hex(Colors.PRIMARY) + "]%s[/color][color=#" + Colors.hex(Colors.SUCCESS) + "][%d%%][/color]") % [padded_message, progress]
 	
 	if terminal_label.text != "":
 		terminal_label.text += "\n"

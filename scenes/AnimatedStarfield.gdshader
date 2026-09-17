@@ -8,6 +8,12 @@ uniform float speed_y: hint_range(-100.0, 100.0, 0.1) = 0.0;
 uniform float step_size: hint_range(0.0, 1.0, 0.01) = 0.01;
 uniform float layers: hint_range(1.0, 10.0, 0.1) = 2.0;
 uniform float color_saturation: hint_range(0.0, 1.0, 0.01) = 0.5;
+// Palette (keep in sync with scripts/Colors.gd; set from StarField.gd)
+uniform vec4 space_color: source_color = vec4(0.078, 0.075, 0.059, 1.0);
+uniform vec4 nebula_color: source_color = vec4(0.180, 0.165, 0.125, 1.0);
+uniform vec4 star_color_warm: source_color = vec4(0.949, 0.910, 0.824, 1.0);
+uniform vec4 star_color_cool: source_color = vec4(0.435, 0.722, 0.824, 1.0);
+uniform float nebula_strength: hint_range(0.0, 1.0, 0.01) = 0.8;
 
 void fragment() {
 	vec2 uv = UV;
@@ -31,13 +37,18 @@ void fragment() {
 		float r = texture(noise_texture, sample_coords + vec2(0.31, 0.17)).r;
 		float g = texture(noise_texture, sample_coords + vec2(0.47, 0.83)).r;
 		float b = texture(noise_texture, sample_coords + vec2(0.79, 0.53)).r;
-		vec3 random_color = vec3(r, g, b);
-		
-		// Mix between white and random color based on saturation
-		vec3 final_color = mix(vec3(1.0), random_color, color_saturation);
+		// Mostly warm cream stars, with the occasional blue glint
+		float cool = step(0.62, r) * step(0.55, b);
+		vec3 tinted = mix(star_color_warm.rgb, star_color_cool.rgb, cool);
+		vec3 final_color = mix(star_color_warm.rgb, tinted, color_saturation) * (0.85 + 0.15 * g);
 		
 		star_color += star_mask * brightness * final_color;
 	}
 	
-	COLOR = vec4(star_color, 1.0);
+	// Soft haze drifting slowly with parallax, over olive-black space
+	vec2 haze_uv = UV + speed * 0.15;
+	float haze = 0.5 + 0.25 * sin(haze_uv.x * 3.1 + 1.3) + 0.25 * sin(haze_uv.y * 2.3 + haze_uv.x * 1.7);
+	haze *= smoothstep(1.4, 0.1, distance(UV, vec2(0.75, 0.3)));
+	vec3 background = mix(space_color.rgb, nebula_color.rgb, clamp(haze, 0.0, 1.0) * nebula_strength);
+	COLOR = vec4(background + star_color, 1.0);
 }

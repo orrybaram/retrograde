@@ -8,7 +8,7 @@ class_name GravityFieldVisual
 var planet: Planet = null
 @export var base_color: Color = Color(0, 0, 0, 0.0): set = _set_base_color
 @export var outline_width: float = 3.0: set = _set_outline_width
-@export var outline_color: Color = Color(1, 1, 1, 0.25): set = _set_outline_color
+@export var outline_color: Color = Colors.OUTLINE: set = _set_outline_color
 @export var ring_count: int = 6: set = _set_ring_count
 
 func _set_ring_count(v: int) -> void:

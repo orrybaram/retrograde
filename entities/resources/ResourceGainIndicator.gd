@@ -57,7 +57,7 @@ func _world_to_screen(world_pos: Vector2) -> Vector2:
 	return screen_pos
 
 ## Show the gain indicator animation
-func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "", tier_color: Color = Color(1.0, 0.75, 0.0)) -> void:
+func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "", tier_color: Color = Colors.PRIMARY) -> void:
 	# Ensure nodes are ready (in case called before _ready)
 	if not amount_label:
 		amount_label = get_node_or_null("AmountLabel") as Label

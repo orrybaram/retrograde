@@ -52,7 +52,7 @@ func _create_explosion() -> void:
 		material.initial_velocity_max = 100.0
 		material.scale_min = 2.0
 		material.scale_max = 8.0
-		material.color = Color(1.0, 0.627, 0.2, 1.0)  # Orange/red explosion
+		material.color = Colors.EXPLOSION
 	
 	ship.boost_particles.amount = 200
 	ship.boost_particles.lifetime = 1

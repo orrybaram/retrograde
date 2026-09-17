@@ -49,7 +49,7 @@ layout_mode = 2
 [node name="VelocityLabel" type="Label" parent="DashboardAnchor/HBox/LeftColumn" unique_id=1356911807]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 10
 text = "0.0 m/s"
 horizontal_alignment = 1
@@ -67,7 +67,7 @@ theme_override_constants/separation = 6
 [node name="E" type="Label" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=1429954255]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 10
 text = "E"
 
@@ -76,13 +76,13 @@ custom_minimum_size = Vector2(140, 14)
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("3_jd13s")
-background_color = Color(0.22923827, 0.14380166, 0, 1)
+background_color = Color(0.42, 0.353, 0.204, 1)
 show_label = false
 
 [node name="F" type="Label" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=2080482548]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 10
 text = "F"
 
@@ -93,7 +93,7 @@ theme_override_constants/separation = 6
 [node name="HullLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/HullRow" unique_id=1872784425]
 layout_mode = 2
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 10
 text = "HP"
 
@@ -120,7 +120,7 @@ expand_mode = 1
 layout_mode = 2
 size_flags_vertical = 4
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 28
 text = "0"
 
@@ -128,7 +128,7 @@ text = "0"
 layout_mode = 2
 size_flags_vertical = 8
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(0.37, 0.28, 0, 1)
+theme_override_colors/font_color = Color(0.42, 0.353, 0.204, 1)
 theme_override_font_sizes/font_size = 14
 text = "/5"
 
@@ -146,7 +146,7 @@ offset_bottom = -33.0
 grow_horizontal = 2
 grow_vertical = 0
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(1, 0.75, 0, 1)
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 14
 text = "Press [action] to harvest"
 horizontal_alignment = 1
@@ -166,7 +166,7 @@ offset_bottom = -16.0
 grow_horizontal = 0
 grow_vertical = 0
 theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(0, 1, 0, 1)
+theme_override_colors/font_color = Color(0.604, 0.682, 0.478, 1)
 theme_override_font_sizes/font_size = 12
 text = "Saving..."
 horizontal_alignment = 2

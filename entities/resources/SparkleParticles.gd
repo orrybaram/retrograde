@@ -69,9 +69,9 @@ func set_idle() -> void:
 		)
 	_apply_state()
 
-func pop(tier_item_id: String = "") -> void:
+func pop(tier_item_id: String = "", intensity: float = 1.0) -> void:
 	var burst := GPUParticles2D.new()
-	burst.amount = 30
+	burst.amount = maxi(int(30 * intensity), 8)
 	burst.lifetime = 0.6
 	burst.one_shot = true
 	burst.emitting = false
@@ -80,12 +80,12 @@ func pop(tier_item_id: String = "") -> void:
 	var mat := ParticleProcessMaterial.new()
 	mat.direction = Vector3(0, 0, 0)
 	mat.spread = 360.0
-	mat.initial_velocity_min = 20.0
-	mat.initial_velocity_max = 60.0
+	mat.initial_velocity_min = 20.0 * intensity
+	mat.initial_velocity_max = 60.0 * intensity
 	mat.gravity = Vector3.ZERO
 	mat.scale_min = 1.0
 	mat.scale_max = 3.0
-	mat.color = _tier_color(tier_item_id)
+	mat.color = tier_color(tier_item_id)
 	mat.damping_min = 20.0
 	mat.damping_max = 40.0
 
@@ -98,14 +98,14 @@ func pop(tier_item_id: String = "") -> void:
 			burst.queue_free()
 	)
 
-static func _tier_color(tier_item_id: String) -> Color:
+static func tier_color(tier_item_id: String) -> Color:
 	match tier_item_id:
-		"slag":      return Color(0.533, 0.533, 0.533)
-		"scrap":     return Colors.PRIMARY
-		"salvage":   return Color(1.0,   0.843, 0.0)
-		"component": return Color(0.0,   1.0,   0.533)
-		"mil_spec":  return Color(0.0,   0.8,   1.0)
-		"artifact":  return Color(1.0,   1.0,   1.0)
+		"slag":      return Colors.TIER_SLAG
+		"scrap":     return Colors.TIER_SCRAP
+		"salvage":   return Colors.TIER_SALVAGE
+		"component": return Colors.TIER_COMPONENT
+		"mil_spec":  return Colors.TIER_MIL_SPEC
+		"artifact":  return Colors.TIER_ARTIFACT
 	return Colors.PRIMARY
 
 func _spawn_arc_particle() -> void:

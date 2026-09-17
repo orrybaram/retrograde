@@ -17,7 +17,8 @@ func get_indicator_bounds() -> Rect2:
 	return Rect2()
 
 ## Returns a dictionary with information to display in the info box
-## Expected keys: "title", "subtitle", "details" (array of strings)
+## Keys: "title" (String), "lines" (Array of {"text": String, "color": Color}).
+## Called every frame while the indicator is shown, so values can change live.
 func get_indicator_info() -> Dictionary:
 	return {}
 

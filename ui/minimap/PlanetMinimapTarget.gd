@@ -17,7 +17,7 @@ func get_minimap_color() -> Color:
 	if planet and is_instance_valid(planet):
 		# Use the planet's color, slightly adjusted for visibility
 		return planet.color
-	return Color(1.0, 0.75, 0.0)  # Fallback amber
+	return Colors.PRIMARY
 
 func get_minimap_icon() -> String:
 	return "dot"

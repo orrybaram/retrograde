@@ -15,6 +15,10 @@ func _ready() -> void:
 	# Get the shader material from the ColorRect
 	if _color_rect and _color_rect.material is ShaderMaterial:
 		_material = _color_rect.material as ShaderMaterial
+		_material.set_shader_parameter("space_color", Colors.SPACE_BG)
+		_material.set_shader_parameter("nebula_color", Colors.NEBULA)
+		_material.set_shader_parameter("star_color_warm", Colors.STAR)
+		_material.set_shader_parameter("star_color_cool", Colors.NAV)
 	
 	# Find ship on next frame (gives scene tree time to initialize)
 	call_deferred("_find_ship")

@@ -3,6 +3,7 @@ class_name ScrapNode
 
 ## Harvestable resource node. Extends OrbitalNode with HP, tier, kind, and amount.
 ## Four-state machine: ScrapIdleState → ScrapInRangeState → ScrapHarvestingState → ScrapDepletedState.
+## Extraction is a hold-and-release timing check (see HarvestTiming); HP mirrors its progress for visuals.
 ## Emits resource_harvested(amount, kind, position, tier_name) when fully depleted.
 ## Returns to pool via ResourceNodePool after the depletion animation completes.
 
@@ -15,7 +16,6 @@ signal can_harvest_changed(can_harvest: bool)
 @export var kind: String = "Scrap"
 @export var amount: int = 1
 @export var max_amount: int = 1
-@export var harvest_rate: float = 10.0  # DPS applied to scrap HP during harvesting
 @export var base_hp: float = 30.0
 @export var trophy_hp_multiplier: float = 2.0
 
@@ -34,6 +34,7 @@ var _trophy_pulse_tween: Tween = null
 var _state_machine: StateMachine
 var health_component: HealthComponent
 var _shape_instance: Node2D = null
+var timing: HarvestTiming = null  # created lazily when a harvest starts; null = untouched
 
 const _SHAPE_SCENES := [
 	preload("res://entities/resources/ScrapShapes/ScrapShape0.tscn"),
@@ -234,8 +235,7 @@ func on_spawn() -> void:
 		if main:
 			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
 
-	# Restore harvest rate (zeroed on despawn)
-	harvest_rate = 10.0
+	timing = null
 
 	# Trophy roll for pooled nodes
 	is_trophy = RNG.rng.randi() % 10 == 0
@@ -276,7 +276,7 @@ func on_despawn() -> void:
 	# Reset resource amounts and HP
 	amount = 0
 	max_amount = 0
-	harvest_rate = 0.0
+	timing = null
 	health_component.max_hp = base_hp
 	health_component.reset()
 
@@ -314,7 +314,23 @@ func _finish_depletion() -> void:
 	if not _is_depleted:
 		_deplete_resource()
 
+## Mirror extraction progress into HP (drives shrink/fade and sparkles) and shake the
+## shape harder as the bar fills.
+func sync_harvest_visual() -> void:
+	var progress := timing.progress if timing else 0.0
+	health_component.current_hp = health_component.max_hp * (1.0 - progress)
+	_update_visual()
+	var visual := _find_visual_node()
+	if not visual:
+		return
+	if not visual.has_meta("base_position"):
+		visual.set_meta("base_position", visual.position)
+	var base: Vector2 = visual.get_meta("base_position")
+	var amp := 2.5 * progress * progress
+	visual.position = base + Vector2(randf_range(-amp, amp), randf_range(-amp, amp))
+
 func _activate_trophy() -> void:
+	timing = null
 	sparkle_particles = get_node_or_null("SparkleParticles") as SparkleParticles
 	if not sparkle_particles:
 		return

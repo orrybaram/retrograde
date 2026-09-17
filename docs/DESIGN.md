@@ -540,7 +540,8 @@ The Tractor Beam dramatically extends the vacuum field's range and pull speed. S
 
 **Tension source:** Skill. Better execution = better rewards. The player improves at cracking containers over time, which feels like their character getting better even though it's the player's own skill growth.
 
-> **TODO**: Design the specific timing mechanic - what does the player see and press?
+**Current prototype (scrap nodes):** hold ACTION and a marker sweeps an `E X T R A C T` bar under the ship (1.6s; trophies 2.0s with a tighter zone). Release inside the sweet zone → normal roll; release in its centre slice → PERFECT (rolls as trophy; trophies take best of two). Release early → progress kept but decays; release late or hold to the end → OVERLOAD (Slag). Payoff scales by tier: hitstop, shake, burst, PERFECT shockwave, loot chip flying into the cargo readout. Code: `HarvestTiming`, `HarvestJuice`, `HarvestMeter`. Iterate with `tools/play.sh playtests/harvest.play`.
+
 > **TODO**: Define container tiers and timing difficulty per zone.
 > **TODO**: Replace current two-phase scanner minigame with this system.
 
@@ -1378,7 +1379,7 @@ The ship visually changes with every upgrade, telling the story of the player's 
 The ship starts as a clean (if ugly) junker and gradually becomes a **patchwork monster** - covered in bolted-on components, strapped-down containers, and jury-rigged systems. It should look like something built by a person who keeps finding useful junk and attaching it. Because that's exactly what it is.
 
 **Artifact upgrades** are visually distinct and unsettling:
-- Artifact components glow - a faint pulsing light that doesn't match the amber palette
+- Artifact components glow - a faint pulsing purple light (`Colors.TITAN`), the one hue the rest of the world never uses
 - They look *different* from the practical junk - smoother, more geometric, almost organic
 - The more artifacts installed, the more the ship looks like two things bolted together: a human junker and something *else*
 - Late-game: a ship with full artifacts looks alien. The player should be able to see the Titan's influence on their own vessel.
@@ -1548,9 +1549,9 @@ As the player progresses inward and dismantles more containment infrastructure, 
 
 See `CLAUDE.md` for detailed visual guidelines. Core principles:
 
-- **Cassette futurism** - CRT monitors, amber phosphor, tape drives, blinking indicator lights
+- **Cassette futurism** - CRT monitors, faded mustard phosphor, tape drives, blinking indicator lights
 - **Monospace everything** - Terminal-style UI throughout
-- **Black and amber** - Primary palette, never deviate
+- **"Violet Signal" palette** - sun-bleached and warm, like a faded photo. Olive-black space (`#14130F`), khaki/umber hulls, faded mustard UI (`#E8C170`), dusty orange planets, sage for success, rust red for danger. Blue (`#6FB8D2`) means navigation. Purple (`#B58AE0`) is reserved for the Titan and Artifacts, so it always signals something rare or wrong. Source of truth: `scripts/Colors.gd`.
 - **Minimalist** - No gradients, no polish, no sleekness. Functional and worn.
 
 ### 6.2 Audio Direction

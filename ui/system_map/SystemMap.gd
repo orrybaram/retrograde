@@ -14,7 +14,7 @@ signal map_closed
 @export var space_station_orbit_color: Color = Colors.MOON_ORBIT
 @export var sun_color: Color = Colors.SUN
 @export var ship_color: Color = Colors.PRIMARY
-@export var space_station_color: Color = Color(0.6, 0.6, 0.7, 1.0)
+@export var space_station_color: Color = Colors.HULL_LIGHT
 
 @export_group("Display")
 @export var padding: float = 80.0  ## Padding from screen edges
