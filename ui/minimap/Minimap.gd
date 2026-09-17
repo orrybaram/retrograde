@@ -2,6 +2,8 @@ extends Control
 class_name Minimap
 
 ## Radar-style minimap that displays the ship and nearby tracked entities.
+## Each MinimapTarget draws its own marker (see draw_marker), using the shape helpers
+## below, so markers can look like what they stand for.
 
 ## The display radius of the minimap in pixels
 @export var display_radius: float = 70.0
@@ -10,13 +12,18 @@ class_name Minimap
 @export var world_range: float = 10000.0
 
 ## Planet size scaling
-@export var planet_size_multiplier: float = 1.0  ## Multiplier to make planets visible on minimap
+@export var planet_size_multiplier: float = 1.3  ## Multiplier to make planets visible on minimap
 
 ## Colors
 @export var background_color: Color = Colors.UI_BACKGROUND_LIGHT
 @export var border_color: Color = Colors.UI_BORDER
 @export var ring_color: Color = Colors.PRIMARY_MEDIUM
-@export var ship_color: Color = Colors.PRIMARY
+@export var ship_color: Color = Colors.CREAM
+@export var nav_color: Color = Colors.NAV
+
+const SHIP_SIZE := 7.0
+const NAV_SIZE := 9.0
+const EDGE_INSET := 11.0 # how far inside the rim pinned markers sit
 
 ## Whether to rotate the minimap with the ship's heading
 @export var rotate_with_ship: bool = false
@@ -69,9 +76,12 @@ func _draw() -> void:
 	# Sort by priority (lower priority drawn first, so higher priority is on top)
 	visible_targets.sort_custom(func(a, b): return a.get_minimap_priority() < b.get_minimap_priority())
 	
+	# Nav diamond goes underneath, so it frames markers instead of covering them
+	_draw_nav_target(center, ship_rotation)
+
 	for target in visible_targets:
 		_draw_target(center, target, ship_rotation)
-	
+
 	# Draw ship indicator at center (always on top)
 	_draw_ship_indicator(center)
 
@@ -106,61 +116,69 @@ func _draw_target(center: Vector2, target: MinimapTarget, ship_rotation: float) 
 	var minimap_pos = relative_pos / world_range * display_radius
 	
 	var target_size = target.get_minimap_size()
-	
-	# Skip targets only when they've fully exited the bounds (center + size is outside)
+	var view_rotation: float = -ship_rotation - PI / 2 if rotate_with_ship else 0.0
+
 	if minimap_pos.length() > display_radius + target_size:
-		return
-	
-	var screen_pos = center + minimap_pos
-	var target_color = target.get_minimap_color()
-	var icon = target.get_minimap_icon()
-	
-	match icon:
-		"dot":
-			draw_circle(screen_pos, target_size, target_color)
-		"diamond":
-			_draw_diamond(screen_pos, target_size, target_color)
-		"triangle":
-			_draw_triangle(screen_pos, target_size, target_color, 0)
-		"square":
-			var rect = Rect2(screen_pos - Vector2(target_size, target_size), Vector2(target_size * 2, target_size * 2))
-			draw_rect(rect, target_color)
-		_:
-			draw_circle(screen_pos, target_size, target_color)
+		if not target.pins_to_edge():
+			return
+		# Out of range: hold it on the rim, pointing the way
+		minimap_pos = minimap_pos.normalized() * (display_radius - EDGE_INSET)
+
+	target.draw_marker(self, center + minimap_pos, target_size, view_rotation)
 
 func _draw_ship_indicator(center: Vector2) -> void:
-	# Draw a crosshair at the center
-	_draw_crosshair(center, 6.0, ship_color)
+	# The player's ship: a cream arrowhead along its heading
+	var heading := -PI / 2 if rotate_with_ship else ship.rotation
+	draw_chevron(self, center, SHIP_SIZE, heading, ship_color)
 
-func _draw_crosshair(pos: Vector2, marker_size: float, color: Color) -> void:
-	var line_width = 1.5
-	# Horizontal line
-	draw_line(pos + Vector2(-marker_size, 0), pos + Vector2(marker_size, 0), color, line_width)
-	# Vertical line
-	draw_line(pos + Vector2(0, -marker_size), pos + Vector2(0, marker_size), color, line_width)
+## Where to put a world position on the minimap (pinned to the rim when out of range).
+func _to_minimap(center: Vector2, world_pos: Vector2, ship_rotation: float, pin: bool) -> Variant:
+	var relative_pos := world_pos - ship.global_position
+	if rotate_with_ship:
+		relative_pos = relative_pos.rotated(-ship_rotation - PI / 2)
+	var minimap_pos := relative_pos / world_range * display_radius
+	if minimap_pos.length() > display_radius - EDGE_INSET:
+		if not pin:
+			return null
+		minimap_pos = minimap_pos.normalized() * (display_radius - EDGE_INSET)
+	return center + minimap_pos
 
-func _draw_triangle(pos: Vector2, marker_size: float, color: Color, angle: float) -> void:
-	var points = PackedVector2Array()
-	# Triangle pointing up by default
-	var base_points = [
-		Vector2(0, -marker_size),      # Top
-		Vector2(-marker_size * 0.7, marker_size * 0.5),  # Bottom left
-		Vector2(marker_size * 0.7, marker_size * 0.5)    # Bottom right
-	]
-	
-	for point in base_points:
-		points.append(pos + point.rotated(angle))
-	
-	draw_polygon(points, PackedColorArray([color, color, color]))
-
-func _draw_diamond(pos: Vector2, marker_size: float, color: Color) -> void:
-	var points = PackedVector2Array([
-		pos + Vector2(0, -marker_size),     # Top
-		pos + Vector2(marker_size, 0),      # Right
-		pos + Vector2(0, marker_size),      # Bottom
-		pos + Vector2(-marker_size, 0)      # Left
+## The nav target (waypoint, or home): a blue diamond outline, held on the rim when far.
+func _draw_nav_target(center: Vector2, ship_rotation: float) -> void:
+	var target := NavSystem.get_target()
+	if not target:
+		return
+	var pos: Vector2 = _to_minimap(center, target.get_position(), ship_rotation, true)
+	var points := PackedVector2Array([
+		pos + Vector2(0, -NAV_SIZE), pos + Vector2(NAV_SIZE, 0),
+		pos + Vector2(0, NAV_SIZE), pos + Vector2(-NAV_SIZE, 0), pos + Vector2(0, -NAV_SIZE),
 	])
-	draw_polygon(points, PackedColorArray([color, color, color, color]))
+	draw_polyline(points, nav_color, 1.5)
+	draw_circle(pos, 1.2, nav_color)
+
+## Present time in seconds, for blinking/pulsing markers.
+static func now() -> float:
+	return Time.get_ticks_msec() / 1000.0
+
+## Ship-like arrowhead pointing along `angle` (0 = +x).
+static func draw_chevron(canvas: CanvasItem, pos: Vector2, marker_size: float, angle: float, color: Color) -> void:
+	var points := PackedVector2Array()
+	for p in [Vector2(1.0, 0.0), Vector2(-0.8, 0.7), Vector2(-0.4, 0.0), Vector2(-0.8, -0.7)]:
+		points.append(pos + (p * marker_size).rotated(angle))
+	canvas.draw_colored_polygon(points, color)
+
+static func draw_diamond(canvas: CanvasItem, pos: Vector2, marker_size: float, color: Color) -> void:
+	canvas.draw_colored_polygon(PackedVector2Array([
+		pos + Vector2(0, -marker_size), pos + Vector2(marker_size, 0),
+		pos + Vector2(0, marker_size), pos + Vector2(-marker_size, 0),
+	]), color)
+
+## Small irregular chunk (a squashed quad) turned by `angle`.
+static func draw_fleck(canvas: CanvasItem, pos: Vector2, marker_size: float, angle: float, color: Color) -> void:
+	var points := PackedVector2Array()
+	for p in [Vector2(1.0, -0.3), Vector2(0.2, 0.9), Vector2(-1.0, 0.4), Vector2(-0.4, -0.8)]:
+		points.append(pos + (p * marker_size).rotated(angle))
+	canvas.draw_colored_polygon(points, color)
 
 ## Register a target to be displayed on the minimap
 func register_target(target: MinimapTarget) -> void:

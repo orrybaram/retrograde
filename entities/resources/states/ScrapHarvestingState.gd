@@ -54,7 +54,7 @@ func _hit(grade: HarvestTiming.Grade) -> void:
 	var ship := scrap_node._ship_in_range
 	scrap_node.hits_left -= 1
 	var final := scrap_node.hits_left <= 0
-	var drops := GemData.drops_for_hit(grade, final, scrap_node.is_trophy, RNG.rng)
+	var drops := scrap_node.drops_for_hit(grade, final)
 
 	var world: Node = ship.get_parent() if ship and is_instance_valid(ship) else scrap_node.get_tree().current_scene
 	Gem.burst(world, scrap_node.global_position, scrap_node.get_orbital_velocity(), drops, final, RNG.rng)

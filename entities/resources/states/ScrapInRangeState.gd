@@ -37,7 +37,9 @@ func process(delta: float) -> void:
 		return
 
 	var new_can_harvest := false
-	if scrap_node.amount > 0 and not scrap_node._is_depleted:
+	# A stranded or wrecked ship can't harvest (the action key abandons ship there)
+	var disabled := ship.state_machine and (ship.state_machine.current_state is StrandedState or ship.state_machine.current_state is DestroyedState)
+	if scrap_node.amount > 0 and not scrap_node._is_depleted and not disabled:
 		var relative_velocity := ship.linear_velocity - scrap_node.get_orbital_velocity()
 		if relative_velocity.length() < 100.0:
 			new_can_harvest = true

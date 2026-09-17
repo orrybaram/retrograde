@@ -65,3 +65,50 @@ func test_cash_in_empties_hold_and_returns_value() -> void:
 	assert_int(InventoryManager.cash_in()).is_equal(expected)
 	assert_int(InventoryManager.get_total_value()).is_equal(0)
 	assert_dict(InventoryManager.get_all_items()).is_empty()
+
+
+func test_wreck_keeps_seventy_percent_of_each_tier() -> void:
+	var ids := GemData.wreck_drops({"shard": 10, "gem": 3, "artifact": 1, "junk": 5})
+	assert_int(ids.count("shard")).is_equal(7)
+	assert_int(ids.count("gem")).is_equal(2)
+	assert_int(ids.count("artifact")).is_equal(1)
+	assert_int(ids.size()).is_equal(10)
+
+
+func test_wreck_gems_never_expire_and_survive_respawn_clear() -> void:
+	var world := auto_free(Node2D.new()) as Node2D
+	add_child(world)
+	var wreck := Gem.wreck_burst(world, Vector2.ZERO, ["gem", "shard"] as Array[String], RandomNumberGenerator.new())
+	var loose := Gem.spawn(world, "shard", Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+	wreck[0]._physics_process(Gem.LIFETIME + 1.0)
+	loose._physics_process(Gem.LIFETIME + 1.0)
+	assert_bool(wreck[0].is_queued_for_deletion()).is_false()
+	assert_bool(loose.is_queued_for_deletion()).is_true()
+	Gem.clear_all(true)
+	assert_int(Gem.active.size()).is_equal(2)
+	Gem.clear_all()
+	assert_int(Gem.active.size()).is_equal(0)
+
+
+func test_cap_evicts_loose_gems_before_wreck_gems() -> void:
+	var world := auto_free(Node2D.new()) as Node2D
+	add_child(world)
+	var wreck := Gem.wreck_burst(world, Vector2.ZERO, ["crystal"] as Array[String], RandomNumberGenerator.new())
+	for i in Gem.MAX_ACTIVE + 5:
+		Gem.spawn(world, "shard", Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+	assert_bool(Gem.active.has(wreck[0])).is_true()
+
+
+func test_wreck_rows_round_trip() -> void:
+	var world := auto_free(Node2D.new()) as Node2D
+	add_child(world)
+	Gem.wreck_burst(world, Vector2(100, -50), ["artifact"] as Array[String], RandomNumberGenerator.new())
+	Gem.spawn(world, "shard", Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+	var rows := Gem.wreck_rows()
+	assert_int(rows.size()).is_equal(1)
+	Gem.clear_all()
+	Gem.restore_wreck(world, rows)
+	assert_int(Gem.active.size()).is_equal(1)
+	assert_bool(Gem.active[0].persistent).is_true()
+	assert_str(Gem.active[0].item_id).is_equal("artifact")
+	assert_vector(Gem.active[0].global_position).is_equal(Vector2(100, -50))

@@ -38,8 +38,8 @@ func _ready() -> void:
 	if ship:
 		ship.fuel_depleted.connect(_on_fuel_depleted)
 
-	# Connect rescue beacon signal
-	EventBus.rescue_beacon_deployed.connect(_on_rescue_beacon_deployed)
+	# Stranded ship: abandon it (or get towed inside a tractor beam)
+	EventBus.abandon_ship_requested.connect(_on_abandon_ship_requested)
 	
 	# Start with menu visible and game paused
 	if start_menu:
@@ -129,11 +129,11 @@ func _on_relaunch_game() -> void:
 
 func _on_fuel_depleted() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
-		# Transition ship to stranded state (player must deploy rescue beacon)
+		# Transition ship to stranded state (player must abandon ship)
 		if ship and ship.state_machine and ship.state_machine.has_state("StrandedState"):
 			ship.state_machine.change_state("StrandedState")
 
-func _is_within_tractor_beam() -> bool:
+func is_within_tractor_beam() -> bool:
 	var stations = get_tree().get_nodes_in_group("space_stations")
 	for station in stations:
 		var tractor_beam = station.get_node_or_null("TractorBeamArea/TractorBeamCollision")
@@ -144,14 +144,19 @@ func _is_within_tractor_beam() -> bool:
 				return true
 	return false
 
-func _on_rescue_beacon_deployed() -> void:
+func _on_abandon_ship_requested() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
 		game_over_pending = true
 		# If within tractor beam range, rescue instead of death
-		if ship and _is_within_tractor_beam():
+		if ship and is_within_tractor_beam():
 			_show_game_over_delayed("Tractor Beam")
-		else:
-			_show_game_over_delayed("Out of Fuel")
+			return
+		# The ship stays adrift with its hold aboard, to be salvaged later
+		var derelict := DerelictShip.abandon(ship) if ship else null
+		var stranded := ship.state_machine.current_state as StrandedState if ship else null
+		if derelict and stranded:
+			stranded.abandon_to(derelict)
+		_show_game_over_delayed("Ship Abandoned")
 
 func _on_quit_to_menu() -> void:
 	current_game_state = MainGameState.MENU
@@ -163,6 +168,7 @@ func start_game() -> void:
 	if start_menu:
 		start_menu.visible = false
 	Gem.clear_all()
+	DerelictShip.clear_all(get_tree())
 
 	# Reset all game state for new game
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
@@ -215,7 +221,6 @@ func start_game() -> void:
 func load_game() -> void:
 	if start_menu:
 		start_menu.visible = false
-	Gem.clear_all()
 
 	# Hide ship while respawning to prevent showing at wrong location
 	if ship and ship.ship_polygon:
@@ -235,6 +240,11 @@ func load_game() -> void:
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	if gs and ship:
 		Save.load_into(gs, ship)
+		# Swap in the saved wrecks in one step, so no save in between can drop them
+		Gem.clear_all()
+		DerelictShip.clear_all(get_tree())
+		Save.restore_wreck_gems(ship.get_parent())
+		Save.restore_derelicts(ship.get_parent(), ship.ship_polygon)
 
 	# Restore planet orbital angles
 	Save.restore_planet_angles(get_tree())
@@ -290,7 +300,7 @@ func show_game_over(reason: String) -> void:
 
 func reset_game() -> void:
 	game_over_pending = false
-	Gem.clear_all()  # loose gems stay behind at the wreck
+	Gem.clear_all(true)  # wreck gems stay where the ship blew up
 	
 	# Calculate relaunch costs before resetting ship
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
@@ -302,7 +312,7 @@ func reset_game() -> void:
 		# Calculate penalty based on game over reason (no penalty for tractor beam)
 		if last_game_over_reason == "Ship Destroyed":
 			penalty_cost = 20
-		elif last_game_over_reason == "Out of Fuel":
+		elif last_game_over_reason == "Ship Abandoned":
 			penalty_cost = 10
 
 		# Deduct penalty from credits

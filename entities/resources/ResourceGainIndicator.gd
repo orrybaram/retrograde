@@ -11,6 +11,7 @@ class_name ResourceGainIndicator
 @export var base_scale: float = 1.0
 @export var upward_movement: float = 20.0  # Pixels to move upward during animation
 var stack_offset: float = 0.0  # Screen px to start above the anchor, so live indicators don't overlap
+var x_offset: float = 0.0  # Screen px sideways from the anchor, so repeated popups don't sit on one column
 
 var _tween: Tween = null
 var _world_position: Vector2 = Vector2.ZERO  # Store world position for tracking
@@ -28,7 +29,7 @@ func _process(_delta: float) -> void:
 
 func _place() -> void:
 	var anchor := follow.global_position if follow and is_instance_valid(follow) else _world_position
-	position = _world_to_screen(anchor) - Vector2(0, stack_offset + _rise)
+	position = _world_to_screen(anchor) + Vector2(x_offset, -(stack_offset + _rise))
 
 ## Convert world position to screen position (includes camera offset, smoothing and zoom)
 func _world_to_screen(world_pos: Vector2) -> Vector2:

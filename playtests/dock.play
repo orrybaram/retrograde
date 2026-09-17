@@ -1,0 +1,41 @@
+# Docking at a port: gems fly out of the hold into the port while the HUD credit count
+# rolls up, and the tank refills over ~5s (empty to full). Dialogue opens after the cash-in.
+# Run: tools/play.sh playtests/dock.play   (frames land in .playtest/dock_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+
+# Full-ish hold, empty tank, then redock
+eval inv.add_item("shard", 30)
+eval inv.add_item("gem", 12)
+eval inv.add_item("crystal", 4)
+eval inv.add_item("artifact", 2)
+eval ship.set("fuel", 0.0)
+assert gs.credits == 0 "no credits yet"
+eval ship.set_meta("pending_dockable", pt.node("space_ports"))
+eval ship.state_machine.change_state("LandedState")
+wait 0.9
+burst dock_1_cash_in 6 0.05
+wait_until gs.credits > 0 2
+assert inv.get_total_value() > 0 "hold still draining while credits count up"
+assert ship.fuel > 0.0 and ship.fuel < ship.max_fuel "tank refilling"
+assert not pt.visible_ui().has("SpacePortDialogue") "dialogue waits for the cash-in"
+wait 0.8
+screenshot dock_2_cash_in
+wait_until inv.get_total_value() == 0 and gs.credits == 60 + 96 + 100 + 200 3
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+wait 0.5
+screenshot dock_3_banked
+assert ship.fuel < ship.max_fuel "still refueling at ~3.5s"
+wait_until ship.fuel >= ship.max_fuel 3
+assert ship.fuel == ship.max_fuel "tank full"
+screenshot dock_4_full
+state

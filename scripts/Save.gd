@@ -32,6 +32,11 @@ static func save(gs: GameState, ship: Ship) -> void:
 	for k in inventory.keys():
 		cfg.set_value("cargo", k, inventory[k])
 	
+	# Gems left floating at wrecks, and abandoned ships
+	cfg.set_value("wreck", "gems", Gem.wreck_rows())
+	if ship and ship.is_inside_tree():
+		cfg.set_value("wreck", "derelicts", DerelictShip.snapshot_all(ship.get_tree()))
+
 	# Save upgrades
 	for upgrade_path in gs.upgrade_levels.keys():
 		var level = gs.upgrade_levels[upgrade_path]
@@ -111,6 +116,20 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 		ship.fuel = min(ship.fuel, ship.max_fuel)
 		ship.hull_strength = min(ship.hull_strength, ship.max_hull)
 		ship.update_mass_from_cargo()  # Update mass based on loaded cargo
+
+## Respawn saved wreck gems into `world`.
+static func restore_wreck_gems(world: Node) -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(Playtest.save_path()) != OK:
+		return
+	Gem.restore_wreck(world, cfg.get_value("wreck", "gems", []))
+
+## Respawn saved abandoned ships into `world`, drawn with `hull`'s polygons.
+static func restore_derelicts(world: Node, hull: Node2D) -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(Playtest.save_path()) != OK:
+		return
+	DerelictShip.restore_all(world, hull, cfg.get_value("wreck", "derelicts", []))
 
 ## Load planet orbital angles into a dictionary
 ## Returns a dictionary mapping planet keys to orbital angles
