@@ -61,7 +61,7 @@ func _on_inventory_changed(item_id: String = "", new_quantity: int = 0) -> void:
 	if new_weight > _last_cargo_weight:
 		_punch_cargo_label()
 	# Hold just filled: the harvest prompt adds a cash-in hint.
-	var max_cargo := ship.max_cargo_weight if ship and is_instance_valid(ship) else 160.0
+	var max_cargo := ship.max_cargo_weight if ship and is_instance_valid(ship) else 80.0
 	if new_weight >= max_cargo and _last_cargo_weight < max_cargo and EventBus.is_harvest_available():
 		_on_action_message_changed(EventBus.harvest_prompt())
 	_last_cargo_weight = new_weight
@@ -136,7 +136,7 @@ func _punch_credits_label() -> void:
 func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	if gs == null: return
 	var cargo_weight = InventoryManager.get_total_weight()
-	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 160
+	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 80
 	current_cargo_label.text = "%d" % int(cargo_weight)
 	var cargo_full: bool = cargo_weight >= max_cargo
 	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo
