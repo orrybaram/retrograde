@@ -147,7 +147,7 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	max_cargo_label.add_theme_color_override("font_color", Colors.DANGER if cargo_full else Colors.PRIMARY_DIM)
 
 	if ship and is_instance_valid(ship):
-		if ship.is_locked_to_planet():
+		if ship.is_locked_to_planet() or ship.is_landed_on_planet():
 			velocity_label.text = "0.0 m/s"
 		else:
 			var speed = ship.linear_velocity.length()

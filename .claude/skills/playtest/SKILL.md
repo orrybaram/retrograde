@@ -40,6 +40,7 @@ successful live exploration into one. A scenario stops at the first failing non-
 | `face <group> [tol]` | steer with turn keys toward nearest node in group (`planets`, `space_ports`, `space_stations`, `resource_nodes`) |
 | `wait <sec>` / `frames <n>` / `timescale <n>` | advance time (wait is game time) |
 | `stage_harvest [dist] [trophy]` | park the flying ship `dist`px (default 40; harvest circle radius 60) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_depleted`/`harvest_stopped` events |
+| `land <planet> [descent] [sec]` | autopilot: taps `thrust` to fall onto the planet at ≤ `descent` px/s (default 15) until `PlanetLandedState`; start nose-up over a pad with `pt.hover_over_site` |
 | `burst <name> <n> <sec>` | n screenshots `sec` apart → `<name>_00.png…` (for judging motion/feel) |
 | `wait_until <expr> [timeout]` | poll expression |
 | `assert <expr> ["message"]` | record failure if falsy |
@@ -83,6 +84,8 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 `playtests/scanner.play` checks the Planetary Scanner: nothing scans without it, buying it at the home store (`gs.has_planet_scanner`), holding in Rook's gravity field fills the meter (leaving resets it), the typed survey readout (`pt.node("scan_panel").body_text()`), the sweep (`.playtest/scanner_4_sweep_*.png`) and the scan surviving a reload. Helpers: `pt.planet(name)`, `pt.park_near_planet(name, dist, [angle_deg])` (parks riding along with the planet, nose away), `pt.scanner()` (`.progress()`, `.target()`), `pt.redock()` (warp to the home port and dock).
 
 `playtests/sites.play` scans Rook (scanner granted with `eval gs.set("has_planet_scanner", true)`) and checks its landing site: hidden before, revealed with a ping, on the minimap, tracked as `SITE`, riding the orbit (`.playtest/sites_*.png`). Sites: `pt.planet("Rook").get_landing_sites()`.
+
+`playtests/landing.play` lands on Rook's site (`PlanetLandedState`, not `LandedState`, which is docking): hidden sites refuse, a fast drop bounces and hurts, sideways doesn't land, `land Rook` touches down, the landed ship rides the orbit with no fuel burn, thrust lifts off for `liftoff_cost()` (gravity x cargo), and too little fuel burns out into `StrandedState` (`.playtest/landing_*.png`). Helpers: `pt.site(planet)`, `pt.hover_over_site(planet, height, [tilt_deg], [descent])`, `pt.altitude(planet)`, `pt.rel_speed(planet)`. Teleporting straight off a pad can re-use its contact for a frame: park away and wait a few frames first.
 
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.

@@ -3,7 +3,8 @@ class_name Ship
 
 ## Player ship entity. Owns fuel, hull (via HealthComponent), cargo weight, and
 ## input intent flags. Behavior is delegated to states via StateMachine:
-## FlyingState → LandedState / HarvestingState / StrandedState / DestroyedState.
+## FlyingState → LandedState (docked) / PlanetLandedState (on a landing site) /
+## HarvestingState / StrandedState / DestroyedState.
 ## Signals: fuel_changed, fuel_depleted, cargo_changed.
 
 @export var thrust_power: float = 350.0
@@ -89,6 +90,7 @@ var original_boost_lifetime: float = 1.5
 
 func _ready() -> void:
 	add_to_group("ship")
+	z_index = 2  # over planets, stations and landing pads it sits on
 	contact_monitor = true
 	max_contacts_reported = 4
 	can_sleep = false  # keep body awake while testing input; turn back on later if you like
@@ -203,6 +205,10 @@ func is_destroyed() -> bool:
 ## Helper method to check if ship is locked to planet
 func is_locked_to_planet() -> bool:
 	return state_machine and state_machine.current_state is LandedState
+
+## True while sitting on a planet's landing site.
+func is_landed_on_planet() -> bool:
+	return state_machine and state_machine.current_state is PlanetLandedState
 
 ## Reset boost particles to original state (after explosion)
 func reset_boost_particles() -> void:

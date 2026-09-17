@@ -9,10 +9,12 @@ class_name FlyingState
 var ALIGNMENT_ANGLE_THRESHOLD_DEGREES: float = 30.0
 var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after entering state
 var _state_enter_time: float = 0.0
+var _touchdown_pending := false
 
 func enter() -> void:
 	super.enter()
 	_state_enter_time = Time.get_ticks_msec() / 1000.0
+	_touchdown_pending = false
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -64,6 +66,9 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 				continue
 
 			var ship_speed = state.get_contact_local_velocity_at_position(i)
+			# Landing pads have their own rules (touch down, or a hard landing)
+			if collider is Planet and _pad_contact(state, collider, ship_speed):
+				break
 
 			var collider_speed = collider.linear_velocity
 			var relative_velocity = ship_speed - collider_speed
@@ -114,6 +119,28 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			
 			var force = Vector2.LEFT.rotated(ship.rotation) * power
 			state.apply_central_force(force)
+
+## Contact with a planet over one of its revealed landing pads: touch down gently, or
+## take damage and bounce. Returns true when the ship is over a pad (the ordinary
+## crash damage doesn't apply there).
+func _pad_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_velocity: Vector2) -> bool:
+	var site := Touchdown.site_under(planet, state.transform.origin)
+	if not site:
+		return false
+	if _touchdown_pending:
+		return true
+	var up := planet.global_position.direction_to(state.transform.origin)
+	var rel := contact_velocity - planet.linear_velocity
+	match Touchdown.judge(rel, state.transform.get_rotation(), up):
+		Touchdown.Result.LAND:
+			_touchdown_pending = true
+			ship.set_meta("pending_site", site)
+			ship.state_machine.change_state.call_deferred("PlanetLandedState")
+		Touchdown.Result.HARD:
+			ship.take_damage(Touchdown.hard_damage(rel.length(), ship.crash_damage_multiplier))
+			state.linear_velocity = Touchdown.bounce_velocity(rel, up, planet.linear_velocity)
+			EventBus.action_message_changed.emit("TOO FAST - SLOW DOWN TO LAND")
+	return true
 
 func _engine_coughing() -> bool:
 	return ship.low_fuel_effect != null and ship.low_fuel_effect.is_coughing()

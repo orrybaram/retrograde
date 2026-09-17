@@ -30,6 +30,9 @@ extends Node
 ##                                 nose on it, velocity matched — ready to hold `action`.
 ##                                 `trophy` forces the node to be a trophy. Sets pt.staged
 ##                                 (its HarvestTiming is pt.staged.timing once a harvest starts).
+##   land <planet> [descent] [sec] throttle real `thrust` presses to fall onto the planet at
+##                                 about <descent> px/s (default 15) until PlanetLandedState.
+##                                 Start nose-up above a pad (pt.hover_over_site).
 ##   timescale <n>                 set Engine.time_scale
 ##   log <text>                    echo text into the transcript
 ##   quit                          end the session
@@ -38,7 +41,8 @@ extends Node
 ##   ship, main, gs (GameState), inv (InventoryManager), bus (EventBus),
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
 ##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
-##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock())
+##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
+##       pt.site(planet), pt.hover_over_site(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
@@ -256,6 +260,8 @@ func execute(line: String) -> Dictionary:
 			reply["paths"] = paths
 		"stage_harvest":
 			await _stage_harvest(float(args[0]) if args.size() > 0 and args[0].is_valid_float() else 40.0, args.has("trophy"), reply)
+		"land":
+			await _land(args[0], float(args[1]) if args.size() > 1 else 15.0, float(args[2]) if args.size() > 2 else 15.0, reply)
 		"timescale":
 			Engine.time_scale = float(args[0])
 		"log":
@@ -346,6 +352,36 @@ func _face(group: String, tolerance: float, reply: Dictionary) -> void:
 		reply["ok"] = false
 		reply["error"] = "face timed out at bearing %s" % reply.get("bearing_deg")
 	await _frames(1)
+
+## Autopilot for a vertical descent: hold `thrust` whenever the ship falls faster than
+## `descent` px/s relative to the planet, release it otherwise.
+func _land(planet_name: String, descent: float, timeout: float, reply: Dictionary) -> void:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if not p or not ship:
+		reply["ok"] = false
+		reply["error"] = "land: no planet '%s' or no ship" % planet_name
+		return
+	var deadline := Time.get_ticks_msec() + int(timeout * 1000.0)
+	var thrusting := false
+	var fastest := 0.0
+	while Time.get_ticks_msec() < deadline and state_name() == "FlyingState":
+		var up := p.global_position.direction_to(ship.global_position)
+		var falling := -(ship.linear_velocity - p.linear_velocity).dot(up)
+		fastest = maxf(fastest, falling)
+		var want := falling > descent
+		if want != thrusting:
+			_key("thrust", want, reply)
+			thrusting = want
+		await get_tree().physics_frame
+	if thrusting:
+		_key("thrust", false, reply)
+	await _frames(2)
+	reply["state"] = state_name()
+	reply["max_descent"] = snappedf(fastest, 0.1)
+	if state_name() != "PlanetLandedState":
+		reply["ok"] = false
+		reply["error"] = "land: ended in %s" % state_name()
 
 ## Skip the flight: park the ship just behind the nearest live scrap node, nose on it,
 ## velocity matched, so the next `hold action` starts a harvest.
@@ -562,6 +598,37 @@ func park_near_planet(planet_name: String, dist: float, angle_deg := 180.0) -> v
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
 	ship.global_position = pos
 	ship.rotation = dir.angle()
+
+## Hover `height` px above a planet's first landing site (from its surface), nose tilted
+## `tilt_deg` off straight up, falling toward it at `descent` px/s relative to the planet.
+func hover_over_site(planet_name: String, height: float, tilt_deg := 0.0, descent := 0.0) -> void:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var site := p.get_landing_sites()[0] as LandingSite
+	var up := site.normal()
+	var pos := site.global_position + up * (PlanetLandedState.LANDED_HEIGHT + height)
+	var rid := ship.get_rid()
+	var rot := up.angle() + deg_to_rad(tilt_deg)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rot, pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, p.linear_velocity - up * descent)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_position = pos
+	ship.rotation = rot
+
+## The first landing site on a planet.
+func site(planet_name: String) -> LandingSite:
+	return planet(planet_name).get_landing_sites()[0]
+
+## Height of the ship's centre above a planet's surface.
+func altitude(planet_name: String) -> float:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Node2D
+	return ship.global_position.distance_to(p.global_position) - p.radius * p.collision_radius_ratio
+
+## Ship speed relative to a planet.
+func rel_speed(planet_name: String) -> float:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	return (ship.linear_velocity - planet(planet_name).linear_velocity).length()
 
 ## Warp back to the home port and dock (as if the player had flown in).
 func redock() -> void:

@@ -32,7 +32,7 @@ var _tracking: LandingSiteTrackingTarget = null
 func _ready() -> void:
 	add_to_group("landing_sites")
 	planet = get_parent() as Planet
-	z_index = 2
+	z_index = 1  # over the planet disc, under the ship
 	if planet:
 		var normal_angle := deg_to_rad(angle_degrees)
 		position = Vector2.from_angle(normal_angle) * surface_radius()

@@ -48,7 +48,9 @@ func close_inventory() -> void:
 	# Only zoom out if not docked (LandedState manages zoom when docked)
 	if ship and ship.camera:
 		var is_docked = ship.is_locked_to_planet()
-		if not is_docked:
+		if ship.is_landed_on_planet():
+			ship.camera.zoom_camera_in(PlanetLandedState.CAMERA_ZOOM)
+		elif not is_docked:
 			ship.camera.zoom_camera_out()
 
 	dialogue_closed.emit()
