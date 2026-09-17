@@ -5,6 +5,9 @@
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -17,9 +20,11 @@ wait_until pt.state_name() == "FlyingState" 3
 # --- Near the station the prompt offers a tow (then refuel and carry on) ---
 eval ship.consume_fuel(ship.fuel + 1.0)
 wait_until pt.state_name() == "StrandedState" 2
-assert pt._action_message.contains("tractor beam") "tow prompt inside the beam"
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel_beam" 2
+assert get_tree().root.get_node("RobotRadio").current_line().confirm == "CALL TRACTOR BEAM" "robot offers a tow inside the beam"
 eval ship.set("fuel", ship.max_fuel)
 eval ship.state_machine.change_state("FlyingState")
+assert not get_tree().root.get_node("RobotRadio").is_active() "refueling withdraws the offer"
 
 # --- Far out, it's abandon ship ---
 eval pt.warp_to(ship.global_position + Vector2(4000, 0))
@@ -32,7 +37,13 @@ eval inv.add_item("artifact", 3)
 eval ship.set("linear_velocity", Vector2(120, 40))
 eval ship.consume_fuel(ship.fuel + 1.0)
 wait_until pt.state_name() == "StrandedState" 2
-assert pt._action_message.contains("abandon ship") "abandon prompt outside the beam"
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 2
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+assert pt.node("radio_panel").choice_text().contains("ABANDON SHIP") "robot offers to abandon ship outside the beam"
 screenshot abandon_1_prompt
 press action
 frames 2
@@ -43,8 +54,13 @@ wait 1
 assert ship.global_position.distance_to(pt.node("derelicts").global_position) < 6.0 "camera rides with the derelict"
 screenshot abandon_2_adrift
 wait_until main.current_game_state == 2 10
-wait_until pt.node("game_over_menu")._boot_pending 15
-assert str(pt.screen_text()).contains("SHIP ABANDONED") "game over says ship abandoned"
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+assert pt.node("radio_panel").message_text().contains("cargo's still aboard") "robot says the cargo is on the derelict"
 screenshot abandon_3_game_over
 press enter
 wait_until main.current_game_state == 1 30

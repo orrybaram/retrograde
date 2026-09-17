@@ -4,6 +4,9 @@
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 wait_until pt.state_name() == "LandedState" 5
 wait 0.5
 screenshot minimap_1_docked
@@ -23,6 +26,12 @@ eval pt.warp_to(ship.global_position + Vector2(4000, 2000))
 frames 5
 eval ship.consume_fuel(ship.fuel + 1.0)
 wait_until pt.state_name() == "StrandedState" 2
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 2
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
 press action
 frames 2
 assert pt.derelict_count() == 1 "empty ship still left behind"
@@ -31,8 +40,13 @@ assert pt.node("derelicts").minimap_target is DerelictMinimapTarget "derelict re
 wait 0.5
 screenshot minimap_3_abandoned
 wait_until main.current_game_state == 2 10
-wait_until pt.node("game_over_menu")._boot_pending 15
-assert str(pt.screen_text()).contains("SALVAGE THE WRECK FOR SCRAP") "empty-hold game over text"
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+assert pt.node("radio_panel").message_text().contains("empty hull for scrap") "empty-hold abandon text"
 press enter
 wait_until main.current_game_state == 1 30
 wait_until pt.state_name() == "LandedState" 5

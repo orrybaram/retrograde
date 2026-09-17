@@ -40,6 +40,9 @@ signal gem_collected(item_id: String, world_position: Vector2)
 signal hold_cashed_in(credits: int)
 ## Emitted when docking at a port converts the hold into credits.
 
+signal radio_message_requested(conversation: RadioConversation)
+## Ask the guide robot to radio the player. RobotRadio queues it by priority.
+
 const CARGO_FULL_MESSAGE := "Hold full - dock at a port to cash in"
 
 var _harvestable_nodes: Dictionary = {}  # Track ScrapNodes that can be harvested

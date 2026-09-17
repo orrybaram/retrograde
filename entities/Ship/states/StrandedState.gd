@@ -2,9 +2,10 @@ extends ShipState
 class_name StrandedState
 
 ## Handles the ship when fuel is depleted.
-## The ship drifts without control until the player abandons it (or, inside a station's
-## tractor beam, calls for a tow). Once abandoned, the hidden ship rides along with the
-## DerelictShip left in its place so the camera stays on it.
+## The ship drifts without control until the player confirms the robot's offer to
+## abandon it (or, inside a station's tractor beam, to call for a tow). Once abandoned,
+## the hidden ship rides along with the DerelictShip left in its place so the camera
+## stays on it.
 
 var _requested: bool = false
 var _in_beam: bool = false
@@ -28,13 +29,18 @@ func enter() -> void:
 	if ship.side_thruster_particles:
 		ship.side_thruster_particles.emitting = false
 
-	_show_prompt()
+	RobotRadio.confirmed.connect(_on_radio_confirmed)
+	_offer_rescue()
 
 func exit() -> void:
 	super.exit()
 	_requested = false
 	_derelict = null
-	EventBus.action_message_changed.emit("")
+	if RobotRadio.confirmed.is_connected(_on_radio_confirmed):
+		RobotRadio.confirmed.disconnect(_on_radio_confirmed)
+	# Refueled some other way: withdraw an offer nobody took
+	if RobotRadio.is_active() and RobotRadio.queue.current.id in [RobotRadio.MSG_OUT_OF_FUEL.id, RobotRadio.MSG_OUT_OF_FUEL_BEAM.id]:
+		RobotRadio.silence()
 
 ## Take over the ship's place with `derelict`: hide the hull and follow it.
 func abandon_to(derelict: DerelictShip) -> void:
@@ -46,12 +52,21 @@ func _check_beam() -> bool:
 	var main = ship.get_tree().get_first_node_in_group("main")
 	return main != null and main.has_method("is_within_tractor_beam") and main.is_within_tractor_beam()
 
-func _show_prompt() -> void:
-	var action_key = InputUtils.get_action_key_name("action")
-	if _in_beam:
-		EventBus.action_message_changed.emit('OUT OF FUEL - Press "%s" to call the tractor beam' % [action_key])
-	else:
-		EventBus.action_message_changed.emit('OUT OF FUEL - Press "%s" to abandon ship' % [action_key])
+## The robot radios the offer that fits: a free tow inside a tractor beam, otherwise
+## abandoning ship. Drifting across the beam's edge swaps one call for the other.
+func _offer_rescue() -> void:
+	EventBus.action_message_changed.emit("")
+	var offer := RobotRadio.MSG_OUT_OF_FUEL_BEAM if _in_beam else RobotRadio.MSG_OUT_OF_FUEL
+	var stale := RobotRadio.MSG_OUT_OF_FUEL if _in_beam else RobotRadio.MSG_OUT_OF_FUEL_BEAM
+	if RobotRadio.is_active() and RobotRadio.queue.current.id == stale.id:
+		RobotRadio.silence()
+	RobotRadio.request(offer)
+
+func _on_radio_confirmed(id: StringName) -> void:
+	if _requested or not (id == RobotRadio.MSG_OUT_OF_FUEL.id or id == RobotRadio.MSG_OUT_OF_FUEL_BEAM.id):
+		return
+	_requested = true
+	EventBus.abandon_ship_requested.emit()
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -62,15 +77,11 @@ func physics_process(delta: float) -> void:
 
 	if _requested:
 		return
-	# Drifting into or out of a tractor beam changes what the key does
+	# Drifting into or out of a tractor beam changes what the robot offers
 	var in_beam := _check_beam()
 	if in_beam != _in_beam:
 		_in_beam = in_beam
-		_show_prompt()
-	if Input.is_action_just_pressed("action"):
-		_requested = true
-		EventBus.action_message_changed.emit("")
-		EventBus.abandon_ship_requested.emit()
+		_offer_rescue()
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	# No thrust control — the ship just drifts, or rides with its derelict once abandoned

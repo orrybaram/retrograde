@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Gotcha! The station's tractor beam has you. Cargo and credits are safe."
+expression = &"happy"
+confirm = "DOCK"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"tractor_rescue"
+priority = 3
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1")])

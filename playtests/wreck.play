@@ -4,6 +4,9 @@
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -29,7 +32,12 @@ wait 0.3
 assert ship.global_position.distance_to(pt.explosion().global_position) < 1.0 "camera stays on the blast"
 wait_until pt.explosion()._debris[0].node.position.length() > 200.0 2
 wait_until main.current_game_state == 2 10
-wait_until pt.node("game_over_menu")._boot_pending 15
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_destroyed" 3
+press enter
+frames 2
+press enter
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
 press enter
 wait_until main.current_game_state == 1 30
 wait_until pt.state_name() == "LandedState" 5

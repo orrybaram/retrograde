@@ -28,3 +28,25 @@ Action rows:
    ACTION NAME                    COST/VALUE    (unselected)
    ACTION NAME                    COST/VALUE    (unavailable/owned: Colors.PRIMARY_DIM #6B5A34)
 ```
+
+## Robot Radio (guide robot help messages)
+
+```
+EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + show-once flags) -> RadioPanel (HUD)
+```
+
+- Data: `RadioConversation` (id, priority, once, lines) of `RadioLine` (speaker, text, expression, glitch).
+  Bundled messages live in `entities/Robot/radio/messages/*.tres`. `{key:<action>}` in text becomes the bound key.
+- Higher priority interrupts (the interrupted one replays after); otherwise queued by priority, FIFO.
+- `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
+- Built-in triggers in `scripts/RobotRadio.gd`: undock, low fuel, hold full, scrap in range.
+- Continue: SPACE (TAB/ENTER aliases) finishes the speech, then moves on (next / confirm / close).
+  SPACE is also the flight action key, so it only drives conversations that pause the game or
+  contain a confirm; other tips take TAB/ENTER and auto-dismiss after `RadioLine.read_time()`.
+- `pause_game` conversations (controls + scrap tutorials, game-over calls) pause the tree and never
+  time out. The unpause waits two physics frames so the closing SPACE isn't read as dock/harvest.
+- Confirm lines (`RadioLine.confirm`) show `> ACTION` and can't time out.
+  `RobotRadio.confirm()` clears the radio, then emits `confirmed(id)`. Used for the out-of-fuel offer
+  (StrandedState: abandon ship, or a tractor-beam tow inside a station's beam) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).
+- Only a powered ship (Flying/Harvesting) can harvest, so a stranded ship's SPACE stays with the radio.
+- `{name}` placeholders come from `conv.with_vars({...})`.
