@@ -62,3 +62,22 @@ func test_planet_color_change_updates_visual() -> void:
 	var visual := planet.get_node("PlanetVisual") as PlanetVisual
 	planet.color = Color(0.2, 0.4, 0.6, 1.0)
 	assert_object(visual.base_color).is_equal(Color(0.2, 0.4, 0.6, 1.0))
+
+
+func test_glow_boost_strongest_near_sun() -> void:
+	assert_float(PlanetVisual.glow_boost_for(10000.0, 50000.0, 250000.0, 1.6)).is_equal_approx(1.6, 0.0001)
+	assert_float(PlanetVisual.glow_boost_for(150000.0, 50000.0, 250000.0, 1.6)).is_equal_approx(1.3, 0.0001)
+	assert_float(PlanetVisual.glow_boost_for(900000.0, 50000.0, 250000.0, 1.6)).is_equal_approx(1.0, 0.0001)
+
+
+func test_glow_boost_handles_degenerate_range() -> void:
+	assert_float(PlanetVisual.glow_boost_for(10.0, 100.0, 100.0, 1.5)).is_equal(1.5)
+	assert_float(PlanetVisual.glow_boost_for(200.0, 100.0, 100.0, 1.5)).is_equal(1.0)
+
+
+func test_glare_peaks_at_surface_and_fades_out() -> void:
+	assert_float(PlanetVisual.glare_alpha_for(900.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.5, 0.0001)
+	assert_float(PlanetVisual.glare_alpha_for(1000.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.5, 0.0001)
+	assert_float(PlanetVisual.glare_alpha_for(2000.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.0625, 0.0001)
+	assert_float(PlanetVisual.glare_alpha_for(3000.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.0, 0.0001)
+	assert_float(PlanetVisual.glare_alpha_for(9000.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.0, 0.0001)
