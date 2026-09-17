@@ -50,3 +50,19 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
   (StrandedState: abandon ship, or a tractor-beam tow inside a station's beam) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).
 - Only a powered ship (Flying/Harvesting) can harvest, so a stranded ship's SPACE stays with the radio.
 - `{name}` placeholders come from `conv.with_vars({...})`.
+
+## Planetary Scanner & Landing (DESIGN.md 4.10)
+
+```
+PlanetScanner (on Ship) -> PlanetScan (meter) + ScanSweep (on Planet) -> GameState.scanned_planets -> EventBus.planet_scanned
+LandingSite (child of Planet, group landing_sites) -> revealed on scan; minimap + LandingSiteTrackingTarget
+FlyingState._pad_contact -> Touchdown rules -> PlanetLandedState (owns zoom, prompt, SiteDrill)
+SiteDrill (HarvestTiming per layer, GemData.drill_drops) -> site.spend() -> GameState.spent_sites (regrow timers)
+```
+
+- `LandedState` is docking at a port; landing on a planet is `PlanetLandedState`.
+- Unlocks: upgrade path `planet_scanner`, flag `GameState.has_planet_scanner` (separate from Scanner PULSE).
+- Save: `[scan] planets` and `[sites] regrow` (site_id -> seconds left). `Save.save_scanned_planets` /
+  `Save.save_site_regrowth` write only their section mid-flight; keep file IO out of code unit tests reach
+  (the default save path in tests is the player's real save).
+- Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `SiteDrill.*`, `GemData.DRILL_*`, `LandingSite.*REGROW_TIME`.

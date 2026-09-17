@@ -57,6 +57,8 @@ wait_until pt.popup_counts() == inv.get_all_items() 3
 hold thrust 0.1
 wait_until pt.state_name() == "FlyingState" 2
 eval pt.park_near_planet("Rook", 2600, 30)
+# The last dig spent the site; skip its regrow time (see regrow.play)
+eval gs.tick_site_regrowth(1000)
 frames 5
 eval pt.hover_over_site("Rook", 60)
 land Rook 15 15
@@ -75,6 +77,8 @@ assert pt.state_name() == "PlanetLandedState" "banking doesn't lift off"
 hold thrust 0.1
 wait_until pt.state_name() == "FlyingState" 2
 eval pt.park_near_planet("Rook", 2600, 30)
+# The last dig spent the site; skip its regrow time (see regrow.play)
+eval gs.tick_site_regrowth(1000)
 frames 5
 eval pt.hover_over_site("Rook", 60)
 land Rook 15 15

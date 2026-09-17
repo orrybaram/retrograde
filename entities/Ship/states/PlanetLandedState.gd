@@ -92,6 +92,11 @@ func physics_process(delta: float) -> void:
 	if Input.is_action_pressed("thrust"):
 		lift_off()
 		return
+	if drill.phase == SiteDrill.Phase.DONE and not site.is_spent():
+		# Regrown while we sat here: a fresh dig
+		drill.queue_free()
+		drill = SiteDrill.attach(ship, site)
+	var was_done := drill.phase == SiteDrill.Phase.DONE
 	if Input.is_action_just_pressed("reverse_thrust"):
 		drill.bank()
 	# A dig starts on a fresh press, not a key still held from flying
@@ -99,6 +104,8 @@ func physics_process(delta: float) -> void:
 	if drill.phase == SiteDrill.Phase.READY:
 		holding = Input.is_action_just_pressed("action")
 	drill.tick(delta, holding)
+	if drill.phase == SiteDrill.Phase.DONE and not was_done:
+		_save_spent_sites()
 	_update_prompt()
 
 ## Burn the liftoff fuel and launch. Too little fuel burns the tank dry instead.
@@ -109,7 +116,10 @@ func lift_off() -> void:
 		ship.consume_fuel(ship.fuel)
 		return
 	ship.consume_fuel(cost)
+	var was_done := drill.phase == SiteDrill.Phase.DONE
 	drill.abort()
+	if drill.phase == SiteDrill.Phase.DONE and not was_done:
+		_save_spent_sites()
 	_launching = true
 	ship.thruster_particles.emitting = true
 
@@ -132,6 +142,12 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = planet.linear_velocity
 	state.angular_velocity = 0.0
 
+## Keep the spent site across a quit without saving the landed ship itself.
+func _save_spent_sites() -> void:
+	var gs := ship.get_tree().get_first_node_in_group("game_state") as GameState
+	if gs:
+		Save.save_site_regrowth(gs.spent_sites)
+
 func _update_prompt() -> void:
 	var prompt := prompt_text()
 	if prompt != _prompt:
@@ -151,6 +167,9 @@ func prompt_text() -> String:
 			if drill.can_bank():
 				return '"%s" drill deeper (%d/%d) - "%s" bank' % [action_key, drill.layer + 1, drill.layer_count(), InputUtils.get_action_key_name("reverse_thrust")]
 			return 'hold "%s" to drill - %s' % [action_key, liftoff]
+	if drill.end_reason == "spent":
+		var left := ceili(site.regrow_left())
+		return "SITE SPENT - regrows in %d:%02d - %s" % [left / 60, left % 60, liftoff]
 	return "DIG COMPLETE - %s" % liftoff
 
 func _flying() -> FlyingState:

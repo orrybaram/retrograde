@@ -6,6 +6,8 @@ class_name LandingSite
 ## Drawn as a pad bracket with a blinking beacon mast, pointing out of the surface.
 ## Hidden (on the map, minimap and tracking too) until the Planetary Scanner maps its
 ## planet. `rich` sites (moons) drill deeper, better gems.
+## A dig spends the site: its beacon dims to PRIMARY_DIM and it can't be drilled until it
+## regrows (REGROW_TIME of play, RICH_REGROW_TIME for rich sites; timers in GameState).
 
 const PAD_WIDTH := 120.0  # along the surface
 const PAD_LIP := 10.0  # bracket upright height
@@ -16,6 +18,8 @@ const BLINK_PERIOD := 1.2
 const REVEAL_TIME := 0.8
 const PING_RADIUS := 140.0
 const LINE_WIDTH := 4.0
+const REGROW_TIME := 300.0
+const RICH_REGROW_TIME := 450.0
 
 ## Where on the rim, in degrees (0 = the planet's +x side).
 @export_range(0.0, 360.0) var angle_degrees: float = 0.0
@@ -28,6 +32,8 @@ var minimap_target: LandingSiteMinimapTarget = null
 var _revealed := false
 var _reveal_time := 0.0  # counts up after reveal, for the ping
 var _tracking: LandingSiteTrackingTarget = null
+var _gs: GameState = null
+var _was_spent := false
 
 func _ready() -> void:
 	add_to_group("landing_sites")
@@ -72,6 +78,31 @@ func velocity() -> Vector2:
 func is_revealed() -> bool:
 	return _revealed
 
+func regrow_time() -> float:
+	return RICH_REGROW_TIME if rich else REGROW_TIME
+
+## Seconds until a dug-out site can be drilled again (0 when it can).
+func regrow_left() -> float:
+	var gs := _game_state()
+	return gs.site_regrow_left(site_id()) if gs else 0.0
+
+func is_spent() -> bool:
+	return regrow_left() > 0.0
+
+## A dig finished here: dim the beacon and start the regrow timer.
+func spend() -> void:
+	var gs := _game_state()
+	if not gs:
+		return
+	gs.spend_site(site_id(), regrow_time())
+	_was_spent = true
+	queue_redraw()
+
+func _game_state() -> GameState:
+	if not is_instance_valid(_gs) and is_inside_tree():
+		_gs = get_tree().get_first_node_in_group("game_state") as GameState
+	return _gs if is_instance_valid(_gs) else null
+
 func tracking_target() -> LandingSiteTrackingTarget:
 	if not _tracking:
 		_tracking = LandingSiteTrackingTarget.new(self)
@@ -87,6 +118,7 @@ func _on_planet_scanned(scanned: Planet) -> void:
 
 func _set_revealed(value: bool, animate: bool) -> void:
 	_revealed = value
+	_was_spent = is_spent()
 	visible = value
 	_reveal_time = 0.0 if animate else REVEAL_TIME
 	queue_redraw()
@@ -94,11 +126,15 @@ func _set_revealed(value: bool, animate: bool) -> void:
 func _process(delta: float) -> void:
 	if not _revealed:
 		return
+	var spent := is_spent()
+	if _was_spent and not spent:
+		_reveal_time = 0.0  # regrown: ping again
+	_was_spent = spent
 	_reveal_time += delta
 	queue_redraw()
 
 func beacon_color() -> Color:
-	return Colors.PRIMARY
+	return Colors.PRIMARY_DIM if is_spent() else Colors.PRIMARY
 
 func _draw() -> void:
 	var t := clampf(_reveal_time / REVEAL_TIME, 0.0, 1.0)
@@ -114,7 +150,8 @@ func _draw() -> void:
 	var mast := Vector2(0, -half - 12.0)
 	var top := mast + Vector2(MAST_HEIGHT * grow, 0)
 	draw_line(mast, top, Color(Colors.HULL_LIGHT, t), 2.0)
-	var lit := fmod(_reveal_time, BLINK_PERIOD) < BLINK_PERIOD * 0.55
+	# A spent beacon glows dim and steady
+	var lit := _was_spent or fmod(_reveal_time, BLINK_PERIOD) < BLINK_PERIOD * 0.55
 	draw_circle(top, BEACON_SIZE * 2.2, Color(color, color.a * (0.25 if lit else 0.08)))
 	draw_circle(top, BEACON_SIZE, color if lit else Color(color, color.a * 0.4))
 	# Reveal ping

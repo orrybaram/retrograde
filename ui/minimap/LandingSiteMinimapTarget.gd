@@ -2,7 +2,7 @@ extends MinimapTarget
 class_name LandingSiteMinimapTarget
 
 ## MinimapTarget for a revealed LandingSite: a small mustard pad bracket facing out of
-## the planet, with a blinking beacon dot.
+## the planet, with a blinking beacon dot. Spent sites are dim and steady.
 
 var site: LandingSite
 
@@ -34,5 +34,5 @@ func draw_marker(map: Minimap, pos: Vector2, size: float, view_rotation: float) 
 	var side := out.orthogonal() * size
 	var lip := out * size * 0.8
 	map.draw_polyline(PackedVector2Array([pos - side + lip, pos - side, pos + side, pos + side + lip]), color, 1.5)
-	var lit := fmod(Minimap.now(), LandingSite.BLINK_PERIOD) < LandingSite.BLINK_PERIOD * 0.55
+	var lit := site.is_spent() or fmod(Minimap.now(), LandingSite.BLINK_PERIOD) < LandingSite.BLINK_PERIOD * 0.55
 	map.draw_circle(pos + out * size * 1.6, 1.3, color if lit else Color(color, 0.35))

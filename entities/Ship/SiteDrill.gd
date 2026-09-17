@@ -7,6 +7,7 @@ class_name SiteDrill
 ## hold's magnet. Deeper layers roll better gems, narrower zones on the last ones.
 ## An early release keeps (decaying) progress. Holding to OVERLOAD ends the dig with
 ## drill kickback. Between layers the player can bank (stop) and keep what was dug.
+## Every finished dig spends the site; a spent site can't be drilled (phase starts DONE).
 ## Draws the drill bit and dust under the ship while it bites.
 
 enum Phase { READY, DIGGING, DONE }
@@ -43,6 +44,9 @@ func _ready() -> void:
 	z_index = -1
 	if not rng:
 		rng = RNG.rng
+	if site and site.is_spent():
+		phase = Phase.DONE
+		end_reason = "spent"
 	_dust = CPUParticles2D.new()
 	_dust.emitting = false
 	_dust.amount = 24
@@ -137,6 +141,8 @@ func _end(reason: String) -> void:
 	phase = Phase.DONE
 	end_reason = reason
 	_set_holding(false)
+	if is_instance_valid(site):
+		site.spend()
 	EventBus.dig_ended.emit(site, reason, layer)
 
 ## Gems burst from the drill hole and the ship's magnet pulls them into the hold.

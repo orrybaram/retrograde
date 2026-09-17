@@ -1,0 +1,88 @@
+# Landing site depletion: a dig spends the site (dim beacon, drill refuses), the regrow
+# timer survives a save + reload, and the site regrows after its time.
+# Run: tools/play.sh playtests/regrow.play   (frames land in .playtest/regrow_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval gs.set("has_planet_scanner", true)
+eval pt.park_near_planet("Rook", 2600, 30)
+wait_until gs.is_planet_scanned("Veld/Rook") 6
+eval pt.hover_over_site("Rook", 60)
+land Rook 15 15
+wait 0.5
+screenshot regrow_1_fresh
+
+# --- Dig one layer and bank: the site is spent ---
+assert not pt.site("Rook").is_spent() "fresh site"
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start 3
+up action
+wait_until pt.drill().layer == 1 2
+hold reverse_thrust 0.1
+wait_until pt.drill().phase == 2 1
+assert pt.site("Rook").is_spent() "digging spends the site"
+assert pt.site("Rook").beacon_color() == pt.site("Rook").minimap_target.get_minimap_color() "minimap marker dims too"
+assert pt.site("Rook").regrow_left() > 440 "rich site regrows in ~7.5 min"
+wait 1.5
+screenshot regrow_2_spent
+
+# --- Landing again: the spent site refuses the drill ---
+hold thrust 0.1
+wait_until pt.state_name() == "FlyingState" 2
+eval pt.park_near_planet("Rook", 2600, 30)
+frames 5
+eval pt.hover_over_site("Rook", 60)
+land Rook 15 15
+wait 0.3
+assert str(pt.snapshot().action_message).contains("SITE SPENT") "prompt says the site is spent"
+hold action 1
+assert pt.drill().layer == 0 and pt.drill().end_reason == "spent" "no drilling a spent site"
+assert pt.item_count() > 0 "the first dig's gems are still aboard"
+
+# --- The timer is saved; a reload keeps the site spent ---
+eval gs.tick_site_regrowth(100)
+eval pt.redock()
+wait_until pt.visible_ui().has("SpacePortDialogue") 5
+press esc
+eval pt.set_meta("left_at_save", pt.site("Rook").regrow_left())
+eval gs.spent_sites.clear()
+assert not pt.site("Rook").is_spent() "cleared before reload"
+eval main.call_deferred("load_game")
+wait_until pt.visible_ui().has("LoadingScreen") 3
+wait_until not pt.visible_ui().has("LoadingScreen") and pt.state_name() == "LandedState" 15
+assert pt.site("Rook").is_spent() "spent state restored from the save"
+assert abs(pt.site("Rook").regrow_left() - pt.get_meta("left_at_save")) < 5 "regrow timer restored"
+assert pt.site("Rook").regrow_left() < 360 "time already waited counts"
+
+# --- Regrown after its time: bright beacon, drillable again ---
+eval gs.tick_site_regrowth(pt.site("Rook").regrow_left() + 1)
+assert not pt.site("Rook").is_spent() "site regrew"
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.park_near_planet("Rook", 2600, 30)
+frames 5
+eval pt.hover_over_site("Rook", 60)
+land Rook 15 15
+wait 0.5
+screenshot regrow_3_regrown
+assert str(pt.snapshot().action_message).contains("to drill") "drill offered again"
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start 3
+up action
+wait_until pt.drill().layer == 1 2
+state

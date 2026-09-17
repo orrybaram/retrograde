@@ -89,6 +89,8 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/drill.play` lands on Rook's rich site and drills: four PERFECT layers to bedrock with the gems reaching the hold, banking (`press reverse_thrust`) after one layer, and an OVERLOAD kickback (`.playtest/drill_*.png`). Drive layers like harvest hits: `down action`, `wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start()`, `up action`. `pt.drill()` has `.layer`, `.layer_count()`, `.phase` (0 READY, 1 DIGGING, 2 DONE), `.end_reason`, `.dug`; the transcript logs `drill_struck` and `dig_ended`.
 
+`playtests/regrow.play` spends Rook's site with a banked dig (dim beacon, `SITE SPENT` prompt, drill refuses), checks the regrow timer survives a redock + reload, then fast-forwards it (`eval gs.tick_site_regrowth(sec)`) and digs again (`.playtest/regrow_*.png`). `pt.site("Rook").is_spent()`, `.regrow_left()`.
+
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.
 - Screenshots need a window (not `--headless`). Read the PNG to actually look at it.
