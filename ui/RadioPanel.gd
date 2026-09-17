@@ -17,6 +17,11 @@ const TEXT_SIZE := 12
 const SMALL_SIZE := 10
 const CHARS_PER_SECOND := 40.0
 const FADE_TIME := 0.15
+## SPACE is also the harvest key, so a transmission that opens while it is held ignores
+## it until the key has been let go and this long has passed. Without it the press already
+## in flight would dismiss the tip unread. Only the opening line is gated (later ones need
+## a release edge anyway), only when the key was actually down, and TAB/ENTER never are.
+const OPENING_GRACE_SEC := 0.3
 ## Menus that sit in the same CanvasLayer as the HUD but never block the radio.
 ## Transient overlays (gem pickup popups) opt out with the "hud_overlay" group.
 const NON_BLOCKING := [&"HUD", &"IndicatorManager"]
@@ -37,6 +42,9 @@ var _hold_total := 0.0
 var _hold_left := 0.0
 var _typed := 0
 var _fade: Tween
+var _opened_at := 0.0
+var _gated := false  # the action key was down when this transmission opened
+var _action_released := false  # ...and has since been let go
 
 func _ready() -> void:
 	name = "RadioPanel"
@@ -185,6 +193,10 @@ func _show_line(line: RadioLine, conv: RadioConversation) -> void:
 	_hold_left = 0.0
 	_hold_total = 0.0
 	_typed = 0
+	if opening:
+		_opened_at = Time.get_ticks_msec() / 1000.0
+		_gated = Input.is_action_pressed("action")
+		_action_released = false
 	_typewriter.type_text(line.display_text(conv.vars))
 	_choice.visible = line.is_confirm()
 	_choice.text = ">  %s" % line.confirm_text(conv.vars)
@@ -210,6 +222,14 @@ func _on_typing_finished() -> void:
 ## Paused or confirm lines never time out.
 func _waits_for_player() -> bool:
 	return _line.is_confirm() or _conv.pause_game
+
+## A transmission that opened with the harvest key down ignores SPACE until it has been
+## let go and OPENING_GRACE_SEC has passed, so the press already in flight doesn't dismiss
+## the tip unread. One that opened with the key up answers straight away.
+func _action_armed() -> bool:
+	if not _gated:
+		return true
+	return _action_released and Time.get_ticks_msec() / 1000.0 - _opened_at >= OPENING_GRACE_SEC
 
 ## SPACE doubles as the flight action key, so it only drives conversations that
 ## hold the game or ask for a confirm (the ship isn't flying then).
@@ -255,6 +275,8 @@ func _update_hint() -> void:
 func _process(delta: float) -> void:
 	if _line == null:
 		return
+	if not _action_released and not Input.is_action_pressed("action"):
+		_action_released = true
 	var blocked := _is_blocked()
 	visible = not blocked
 	_typewriter.set_process(not blocked)
@@ -285,7 +307,7 @@ func _input(event: InputEvent) -> void:
 		return
 	var enter: bool = event is InputEventKey and event.pressed and not event.echo \
 			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER)
-	var space: bool = event.is_action_pressed("action") and _space_continues()
+	var space: bool = event.is_action_pressed("action") and _space_continues() and _action_armed()
 	if not (space or enter or event.is_action_pressed("radio_next")):
 		return
 	_continue()

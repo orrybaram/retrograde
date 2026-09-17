@@ -42,9 +42,14 @@ extends Node
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
 const DEFAULT_PORT := 7777
-const SAVE_PATH := "user://playtest_save.cfg"
+## Per-run save file. Godot's user dir is keyed by project name, so parallel runs
+## (and other worktrees of this project) would otherwise share one save and clobber
+## each other's state mid-scenario.
+const SAVE_DIR := "user://playtest"
+
 
 var active := false
+var _save_file := ""
 var out_dir := ""
 var failures: Array[String] = []
 var staged: ScrapNode = null  # last node picked by stage_harvest, for expressions: pt.staged
@@ -66,8 +71,10 @@ func _ready() -> void:
 		out_dir = ProjectSettings.globalize_path("res://.playtest")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_log_file = FileAccess.open(out_dir.path_join("transcript.jsonl"), FileAccess.WRITE)
-	# Never touch the player's real save.
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	# Never touch the player's real save, and never share one with a parallel run.
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAVE_DIR))
+	_save_file = "%s/save_%d.cfg" % [SAVE_DIR, OS.get_process_id()]
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(_save_file))
 	EventBus.action_message_changed.connect(func(msg: String): _action_message = msg)
 	EventBus.harvest_hit.connect(func(_s, grade: HarvestTiming.Grade, gems: Array[String], final: bool):
 		last_drops = gems
@@ -88,7 +95,7 @@ func _ready() -> void:
 		_run_file.call_deferred(target)
 
 func save_path() -> String:
-	return SAVE_PATH if active else "user://save.cfg"
+	return _save_file if active else "user://save.cfg"
 
 # --- Runners -----------------------------------------------------------------
 
@@ -155,6 +162,8 @@ func _read_line(peer: StreamPeerTCP) -> String:
 
 func _finish() -> void:
 	_release_all()
+	if _save_file != "":
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(_save_file))
 	var summary := {"done": true, "ok": failures.is_empty(), "failures": failures, "out_dir": out_dir}
 	_emit(summary)
 	print("PLAYTEST %s" % ("PASSED" if failures.is_empty() else "FAILED"))

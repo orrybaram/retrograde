@@ -290,23 +290,17 @@ func test_pause_follows_whatever_is_on_air() -> void:
 	assert_bool(radio.is_pausing()).is_false()
 
 
-func test_pausing_tip_waits_for_the_player_to_back_off() -> void:
+func test_pausing_tip_goes_on_air_mid_harvest() -> void:
 	var radio := _radio()
 	var tutorial := _conv(&"hold_full", Priority.HINT, 1, true)
 	tutorial.pause_game = true
 	Input.action_press("action")  # mid-harvest
-	assert_int(radio.request(tutorial)).is_equal(Result.QUEUED)
-	assert_int(radio.request(tutorial)).is_equal(Result.QUEUED)  # re-triggers don't stack
-	assert_bool(radio.is_active()).is_false()
-	assert_bool(radio.is_pausing()).is_false()
-	radio.poll_deferred(10.0)
-	Input.action_release("action")
-	radio.poll_deferred(10.5)  # let go, but not for long enough
-	assert_bool(radio.is_active()).is_false()
-	radio.poll_deferred(11.1)
+	assert_int(radio.request(tutorial)).is_equal(Result.STARTED)
 	assert_object(radio.queue.current).is_same(tutorial)
 	assert_bool(radio.is_pausing()).is_true()
 	assert_int(radio.queue.pending_count()).is_equal(0)
+	Input.action_release("action")
+	assert_int(radio.request(tutorial)).is_equal(Result.REJECTED)  # once-only, already seen
 
 
 func test_non_pausing_tip_plays_even_while_busy() -> void:
@@ -316,16 +310,17 @@ func test_non_pausing_tip_plays_even_while_busy() -> void:
 	Input.action_release("thrust")
 
 
-func test_silence_drops_held_back_tips() -> void:
+func test_silence_drops_an_on_air_tip() -> void:
 	var radio := _radio()
 	var tutorial := _conv(&"tutorial")
 	tutorial.pause_game = true
 	Input.action_press("action")
 	radio.request(tutorial)
 	Input.action_release("action")
+	assert_bool(radio.is_active()).is_true()
 	radio.silence()
-	radio.poll_deferred(1000.0)
 	assert_bool(radio.is_active()).is_false()
+	assert_bool(radio.is_pausing()).is_false()
 
 
 func test_confirming_a_paused_call_unpauses() -> void:

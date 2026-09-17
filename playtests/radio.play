@@ -79,12 +79,16 @@ wait 0.3
 assert not get_tree().root.get_node("RobotRadio").is_active() "low-fuel tutorial finished"
 assert not get_tree().paused "closing the low-fuel tutorial unpauses"
 
-# Scrap tutorial pauses the game and waits for the player
+# Scrap tutorial pauses the game and waits for the player. It lands the moment the
+# scrap is in range, with thrust still held -- not seconds later once the player coasts.
 eval ship.set("fuel", 150.0)
+down thrust
 stage_harvest 40
-wait_until pt.node("radio_panel").visible 3
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_scrap" "scrap tip on air"
+frames 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_scrap" "scrap tip on air mid-thrust"
 assert get_tree().paused "scrap tutorial pauses the game"
+up thrust
+assert pt.node("radio_panel").visible "scrap tip visible right away"
 wait 1.5
 screenshot radio_05_scrap_tip
 wait_until not pt.node("radio_panel").is_typing() 10
@@ -200,18 +204,16 @@ down action
 wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
 up action
 wait_until inv.get_total_weight() >= ship.max_cargo_weight 5
+frames 2
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_cargo_full" "hold-full tutorial on air the moment the hold fills"
+assert get_tree().paused "hold-full tutorial pauses"
+# SPACE is still in flight from harvesting: it must not dismiss the line that just landed
 down action
-frames 10
-assert get_tree().root.get_node("RobotRadio").is_deferred("first_cargo_full") "held back while SPACE is down"
-assert not get_tree().paused "no pause mid-press"
+frames 5
 up action
 frames 5
-press space
-frames 5
-assert not get_tree().root.get_node("RobotRadio").is_active() "still held back right after a press"
-wait_until get_tree().root.get_node("RobotRadio").is_active() 3
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_cargo_full" "hold-full tutorial on air"
-assert get_tree().paused "hold-full tutorial pauses"
+assert get_tree().root.get_node("RobotRadio").is_active() "a SPACE still in flight doesn't dismiss it"
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "and doesn't skip past the first line"
 assert pt.node("radio_panel").visible "radio visible over the gem popups"
 wait 1
 screenshot radio_11_hold_full
