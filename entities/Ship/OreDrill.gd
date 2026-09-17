@@ -1,13 +1,13 @@
 extends Node2D
-class_name SiteDrill
+class_name OreDrill
 
-## The ship's drill while it sits on a landing site. Owned by PlanetLandedState.
+## The ship's drill while it sits on the ground over an ore seam. Owned by PlanetLandedState.
 ## A dig is LAYERS (RICH_LAYERS on rich sites) HarvestTiming sweeps in a row: hold
 ## `action` to sweep, release in the zone to break a layer and throw its gems into the
 ## hold's magnet. Deeper layers roll better gems, narrower zones on the last ones.
 ## An early release keeps (decaying) progress. Holding to OVERLOAD ends the dig with
 ## drill kickback. Between layers the player can bank (stop) and keep what was dug.
-## Every finished dig spends the site; a spent site can't be drilled (phase starts DONE).
+## Every finished dig spends the seam; a spent seam can't be drilled (phase starts DONE).
 ## Draws the drill bit and dust under the ship while it bites.
 
 enum Phase { READY, DIGGING, DONE }
@@ -20,7 +20,7 @@ const BIT_START := 12.0  # ship tail, local -x
 const BIT_LENGTH := 16.0
 const DUST_COLOR := Colors.HULL_LIGHT
 
-var site: LandingSite = null
+var ore: OreDeposit = null
 var ship: Ship = null
 var rng: RandomNumberGenerator = null
 var phase := Phase.READY
@@ -32,11 +32,11 @@ var end_reason := ""
 var _holding := false
 var _dust: CPUParticles2D
 
-static func attach(landed_ship: Ship, landing_site: LandingSite) -> SiteDrill:
-	var drill := SiteDrill.new()
-	drill.name = "SiteDrill"
+static func attach(landed_ship: Ship, deposit: OreDeposit) -> OreDrill:
+	var drill := OreDrill.new()
+	drill.name = "OreDrill"
 	drill.ship = landed_ship
-	drill.site = landing_site
+	drill.ore = deposit
 	landed_ship.add_child(drill)
 	return drill
 
@@ -44,7 +44,7 @@ func _ready() -> void:
 	z_index = -1
 	if not rng:
 		rng = RNG.rng
-	if site and site.is_spent():
+	if ore and ore.is_spent():
 		phase = Phase.DONE
 		end_reason = "spent"
 	_dust = CPUParticles2D.new()
@@ -63,10 +63,10 @@ func _ready() -> void:
 	add_child(_dust)
 
 func layer_count() -> int:
-	return RICH_LAYERS if site and site.rich else LAYERS
+	return RICH_LAYERS if ore and ore.rich else LAYERS
 
 func depth() -> int:
-	return layer + (1 if site and site.rich else 0)
+	return layer + (1 if ore and ore.rich else 0)
 
 func is_holding() -> bool:
 	return _holding
@@ -124,7 +124,7 @@ func _strike(grade: HarvestTiming.Grade) -> void:
 	dug.append_array(drops)
 	var final := layer >= layer_count()
 	_throw(drops, grade, final)
-	EventBus.drill_struck.emit(site, grade, drops, layer, final)
+	EventBus.drill_struck.emit(ore, grade, drops, layer, final)
 	if final:
 		_end("bottom")
 	else:
@@ -141,22 +141,22 @@ func _end(reason: String) -> void:
 	phase = Phase.DONE
 	end_reason = reason
 	_set_holding(false)
-	if is_instance_valid(site):
-		site.spend()
-	EventBus.dig_ended.emit(site, reason, layer)
+	if is_instance_valid(ore):
+		ore.spend()
+	EventBus.dig_ended.emit(ore, reason, layer)
 
 ## Gems burst from the drill hole and the ship's magnet pulls them into the hold.
 func _throw(drops: Array[String], grade: HarvestTiming.Grade, final: bool) -> void:
 	if not is_instance_valid(ship) or not ship.is_inside_tree():
 		return
 	var hole := to_global(Vector2(-BIT_START, 0))
-	Gem.burst(ship.get_parent(), hole, site.velocity(), drops, final, rng)
+	Gem.burst(ship.get_parent(), hole, ore.velocity(), drops, final, rng)
 	_juice(grade, GemData.best_of(drops), final)
 
 func _juice(grade: HarvestTiming.Grade, gem_id: String, final: bool) -> void:
 	if not is_instance_valid(ship) or not ship.is_inside_tree():
 		return
-	HarvestJuice.play_at(ship, get_tree(), to_global(Vector2(-BIT_START, 0)), site.velocity(), grade, gem_id, final)
+	HarvestJuice.play_at(ship, get_tree(), to_global(Vector2(-BIT_START, 0)), ore.velocity(), grade, gem_id, final)
 
 func _set_holding(value: bool) -> void:
 	_holding = value

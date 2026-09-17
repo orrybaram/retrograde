@@ -40,6 +40,8 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 
 ## Surface gravity readouts divide by this (px/s^2 per unit mass) to show G.
 const STANDARD_GRAVITY := 50.0
+## How many ore seams a planet (not a moon) grows.
+const ORE_COUNT := Vector2i(1, 3)
 
 var parent_planet: Planet = null
 var minimap_target: PlanetMinimapTarget = null
@@ -97,13 +99,32 @@ func is_scanned() -> bool:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	return gs != null and gs.is_planet_scanned(save_key())
 
-## Landing sites on this planet's surface (revealed once it's scanned).
-func get_landing_sites() -> Array[Node]:
-	var sites: Array[Node] = []
+## Ore seams under this planet's surface (revealed once it's scanned).
+func get_ore_deposits() -> Array[OreDeposit]:
+	var ores: Array[OreDeposit] = []
 	for child in get_children():
-		if child.is_in_group("landing_sites"):
-			sites.append(child)
-	return sites
+		if child is OreDeposit:
+			ores.append(child)
+	return ores
+
+## Grow this planet's ore seams: 1 rich seam on a moon, 1-3 on a planet, none on the sun
+## or a gas giant (no ground to land on). Seeded from the planet's save key, so a planet
+## has the same seams in the same places every session.
+func _spawn_ore() -> void:
+	if planet_type == PlanetType.SUN or planet_type == PlanetType.GAS_GIANT:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(save_key())
+	var count := 1 if is_moon() else rng.randi_range(ORE_COUNT.x, ORE_COUNT.y)
+	# Spread the seams apart so one landing is never in reach of two
+	var gap := 360.0 / count
+	for i in count:
+		var ore := OreDeposit.new()
+		ore.name = "Ore%d" % i
+		ore.ore_index = i
+		ore.rich = is_moon()
+		ore.angle_degrees = fmod(rng.randf_range(0.0, gap) + gap * i, 360.0)
+		add_child(ore)
 
 func _ready() -> void:
 	add_to_group("planets")
@@ -130,6 +151,8 @@ func _ready() -> void:
 		if orbit_visual:
 			orbit_visual.show_orbit = show_orbit_path
 	
+	_spawn_ore()
+
 	# Register with minimap
 	_register_with_minimap.call_deferred()
 

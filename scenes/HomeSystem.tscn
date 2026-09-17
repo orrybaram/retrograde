@@ -3,7 +3,6 @@
 [ext_resource type="PackedScene" uid="uid://dyj33wc7mamja" path="res://entities/Planet/Planet.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://b8k2j3m4n5p6q" path="res://entities/structures/SpaceStation.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://entities/resources/OrbitalRingSpawner.tscn" id="2_vpsiu"]
-[ext_resource type="Script" path="res://entities/Planet/LandingSite.gd" id="3_site"]
 
 [node name="HomeSystem" type="Node2D" unique_id=1363253957]
 
@@ -164,63 +163,16 @@ orbital_distance = 6000.0
 orbital_speed = 20.0
 initial_angle_degrees = 180.0
 
-[node name="SiteA" type="Node2D" parent="Sun/TERRA-0" unique_id=305713073]
-script = ExtResource("3_site")
-angle_degrees = 35.0
 
-[node name="SiteB" type="Node2D" parent="Sun/TERRA-0" unique_id=349358866]
-script = ExtResource("3_site")
-angle_degrees = 150.0
 
-[node name="SiteC" type="Node2D" parent="Sun/TERRA-0" unique_id=379146375]
-script = ExtResource("3_site")
-angle_degrees = 265.0
 
-[node name="SiteA" type="Node2D" parent="Sun/Roke" unique_id=381241274]
-script = ExtResource("3_site")
-angle_degrees = 80.0
 
-[node name="SiteB" type="Node2D" parent="Sun/Roke" unique_id=302591853]
-script = ExtResource("3_site")
-angle_degrees = 250.0
 
-[node name="SiteA" type="Node2D" parent="Sun/Roke/Cairn" unique_id=330179661]
-script = ExtResource("3_site")
-angle_degrees = 200.0
-rich = true
 
-[node name="SiteA" type="Node2D" parent="Sun/Sonder/Char" unique_id=369004842]
-script = ExtResource("3_site")
-angle_degrees = 120.0
-rich = true
 
-[node name="SiteA" type="Node2D" parent="Sun/Crom" unique_id=343113410]
-script = ExtResource("3_site")
-angle_degrees = 10.0
 
-[node name="SiteB" type="Node2D" parent="Sun/Crom" unique_id=364070140]
-script = ExtResource("3_site")
-angle_degrees = 190.0
 
-[node name="SiteA" type="Node2D" parent="Sun/Crom/Dross" unique_id=338956266]
-script = ExtResource("3_site")
-angle_degrees = 300.0
-rich = true
 
-[node name="SiteA" type="Node2D" parent="Sun/Crom/Barrow" unique_id=358658258]
-script = ExtResource("3_site")
-angle_degrees = 60.0
-rich = true
 
-[node name="SiteA" type="Node2D" parent="Sun/Veld" unique_id=385366658]
-script = ExtResource("3_site")
-angle_degrees = 130.0
 
-[node name="SiteB" type="Node2D" parent="Sun/Veld" unique_id=350730805]
-script = ExtResource("3_site")
-angle_degrees = 320.0
 
-[node name="SiteA" type="Node2D" parent="Sun/Veld/Rook" unique_id=302640146]
-script = ExtResource("3_site")
-angle_degrees = 0.0
-rich = true

@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Tests for drilling a landing site: depth / PERFECT gem tiers, the layer sequence,
+## Tests for drilling an ore seam: depth / PERFECT gem tiers, the layer sequence,
 ## early release, banking, overload kickback, and gems reaching the hold.
 
 const GOOD := HarvestTiming.Grade.GOOD
@@ -27,11 +27,11 @@ func after_test() -> void:
 	Gem.clear_all()
 
 
-func _on_struck(_site, grade, gems, layer, final) -> void:
+func _on_struck(_ore, grade, gems, layer, final) -> void:
 	_events.append({"type": "struck", "grade": grade, "gems": gems, "layer": layer, "final": final})
 
 
-func _on_ended(_site, reason, layers) -> void:
+func _on_ended(_ore, reason, layers) -> void:
 	_events.append({"type": "ended", "reason": reason, "layers": layers})
 
 
@@ -71,40 +71,44 @@ func test_layer_drop_counts_and_late_cracks() -> void:
 		assert_int(late.count("shard")).is_equal(late.size())
 
 
-func _site(rich := false) -> LandingSite:
+func _ore(rich := false) -> OreDeposit:
 	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
 	add_child(planet)
-	var site := LandingSite.new()
-	site.rich = rich
-	planet.add_child(site)
-	return site
+	# Planets grow their own seams; these tests place their own
+	for grown in planet.get_ore_deposits():
+		grown.free()
+	var ore := OreDeposit.new()
+	ore.rich = rich
+	ore.ore_index = 9
+	planet.add_child(ore)
+	return ore
 
 
-func _drill(site: LandingSite, ship: Ship = null) -> SiteDrill:
-	var drill: SiteDrill
+func _drill(ore: OreDeposit, ship: Ship = null) -> OreDrill:
+	var drill: OreDrill
 	if ship:
-		drill = SiteDrill.attach(ship, site)
+		drill = OreDrill.attach(ship, ore)
 	else:
-		drill = auto_free(SiteDrill.new()) as SiteDrill
-		drill.site = site
+		drill = auto_free(OreDrill.new()) as OreDrill
+		drill.ore = ore
 		add_child(drill)
 	drill.rng = _seeded()
 	return drill
 
 
 ## Hold the key, then let go with the sweep at `at` (a timing fraction).
-func _release_at(drill: SiteDrill, at: float) -> void:
+func _release_at(drill: OreDrill, at: float) -> void:
 	drill.tick(0.0, true)
 	drill.timing.progress = at
 	drill.tick(0.0, false)
 
 
 func test_a_dig_starts_on_hold_and_breaks_layers_in_the_zone() -> void:
-	var drill := _drill(_site())
+	var drill := _drill(_ore())
 	drill.tick(1.0, false)
-	assert_int(drill.phase).is_equal(SiteDrill.Phase.READY)
+	assert_int(drill.phase).is_equal(OreDrill.Phase.READY)
 	_release_at(drill, 0.0)
-	assert_int(drill.phase).is_equal(SiteDrill.Phase.DIGGING)
+	assert_int(drill.phase).is_equal(OreDrill.Phase.DIGGING)
 	var first := drill.timing
 	_release_at(drill, first.perfect_start())
 	assert_int(drill.layer).is_equal(1)
@@ -115,7 +119,7 @@ func test_a_dig_starts_on_hold_and_breaks_layers_in_the_zone() -> void:
 
 
 func test_early_release_keeps_progress_and_is_not_a_layer() -> void:
-	var drill := _drill(_site())
+	var drill := _drill(_ore())
 	drill.tick(0.0, true)
 	drill.tick(drill.timing.duration * 0.25, true)
 	drill.tick(0.0, false)
@@ -129,35 +133,35 @@ func test_early_release_keeps_progress_and_is_not_a_layer() -> void:
 func test_normal_sites_bottom_out_after_three_layers_rich_after_four() -> void:
 	for rich in [false, true]:
 		_events.clear()
-		var drill := _drill(_site(rich))
+		var drill := _drill(_ore(rich))
 		_release_at(drill, 0.0)  # starts the dig
-		for i in (SiteDrill.RICH_LAYERS if rich else SiteDrill.LAYERS):
-			assert_int(drill.phase).is_equal(SiteDrill.Phase.DIGGING)
+		for i in (OreDrill.RICH_LAYERS if rich else OreDrill.LAYERS):
+			assert_int(drill.phase).is_equal(OreDrill.Phase.DIGGING)
 			_release_at(drill, drill.timing.zone_start)
-		assert_int(drill.phase).is_equal(SiteDrill.Phase.DONE)
+		assert_int(drill.phase).is_equal(OreDrill.Phase.DONE)
 		assert_str(drill.end_reason).is_equal("bottom")
 		assert_bool(_events[-2]["final"]).is_true()
 		assert_dict(_events[-1]).is_equal({"type": "ended", "reason": "bottom", "layers": drill.layer_count()})
 
 
 func test_deep_layers_get_the_narrow_zone() -> void:
-	var drill := _drill(_site(true))
+	var drill := _drill(_ore(true))
 	_release_at(drill, 0.0)
 	var width := drill.timing.zone_end - drill.timing.zone_start
 	assert_float(width).is_equal_approx(HarvestTiming.NORMAL_ZONE_WIDTH, 0.0001)
 	_release_at(drill, drill.timing.zone_start)
 	_release_at(drill, drill.timing.zone_start)
-	assert_int(drill.depth()).is_equal(SiteDrill.TROPHY_DEPTH)
+	assert_int(drill.depth()).is_equal(OreDrill.TROPHY_DEPTH)
 	width = drill.timing.zone_end - drill.timing.zone_start
 	assert_float(width).is_equal_approx(HarvestTiming.TROPHY_ZONE_WIDTH, 0.0001)
 
 
 func test_bank_between_layers_keeps_the_haul() -> void:
-	var drill := _drill(_site())
+	var drill := _drill(_ore())
 	_release_at(drill, 0.0)
 	assert_bool(drill.can_bank()).is_false()
 	drill.bank()
-	assert_int(drill.phase).is_equal(SiteDrill.Phase.READY)
+	assert_int(drill.phase).is_equal(OreDrill.Phase.READY)
 	_release_at(drill, 0.0)
 	_release_at(drill, drill.timing.zone_start)
 	drill.tick(0.0, true)
@@ -166,7 +170,7 @@ func test_bank_between_layers_keeps_the_haul() -> void:
 	var dug := drill.dug.duplicate()
 	assert_bool(drill.can_bank()).is_true()
 	drill.bank()
-	assert_int(drill.phase).is_equal(SiteDrill.Phase.DONE)
+	assert_int(drill.phase).is_equal(OreDrill.Phase.DONE)
 	assert_str(drill.end_reason).is_equal("bank")
 	assert_array(drill.dug).is_equal(dug)
 	drill.tick(1.0, true)
@@ -181,25 +185,25 @@ func _ship() -> Ship:
 
 func test_overload_ends_the_dig_with_kickback() -> void:
 	var ship := _ship()
-	var drill := _drill(_site(), ship)
+	var drill := _drill(_ore(), ship)
 	_release_at(drill, 0.0)
 	_release_at(drill, drill.timing.zone_start)
 	var dug := drill.dug.duplicate()
 	var hull := ship.hull_strength
 	drill.tick(0.0, true)
 	drill.tick(drill.timing.duration, true)
-	assert_int(drill.phase).is_equal(SiteDrill.Phase.DONE)
+	assert_int(drill.phase).is_equal(OreDrill.Phase.DONE)
 	assert_str(drill.end_reason).is_equal("overload")
-	assert_float(ship.hull_strength).is_equal(hull - SiteDrill.KICKBACK_DAMAGE)
+	assert_float(ship.hull_strength).is_equal(hull - OreDrill.KICKBACK_DAMAGE)
 	assert_array(drill.dug).is_equal(dug)
 	assert_dict(_events[-1]).is_equal({"type": "ended", "reason": "overload", "layers": 1})
 
 
 func test_liftoff_mid_dig_ends_it() -> void:
-	var drill := _drill(_site())
+	var drill := _drill(_ore())
 	_release_at(drill, 0.0)
 	drill.abort()
-	assert_int(drill.phase).is_equal(SiteDrill.Phase.READY)
+	assert_int(drill.phase).is_equal(OreDrill.Phase.READY)
 	_release_at(drill, 0.0)
 	_release_at(drill, drill.timing.zone_start)
 	drill.abort()
@@ -208,9 +212,9 @@ func test_liftoff_mid_dig_ends_it() -> void:
 
 func test_dug_gems_fly_into_the_hold() -> void:
 	var ship := _ship()
-	var site := _site()
-	ship.global_position = site.global_position + Vector2(PlanetLandedState.LANDED_HEIGHT, 0)
-	var drill := _drill(site, ship)
+	var ore := _ore()
+	ship.global_position = ore.global_position + Vector2(PlanetLandedState.LANDED_HEIGHT, 0)
+	var drill := _drill(ore, ship)
 	_release_at(drill, 0.0)
 	_release_at(drill, drill.timing.perfect_start())
 	var dug := drill.dug.size()

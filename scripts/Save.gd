@@ -3,15 +3,15 @@ class_name Save
 
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
-## InventoryManager contents, planet orbital angles, scanned planets, spent landing sites
-## (seconds until they regrow), and which radio tips were seen.
+## InventoryManager contents, planet orbital angles, scanned planets, dug-out ore seams
+## (seconds until they refill), and which radio tips were seen.
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
 const SCAN_SECTION := "scan"
 const SCAN_PLANETS_KEY := "planets"
-const SITES_SECTION := "sites"
-const SITES_REGROW_KEY := "regrow"
+const ORE_SECTION := "ore"
+const ORE_REGROW_KEY := "regrow"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -64,7 +64,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 
 	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, RobotRadio.seen_ids())
 	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray(gs.scanned_planets.keys()))
-	cfg.set_value(SITES_SECTION, SITES_REGROW_KEY, gs.spent_sites.duplicate())
+	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 
 	cfg.save(Playtest.save_path())
 
@@ -102,25 +102,25 @@ static func load_scanned_planets(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray()))
 
-## Writes only the spent-site regrow timers into an existing save, like save_scanned_planets.
-static func save_site_regrowth(spent: Dictionary, path: String = "") -> void:
+## Writes only the spent-ore regrow timers into an existing save, like save_scanned_planets.
+static func save_ore_regrowth(spent: Dictionary, path: String = "") -> void:
 	var file := path if path != "" else Playtest.save_path()
 	var cfg := ConfigFile.new()
 	if cfg.load(file) != OK:
 		return
-	cfg.set_value(SITES_SECTION, SITES_REGROW_KEY, spent.duplicate())
+	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, spent.duplicate())
 	cfg.save(file)
 
-## site_id -> seconds until it regrows.
-static func load_site_regrowth(path: String = "") -> Dictionary:
+## ore_id -> seconds until it refills.
+static func load_ore_regrowth(path: String = "") -> Dictionary:
 	var cfg := ConfigFile.new()
 	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
 		return {}
-	var spent = cfg.get_value(SITES_SECTION, SITES_REGROW_KEY, {})
+	var spent = cfg.get_value(ORE_SECTION, ORE_REGROW_KEY, {})
 	var out := {}
 	if spent is Dictionary:
-		for site_id in spent:
-			out[str(site_id)] = float(spent[site_id])
+		for ore_id in spent:
+			out[str(ore_id)] = float(spent[ore_id])
 	return out
 
 ## Helper function to get a unique key for a planet
@@ -154,7 +154,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.scanned_planets.clear()
 	for key in load_scanned_planets():
 		gs.mark_planet_scanned(key)
-	gs.spent_sites = load_site_regrowth()
+	gs.spent_ore = load_ore_regrowth()
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}

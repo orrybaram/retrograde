@@ -49,10 +49,7 @@ wait 32
 assert pt.wreck_gem_count() == 23 "wreck gems outlive the loose-gem lifetime"
 
 # Reload from the save: wreck gems come back
-eval main.call_deferred("load_game")
-frames 2
-wait_until main.current_game_state == 1 and not get_tree().paused 15
-wait 1
+reload
 assert pt.wreck_gem_count() == 23 "wreck gems restored from the save"
 
 # Depart and warp next to the wreck: the magnet collects them

@@ -52,8 +52,8 @@ static func readout_lines(planet: Planet) -> PackedStringArray:
 	lines.append(_row("CLASS", type_name(planet.planet_type)))
 	lines.append(_row("HABITABLE", "%d%%" % roundi(planet.habitability * 100.0)))
 	lines.append(_row("GRAVITY", "%.1f G" % planet.surface_gravity()))
-	var sites := planet.get_landing_sites().size()
-	lines.append(_row("SITES", "%d FOUND" % sites if sites > 0 else "NONE FOUND"))
+	var seams := planet.get_ore_deposits().size()
+	lines.append(_row("ORE", "%d SEAMS" % seams if seams > 0 else "NONE FOUND"))
 	return lines
 
 static func type_name(type: Planet.PlanetType) -> String:

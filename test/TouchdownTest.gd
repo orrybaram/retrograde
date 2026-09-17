@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## Tests for landing on a site: pad detection, touchdown vs hard landing, bounce,
-## liftoff fuel cost, and the PlanetLandedState lock / liftoff.
+## Tests for landing near an ore seam: reach detection, touchdown vs hard landing,
+## bounce, liftoff fuel cost, and the PlanetLandedState lock / liftoff.
 
 const LAND := Touchdown.Result.LAND
 const HARD := Touchdown.Result.HARD
@@ -25,33 +25,37 @@ func _planet(radius := 400.0) -> Planet:
 	planet.radius = radius
 	planet.enable_orbiting = false
 	add_child(planet)
+	# Planets grow their own seams; these tests place their own
+	for grown in planet.get_ore_deposits():
+		grown.free()
 	return planet
 
 
-func _site(planet: Planet, angle := 0.0, revealed := true) -> LandingSite:
-	var site := LandingSite.new()
-	site.angle_degrees = angle
-	planet.add_child(site)
+func _ore(planet: Planet, angle := 0.0, revealed := true) -> OreDeposit:
+	var ore := OreDeposit.new()
+	ore.angle_degrees = angle
+	ore.ore_index = 9
+	planet.add_child(ore)
 	if revealed:
 		_gs.mark_planet_scanned(planet.save_key())
-		site.refresh()
-	return site
+		ore.refresh()
+	return ore
 
 
-func test_ship_is_over_the_pad_only_within_its_arc() -> void:
+func test_ship_is_in_reach_of_a_seam_only_within_its_arc() -> void:
 	var planet := _planet(400.0)
-	var site := _site(planet, 0.0)
-	var half := site.pad_half_angle()
-	assert_object(Touchdown.site_under(planet, Vector2(420, 0))).is_same(site)
-	assert_object(Touchdown.site_under(planet, Vector2.from_angle(half) * 420)).is_same(site)
-	assert_object(Touchdown.site_under(planet, Vector2.from_angle(half * 2.0) * 420)).is_null()
-	assert_object(Touchdown.site_under(planet, Vector2(-420, 0))).is_null()
+	var ore := _ore(planet, 0.0)
+	var reach := ore.reach_angle()
+	assert_object(Touchdown.ore_under(planet, Vector2(420, 0))).is_same(ore)
+	assert_object(Touchdown.ore_under(planet, Vector2.from_angle(reach) * 420)).is_same(ore)
+	assert_object(Touchdown.ore_under(planet, Vector2.from_angle(reach * 2.0) * 420)).is_null()
+	assert_object(Touchdown.ore_under(planet, Vector2(-420, 0))).is_null()
 
 
-func test_hidden_sites_cannot_be_landed_on() -> void:
+func test_hidden_seams_cannot_be_landed_on() -> void:
 	var planet := _planet(400.0)
-	_site(planet, 0.0, false)
-	assert_object(Touchdown.site_under(planet, Vector2(420, 0))).is_null()
+	_ore(planet, 0.0, false)
+	assert_object(Touchdown.ore_under(planet, Vector2(420, 0))).is_null()
 
 
 func test_slow_and_upright_touches_down() -> void:
@@ -63,7 +67,7 @@ func test_slow_but_sideways_does_not_land() -> void:
 	assert_int(Touchdown.judge(Vector2(-10, 0), PI, Vector2.RIGHT)).is_equal(NONE)
 
 
-func test_fast_into_the_pad_is_a_hard_landing() -> void:
+func test_fast_into_the_ground_is_a_hard_landing() -> void:
 	var into := Vector2(-(Touchdown.LANDING_SPEED + 1.0), 0)
 	assert_int(Touchdown.judge(into, 0.0, Vector2.RIGHT)).is_equal(HARD)
 	# Moving away (just lifted off) is never a hard landing
@@ -89,30 +93,30 @@ func test_liftoff_cost_scales_with_gravity_and_cargo() -> void:
 	assert_float(Touchdown.liftoff_cost(0.5, 160.0)).is_equal_approx(base * 1.5, 0.001)
 
 
-func test_landed_pose_is_clamped_onto_the_pad() -> void:
+func test_landed_pose_is_held_within_reach_of_the_seam() -> void:
 	var planet := _planet(400.0)
-	var site := _site(planet, 90.0)
+	var ore := _ore(planet, 90.0)
 	var height := 400.0 + PlanetLandedState.LANDED_HEIGHT
-	assert_vector(PlanetLandedState.pad_offset(site, Vector2(3, 430))).is_equal_approx(
+	assert_vector(PlanetLandedState.ground_offset(ore, Vector2(3, 430))).is_equal_approx(
 		Vector2.from_angle(Vector2(3, 430).angle()) * height, Vector2.ONE * 0.01)
-	var far := PlanetLandedState.pad_offset(site, Vector2(-300, 300))
-	assert_float(absf(angle_difference(far.angle(), PI / 2.0))).is_equal_approx(site.pad_half_angle(), 0.0001)
+	var far := PlanetLandedState.ground_offset(ore, Vector2(-300, 300))
+	assert_float(absf(angle_difference(far.angle(), PI / 2.0))).is_equal_approx(ore.reach_angle(), 0.0001)
 	assert_float(far.length()).is_equal_approx(height, 0.01)
 
 
-func _landed_ship(planet: Planet, site: LandingSite) -> Ship:
+func _landed_ship(planet: Planet, ore: OreDeposit) -> Ship:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	add_child(ship)
-	ship.global_position = site.global_position + site.normal() * 20.0
-	ship.set_meta("pending_site", site)
+	ship.global_position = ore.global_position + ore.normal() * 20.0
+	ship.set_meta("pending_ore", ore)
 	ship.state_machine.change_state("PlanetLandedState")
 	return ship
 
 
 func test_landed_ship_locks_to_the_planet_and_burns_no_fuel() -> void:
 	var planet := _planet(400.0)
-	var site := _site(planet, 0.0)
-	var ship := _landed_ship(planet, site)
+	var ore := _ore(planet, 0.0)
+	var ship := _landed_ship(planet, ore)
 	assert_bool(ship.is_landed_on_planet()).is_true()
 	var fuel := ship.fuel
 	planet.global_position = Vector2(500, -200)
@@ -125,8 +129,8 @@ func test_landed_ship_locks_to_the_planet_and_burns_no_fuel() -> void:
 
 func test_liftoff_burns_fuel_and_flies_away() -> void:
 	var planet := _planet(400.0)
-	var site := _site(planet, 0.0)
-	var ship := _landed_ship(planet, site)
+	var ore := _ore(planet, 0.0)
+	var ship := _landed_ship(planet, ore)
 	InventoryManager.add_item("crystal", 20)
 	var state := ship.state_machine.current_state as PlanetLandedState
 	var cost := state.liftoff_cost()
@@ -141,8 +145,8 @@ func test_liftoff_burns_fuel_and_flies_away() -> void:
 
 func test_liftoff_without_enough_fuel_burns_the_tank_dry() -> void:
 	var planet := _planet(400.0)
-	var site := _site(planet, 0.0)
-	var ship := _landed_ship(planet, site)
+	var ore := _ore(planet, 0.0)
+	var ship := _landed_ship(planet, ore)
 	var state := ship.state_machine.current_state as PlanetLandedState
 	ship.fuel = state.liftoff_cost() * 0.5
 	var depleted := [false]
@@ -154,14 +158,14 @@ func test_liftoff_without_enough_fuel_burns_the_tank_dry() -> void:
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("PlanetLandedState")
 
 
-func test_a_site_regrowing_under_a_landed_ship_gets_a_fresh_drill() -> void:
+func test_a_seam_refilling_under_a_landed_ship_gets_a_fresh_drill() -> void:
 	var planet := _planet(400.0)
-	var site := _site(planet, 0.0)
-	site.spend()
-	var ship := _landed_ship(planet, site)
+	var ore := _ore(planet, 0.0)
+	ore.spend()
+	var ship := _landed_ship(planet, ore)
 	var state := ship.state_machine.current_state as PlanetLandedState
 	assert_str(state.drill.end_reason).is_equal("spent")
-	_gs.tick_site_regrowth(LandingSite.RICH_REGROW_TIME)
+	_gs.tick_ore_regrowth(OreDeposit.RICH_REGROW_TIME)
 	await await_millis(100)
-	assert_int(state.drill.phase).is_equal(SiteDrill.Phase.READY)
-	assert_object(ship.get_node_or_null("SiteDrill")).is_same(state.drill)
+	assert_int(state.drill.phase).is_equal(OreDrill.Phase.READY)
+	assert_object(ship.get_node_or_null("OreDrill")).is_same(state.drill)

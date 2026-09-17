@@ -81,9 +81,7 @@ wait_until pt.visible_ui().has("SpacePortDialogue") 5
 press esc
 eval gs.scanned_planets.clear()
 eval gs.set("has_planet_scanner", false)
-eval main.call_deferred("load_game")
-wait_until pt.visible_ui().has("LoadingScreen") 3
-wait_until not pt.visible_ui().has("LoadingScreen") and pt.state_name() == "LandedState" 15
+reload
 assert gs.is_planet_scanned("Veld/Rook") "scan restored from the save"
 assert gs.has_planet_scanner "scanner restored from the save"
 state

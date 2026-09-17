@@ -2,7 +2,7 @@ extends Node
 class_name GameState
 
 ## Global singleton holding persistent player progression: credits, upgrade levels,
-## death count, scanned planets and spent landing sites. Populated by Save.load() at game start; serialized by Save.save()
+## death count, scanned planets and dug-out ore seams. Populated by Save.load() at game start; serialized by Save.save()
 ## on dock/game-over. Emits credits_changed and upgrade_level_changed signals.
 
 signal credits_changed
@@ -19,8 +19,8 @@ var has_planet_scanner: bool = false
 ## Planets the Planetary Scanner has mapped, keyed by Planet.save_key(). Permanent.
 var scanned_planets: Dictionary = {}
 
-## Dug-out landing sites: LandingSite.site_id() -> seconds of play left until they regrow.
-var spent_sites: Dictionary = {}
+## Dug-out ore seams: OreDeposit.ore_id() -> seconds of play left until they refill.
+var spent_ore: Dictionary = {}
 
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
@@ -33,8 +33,8 @@ func _ready() -> void:
 	add_to_group("game_state")
 
 func _process(delta: float) -> void:
-	# Sites regrow on play time: the tree is paused in menus
-	tick_site_regrowth(delta)
+	# Seams refill on play time: the tree is paused in menus
+	tick_ore_regrowth(delta)
 
 ## Get the player's current upgrade level for a given path.
 ## Returns 0 (base state) if no upgrades have been purchased for this path.
@@ -53,20 +53,20 @@ func is_planet_scanned(key: String) -> bool:
 func mark_planet_scanned(key: String) -> void:
 	scanned_planets[key] = true
 
-func spend_site(site_id: String, regrow_seconds: float) -> void:
-	spent_sites[site_id] = regrow_seconds
+func spend_ore(ore_id: String, regrow_seconds: float) -> void:
+	spent_ore[ore_id] = regrow_seconds
 
-## Seconds until a spent site regrows (0 when it can be drilled).
-func site_regrow_left(site_id: String) -> float:
-	return spent_sites.get(site_id, 0.0)
+## Seconds until a spent ore seam refills (0 when it can be drilled).
+func ore_regrow_left(ore_id: String) -> float:
+	return spent_ore.get(ore_id, 0.0)
 
-func tick_site_regrowth(delta: float) -> void:
-	for site_id in spent_sites.keys():
-		var left: float = spent_sites[site_id] - delta
+func tick_ore_regrowth(delta: float) -> void:
+	for ore_id in spent_ore.keys():
+		var left: float = spent_ore[ore_id] - delta
 		if left <= 0.0:
-			spent_sites.erase(site_id)
+			spent_ore.erase(ore_id)
 		else:
-			spent_sites[site_id] = left
+			spent_ore[ore_id] = left
 
 ## Compatibility wrapper for clearing cargo.
 ## Now delegates to InventoryManager.clear_inventory()
@@ -84,7 +84,7 @@ func reset_all_state() -> void:
 	has_drone_bay = false
 	has_planet_scanner = false
 	scanned_planets.clear()
-	spent_sites.clear()
+	spent_ore.clear()
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()

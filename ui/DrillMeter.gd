@@ -1,7 +1,7 @@
 extends Control
 class_name DrillMeter
 
-## HUD bar for the site drill, just under the landed ship: the current layer's timing
+## HUD bar for the ore drill, just under the landed ship: the current layer's timing
 ## sweep with a depth gauge, then the grade of each layer as it breaks. Mirrors
 ## HarvestMeter (and shares its drawing). Added to the HUD at runtime.
 
@@ -29,16 +29,16 @@ func _ready() -> void:
 	EventBus.drill_struck.connect(_on_drill_struck)
 	EventBus.dig_ended.connect(_on_dig_ended)
 
-func _drill() -> SiteDrill:
+func _drill() -> OreDrill:
 	var ship := get_tree().get_first_node_in_group("ship")
-	return ship.get_node_or_null("SiteDrill") as SiteDrill if ship else null
+	return ship.get_node_or_null("OreDrill") as OreDrill if ship else null
 
-func _on_drill_struck(_site: LandingSite, grade: HarvestTiming.Grade, gem_ids: Array[String], _layer: int, final: bool) -> void:
+func _on_drill_struck(_ore: OreDeposit, grade: HarvestTiming.Grade, gem_ids: Array[String], _layer: int, final: bool) -> void:
 	_show_result(GRADE_TEXT.get(grade, ""), Colors.DANGER if grade == HarvestTiming.Grade.LATE else GemData.color_of(GemData.best_of(gem_ids)))
 	if final:
 		_result_text += "   B E D R O C K"
 
-func _on_dig_ended(_site: LandingSite, reason: String, _layers: int) -> void:
+func _on_dig_ended(_ore: OreDeposit, reason: String, _layers: int) -> void:
 	match reason:
 		"overload":
 			_show_result(GRADE_TEXT[HarvestTiming.Grade.OVERLOAD], Colors.DANGER)
@@ -50,8 +50,8 @@ func _show_result(text: String, color: Color) -> void:
 	_result_color = color
 	_result_time = RESULT_HOLD
 
-func _active(drill: SiteDrill) -> bool:
-	return drill != null and drill.phase == SiteDrill.Phase.DIGGING and drill.timing != null
+func _active(drill: OreDrill) -> bool:
+	return drill != null and drill.phase == OreDrill.Phase.DIGGING and drill.timing != null
 
 func _process(delta: float) -> void:
 	if _result_time > 0.0:

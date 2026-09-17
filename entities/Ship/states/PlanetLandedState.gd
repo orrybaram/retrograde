@@ -1,10 +1,10 @@
 extends ShipState
 class_name PlanetLandedState
 
-## The ship sitting on a LandingSite's pad. (LandedState is docking at a port.)
-## Entered from FlyingState on a gentle touchdown (see Touchdown). The ship settles onto
-## the pad and then locks to the planet, riding its orbit; engines are off, so no fuel
-## burns. `action` drills the site (SiteDrill), reverse thrust banks between layers.
+## The ship sitting on a planet's surface, over an ore seam. (LandedState is docking.)
+## Entered from FlyingState on a gentle touchdown (see Touchdown). The ship settles on
+## the ground and then locks to the planet, riding its orbit; engines are off, so no fuel
+## burns. `action` drills the seam (OreDrill), reverse thrust banks between layers.
 ## Thrust lifts off, burning Touchdown.liftoff_cost() in one go: with too little fuel
 ## the engines burn out and the ship is stranded.
 ## Owns the landed camera zoom, the drill and the landed action prompt.
@@ -15,8 +15,8 @@ const SETTLE_TIME := 0.35
 const LIFTOFF_SPEED := 110.0
 const LIFTOFF_CLEARANCE := 3.0
 
-var site: LandingSite = null
-var drill: SiteDrill = null
+var ore: OreDeposit = null
+var drill: OreDrill = null
 
 var _offset := Vector2.ZERO  # locked position relative to the planet centre
 var _start_offset := Vector2.ZERO
@@ -27,17 +27,17 @@ var _prompt := ""
 
 func enter() -> void:
 	super.enter()
-	site = ship.get_meta("pending_site", null) as LandingSite
-	ship.remove_meta("pending_site")
-	if not is_instance_valid(site) or not is_instance_valid(site.planet):
-		site = null
+	ore = ship.get_meta("pending_ore", null) as OreDeposit
+	ship.remove_meta("pending_ore")
+	if not is_instance_valid(ore) or not is_instance_valid(ore.planet):
+		ore = null
 		_exit_to_flying.call_deferred()
 		return
 
-	var planet := site.planet
+	var planet := ore.planet
 	_start_offset = ship.global_position - planet.global_position
 	_start_rotation = ship.rotation
-	_offset = pad_offset(site, ship.global_position)
+	_offset = ground_offset(ore, ship.global_position)
 	_settle = 0.0
 	_launching = false
 
@@ -52,9 +52,9 @@ func enter() -> void:
 	ship.damage_shake_current_intensity = ship.harvest_lockon_shake_intensity
 
 	# Arrived: the tracker goes back to home base
-	if NavSystem.get_target() == site.tracking_target():
+	if NavSystem.get_target() == ore.tracking_target():
 		NavSystem.track_home()
-	drill = SiteDrill.attach(ship, site)
+	drill = OreDrill.attach(ship, ore)
 	_prompt = ""
 	_update_prompt()
 
@@ -64,26 +64,26 @@ func exit() -> void:
 		drill.abort()
 		_free_drill()
 	drill = null
-	site = null
+	ore = null
 	_launching = false
 	_prompt = ""
 	EventBus.action_message_changed.emit("")
 	ship.camera.zoom_camera_out()
 
 ## Where the ship sits relative to the planet centre: straight out from the surface at
-## its touchdown bearing, clamped onto the pad.
-static func pad_offset(landing_site: LandingSite, ship_position: Vector2) -> Vector2:
-	var planet := landing_site.planet
+## its touchdown bearing, held within reach of the seam.
+static func ground_offset(deposit: OreDeposit, ship_position: Vector2) -> Vector2:
+	var planet := deposit.planet
 	var bearing := (ship_position - planet.global_position).angle()
-	var half := landing_site.pad_half_angle()
-	var clamped := landing_site.global_rotation + clampf(angle_difference(landing_site.global_rotation, bearing), -half, half)
-	return Vector2.from_angle(clamped) * (landing_site.surface_radius() + LANDED_HEIGHT)
+	var reach := deposit.reach_angle()
+	var clamped := deposit.global_rotation + clampf(angle_difference(deposit.global_rotation, bearing), -reach, reach)
+	return Vector2.from_angle(clamped) * (deposit.surface_radius() + LANDED_HEIGHT)
 
 func liftoff_cost() -> float:
-	return Touchdown.liftoff_cost(site.planet.surface_gravity(), ship.get_cargo_weight())
+	return Touchdown.liftoff_cost(ore.planet.surface_gravity(), ship.get_cargo_weight())
 
 func physics_process(delta: float) -> void:
-	if not is_ship_valid() or not site:
+	if not is_ship_valid() or not ore:
 		return
 	_settle += delta
 	_flying()._update_camera_shake(delta)
@@ -92,20 +92,20 @@ func physics_process(delta: float) -> void:
 	if Input.is_action_pressed("thrust"):
 		lift_off()
 		return
-	if drill.phase == SiteDrill.Phase.DONE and not site.is_spent():
+	if drill.phase == OreDrill.Phase.DONE and not ore.is_spent():
 		# Regrown while we sat here: a fresh dig
 		_free_drill()
-		drill = SiteDrill.attach(ship, site)
-	var was_done := drill.phase == SiteDrill.Phase.DONE
+		drill = OreDrill.attach(ship, ore)
+	var was_done := drill.phase == OreDrill.Phase.DONE
 	if Input.is_action_just_pressed("reverse_thrust"):
 		drill.bank()
 	# A dig starts on a fresh press, not a key still held from flying
 	var holding := Input.is_action_pressed("action")
-	if drill.phase == SiteDrill.Phase.READY:
+	if drill.phase == OreDrill.Phase.READY:
 		holding = Input.is_action_just_pressed("action")
 	drill.tick(delta, holding)
-	if drill.phase == SiteDrill.Phase.DONE and not was_done:
-		_save_spent_sites()
+	if drill.phase == OreDrill.Phase.DONE and not was_done:
+		_save_spent_ore()
 	_update_prompt()
 
 ## Burn the liftoff fuel and launch. Too little fuel burns the tank dry instead.
@@ -116,17 +116,17 @@ func lift_off() -> void:
 		ship.consume_fuel(ship.fuel)
 		return
 	ship.consume_fuel(cost)
-	var was_done := drill.phase == SiteDrill.Phase.DONE
+	var was_done := drill.phase == OreDrill.Phase.DONE
 	drill.abort()
-	if drill.phase == SiteDrill.Phase.DONE and not was_done:
-		_save_spent_sites()
+	if drill.phase == OreDrill.Phase.DONE and not was_done:
+		_save_spent_ore()
 	_launching = true
 	ship.thruster_particles.emitting = true
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
-	if not is_ship_valid() or not site or not is_instance_valid(site.planet):
+	if not is_ship_valid() or not ore or not is_instance_valid(ore.planet):
 		return
-	var planet := site.planet
+	var planet := ore.planet
 	var up := _offset.normalized()
 	if _launching:
 		state.transform = Transform2D(up.angle(), planet.global_position + _offset + up * LIFTOFF_CLEARANCE)
@@ -142,16 +142,16 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = planet.linear_velocity
 	state.angular_velocity = 0.0
 
-## Detach now so a new SiteDrill can take the name this frame.
+## Detach now so a new OreDrill can take the name this frame.
 func _free_drill() -> void:
 	ship.remove_child(drill)
 	drill.queue_free()
 
-## Keep the spent site across a quit without saving the landed ship itself.
-func _save_spent_sites() -> void:
+## Keep the spent seam across a quit without saving the landed ship itself.
+func _save_spent_ore() -> void:
 	var gs := ship.get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
-		Save.save_site_regrowth(gs.spent_sites)
+		Save.save_ore_regrowth(gs.spent_ore)
 
 func _update_prompt() -> void:
 	var prompt := prompt_text()
@@ -163,9 +163,9 @@ func _update_prompt() -> void:
 func prompt_text() -> String:
 	var liftoff := EventBus.key_prompt("thrust", "LIFT OFF (%d FUEL)" % ceili(liftoff_cost()))
 	match drill.phase:
-		SiteDrill.Phase.READY:
+		OreDrill.Phase.READY:
 			return "%s   %s" % [EventBus.action_prompt("DRILL"), liftoff]
-		SiteDrill.Phase.DIGGING:
+		OreDrill.Phase.DIGGING:
 			if drill.is_holding():
 				return ""
 			if drill.can_bank():
@@ -175,9 +175,8 @@ func prompt_text() -> String:
 				]
 			return "%s   %s" % [EventBus.action_prompt("DRILL"), liftoff]
 	if drill.end_reason == "spent":
-		var left := ceili(site.regrow_left())
-		return "SITE SPENT %d:%02d   %s" % [left / 60, left % 60, liftoff]
-	return "DIG COMPLETE   %s" % liftoff
+		return "SEAM SPENT   %s" % liftoff
+	return "SEAM DRILLED OUT   %s" % liftoff
 
 func _flying() -> FlyingState:
 	return ship.state_machine.states.get("FlyingState") as FlyingState

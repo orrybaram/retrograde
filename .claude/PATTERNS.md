@@ -67,14 +67,18 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 
 ```
 PlanetScanner (on Ship) -> PlanetScan (meter) + ScanSweep (on Planet) -> GameState.scanned_planets -> EventBus.planet_scanned
-LandingSite (child of Planet, group landing_sites) -> revealed on scan; minimap + LandingSiteTrackingTarget
-FlyingState._pad_contact -> Touchdown rules -> PlanetLandedState (owns zoom, prompt, SiteDrill)
-SiteDrill (HarvestTiming per layer, GemData.drill_drops) -> site.spend() -> GameState.spent_sites (regrow timers)
+OreDeposit (child of Planet, grown by Planet._spawn_ore) -> surfaced on scan; minimap + OreTrackingTarget
+FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom, prompt, OreDrill)
+OreDrill (HarvestTiming per layer, GemData.drill_drops) -> ore.spend() -> GameState.spent_ore (refill timers)
 ```
 
 - `LandedState` is docking at a port; landing on a planet is `PlanetLandedState`.
+- Ore seams are hexagons just under the surface, seeded from the planet's save key, so they are
+  the same every session and need no authoring in `HomeSystem.tscn`. There is no landing pad:
+  land on plain ground within `OreDeposit.REACH` of a seam.
 - Unlocks: upgrade path `planet_scanner`, flag `GameState.has_planet_scanner` (separate from Scanner PULSE).
-- Save: `[scan] planets` and `[sites] regrow` (site_id -> seconds left). `Save.save_scanned_planets` /
-  `Save.save_site_regrowth` write only their section mid-flight; keep file IO out of code unit tests reach
-  (the default save path in tests is the player's real save).
-- Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `SiteDrill.*`, `GemData.DRILL_*`, `LandingSite.*REGROW_TIME`.
+- Save: `[scan] planets` and `[ore] regrow` (ore_id -> seconds left, never shown to the player).
+  `Save.save_scanned_planets` / `Save.save_ore_regrowth` write only their section mid-flight; keep file IO
+  out of code unit tests reach (the default save path in tests is the player's real save).
+- Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `OreDrill.*`, `GemData.DRILL_*`,
+  `OreDeposit.REACH` / `DEPTH_*` / `*REGROW_TIME`.

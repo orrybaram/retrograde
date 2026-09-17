@@ -66,8 +66,8 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 				continue
 
 			var ship_speed = state.get_contact_local_velocity_at_position(i)
-			# Landing pads have their own rules (touch down, or a hard landing)
-			if collider is Planet and _pad_contact(state, collider, ship_speed):
+			# Ground near an ore seam has its own rules (touch down, or a hard landing)
+			if collider is Planet and _ground_contact(state, collider, ship_speed):
 				break
 
 			var collider_speed = collider.linear_velocity
@@ -120,12 +120,12 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			var force = Vector2.LEFT.rotated(ship.rotation) * power
 			state.apply_central_force(force)
 
-## Contact with a planet over one of its revealed landing pads: touch down gently, or
-## take damage and bounce. Returns true when the ship is over a pad (the ordinary
-## crash damage doesn't apply there).
-func _pad_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_velocity: Vector2) -> bool:
-	var site := Touchdown.site_under(planet, state.transform.origin)
-	if not site:
+## Contact with a planet within reach of one of its revealed ore seams: touch down
+## gently, or take damage and bounce. Returns true when the ship is over a seam (the
+## ordinary crash damage doesn't apply there).
+func _ground_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_velocity: Vector2) -> bool:
+	var ore := Touchdown.ore_under(planet, state.transform.origin)
+	if not ore:
 		return false
 	if _touchdown_pending:
 		return true
@@ -134,7 +134,7 @@ func _pad_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_veloc
 	match Touchdown.judge(rel, state.transform.get_rotation(), up):
 		Touchdown.Result.LAND:
 			_touchdown_pending = true
-			ship.set_meta("pending_site", site)
+			ship.set_meta("pending_ore", ore)
 			ship.state_machine.change_state.call_deferred("PlanetLandedState")
 		Touchdown.Result.HARD:
 			ship.take_damage(Touchdown.hard_damage(rel.length(), ship.crash_damage_multiplier))

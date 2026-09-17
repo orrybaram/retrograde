@@ -85,7 +85,7 @@ func test_readout_lists_the_survey_data() -> void:
 	assert_str(text).contains("ICE GIANT")
 	assert_str(text).contains("25%")
 	assert_str(text).contains("%.1f G" % planet.surface_gravity())
-	assert_str(text).contains("NONE FOUND")
+	assert_str(text).contains("%d SEAMS" % planet.get_ore_deposits().size())
 	assert_str(text).not_contains("ORBITS")
 
 

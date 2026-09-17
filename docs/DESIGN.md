@@ -45,7 +45,7 @@ The system is organized in orbital tiers, with the player starting in the outerm
 **Environment:**
 - Cold, dark, sparse. The sun is a distant bright dot.
 - Basic scrap fields in orbit - frozen hull fragments, derelict cargo containers, wiring bundles
-- The planet's surface is inaccessible until the player buys the Planetary Scanner, which reveals landing sites (see 4.10)
+- The planet's surface is inaccessible until the player buys the Planetary Scanner, which reveals the ore seams under it (see 4.10)
 - The void is close here - visible as an absence at the edge of the skybox
 
 **Resources:** Common metals, hull fragments, basic wiring, frozen fuel reserves
@@ -1393,52 +1393,53 @@ The ship starts as a clean (if ugly) junker and gradually becomes a **patchwork 
 
 ### 4.10 Planetary Scanner & Landing
 
-Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner**, reveals planet data and hidden **landing sites** where the player touches down and drills for gems.
+Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner**, reveals planet data and the **ore seams** just under the surface, where the player sets down and drills for gems.
 
 #### The Upgrade
 - `UpgradeItem` **Planetary Scanner** - path `planet_scanner`, tier 1, cheap, sold at the home station. Distinct from Scanner PULSE (#45, minimap resource pings).
 - `UNLOCK_FEATURE` → `has_planet_scanner`.
-- Future tier 2: wider scan range, faster scan, or reveals site yield.
+- Future tier 2: wider scan range, faster scan, or seams read deeper below the surface.
 
 #### Passive Scan
 - With the scanner installed, staying inside a planet's gravity field fills a scan meter (~4s). An amber sweep arc rotates around the planet while it fills.
 - Leaving the field before it completes resets the meter. Completed scans are permanent (saved).
-- On completion a small terminal readout types out: name/designation, `planet_type`, `habitability`, gravity strength, and sites found.
+- On completion a small terminal readout types out: name/designation, `planet_type`, `habitability`, gravity strength, and ore seams found.
 - Unscanned planets show `? ? ?` on the minimap.
 - The gravity pull makes holding position part of the challenge - tune meter speed accordingly.
 
-#### Landing Sites
-- 1-3 sites per planet (moons: 1, higher yield), each at a fixed angle on the surface; they ride the planet's orbit.
-- Visual: small beacon + pad bracket on the planet rim. Shown on minimap and in the tracking system.
-- Invisible until the planet is scanned.
+#### Ore Seams
+- A planet grows its own seams: 1-3 per rocky/ice planet, 1 richer seam per moon, none on the sun or a gas giant (no ground to land on). Seeded from the planet's save key, so a planet has the same seams every session.
+- Visual: a few subtle hexagons sitting just under the surface (`OreDeposit.DEPTH_MIN`..`DEPTH_MAX`), breathing slowly. Shown on the minimap and in the tracking system.
+- Buried (invisible, untrackable, unlandable) until the planet is scanned; the scan surfaces them with a ping.
 
-#### Touchdown (`LandedState`)
-- To land: be over the pad arc, with low speed relative to the planet and the nose roughly away from the planet's centre.
+#### Touchdown (`PlanetLandedState`)
+- To land: touch the plain surface within `OreDeposit.REACH` of a seam, with low speed relative to the planet and the nose roughly away from the planet's centre. There is no pad - any ground near the seam will do.
 - Too fast → hull damage + bounce.
 - Once landed, the ship locks to the planet and follows its orbit. Thrust and fuel drain stop.
 - Thrust to lift off. Liftoff costs a burst of fuel scaled by planet gravity × cargo weight - a light risk when the hold is full.
 
 #### Drilling
-- While landed, ACTION starts a `D R I L L` sequence reusing the `HarvestTiming` bar, 3-4 depth layers in a row.
+- Landing next to a seam offers the drill prompt; ACTION starts a `D R I L L` sequence reusing the `HarvestTiming` bar, 3-4 depth layers in a row.
 - Each successful layer adds gems; deeper layers roll higher `GemData` tiers. PERFECT bumps that layer one tier.
 - OVERLOAD ends the dig: keep what was dug, take small hull damage from drill kickback.
 - The player can stop between layers and bank what they have (push-your-luck).
 
 #### Depletion
-- After a dig the site is spent and its beacon dims to `Colors.PRIMARY_DIM`.
-- It regrows after ~5 min of game time (richer sites take longer).
-- Site state persists in `Save.gd` alongside planet orbital angles.
+- After a dig the seam is spent: its hexes dim to `Colors.PRIMARY_DIM` and the drill refuses it.
+- It refills after ~5 min of game time (richer seams take longer). No countdown is ever shown - the seam just comes back.
+- Seam state persists in `Save.gd` alongside planet orbital angles.
 
 #### Build Order
 1. Scanner upgrade item + `has_planet_scanner` flag
 2. Passive scan + readout + persisted scanned state
-3. Landing site nodes, visuals, minimap/tracking markers
-4. `LandedState`: touchdown + liftoff
+3. Ore seam nodes, visuals, minimap/tracking markers
+4. `PlanetLandedState`: touchdown + liftoff
 5. Drill minigame + gem payout
-6. Depletion / regrowth + save
+6. Depletion / refill + save
 
-> **TODO**: Per-planet-type site variants (ice → shards + fuel, rocky → bigger gems) - v2.
-> **TODO**: Tune scan time, touchdown speed threshold, liftoff fuel cost, regrow time.
+> **TODO**: Deeper scans and deeper digs - seams further below the surface, reached by a later scanner/drill tier.
+> **TODO**: Per-planet-type seam variants (ice → shards + fuel, rocky → bigger gems) - v2.
+> **TODO**: Tune scan time, touchdown speed threshold, liftoff fuel cost, refill time.
 
 ---
 

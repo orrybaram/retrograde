@@ -33,6 +33,7 @@ extends Node
 ##   land <planet> [descent] [sec] throttle real `thrust` presses to fall onto the planet at
 ##                                 about <descent> px/s (default 15) until PlanetLandedState.
 ##                                 Start nose-up above a pad (pt.hover_over_site).
+##   reload                        reload the game from the save and wait for it to finish
 ##   timescale <n>                 set Engine.time_scale
 ##   log <text>                    echo text into the transcript
 ##   quit                          end the session
@@ -42,7 +43,7 @@ extends Node
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
 ##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
 ##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
-##       pt.site(planet), pt.hover_over_site(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.drill(),
+##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.drill(),
 ##       pt.caption(text) (on-screen caption for recorded videos))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
@@ -286,6 +287,8 @@ func execute(line: String) -> Dictionary:
 			await _stage_harvest(float(args[0]) if args.size() > 0 and args[0].is_valid_float() else 40.0, args.has("trophy"), reply)
 		"land":
 			await _land(args[0], float(args[1]) if args.size() > 1 else 15.0, float(args[2]) if args.size() > 2 else 15.0, reply)
+		"reload":
+			await _reload(reply)
 		"timescale":
 			Engine.time_scale = float(args[0])
 		"log":
@@ -623,14 +626,14 @@ func park_near_planet(planet_name: String, dist: float, angle_deg := 180.0) -> v
 	ship.global_position = pos
 	ship.rotation = dir.angle()
 
-## Hover `height` px above a planet's first landing site (from its surface), nose tilted
+## Hover `height` px above a planet's first ore seam (from its surface), nose tilted
 ## `tilt_deg` off straight up, falling toward it at `descent` px/s relative to the planet.
-func hover_over_site(planet_name: String, height: float, tilt_deg := 0.0, descent := 0.0) -> void:
+func hover_over_ore(planet_name: String, height: float, tilt_deg := 0.0, descent := 0.0) -> void:
 	var p := planet(planet_name)
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
-	var site := p.get_landing_sites()[0] as LandingSite
-	var up := site.normal()
-	var pos := site.global_position + up * (PlanetLandedState.LANDED_HEIGHT + height)
+	var seam := p.get_ore_deposits()[0]
+	var up := seam.normal()
+	var pos := seam.global_position + up * (PlanetLandedState.LANDED_HEIGHT + height)
 	var rid := ship.get_rid()
 	var rot := up.angle() + deg_to_rad(tilt_deg)
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rot, pos))
@@ -639,14 +642,30 @@ func hover_over_site(planet_name: String, height: float, tilt_deg := 0.0, descen
 	ship.global_position = pos
 	ship.rotation = rot
 
-## The landed ship's drill (pt.drill().timing, .layer, .phase), or null.
-func drill() -> SiteDrill:
-	var ship := get_tree().get_first_node_in_group("ship")
-	return ship.get_node_or_null("SiteDrill") if ship else null
+## Reload from the save (as CONTINUE does) and wait for the load to finish, so the next
+## command sees the loaded world. Fails when there is no save to load.
+func _reload(reply: Dictionary) -> void:
+	if not Save.save_exists():
+		reply["ok"] = false
+		reply["error"] = "reload: no save file yet"
+		return
+	var main := get_tree().get_first_node_in_group("main")
+	await main.load_game()
+	await _frames(2)
+	reply["state"] = state_name()
 
-## The first landing site on a planet.
-func site(planet_name: String) -> LandingSite:
-	return planet(planet_name).get_landing_sites()[0]
+## True when a save file exists (scenarios that reload should check this first).
+func save_exists() -> bool:
+	return Save.save_exists()
+
+## The landed ship's drill (pt.drill().timing, .layer, .phase), or null.
+func drill() -> OreDrill:
+	var ship := get_tree().get_first_node_in_group("ship")
+	return ship.get_node_or_null("OreDrill") if ship else null
+
+## The first ore seam on a planet.
+func ore(planet_name: String) -> OreDeposit:
+	return planet(planet_name).get_ore_deposits()[0]
 
 ## Height of the ship's centre above a planet's surface.
 func altitude(planet_name: String) -> float:
