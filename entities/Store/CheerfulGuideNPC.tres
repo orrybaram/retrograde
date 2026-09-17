@@ -17,4 +17,4 @@ greeting = "* Hey there, pilot!
 * Welcome to SR-7.
 * I've got everything you need -
 * upgrades, repairs, you name it."
-talk_topics = PackedStringArray("What is this place?", "Any advice for a new pilot?", "What upgrades do you recommend?")
+talk_topics = Array[String](["What is this place?", "Any advice for a new pilot?", "What upgrades do you recommend?"])
