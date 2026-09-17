@@ -18,4 +18,5 @@ script = ExtResource("1_conv")
 id = &"first_cargo_full"
 priority = 1
 once = true
+pause_game = true
 lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2")])

@@ -86,7 +86,6 @@ func get_indicator_info() -> Dictionary:
 	var ship := resource_node._ship_in_range
 	if ship and is_instance_valid(ship) and ship.is_cargo_full():
 		lines.append({"text": "HOLD FULL", "color": Colors.DANGER})
-		lines.append({"text": "CASH IN AT PORT / UPGRADE HOLD", "color": Colors.TEXT_MUTED})
 
 	return {
 		"title": resource_node.kind,

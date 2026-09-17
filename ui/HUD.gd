@@ -1,7 +1,7 @@
 extends Control
 
 ## In-game HUD: fuel bar, hull segment bar, cargo weight, banked credits, velocity readout,
-## transient action messages, and the robot's radio panel. Subscribes to ship signals and EventBus.action_message_changed.
+## and the robot's radio panel. Subscribes to ship signals. (Action prompts live in IndicatorManager.)
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
 @onready var fuel_progress_bar: ProgressBarWidget = $"DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar"
@@ -10,7 +10,6 @@ extends Control
 @onready var max_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/MaxCargoLabel"
 @onready var credits_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CreditsLabel"
 @onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
-@onready var action_message_label: Label = $"ActionMessageLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
 
 var gs: Node = null
@@ -46,33 +45,15 @@ func _ready() -> void:
 	if ship and ship.has_signal("cargo_changed"):
 		ship.cargo_changed.connect(_on_cargo_changed)
 
-	EventBus.action_message_changed.connect(_on_action_message_changed)
-	if EventBus.is_harvest_available():
-		_on_action_message_changed(EventBus.harvest_prompt())
-	else:
-		_on_action_message_changed("")
-
-func _on_action_message_changed(message: String) -> void:
-	_update_action_message(message)
-
 func _on_inventory_changed(item_id: String = "", new_quantity: int = 0) -> void:
 	_update_labels(item_id, new_quantity)
 	var new_weight = InventoryManager.get_total_weight()
 	if new_weight > _last_cargo_weight:
 		_punch_cargo_label()
-	# Hold just filled: the harvest prompt adds a cash-in hint.
-	var max_cargo := ship.max_cargo_weight if ship and is_instance_valid(ship) else 160.0
-	if new_weight >= max_cargo and _last_cargo_weight < max_cargo and EventBus.is_harvest_available():
-		_on_action_message_changed(EventBus.harvest_prompt())
 	_last_cargo_weight = new_weight
 
 func _on_cargo_changed(_current_weight: float, _max_weight: float) -> void:
 	_update_labels()
-
-func _update_action_message(message: String) -> void:
-	if action_message_label:
-		action_message_label.visible = message != ""
-		action_message_label.text = message
 
 func show_saving_indicator() -> void:
 	if save_indicator_label:
@@ -136,7 +117,7 @@ func _punch_credits_label() -> void:
 func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	if gs == null: return
 	var cargo_weight = InventoryManager.get_total_weight()
-	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 160
+	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 50
 	current_cargo_label.text = "%d" % int(cargo_weight)
 	var cargo_full: bool = cargo_weight >= max_cargo
 	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo

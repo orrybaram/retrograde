@@ -29,6 +29,13 @@ Action rows:
    ACTION NAME                    COST/VALUE    (unavailable/owned: Colors.PRIMARY_DIM #6B5A34)
 ```
 
+Full-screen menus with UNIT-7 (inventory, store) are built in code from shared parts:
+- `TerminalWindow` (`ui/TerminalWindow.gd`): dimmed backdrop, centered bordered window, title/hint tabs, `animate_in()`, plus static builders (`label`, `header`, `rule`, `spacer`, `filler`, `box`).
+- `RobotCard` (`ui/RobotCard.gd`): left column with the robot portrait, status tag, `say(text, expression)` typed dialogue and credits.
+- `SegmentGauge` (`ui/SegmentGauge.gd`): segmented bar / tier pips.
+
+`Typewriter` lays text out after shaping (`VC_CHARS_AFTER_SHAPING`) so wrapped words don't jump lines while typing.
+
 ## Robot Radio (guide robot help messages)
 
 ```
@@ -43,8 +50,13 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 - Continue: SPACE (TAB/ENTER aliases) finishes the speech, then moves on (next / confirm / close).
   SPACE is also the flight action key, so it only drives conversations that pause the game or
   contain a confirm; other tips take TAB/ENTER and auto-dismiss after `RadioLine.read_time()`.
-- `pause_game` conversations (controls + scrap tutorials, game-over calls) pause the tree and never
+- `pause_game` conversations (every `once` tutorial: controls, scrap, low fuel, hold full; game-over calls) pause the tree and never
   time out. The unpause waits two physics frames so the closing SPACE isn't read as dock/harvest.
+  A pausing conversation requested while a flight key (action/thrust/turn/boost) is down is held
+  back until the keys have been up for `RobotRadio.PAUSE_GRACE_SEC` (1s), so mashing SPACE mid-harvest
+  can't dismiss it unread.
+- RadioPanel hides while a menu is open in the HUD's CanvasLayer. Transient overlays there (gem
+  pickup popups) join the `hud_overlay` group so they don't count as menus.
 - Confirm lines (`RadioLine.confirm`) show `> ACTION` and can't time out.
   `RobotRadio.confirm()` clears the radio, then emits `confirmed(id)`. Used for the out-of-fuel offer
   (StrandedState: abandon ship, or a tractor-beam tow inside a station's beam) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).

@@ -19,6 +19,7 @@ var follow: Node2D = null  # When set, the text tracks this node instead of a fi
 var _rise := 0.0  # Animated upward drift in screen px
 
 func _ready() -> void:
+	add_to_group("hud_overlay")  # not a menu: the radio stays up over it
 	visible = false
 	modulate.a = 0.0
 
