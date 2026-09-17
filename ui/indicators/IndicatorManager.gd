@@ -18,6 +18,7 @@ const PROMPT_FONT_SIZE := 8
 const PROMPT_GAP := 6.0
 const PROMPT_SHIP_OFFSET := 26.0  # below the ship's center, in screen px
 const PROMPT_ALPHA := 0.7
+const PROMPT_OUTLINE := 4  # dark halo so the hint reads over the landing bay stripes
 
 var _prompt: Label
 var _prompt_text := ""
@@ -31,6 +32,8 @@ func _ready() -> void:
 	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_prompt.add_theme_font_size_override("font_size", PROMPT_FONT_SIZE)
 	_prompt.add_theme_color_override("font_color", Colors.PRIMARY)
+	_prompt.add_theme_color_override("font_outline_color", Colors.SPACE_BG)
+	_prompt.add_theme_constant_override("outline_size", PROMPT_OUTLINE)
 	_prompt.visible = false
 	add_child(_prompt)
 	EventBus.action_message_changed.connect(_on_action_message_changed)

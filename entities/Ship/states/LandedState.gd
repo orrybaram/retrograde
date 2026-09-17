@@ -319,8 +319,7 @@ func _exit_to_flying() -> void:
 		state_machine.change_state("FlyingState")
 
 func _show_enter_spaceport_message() -> void:
-	var action_key = InputUtils.get_action_key_name("action")
-	EventBus.action_message_changed.emit('Press "%s" to enter spaceport' % [action_key])
+	EventBus.action_message_changed.emit(EventBus.action_prompt("ENTER PORT"))
 
 func _on_dialogue_closed() -> void:
 	_show_enter_spaceport_message()
