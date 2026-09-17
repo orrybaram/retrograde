@@ -1,0 +1,81 @@
+# Foreground space dust, every case: docked (hidden), cruising (drifting specks, no streaks),
+# boosting (streaks only when really fast), boosted braking (streaks shrink, dust fades),
+# boosting + turning (streaks follow velocity, not the nose), harvesting.
+# Run: tools/play.sh playtests/dust.play
+# Video: each `eval get_tree().get_frame()` after a `log mark` gives the frame to time captions
+# against a `godot --write-movie out.avi --fixed-fps 60` capture.
+# The ship brakes and turns 90 degrees before boosting: straight ahead of the dock it hits something.
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+
+log mark DOCKED
+eval get_tree().get_frame()
+wait 2.5
+assert main.get_node("SpaceDust")._visibility < 0.01 "no dust while docked"
+screenshot dust_1_docked
+
+log mark CRUISE
+eval get_tree().get_frame()
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks"
+wait 2
+eval ship.linear_velocity.length()
+assert main.get_node("SpaceDust")._visibility > 0.5 "specks visible at cruising speed"
+assert main.get_node("SpaceDust")._stretch == 0.0 "no streaks at cruising speed"
+screenshot dust_2_cruise
+# Stop and turn to a clear heading.
+down reverse_thrust
+wait_until ship.linear_velocity.dot(Vector2(cos(ship.rotation), sin(ship.rotation))) < 5 10
+up reverse_thrust
+hold turn_left 0.3
+wait 1
+
+log mark BOOST
+eval get_tree().get_frame()
+down thrust
+hold boost 3.5
+up thrust
+eval ship.linear_velocity.length()
+assert main.get_node("SpaceDust")._stretch > 0.8 "streaks when really fast"
+screenshot dust_3_boost
+
+log mark BRAKE
+eval get_tree().get_frame()
+down reverse_thrust
+down boost
+wait_until ship.linear_velocity.dot(Vector2(cos(ship.rotation), sin(ship.rotation))) < 5 15
+release_all
+assert pt.state_name() == "FlyingState" "survived the boost"
+wait 1.5
+eval ship.linear_velocity.length()
+assert main.get_node("SpaceDust")._stretch == 0.0 "streaks gone when slow"
+assert main.get_node("SpaceDust")._visibility < 0.2 "dust fades out when stopped"
+screenshot dust_4_brake
+
+log mark TURN
+eval get_tree().get_frame()
+down thrust
+hold boost 3.5
+up thrust
+hold turn_left 0.5
+wait 1
+hold turn_right 0.5
+wait 1
+assert pt.state_name() == "FlyingState" "still flying"
+assert main.get_node("SpaceDust")._stretch > 0.5 "coasting fast keeps streaks"
+screenshot dust_5_turn
+
+log mark HARVEST
+eval get_tree().get_frame()
+stage_harvest 40
+down action
+wait_until pt.state_name() == "HarvestingState" 2
+eval ship.linear_velocity.length()
+wait 2
+screenshot dust_6_harvest
+up action
+wait 1.5
+
+log mark END
+eval get_tree().get_frame()
