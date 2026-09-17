@@ -1,0 +1,116 @@
+# Out of fuel: inside a tractor beam the key calls a tow; outside it abandons ship. The
+# abandoned ship stays adrift with its whole hold aboard, survives respawn and a reload,
+# and salvaging it with five PERFECT hits recovers 100% of that hold plus the hull's scrap.
+# Run: tools/play.sh playtests/abandon.play   (frames land in .playtest/abandon_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+
+# --- Near the station the prompt offers a tow (then refuel and carry on) ---
+eval ship.consume_fuel(ship.fuel + 1.0)
+wait_until pt.state_name() == "StrandedState" 2
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel_beam" 2
+assert get_tree().root.get_node("RobotRadio").current_line().confirm == "CALL TRACTOR BEAM" "robot offers a tow inside the beam"
+eval ship.set("fuel", ship.max_fuel)
+eval ship.state_machine.change_state("FlyingState")
+assert not get_tree().root.get_node("RobotRadio").is_active() "refueling withdraws the offer"
+
+# --- Far out, it's abandon ship ---
+eval pt.warp_to(ship.global_position + Vector2(4000, 0))
+frames 5
+assert not main.is_within_tractor_beam() "clear of the tractor beam"
+# 20 shards + 10 gems + 3 artifacts = 33 gems, 420 CR
+eval inv.add_item("shard", 20)
+eval inv.add_item("gem", 10)
+eval inv.add_item("artifact", 3)
+eval ship.set("linear_velocity", Vector2(120, 40))
+eval ship.consume_fuel(ship.fuel + 1.0)
+wait_until pt.state_name() == "StrandedState" 2
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 2
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+assert pt.node("radio_panel").choice_text().contains("ABANDON SHIP") "robot offers to abandon ship outside the beam"
+screenshot abandon_1_prompt
+press action
+frames 2
+assert pt.derelict_count() == 1 "ship left adrift"
+assert pt.node("derelicts").loot.size() == 33 "whole hold aboard"
+assert not ship.ship_polygon.visible "player hull replaced by the derelict"
+wait 1
+assert ship.global_position.distance_to(pt.node("derelicts").global_position) < 6.0 "camera rides with the derelict"
+screenshot abandon_2_adrift
+wait_until main.current_game_state == 2 10
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+assert pt.node("radio_panel").message_text().contains("cargo's still aboard") "robot says the cargo is on the derelict"
+screenshot abandon_3_game_over
+press enter
+wait_until main.current_game_state == 1 30
+wait_until pt.state_name() == "LandedState" 5
+assert pt.derelict_count() == 1 "derelict survives the respawn"
+assert inv.get_total_value() == 0 "new ship starts empty"
+
+# --- Reload: the derelict comes back from the save ---
+eval main.call_deferred("load_game")
+wait 3
+assert pt.derelict_count() == 1 "derelict restored from the save"
+assert pt.node("derelicts").loot.size() == 33 "hold still aboard after reload"
+
+# --- Salvage it: five PERFECT hits recover everything ---
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.3
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.warp_to(pt.node("derelicts").global_position + Vector2(-60, 0))
+frames 3
+stage_harvest 40
+assert pt.staged is DerelictShip "staged the derelict"
+screenshot abandon_4_salvage
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged.hits_left == 4 2
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged.hits_left == 3 2
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged.hits_left == 2 2
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged.hits_left == 1 2
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.derelict_count() == 0 3
+burst abandon_5_break 5 0.1
+# 33 hold gems + a PERFECT scrap break (at least 7 more)
+wait_until pt.item_count() >= 40 8
+wait 1
+assert inv.get_quantity("shard") >= 20 and inv.get_quantity("gem") >= 10 and inv.get_quantity("artifact") >= 3 "all-PERFECT salvage recovers the whole hold"
+assert inv.get_total_value() > 420 "the hull adds its own scrap on top"
+state

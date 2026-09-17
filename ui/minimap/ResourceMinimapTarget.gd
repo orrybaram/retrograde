@@ -1,7 +1,8 @@
 extends MinimapTarget
 class_name ResourceMinimapTarget
 
-## MinimapTarget implementation for ScrapNode entities.
+## MinimapTarget for ScrapNode: a small hull-colored chunk that tumbles with the scrap.
+## Trophy scrap is a larger mustard chunk that twinkles.
 
 var resource: ScrapNode
 
@@ -23,17 +24,14 @@ func get_minimap_position() -> Vector2:
 	return resource.global_position
 
 func get_minimap_color() -> Color:
-	# Use a distinct color for resources (green/yellow)
-	if resource and is_instance_valid(resource):
-		# Use the resource's color (ScrapNode has a color property)
-		return resource.color
-	return Colors.SUCCESS
-
-func get_minimap_icon() -> String:
-	return "dot"  # Small dot for resources
+	if resource and is_instance_valid(resource) and resource.is_trophy:
+		return Colors.PRIMARY
+	return Colors.HULL_LIGHT
 
 func get_minimap_size() -> float:
-	return 2.0
+	if resource and is_instance_valid(resource) and resource.is_trophy:
+		return 3.0
+	return 2.2
 
 func get_minimap_priority() -> int:
 	# Resources have low priority (drawn below planets/stations)
@@ -49,3 +47,9 @@ func is_minimap_visible() -> bool:
 
 func get_minimap_node() -> Node2D:
 	return resource
+
+func draw_marker(map: Minimap, pos: Vector2, size: float, view_rotation: float) -> void:
+	var color := get_minimap_color()
+	if resource.is_trophy:
+		color.a = 0.65 + 0.35 * sin(Minimap.now() * 5.0 + pos.x)
+	Minimap.draw_fleck(map, pos, size, resource.rotation + view_rotation, color)

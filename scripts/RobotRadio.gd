@@ -23,8 +23,9 @@ const MSG_LOW_FUEL := preload("res://entities/Robot/radio/messages/first_low_fue
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
 const MSG_OUT_OF_FUEL := preload("res://entities/Robot/radio/messages/out_of_fuel.tres")
+const MSG_OUT_OF_FUEL_BEAM := preload("res://entities/Robot/radio/messages/out_of_fuel_beam.tres")
 const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_destroyed.tres")
-const MSG_TOWED_HOME := preload("res://entities/Robot/radio/messages/towed_home.tres")
+const MSG_SHIP_ABANDONED := preload("res://entities/Robot/radio/messages/ship_abandoned.tres")
 const MSG_TRACTOR_RESCUE := preload("res://entities/Robot/radio/messages/tractor_rescue.tres")
 
 var queue := RadioQueue.new()

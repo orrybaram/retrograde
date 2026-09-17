@@ -1,7 +1,7 @@
 # Robot radio. The controls and scrap tutorials pause the game and wait for the player:
 # SPACE (TAB/ENTER aliases) finishes the speech, then moves on. Unpaused tips auto-dismiss
 # and leave SPACE to the ship. Running dry and losing the ship are radio calls whose
-# confirm line sends the beacon / relaunches.
+# confirm line abandons ship / relaunches.
 # Run: tools/play.sh playtests/radio.play   (frames land in .playtest/radio_*.png)
 
 press enter
@@ -109,13 +109,13 @@ wait 0.3
 assert not get_tree().root.get_node("RobotRadio").is_active() "tutorial finished"
 assert not get_tree().paused "closing the tutorial unpauses"
 
-# Out of fuel: a confirm call, game keeps running
+# Out of fuel: the robot offers to abandon ship (a confirm call), game keeps running
 eval ship.set("fuel", 0.5)
 hold thrust 0.5
 wait_until pt.state_name() == "StrandedState" 3
 assert not bus.is_harvest_available() "a stranded ship can't harvest the scrap beside it"
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 3
-assert not get_tree().paused "beacon offer doesn't pause (you may be drifting home)"
+assert not get_tree().paused "abandon offer doesn't pause (you may be drifting home)"
 assert pt.node("radio_panel").choice_text() == "" "no confirm row on the intro line"
 press i
 wait_until pt.visible_ui().has("InventoryUI") 2
@@ -129,22 +129,22 @@ press space
 wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
 assert pt.state_name() == "StrandedState" "SPACE on the radio doesn't start a harvest"
 wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_07_beacon_offer
-assert pt.node("radio_panel").choice_text().contains("SEND RESCUE BEACON") "confirm row shown"
+screenshot radio_07_abandon_offer
+assert pt.node("radio_panel").choice_text().contains("ABANDON SHIP") "confirm row shown"
 wait 10
 assert get_tree().root.get_node("RobotRadio").current_line().is_confirm() "confirm never times out"
 assert main.current_game_state == 1 "nothing happens until confirmed"
 press radio_next
 wait_until main.current_game_state == 2 10
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "towed_home" 3
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
 assert get_tree().paused "game-over call pauses"
 press space
 frames 2
 press space
 wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
 wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_08_towed_home
-assert pt.node("radio_panel").choice_text().contains("-10 CR") "tow fee filled in"
+screenshot radio_08_abandoned
+assert pt.node("radio_panel").choice_text().contains("-10 CR") "abandon fee filled in"
 press enter
 wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
 wait 0.3
@@ -177,5 +177,5 @@ wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
 wait 1
 assert not get_tree().paused "relaunch unpauses"
 assert pt.visible_ui().is_empty() "the confirming SPACE doesn't open the dock menu"
-assert gs.death_count == 2 "tow and explosion both count as deaths"
+assert gs.death_count == 2 "abandoning and exploding both count as deaths"
 quit

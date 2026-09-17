@@ -20,8 +20,9 @@ signal planets_restored()
 signal resources_refresh_requested()
 ## Emitted when resource nodes should respawn (e.g. docking at a space port or respawning).
 
-signal rescue_beacon_deployed()
-## Emitted when the player deploys a rescue beacon after running out of fuel.
+signal abandon_ship_requested()
+## Emitted when a stranded (out of fuel) player acts: abandon ship, or a tractor-beam tow
+## when a station is in range.
 
 signal game_unpaused(pause_duration: float)
 ## Emitted when game resumes from pause with the duration paused in seconds.

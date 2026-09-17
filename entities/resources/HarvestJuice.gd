@@ -53,6 +53,16 @@ static func play(ship: Ship, scrap: ScrapNode, grade: HarvestTiming.Grade, gem_i
 	if stop > 0.0:
 		hitstop(scrap.get_tree(), stop)
 
+static func is_hitstopped() -> bool:
+	return _hitstop_restore >= 0.0
+
+## Distance a body at `velocity` misses over `real_dt` wall-clock seconds while time is
+## slowed. Orbits run on wall-clock time, so the ship makes this up to stay with them.
+static func hitstop_catch_up(velocity: Vector2, real_dt: float) -> Vector2:
+	if not is_hitstopped():
+		return Vector2.ZERO
+	return velocity * real_dt * (_hitstop_restore - Engine.time_scale)
+
 ## Briefly slow the whole game. Overlapping calls extend rather than stack.
 static func hitstop(tree: SceneTree, seconds: float) -> void:
 	if _hitstop_restore < 0.0:

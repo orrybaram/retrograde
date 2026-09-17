@@ -46,7 +46,7 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 - `pause_game` conversations (controls + scrap tutorials, game-over calls) pause the tree and never
   time out. The unpause waits two physics frames so the closing SPACE isn't read as dock/harvest.
 - Confirm lines (`RadioLine.confirm`) show `> ACTION` and can't time out.
-  `RobotRadio.confirm()` clears the radio, then emits `confirmed(id)`. Used for the rescue beacon
-  (StrandedState) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).
+  `RobotRadio.confirm()` clears the radio, then emits `confirmed(id)`. Used for the out-of-fuel offer
+  (StrandedState: abandon ship, or a tractor-beam tow inside a station's beam) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).
 - Only a powered ship (Flying/Harvesting) can harvest, so a stranded ship's SPACE stays with the radio.
 - `{name}` placeholders come from `conv.with_vars({...})`.

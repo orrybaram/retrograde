@@ -149,6 +149,19 @@ func _ready() -> void:
 	if side_thruster_particles and side_thruster_particles.process_material:
 		side_thruster_particles.process_material = side_thruster_particles.process_material.duplicate()
 
+var _last_frame_usec := 0
+
+func _process(_dt: float) -> void:
+	# Hitstop slows physics, but orbits keep wall-clock time: keep pace so the ship
+	# doesn't fall behind the scrap it's harvesting.
+	var now := Time.get_ticks_usec()
+	var real_dt := (now - _last_frame_usec) / 1_000_000.0 if _last_frame_usec > 0 else 0.0
+	_last_frame_usec = now
+	if real_dt < 0.1 and not is_destroyed():
+		var catch_up := HarvestJuice.hitstop_catch_up(linear_velocity, real_dt)
+		if catch_up != Vector2.ZERO:
+			global_position += catch_up
+
 func _physics_process(dt: float) -> void:
 	# Delegate to current state
 	if state_machine and state_machine.current_state:

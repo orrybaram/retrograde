@@ -81,3 +81,17 @@ func test_glare_peaks_at_surface_and_fades_out() -> void:
 	assert_float(PlanetVisual.glare_alpha_for(2000.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.0625, 0.0001)
 	assert_float(PlanetVisual.glare_alpha_for(3000.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.0, 0.0001)
 	assert_float(PlanetVisual.glare_alpha_for(9000.0, 1000.0, 3.0, 0.5)).is_equal_approx(0.0, 0.0001)
+
+
+func test_glow_brightest_on_sun_side() -> void:
+	var to_sun := Vector2.RIGHT
+	var lit := PlanetVisual.glow_side_gain(Vector2.RIGHT, to_sun, 2.5, 0.35)
+	var side := PlanetVisual.glow_side_gain(Vector2.UP, to_sun, 2.5, 0.35)
+	var dark := PlanetVisual.glow_side_gain(Vector2.LEFT, to_sun, 2.5, 0.35)
+	assert_float(lit).is_equal_approx(2.5, 0.0001)
+	assert_float(dark).is_equal_approx(0.35, 0.0001)
+	assert_float(side).is_between(dark, lit)
+
+
+func test_glow_side_gain_neutral_without_light() -> void:
+	assert_float(PlanetVisual.glow_side_gain(Vector2.RIGHT, Vector2.ZERO, 2.5, 0.35)).is_equal(1.0)

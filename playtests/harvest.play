@@ -99,5 +99,6 @@ assert gs.credits == 0 and inv.get_total_value() > 0 "fresh game: no credits, ge
 eval ship.set_meta("pending_dockable", pt.node("space_ports"))
 eval ship.state_machine.change_state("LandedState")
 frames 2
-assert inv.get_total_value() == 0 and gs.credits > 0 "dock converts the hold into credits"
+wait_until inv.get_total_value() == 0 and gs.credits > 0 5
+assert gs.credits > 0 "dock flies the hold into the port as credits"
 state

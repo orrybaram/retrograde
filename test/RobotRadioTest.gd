@@ -344,14 +344,14 @@ func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
 
 const TIPS := [RADIO_SCRIPT.MSG_DEPARTURE, RADIO_SCRIPT.MSG_LOW_FUEL, RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP]
 const CONFIRM_CALLS := [RADIO_SCRIPT.MSG_OUT_OF_FUEL, RADIO_SCRIPT.MSG_SHIP_DESTROYED,
-	RADIO_SCRIPT.MSG_TOWED_HOME, RADIO_SCRIPT.MSG_TRACTOR_RESCUE]
+	RADIO_SCRIPT.MSG_SHIP_ABANDONED, RADIO_SCRIPT.MSG_TRACTOR_RESCUE, RADIO_SCRIPT.MSG_OUT_OF_FUEL_BEAM]
 
 
 func test_bundled_messages_are_valid() -> void:
 	for conv: RadioConversation in TIPS + CONFIRM_CALLS:
 		assert_str(String(conv.id)).is_not_empty()
 		assert_bool(conv.lines.is_empty()).is_false()
-		var vars := {"penalty": 20}
+		var vars := {"penalty": 20, "salvage": "Salvage it."}
 		for line in conv.lines:
 			var shown := line.display_text(vars) + line.confirm_text(vars)
 			assert_bool(RobotFaces.has_face(line.expression)).override_failure_message("%s: %s" % [conv.id, line.expression]).is_true()
@@ -376,10 +376,11 @@ func test_tutorials_and_game_over_pause_but_beacon_offer_does_not() -> void:
 	assert_bool(RADIO_SCRIPT.MSG_DEPARTURE.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SHIP_DESTROYED.pause_game).is_true()
-	assert_bool(RADIO_SCRIPT.MSG_TOWED_HOME.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_SHIP_ABANDONED.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_TRACTOR_RESCUE.pause_game).is_true()
 	# Stranded pilots may still be drifting into the tractor beam
 	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL.pause_game).is_false()
+	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL_BEAM.pause_game).is_false()
 	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_false()
 	assert_bool(RADIO_SCRIPT.MSG_CARGO_FULL.pause_game).is_false()
 

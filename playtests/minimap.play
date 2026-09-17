@@ -1,0 +1,66 @@
+# Minimap markers: cream heading arrow for the ship, station silhouette with a blue
+# beacon, shaded planets, scrap chunks, and an abandoned ship pinned to the rim.
+# Run: tools/play.sh playtests/minimap.play   (frames land in .playtest/minimap_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+wait_until pt.state_name() == "LandedState" 5
+wait 0.5
+screenshot minimap_1_docked
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+hold turn_left 0.4
+hold thrust 0.8
+wait 1
+screenshot minimap_2_flying
+
+# Abandon ship out past the station, then look for it from home
+eval pt.warp_to(ship.global_position + Vector2(4000, 2000))
+frames 5
+eval ship.consume_fuel(ship.fuel + 1.0)
+wait_until pt.state_name() == "StrandedState" 2
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 2
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+press action
+frames 2
+assert pt.derelict_count() == 1 "empty ship still left behind"
+assert pt.node("derelicts").hull_only "empty hull salvages like scrap"
+assert pt.node("derelicts").minimap_target is DerelictMinimapTarget "derelict registered on the minimap"
+wait 0.5
+screenshot minimap_3_abandoned
+wait_until main.current_game_state == 2 10
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+assert pt.node("radio_panel").message_text().contains("empty hull for scrap") "empty-hold abandon text"
+press enter
+wait_until main.current_game_state == 1 30
+wait_until pt.state_name() == "LandedState" 5
+eval pt.warp_to(ship.global_position + Vector2(-9000, -5000))
+eval ship.state_machine.change_state("FlyingState")
+wait 0.5
+assert pt.node("derelicts").minimap_target.pins_to_edge() "far derelict stays on the rim"
+screenshot minimap_4_derelict_far
+
+# Nav target: blue diamond at a near waypoint, held on the rim for a far one
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(3000, -2500))
+wait 0.2
+screenshot minimap_5_waypoint_near
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(-30000, 8000))
+wait 0.2
+screenshot minimap_6_waypoint_far
+eval get_node("/root/NavSystem").track(null)

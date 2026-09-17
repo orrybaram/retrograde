@@ -26,6 +26,7 @@ const BREAK_MAX := 8
 const PERFECT_CHIP_BONUS := 1
 const PERFECT_BREAK_BONUS := 2
 const TROPHY_BREAK_BONUS := 3
+const WRECK_SHARE := 0.7  # of the hold left floating where the ship blew up
 
 ## Item ids for one hit. Botched timing (LATE / OVERLOAD) still breaks off gems, but only shards.
 static func drops_for_hit(grade: HarvestTiming.Grade, final: bool, trophy: bool, rng: RandomNumberGenerator) -> Array[String]:
@@ -111,6 +112,15 @@ static func best_of(ids: Array) -> String:
 		if tier_of(id) > tier_of(best):
 			best = id
 	return best
+
+## Item ids left at a wreck: WRECK_SHARE of each gem tier in the hold, rounded.
+static func wreck_drops(items: Dictionary) -> Array[String]:
+	var ids: Array[String] = []
+	for id in items:
+		if is_gem(id):
+			for i in roundi(int(items[id]) * WRECK_SHARE):
+				ids.append(id)
+	return ids
 
 ## Credits a set of {item_id: quantity} is worth. Non-gem ids count for nothing.
 static func hold_value(items: Dictionary) -> int:

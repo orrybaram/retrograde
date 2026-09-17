@@ -21,11 +21,11 @@ enum MainGameState {
 @onready var hud: Control = $"CanvasLayer/HUD"
 
 ## Relaunch fee per game-over reason (a tractor-beam rescue is free).
-const RELAUNCH_PENALTY := {"Ship Destroyed": 20, "Out of Fuel": 10}
+const RELAUNCH_PENALTY := {"Ship Destroyed": 20, "Ship Abandoned": 10}
 ## What the robot radios after each game-over reason. Its confirm line relaunches.
 const GAME_OVER_MESSAGES := {
 	"Ship Destroyed": RobotRadio.MSG_SHIP_DESTROYED,
-	"Out of Fuel": RobotRadio.MSG_TOWED_HOME,
+	"Ship Abandoned": RobotRadio.MSG_SHIP_ABANDONED,
 	"Tractor Beam": RobotRadio.MSG_TRACTOR_RESCUE,
 }
 
@@ -46,8 +46,8 @@ func _ready() -> void:
 	if ship:
 		ship.fuel_depleted.connect(_on_fuel_depleted)
 
-	# Connect rescue beacon signal
-	EventBus.rescue_beacon_deployed.connect(_on_rescue_beacon_deployed)
+	# Stranded ship: abandon it (or get towed inside a tractor beam)
+	EventBus.abandon_ship_requested.connect(_on_abandon_ship_requested)
 	
 	# Start with menu visible and game paused
 	if start_menu:
@@ -141,11 +141,11 @@ func _on_radio_confirmed(id: StringName) -> void:
 
 func _on_fuel_depleted() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
-		# Transition ship to stranded state (player must deploy rescue beacon)
+		# Transition ship to stranded state (player must abandon ship)
 		if ship and ship.state_machine and ship.state_machine.has_state("StrandedState"):
 			ship.state_machine.change_state("StrandedState")
 
-func _is_within_tractor_beam() -> bool:
+func is_within_tractor_beam() -> bool:
 	var stations = get_tree().get_nodes_in_group("space_stations")
 	for station in stations:
 		var tractor_beam = station.get_node_or_null("TractorBeamArea/TractorBeamCollision")
@@ -156,14 +156,19 @@ func _is_within_tractor_beam() -> bool:
 				return true
 	return false
 
-func _on_rescue_beacon_deployed() -> void:
+func _on_abandon_ship_requested() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
 		game_over_pending = true
 		# If within tractor beam range, rescue instead of death
-		if ship and _is_within_tractor_beam():
+		if ship and is_within_tractor_beam():
 			_show_game_over_delayed("Tractor Beam")
-		else:
-			_show_game_over_delayed("Out of Fuel")
+			return
+		# The ship stays adrift with its hold aboard, to be salvaged later
+		var derelict := DerelictShip.abandon(ship) if ship else null
+		var stranded := ship.state_machine.current_state as StrandedState if ship else null
+		if derelict and stranded:
+			stranded.abandon_to(derelict)
+		_show_game_over_delayed("Ship Abandoned")
 
 func _on_quit_to_menu() -> void:
 	current_game_state = MainGameState.MENU
@@ -176,6 +181,7 @@ func start_game() -> void:
 	if start_menu:
 		start_menu.visible = false
 	Gem.clear_all()
+	DerelictShip.clear_all(get_tree())
 
 	# Reset all game state for new game
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
@@ -229,7 +235,6 @@ func start_game() -> void:
 func load_game() -> void:
 	if start_menu:
 		start_menu.visible = false
-	Gem.clear_all()
 
 	# Hide ship while respawning to prevent showing at wrong location
 	if ship and ship.ship_polygon:
@@ -249,6 +254,11 @@ func load_game() -> void:
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	if gs and ship:
 		Save.load_into(gs, ship)
+		# Swap in the saved wrecks in one step, so no save in between can drop them
+		Gem.clear_all()
+		DerelictShip.clear_all(get_tree())
+		Save.restore_wreck_gems(ship.get_parent())
+		Save.restore_derelicts(ship.get_parent(), ship.ship_polygon)
 
 	# Restore planet orbital angles
 	Save.restore_planet_angles(get_tree())
@@ -300,11 +310,14 @@ func show_game_over(reason: String) -> void:
 	game_over_pending = false
 	RobotRadio.silence()
 	var message: RadioConversation = GAME_OVER_MESSAGES.get(reason, RobotRadio.MSG_SHIP_DESTROYED)
-	RobotRadio.request(message.with_vars({"penalty": RELAUNCH_PENALTY.get(reason, 0)}))
+	# The hold isn't cleared until relaunch, so it still says what an abandoned hull carries
+	var salvage := "Your cargo's still aboard, so salvage the wreck to get it back." \
+			if InventoryManager.get_total_value() > 0 else "Salvage the empty hull for scrap sometime."
+	RobotRadio.request(message.with_vars({"penalty": RELAUNCH_PENALTY.get(reason, 0), "salvage": salvage}))
 
 func reset_game() -> void:
 	game_over_pending = false
-	Gem.clear_all()  # loose gems stay behind at the wreck
+	Gem.clear_all(true)  # wreck gems stay where the ship blew up
 	
 	# Calculate relaunch costs before resetting ship
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState

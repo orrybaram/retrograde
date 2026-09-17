@@ -48,7 +48,26 @@ func test_runs_to_completion_and_fires_every_blast() -> void:
 	assert_int(steps).is_less(int(ShipExplosion.DURATION * 30.0) + 2)
 	for blast in explosion._blasts:
 		assert_bool(blast.fired).is_true()
-	assert_float(explosion.position.x).is_equal_approx(10.0 * ShipExplosion.DURATION, 1.0)
+	assert_vector(explosion.position).is_equal(Vector2.ZERO)
+
+
+func test_blast_stays_put_while_debris_carries_ship_momentum() -> void:
+	var hull := auto_free(Node2D.new()) as Node2D
+	var poly := Polygon2D.new()
+	poly.polygon = PackedVector2Array([Vector2(-5, -5), Vector2(5, -5), Vector2(5, 5), Vector2(-5, 5)])
+	hull.add_child(poly)
+	var still := auto_free(ShipExplosion.new()) as ShipExplosion
+	still.start(hull, Vector2.ZERO, null, Vector2.ZERO, 5)
+	var moving := auto_free(ShipExplosion.new()) as ShipExplosion
+	moving.start(hull, Vector2(200, 0), null, Vector2.ZERO, 5)
+	for i in 30:
+		still.advance(1.0 / 30.0)
+		moving.advance(1.0 / 30.0)
+	assert_vector(moving.position).is_equal(still.position)
+	# Same seed, so each piece is offset by exactly one second of drift
+	for i in moving._debris.size():
+		var offset: Vector2 = moving._debris[i].node.position - still._debris[i].node.position
+		assert_vector(offset).is_equal_approx(Vector2(200, 0), Vector2(0.5, 0.5))
 
 
 func test_explosion_restores_camera_offset() -> void:

@@ -34,6 +34,10 @@ var _sun: Node2D = null
 @export var glow_near_boost: float = 1.6
 @export var glow_near_distance: float = 50000.0
 @export var glow_far_distance: float = 250000.0
+## Halo multiplier on the side facing the sun.
+@export var glow_lit_gain: float = 2.5 : set = _set_glow_lit_gain
+## Halo multiplier on the side facing away from the sun.
+@export var glow_dark_gain: float = 0.35 : set = _set_glow_dark_gain
 
 ## Current sun-proximity multiplier on glow_strength.
 var _glow_boost: float = 1.0
@@ -141,6 +145,22 @@ func _set_glow_size(v: float) -> void:
 	glow_size = clampf(v, 0.0, 1.0)
 	queue_redraw()
 
+func _set_glow_lit_gain(v: float) -> void:
+	glow_lit_gain = maxf(0.0, v)
+	queue_redraw()
+
+func _set_glow_dark_gain(v: float) -> void:
+	glow_dark_gain = maxf(0.0, v)
+	queue_redraw()
+
+## Halo multiplier for the rim point in direction `dir`: `lit_gain` facing `to_light`,
+## `dark_gain` facing away, eased so the brightness bunches up on the sunward side.
+static func glow_side_gain(dir: Vector2, to_light: Vector2, lit_gain: float, dark_gain: float) -> float:
+	if to_light.is_zero_approx():
+		return 1.0
+	var t := (dir.normalized().dot(to_light.normalized()) + 1.0) * 0.5
+	return lerpf(dark_gain, lit_gain, t * t)
+
 ## Glow multiplier for a body `distance` from the sun: `near_boost` at or inside
 ## `near`, 1.0 at or beyond `far`, linear in between.
 static func glow_boost_for(distance: float, near: float, far: float, near_boost: float) -> float:
@@ -171,8 +191,9 @@ static func build_shadow_polygon(radius: float, to_light: Vector2, curve: float,
 
 ## Appends a ring-shaped radial gradient to `canvas_item` in a single draw call.
 ## `stops` is an Array of [radius: float, color: Color], ordered by increasing radius.
-## A first stop at radius 0 produces a filled disc.
-static func add_radial_gradient(canvas_item: RID, stops: Array, segments: int) -> void:
+## A first stop at radius 0 produces a filled disc. `gains` (optional, one per segment)
+## scales alpha around the ring.
+static func add_radial_gradient(canvas_item: RID, stops: Array, segments: int, gains: PackedFloat32Array = PackedFloat32Array()) -> void:
 	if stops.size() < 2:
 		return
 	var n := maxi(segments, 8)
@@ -182,10 +203,14 @@ static func add_radial_gradient(canvas_item: RID, stops: Array, segments: int) -
 	var dirs: Array[Vector2] = []
 	for i in n:
 		dirs.append(Vector2.from_angle(TAU * i / n))
+	var use_gains := gains.size() == n
 	for stop in stops:
-		for d in dirs:
-			points.append(d * float(stop[0]))
-			colors.append(stop[1])
+		for i in n:
+			points.append(dirs[i] * float(stop[0]))
+			var c: Color = stop[1]
+			if use_gains:
+				c.a = clampf(c.a * gains[i], 0.0, 1.0)
+			colors.append(c)
 	for ring in stops.size() - 1:
 		var a0 := ring * n
 		var b0 := (ring + 1) * n
@@ -230,15 +255,20 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 96, outline_color, outline_width)
 
 ## Halo that fades from `glow_strength` alpha at the rim to 0 outside,
-## with an eased two-band falloff.
+## with an eased two-band falloff. Brighter on the sun-facing side.
 func _draw_glow(radius: float) -> void:
 	var outer := radius * (1.0 + glow_size)
-	var strength := clampf(glow_strength * _glow_boost, 0.0, 1.0)
+	var strength := glow_strength * _glow_boost
+	var n := maxi(glow_segments, 8)
+	var gains := PackedFloat32Array()
+	gains.resize(n)
+	for i in n:
+		gains[i] = glow_side_gain(Vector2.from_angle(TAU * i / n), light_dir, glow_lit_gain, glow_dark_gain)
 	add_radial_gradient(get_canvas_item(), [
 		[radius, Color(base_color, base_color.a * strength)],
 		[lerpf(radius, outer, 0.35), Color(base_color, base_color.a * strength * 0.35)],
 		[outer, Color(base_color, 0.0)],
-	], glow_segments)
+	], n, gains)
 
 ## Additive corona, drifting rays, and a disc that burns white toward the center.
 func _draw_sun(radius: float) -> void:

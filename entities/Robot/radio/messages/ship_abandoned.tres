@@ -5,18 +5,18 @@
 
 [sub_resource type="Resource" id="line_1"]
 script = ExtResource("2_line")
-text = "Beacon received! A tow drone is dragging you home. Hold tight..."
+text = "Ship abandoned. I've marked the hull on your scanners."
 expression = &"worried"
 
 [sub_resource type="Resource" id="line_2"]
 script = ExtResource("2_line")
-text = "The tow ate your cargo, and the fee is {penalty} CR. Ready to fly again?"
+text = "{salvage} Your new ship is fueled and waiting."
 expression = &"neutral"
 confirm = "RELAUNCH  -{penalty} CR"
 
 [resource]
 script = ExtResource("1_conv")
-id = &"towed_home"
+id = &"ship_abandoned"
 priority = 3
 pause_game = true
 lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2")])

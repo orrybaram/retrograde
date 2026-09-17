@@ -1,6 +1,6 @@
 extends Control
 
-## In-game HUD: fuel bar, hull segment bar, cargo weight, velocity readout,
+## In-game HUD: fuel bar, hull segment bar, cargo weight, banked credits, velocity readout,
 ## transient action messages, and the robot's radio panel. Subscribes to ship signals and EventBus.action_message_changed.
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
@@ -8,6 +8,7 @@ extends Control
 @onready var hull_segment_bar: HullSegmentBar = $"DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar"
 @onready var current_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CurrentCargoLabel"
 @onready var max_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/MaxCargoLabel"
+@onready var credits_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CreditsLabel"
 @onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
 @onready var action_message_label: Label = $"ActionMessageLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
@@ -16,6 +17,8 @@ var gs: Node = null
 var ship: Ship = null
 var _last_cargo_weight: float = 0.0
 var _cargo_punch_tween: Tween = null
+var _shown_credits := 0.0  # rolls toward gs.credits so banked credits count up
+var _credits_punch_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("hud")
@@ -33,6 +36,8 @@ func _ready() -> void:
 	add_child(radio)
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
+	if gs:
+		_shown_credits = gs.credits
 	_update_labels()
 	_last_cargo_weight = InventoryManager.get_total_weight()
 	InventoryManager.inventory_changed.connect(_on_inventory_changed)
@@ -101,8 +106,32 @@ func _fit_dashboard() -> void:
 	dashboard.offset_top = -min_size.y
 	dashboard.offset_right = dashboard.offset_left + min_size.x
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	_roll_credits(dt)
 	_update_labels()
+
+## During a cash-in, tick the shown credit count up toward the bank; otherwise
+## (loads, purchases) snap to it.
+func _roll_credits(dt: float) -> void:
+	if gs == null:
+		return
+	var target := float(gs.credits)
+	if HoldCashIn.running == 0 or target < _shown_credits:
+		_shown_credits = target
+		return
+	var step := maxf(absf(target - _shown_credits) * 10.0, 40.0) * dt
+	var before := int(_shown_credits)
+	_shown_credits = move_toward(_shown_credits, target, step)
+	if int(_shown_credits) > before:
+		_punch_credits_label()
+
+func _punch_credits_label() -> void:
+	if not credits_label or (_credits_punch_tween and _credits_punch_tween.is_running()):
+		return
+	credits_label.pivot_offset = credits_label.size / 2.0
+	_credits_punch_tween = create_tween()
+	_credits_punch_tween.tween_property(credits_label, "scale", Vector2(1.15, 1.15), 0.05)
+	_credits_punch_tween.tween_property(credits_label, "scale", Vector2.ONE, 0.1)
 
 func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	if gs == null: return
@@ -110,8 +139,8 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 160
 	current_cargo_label.text = "%d" % int(cargo_weight)
 	var cargo_full: bool = cargo_weight >= max_cargo
-	var value_text := "  %d CR" % InventoryManager.get_total_value()
-	max_cargo_label.text = ("/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo) + value_text
+	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo
+	credits_label.text = "  %d CR" % int(_shown_credits)
 	var cargo_color := Colors.DANGER if cargo_full else Colors.PRIMARY
 	current_cargo_label.add_theme_color_override("font_color", cargo_color)
 	max_cargo_label.add_theme_color_override("font_color", Colors.DANGER if cargo_full else Colors.PRIMARY_DIM)
