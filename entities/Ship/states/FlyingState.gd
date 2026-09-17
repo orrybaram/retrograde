@@ -292,8 +292,7 @@ func _check_dockable_proximity() -> void:
 		if is_slow_enough and is_aligned and not in_cooldown:
 			# Show docking prompt (only if harvest isn't available)
 			if not EventBus.is_harvest_available():
-				var dock_key = InputUtils.get_action_key_name("action")
-				EventBus.action_message_changed.emit('Press "%s" to dock' % [dock_key])
+				EventBus.action_message_changed.emit(EventBus.action_prompt("DOCK"))
 		else:
 			# Moving too fast, not aligned, or in cooldown - clear message
 			if not EventBus.is_harvest_available():
