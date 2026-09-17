@@ -38,9 +38,13 @@ func _input(event: InputEvent) -> void:
 
 		if visible:
 			_on_resume_pressed()
+			get_viewport().set_input_as_handled()
 		else:
 			_show_pause_menu()
-		get_viewport().set_input_as_handled()
+			# Only consume ESC if we actually paused; otherwise let the open
+			# dialogue/store close itself.
+			if visible:
+				get_viewport().set_input_as_handled()
 		return
 
 	if not visible:

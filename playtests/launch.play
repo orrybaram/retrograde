@@ -1,0 +1,55 @@
+# Smoke playthrough: new game -> dock dialogue -> depart -> fly -> HUD overlays.
+# Run: tools/play.sh playtests/launch.play   (add --headless to skip screenshots)
+
+assert main.current_game_state == 0 "boots to menu"
+assert pt.visible_ui().has("StartMenu") "start menu visible"
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+wait 0.5
+screenshot 01_docked
+
+# Dock dialogue
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+screenshot 02_dock_dialogue
+# Regression: ESC closes the dock dialogue without pausing
+press escape
+wait_until pt.visible_ui().is_empty() 2
+assert not get_tree().paused "ESC on dock dialogue must not pause"
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+
+# Launch
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+assert ship.fuel < ship.max_fuel "thrusting burns fuel"
+assert ship.linear_velocity.length() > 50 "ship is moving"
+face planets 5
+assert abs(pt.nearest("planets").bearing_deg) <= 10 "face turns toward target"
+wait 1
+screenshot 03_flying
+
+# Overlays
+press i
+wait_until pt.visible_ui().has("InventoryUI") 2
+screenshot 04_inventory
+press i
+wait_until not pt.visible_ui().has("InventoryUI") 2
+press m
+wait_until pt.visible_ui().has("SystemMap") 2
+screenshot 05_system_map
+press m
+wait_until pt.visible_ui().is_empty() 2
+
+# Pause
+press escape
+wait_until get_tree().paused and pt.node("pause_menu").visible 2
+screenshot 06_paused
+press escape
+wait_until not get_tree().paused 2
+
+state
