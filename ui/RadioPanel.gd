@@ -2,12 +2,13 @@ class_name RadioPanel
 extends Control
 
 ## HUD transmission box for RobotRadio: the robot on the left, its message typed out
-## on the right. Never blocks flight. `radio_next` (TAB) advances/dismisses, ENTER
-## finishes the typing, and a finished line auto-dismisses after RadioLine.read_time().
-## Sits bottom-right, clear of the dashboard and the action message. Hidden while a
-## menu is open. Added to the HUD at runtime.
+## on the right. `radio_next` (TAB) advances/dismisses, ENTER finishes the typing, and
+## a finished line auto-dismisses after RadioLine.read_time(). Conversations that pause
+## the game wait instead (ENTER or TAB moves on). Confirm lines show `> ACTION` and wait
+## for ENTER/SPACE. Sits bottom-right, clear of the dashboard and the action message.
+## Hidden while a menu is open. Runs while paused. Added to the HUD at runtime.
 
-const PANEL_SIZE := Vector2(600, 190)
+const PANEL_SIZE := Vector2(600, 202)
 const SCREEN_MARGIN := Vector2(16, 72)  # right, bottom (clears action message + save indicator)
 const TITLE := "/ I N C O M I N G   T R A N S M I S S I O N /"
 const ROBOT_FONT_SIZE := 16
@@ -21,9 +22,11 @@ const NON_BLOCKING := [&"HUD", &"IndicatorManager"]
 var robot: RobotView
 
 var _line: RadioLine = null
+var _conv: RadioConversation = null
 var _message: RichTextLabel
 var _speaker: Label
 var _counter: Label
+var _choice: Label
 var _hint: Label
 var _timer_bar: ColorRect
 var _typewriter: Typewriter
@@ -36,6 +39,7 @@ var _fade: Tween
 func _ready() -> void:
 	name = "RadioPanel"
 	add_to_group("radio_panel")
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build()
 	visible = false
@@ -50,6 +54,9 @@ func is_typing() -> bool:
 
 func message_text() -> String:
 	return _message.get_parsed_text()
+
+func choice_text() -> String:
+	return _choice.text if _choice.visible else ""
 
 # --- Layout ------------------------------------------------------------------
 
@@ -134,6 +141,9 @@ func _build() -> void:
 	_message.add_theme_constant_override("line_separation", 6)
 	column.add_child(_message)
 
+	_choice = _label("", TEXT_SIZE, Colors.PRIMARY)
+	column.add_child(_choice)
+
 	_hint = _label("", SMALL_SIZE, Colors.PRIMARY_DIM)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	column.add_child(_hint)
@@ -159,6 +169,7 @@ func _label(text: String, font_size: int, color: Color) -> Label:
 func _show_line(line: RadioLine, conv: RadioConversation) -> void:
 	var opening := _line == null
 	_line = line
+	_conv = conv
 	_speaker.text = "%s >" % line.speaker_name().to_upper()
 	var pending := RobotRadio.queue.pending_count()
 	_counter.text = "%d/%d" % [RobotRadio.queue.line_index + 1, conv.lines.size()]
@@ -172,7 +183,10 @@ func _show_line(line: RadioLine, conv: RadioConversation) -> void:
 	_hold_left = 0.0
 	_hold_total = 0.0
 	_typed = 0
-	_typewriter.type_text(line.display_text())
+	_typewriter.type_text(line.display_text(conv.vars))
+	_choice.visible = line.is_confirm()
+	_choice.text = ">  %s" % line.confirm_text(conv.vars)
+	_choice.add_theme_color_override("font_color", Colors.PRIMARY_DIM)
 	_beeper.chirp(line.expression)
 	_update_hint()
 	if opening:
@@ -182,13 +196,22 @@ func _show_line(line: RadioLine, conv: RadioConversation) -> void:
 func _on_typing_finished() -> void:
 	robot.talking = false
 	robot.glitch_rate = 0.0
-	if _line:
-		_hold_total = _line.read_time()
+	_choice.add_theme_color_override("font_color", Colors.PRIMARY)
+	if _line and _waits_for_player():
+		_hold_total = 0.0
+		_hold_left = 0.0
+	elif _line:
+		_hold_total = _line.read_time(_conv.vars)
 		_hold_left = _hold_total
 	_update_hint()
 
+## Paused or confirm lines never time out.
+func _waits_for_player() -> bool:
+	return _line.is_confirm() or _conv.pause_game
+
 func _close() -> void:
 	_line = null
+	_conv = null
 	_typewriter.show_immediate(_message.text)
 	robot.talking = false
 	robot.glitch_rate = 0.0
@@ -209,10 +232,18 @@ func _fade_to(alpha: float) -> void:
 func _update_hint() -> void:
 	var next_key := InputUtils.get_action_key_name("radio_next").to_upper()
 	var last := RobotRadio.queue.line_index + 1 >= RobotRadio.queue.current.lines.size() if RobotRadio.queue.current else true
+	var next_word := "CLOSE" if last and RobotRadio.queue.pending_count() == 0 else "NEXT"
 	var parts: Array[String] = []
+	if _conv and _conv.pause_game:
+		parts.append("PAUSED")
 	if _typewriter.is_typing():
 		parts.append("ENTER SKIP")
-	parts.append("%s %s" % [next_key, "CLOSE" if last and RobotRadio.queue.pending_count() == 0 else "NEXT"])
+	elif _line and _line.is_confirm():
+		parts.append("ENTER CONFIRM")
+	elif _conv and _conv.pause_game:
+		parts.append("ENTER " + next_word)
+	if _line and not _line.is_confirm():
+		parts.append("%s %s" % [next_key, next_word])
 	_hint.text = "   ".join(parts)
 
 func _process(delta: float) -> void:
@@ -247,12 +278,26 @@ func _input(event: InputEvent) -> void:
 	if _line == null or not visible:
 		return
 	if event.is_action_pressed("radio_next"):
-		RobotRadio.advance()
+		if not _line.is_confirm():
+			RobotRadio.advance()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.pressed and not event.echo \
-			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER) and _typewriter.is_typing():
+		return
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	var enter: bool = event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER
+	# SPACE also accepts a confirm line, like the terminal menus
+	var space: bool = event.keycode == KEY_SPACE and _line.is_confirm()
+	if not (enter or space):
+		return
+	if _typewriter.is_typing():
 		_typewriter.skip()
-		get_viewport().set_input_as_handled()
+	elif _line.is_confirm():
+		RobotRadio.confirm()
+	elif enter and _conv.pause_game:
+		RobotRadio.advance()
+	else:
+		return
+	get_viewport().set_input_as_handled()
 
 ## A menu (dock, store, map, inventory, pause, game over) is up: step aside.
 func _is_blocked() -> bool:

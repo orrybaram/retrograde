@@ -396,9 +396,4 @@ func _is_ui_blocking_input() -> bool:
 	if inventory_ui and inventory_ui.visible:
 		return true
 
-	# Check GameOverMenu
-	var game_over_menu = tree.get_first_node_in_group("game_over_menu") as GameOverMenu
-	if game_over_menu and game_over_menu.visible:
-		return true
-
 	return false

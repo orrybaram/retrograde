@@ -223,6 +223,82 @@ func test_load_seen_drops_what_was_on_air() -> void:
 	assert_bool(radio.has_seen(&"b")).is_true()
 
 
+# --- Confirm lines and pausing ------------------------------------------------------
+
+func _confirm_conv(id: StringName, pause: bool = false) -> RadioConversation:
+	var lines: Array[RadioLine] = [RadioLine.make("intro"), RadioLine.make("ok?", &"neutral", false, "OK")]
+	var conv := RadioConversation.make(id, lines, Priority.URGENT)
+	conv.pause_game = pause
+	return conv
+
+
+func test_confirm_line_cannot_be_skipped() -> void:
+	var radio := _radio()
+	radio.request(_confirm_conv(&"ask"))
+	assert_bool(radio.current_line().is_confirm()).is_false()
+	radio.confirm()  # not a confirm line yet: ignored
+	assert_int(radio.queue.line_index).is_equal(0)
+	radio.advance()
+	assert_bool(radio.current_line().is_confirm()).is_true()
+	radio.advance()
+	radio.advance()
+	assert_bool(radio.current_line().is_confirm()).override_failure_message("advance must not skip a confirm").is_true()
+
+
+func test_confirm_emits_id_and_clears_the_queue() -> void:
+	var radio := _radio()
+	var ids: Array[StringName] = []
+	var active_when_emitted := [true]
+	radio.confirmed.connect(func(id: StringName) -> void:
+		ids.append(id)
+		active_when_emitted[0] = radio.is_active())
+	radio.request(_conv(&"tip"))
+	radio.request(_confirm_conv(&"ask"))  # interrupts the tip
+	radio.advance()
+	radio.confirm()
+	assert_array(ids).is_equal([&"ask"])
+	assert_bool(active_when_emitted[0]).override_failure_message("radio should be quiet before confirmed fires").is_false()
+	assert_bool(radio.is_active()).is_false()
+	assert_int(radio.queue.pending_count()).override_failure_message("interrupted tip should be dropped").is_equal(0)
+
+
+func test_pausing_conversation_holds_pause_until_it_ends() -> void:
+	var radio := _radio()
+	var tutorial := _conv(&"tutorial", Priority.HINT, 2)
+	tutorial.pause_game = true
+	radio.request(tutorial)
+	assert_bool(radio.is_pausing()).is_true()
+	radio.advance()
+	assert_bool(radio.is_pausing()).is_true()
+	radio.advance()
+	assert_bool(radio.is_pausing()).is_false()
+
+
+func test_pause_follows_whatever_is_on_air() -> void:
+	var radio := _radio()
+	var tutorial := _conv(&"tutorial", Priority.HINT)
+	tutorial.pause_game = true
+	radio.request(_conv(&"chatter", Priority.CHATTER))
+	assert_bool(radio.is_pausing()).is_false()
+	radio.request(tutorial)  # interrupts
+	assert_bool(radio.is_pausing()).is_true()
+	radio.request(_conv(&"warn", Priority.WARNING))  # non-pausing interrupt
+	assert_bool(radio.is_pausing()).is_false()
+	radio.advance()  # tutorial replays
+	assert_bool(radio.is_pausing()).is_true()
+	radio.silence()
+	assert_bool(radio.is_pausing()).is_false()
+
+
+func test_confirming_a_paused_call_unpauses() -> void:
+	var radio := _radio()
+	radio.request(_confirm_conv(&"relaunch", true))
+	radio.advance()
+	assert_bool(radio.is_pausing()).is_true()
+	radio.confirm()
+	assert_bool(radio.is_pausing()).is_false()
+
+
 # --- Triggers --------------------------------------------------------------------
 
 func test_departure_fires_once_on_undock() -> void:
@@ -266,20 +342,58 @@ func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
 
 # --- Data ------------------------------------------------------------------------
 
+const TIPS := [RADIO_SCRIPT.MSG_DEPARTURE, RADIO_SCRIPT.MSG_LOW_FUEL, RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP]
+const CONFIRM_CALLS := [RADIO_SCRIPT.MSG_OUT_OF_FUEL, RADIO_SCRIPT.MSG_SHIP_DESTROYED,
+	RADIO_SCRIPT.MSG_TOWED_HOME, RADIO_SCRIPT.MSG_TRACTOR_RESCUE]
+
+
 func test_bundled_messages_are_valid() -> void:
-	for conv: RadioConversation in [RADIO_SCRIPT.MSG_DEPARTURE, RADIO_SCRIPT.MSG_LOW_FUEL,
-			RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP]:
+	for conv: RadioConversation in TIPS + CONFIRM_CALLS:
 		assert_str(String(conv.id)).is_not_empty()
-		assert_bool(conv.once).is_true()
 		assert_bool(conv.lines.is_empty()).is_false()
+		var vars := {"penalty": 20}
 		for line in conv.lines:
+			var shown := line.display_text(vars) + line.confirm_text(vars)
 			assert_bool(RobotFaces.has_face(line.expression)).override_failure_message("%s: %s" % [conv.id, line.expression]).is_true()
-			assert_str(line.display_text()).is_not_empty()
-			assert_bool(line.display_text().contains("{key:")).override_failure_message(line.text).is_false()
+			assert_str(line.display_text(vars)).is_not_empty()
+			assert_bool(shown.contains("{")).override_failure_message(shown).is_false()
+	for conv: RadioConversation in TIPS:
+		assert_bool(conv.once).is_true()
+		for line in conv.lines:
+			assert_bool(line.is_confirm()).is_false()
+
+
+func test_confirm_calls_end_on_a_confirm_line() -> void:
+	for conv: RadioConversation in CONFIRM_CALLS:
+		assert_bool(conv.once).override_failure_message(String(conv.id)).is_false()
+		assert_int(conv.priority).is_equal(Priority.URGENT)
+		assert_bool(conv.lines.back().is_confirm()).override_failure_message(String(conv.id)).is_true()
+		for i in conv.lines.size() - 1:
+			assert_bool(conv.lines[i].is_confirm()).is_false()
+
+
+func test_scrap_tutorial_and_game_over_pause_but_beacon_offer_does_not() -> void:
+	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_SHIP_DESTROYED.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_TOWED_HOME.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_TRACTOR_RESCUE.pause_game).is_true()
+	# Stranded pilots may still be drifting into the tractor beam
+	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL.pause_game).is_false()
+	assert_bool(RADIO_SCRIPT.MSG_DEPARTURE.pause_game).is_false()
 
 
 func test_low_fuel_outranks_tips() -> void:
 	assert_int(RADIO_SCRIPT.MSG_LOW_FUEL.priority).is_greater(RADIO_SCRIPT.MSG_SCRAP.priority)
+
+
+func test_vars_fill_text_and_confirm_label() -> void:
+	var line := RadioLine.make("Fee is {penalty} CR.", &"neutral", false, "PAY {penalty}")
+	var conv := RadioConversation.make(&"fee", [line] as Array[RadioLine]).with_vars({"penalty": 20})
+	assert_str(conv.lines[0].display_text(conv.vars)).is_equal("Fee is 20 CR.")
+	assert_str(conv.lines[0].confirm_text(conv.vars)).is_equal("PAY 20")
+	assert_str(String(conv.id)).is_equal("fee")
+	# The shared template is untouched
+	assert_str(line.display_text()).is_equal("Fee is {penalty} CR.")
 
 
 func test_key_tokens_use_the_input_map() -> void:

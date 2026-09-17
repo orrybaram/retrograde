@@ -68,9 +68,9 @@ func _show_pause_menu() -> void:
 	if start_menu and start_menu.visible:
 		return
 
-	# Don't pause if game over menu is showing
-	var game_over = get_tree().get_first_node_in_group("game_over_menu") as GameOverMenu
-	if game_over and game_over.visible:
+	# Don't pause on game over (the robot's relaunch call is up)
+	var main = get_tree().get_first_node_in_group("main")
+	if main and main.is_game_over():
 		return
 
 	# Don't pause if another dialogue is open
@@ -148,8 +148,10 @@ func _update_menu_display() -> void:
 func _on_resume_pressed() -> void:
 	var pause_duration = Time.get_ticks_msec() / 1000.0 - _pause_start_time
 	visible = false
-	get_tree().paused = false
-	EventBus.game_unpaused.emit(pause_duration)
+	# A pausing radio transmission keeps the game held until it's done.
+	if not RobotRadio.is_pausing():
+		get_tree().paused = false
+		EventBus.game_unpaused.emit(pause_duration)
 	resumed.emit()
 
 func _on_quit_pressed() -> void:

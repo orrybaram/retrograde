@@ -2,14 +2,18 @@ extends Node
 
 ## The guide robot's radio. Owns the transmission queue and show-once flags,
 ## and turns game events into help messages. RadioPanel (HUD) displays the
-## current line and calls advance() when it is dismissed.
+## current line and calls advance() when it is dismissed, or confirm() on a
+## confirm line. A conversation with `pause_game` pauses the tree while on air.
 ##
 ## Anything can radio the player with
 ##   EventBus.radio_message_requested.emit(conversation)
+## and react to a confirm line via `confirmed`.
 
 signal line_started(line: RadioLine, conversation: RadioConversation)
 ## The radio went quiet (last line dismissed, or reset).
 signal transmission_ended
+## The player accepted the confirm line of conversation `id`.
+signal confirmed(id: StringName)
 
 ## Placeholder until the guide gets a name (docs/DESIGN.md 5.3).
 const SPEAKER_NAME := "UNIT-7"
@@ -18,6 +22,10 @@ const MSG_DEPARTURE := preload("res://entities/Robot/radio/messages/first_depart
 const MSG_LOW_FUEL := preload("res://entities/Robot/radio/messages/first_low_fuel.tres")
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
+const MSG_OUT_OF_FUEL := preload("res://entities/Robot/radio/messages/out_of_fuel.tres")
+const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_destroyed.tres")
+const MSG_TOWED_HOME := preload("res://entities/Robot/radio/messages/towed_home.tres")
+const MSG_TRACTOR_RESCUE := preload("res://entities/Robot/radio/messages/tractor_rescue.tres")
 
 var queue := RadioQueue.new()
 ## Save file for show-once flags; empty uses the game save (Playtest.save_path()).
@@ -27,6 +35,8 @@ var persist := true
 
 var _seen: Dictionary = {}  # StringName -> true
 var _ship: Ship = null
+var _pausing := false  # this radio paused the tree
+var _pause_started := 0.0
 
 func _ready() -> void:
 	EventBus.radio_message_requested.connect(request)
@@ -43,24 +53,55 @@ func request(conv: RadioConversation) -> RadioQueue.Result:
 	if conv.once and result in [RadioQueue.Result.STARTED, RadioQueue.Result.INTERRUPTED, RadioQueue.Result.QUEUED]:
 		mark_seen(conv.id)
 	if result == RadioQueue.Result.STARTED or result == RadioQueue.Result.INTERRUPTED:
+		_sync_pause()
 		line_started.emit(queue.current_line(), queue.current)
 	return result
 
 ## Dismisses the current line and plays the next one, if any.
+## Confirm lines only end through confirm().
 func advance() -> void:
-	if not queue.is_active():
+	if not queue.is_active() or queue.current_line().is_confirm():
 		return
 	var line := queue.advance()
+	_sync_pause()
 	if line:
 		line_started.emit(line, queue.current)
 	else:
 		transmission_ended.emit()
+
+## Accepts the current confirm line. A confirm always changes the game state, so
+## the radio goes quiet (dropping anything queued) before `confirmed` fires.
+func confirm() -> void:
+	var line := queue.current_line()
+	if line == null or not line.is_confirm():
+		return
+	var id := queue.current.id
+	silence()
+	confirmed.emit(id)
 
 func current_line() -> RadioLine:
 	return queue.current_line()
 
 func is_active() -> bool:
 	return queue.is_active()
+
+## True while an on-air conversation holds the game paused.
+func is_pausing() -> bool:
+	return _pausing
+
+func _sync_pause() -> void:
+	var want := queue.is_active() and queue.current.pause_game
+	if want == _pausing:
+		return
+	_pausing = want
+	if not is_inside_tree():
+		return
+	if want:
+		_pause_started = Time.get_ticks_msec() / 1000.0
+		get_tree().paused = true
+	else:
+		get_tree().paused = false
+		EventBus.game_unpaused.emit(Time.get_ticks_msec() / 1000.0 - _pause_started)
 
 # --- Show-once flags -----------------------------------------------------------
 
@@ -97,6 +138,7 @@ func reset() -> void:
 func silence() -> void:
 	var was_active := queue.is_active()
 	queue.clear()
+	_sync_pause()
 	if was_active:
 		transmission_ended.emit()
 

@@ -2,7 +2,8 @@ extends ShipState
 class_name StrandedState
 
 ## Handles the ship when fuel is depleted.
-## The ship drifts without control until the player deploys a rescue beacon.
+## The ship drifts without control until the player confirms the robot's
+## offer to send a rescue beacon.
 
 var _beacon_deployed: bool = false
 
@@ -22,14 +23,20 @@ func enter() -> void:
 	if ship.side_thruster_particles:
 		ship.side_thruster_particles.emitting = false
 
-	# Show rescue beacon prompt
-	var action_key = InputUtils.get_action_key_name("action")
-	EventBus.action_message_changed.emit('Press "%s" to deploy rescue beacon' % [action_key])
+	# The robot offers a rescue beacon; confirming it deploys one
+	EventBus.action_message_changed.emit("")
+	RobotRadio.confirmed.connect(_on_radio_confirmed)
+	RobotRadio.request(RobotRadio.MSG_OUT_OF_FUEL)
 
 func exit() -> void:
 	super.exit()
 	_beacon_deployed = false
-	EventBus.action_message_changed.emit("")
+	if RobotRadio.confirmed.is_connected(_on_radio_confirmed):
+		RobotRadio.confirmed.disconnect(_on_radio_confirmed)
+
+func _on_radio_confirmed(id: StringName) -> void:
+	if id == RobotRadio.MSG_OUT_OF_FUEL.id and not _beacon_deployed:
+		_deploy_beacon()
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -37,10 +44,6 @@ func physics_process(delta: float) -> void:
 
 	# Update camera shake (ship is still drifting)
 	_update_camera_shake(delta)
-
-	# Check for action key to deploy rescue beacon
-	if not _beacon_deployed and Input.is_action_just_pressed("action"):
-		_deploy_beacon()
 
 func integrate_forces(_state: PhysicsDirectBodyState2D) -> void:
 	# No thrust control — ship just drifts

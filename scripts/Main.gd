@@ -2,7 +2,8 @@ extends Node2D
 
 ## Root scene controller. Owns the MainGameState enum (MENU / PLAYING / GAME_OVER)
 ## and orchestrates transitions between StartMenu, active gameplay, PauseMenu,
-## and GameOverMenu. Connects ship signals (fuel_depleted) and EventBus events.
+## and the game-over radio call (RobotRadio). Connects ship signals (fuel_depleted)
+## and EventBus events.
 
 enum MainGameState {
 	MENU,
@@ -12,13 +13,21 @@ enum MainGameState {
 
 @onready var ship := $Ship
 @onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
-@onready var game_over_menu: GameOverMenu = $"CanvasLayer/GameOverMenu"
 @onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
 @onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 @onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
 @onready var hud: Control = $"CanvasLayer/HUD"
+
+## Relaunch fee per game-over reason (a tractor-beam rescue is free).
+const RELAUNCH_PENALTY := {"Ship Destroyed": 20, "Out of Fuel": 10}
+## What the robot radios after each game-over reason. Its confirm line relaunches.
+const GAME_OVER_MESSAGES := {
+	"Ship Destroyed": RobotRadio.MSG_SHIP_DESTROYED,
+	"Out of Fuel": RobotRadio.MSG_TOWED_HOME,
+	"Tractor Beam": RobotRadio.MSG_TRACTOR_RESCUE,
+}
 
 var current_game_state: MainGameState = MainGameState.MENU
 var last_game_over_reason: String = ""
@@ -29,8 +38,7 @@ func _ready() -> void:
 	if start_menu:
 		start_menu.start_game.connect(_on_start_game)
 		start_menu.load_game.connect(_on_load_game)
-	if game_over_menu:
-		game_over_menu.relaunch_game.connect(_on_relaunch_game)
+	RobotRadio.confirmed.connect(_on_radio_confirmed)
 	if pause_menu:
 		pause_menu.quit_to_menu.connect(_on_quit_to_menu)
 	
@@ -87,8 +95,6 @@ func _toggle_inventory() -> void:
 	# Don't toggle if other menus are open
 	if start_menu and start_menu.visible:
 		return
-	if game_over_menu and game_over_menu.visible:
-		return
 	if system_map and system_map.visible:
 		return
 	if pause_menu and pause_menu.visible:
@@ -106,8 +112,6 @@ func _toggle_system_map() -> void:
 	# Don't toggle if other menus are open
 	if start_menu and start_menu.visible:
 		return
-	if game_over_menu and game_over_menu.visible:
-		return
 	if inventory_ui and inventory_ui.visible:
 		return
 	if pause_menu and pause_menu.visible:
@@ -124,8 +128,16 @@ func _on_start_game() -> void:
 func _on_load_game() -> void:
 	await load_game()
 
-func _on_relaunch_game() -> void:
-	reset_game()
+func is_game_over() -> bool:
+	return current_game_state == MainGameState.GAME_OVER
+
+func _on_radio_confirmed(id: StringName) -> void:
+	if not is_game_over():
+		return
+	for conv: RadioConversation in GAME_OVER_MESSAGES.values():
+		if conv.id == id:
+			reset_game()
+			return
 
 func _on_fuel_depleted() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
@@ -270,7 +282,7 @@ func load_game() -> void:
 	EventBus.ship_respawned.emit()
 
 func _show_game_over_delayed(reason: String) -> void:
-	# Let the explosion play out before showing game over menu
+	# Let the explosion play out before the robot calls in
 	await get_tree().create_timer(3.2).timeout
 	show_game_over(reason)
 
@@ -284,12 +296,11 @@ func show_game_over(reason: String) -> void:
 		if gs:
 			gs.death_count += 1
 
-	RobotRadio.silence()
-	# Don't pause - physics should continue during game over
-	if game_over_menu:
-		game_over_menu.show_menu(reason)
 	current_game_state = MainGameState.GAME_OVER
 	game_over_pending = false
+	RobotRadio.silence()
+	var message: RadioConversation = GAME_OVER_MESSAGES.get(reason, RobotRadio.MSG_SHIP_DESTROYED)
+	RobotRadio.request(message.with_vars({"penalty": RELAUNCH_PENALTY.get(reason, 0)}))
 
 func reset_game() -> void:
 	game_over_pending = false
@@ -302,11 +313,8 @@ func reset_game() -> void:
 	var is_tractor_beam_rescue = last_game_over_reason == "Tractor Beam"
 
 	if ship and gs:
-		# Calculate penalty based on game over reason (no penalty for tractor beam)
-		if last_game_over_reason == "Ship Destroyed":
-			penalty_cost = 20
-		elif last_game_over_reason == "Out of Fuel":
-			penalty_cost = 10
+		# Penalty based on game over reason (no penalty for tractor beam)
+		penalty_cost = RELAUNCH_PENALTY.get(last_game_over_reason, 0)
 
 		# Deduct penalty from credits
 		gs.credits = max(0, gs.credits - penalty_cost)
@@ -361,9 +369,6 @@ func reset_game() -> void:
 		else:
 			push_warning("No dock found for respawn")
 	
-	# Hide game over menu and unpause
-	if game_over_menu:
-		game_over_menu.hide_menu()
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 

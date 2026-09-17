@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Your tank's bone dry, pilot. You're just drifting now."
+expression = &"worried"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Want a rescue beacon? Close to the station, its tractor beam tows you in for free."
+expression = &"neutral"
+confirm = "SEND RESCUE BEACON"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"out_of_fuel"
+priority = 3
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2")])

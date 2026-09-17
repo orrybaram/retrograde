@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Beacon received! A tow drone is dragging you home. Hold tight..."
+expression = &"worried"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "The tow ate your cargo, and the fee is {penalty} CR. Ready to fly again?"
+expression = &"neutral"
+confirm = "RELAUNCH  -{penalty} CR"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"towed_home"
+priority = 3
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2")])

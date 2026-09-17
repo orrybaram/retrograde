@@ -41,3 +41,8 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 - `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
 - Built-in triggers in `scripts/RobotRadio.gd`: undock, low fuel, hold full, scrap in range.
 - Keys: `radio_next` (TAB) advances/dismisses, ENTER finishes typing. Lines auto-dismiss after `RadioLine.read_time()`.
+- `pause_game` conversations pause the tree while on air and never time out (ENTER/TAB moves on).
+- Confirm lines (`RadioLine.confirm`) show `> ACTION`, can't be skipped, and accept on ENTER/SPACE.
+  `RobotRadio.confirm()` silences the radio, then emits `confirmed(id)`. Used for the rescue beacon
+  (StrandedState) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).
+- `{name}` placeholders come from `conv.with_vars({...})`.
