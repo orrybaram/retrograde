@@ -38,7 +38,7 @@ const STARFIELD_SEED := 20260917
 @export var background_color: Color = Colors.UI_BACKGROUND
 @export var border_color: Color = Colors.UI_BORDER
 @export var grid_color: Color = Colors.PRIMARY_SUBTLE
-@export var orbit_color: Color = Colors.PRIMARY_MEDIUM
+@export var orbit_color: Color = Colors.PRIMARY_FADED
 @export var moon_orbit_color: Color = Colors.MOON_ORBIT
 @export var space_station_orbit_color: Color = Colors.MOON_ORBIT
 @export var sun_color: Color = Colors.SUN
@@ -340,17 +340,25 @@ func draw_chart(c: Control) -> void:
 	_draw_scanlines(c)
 
 func _draw_starfield(c: Control) -> void:
+	# One multiline for the whole field: a star per 1px segment
+	var points := PackedVector2Array()
+	var colors := PackedColorArray()
 	for i in range(_stars.size()):
-		var p := Vector2(_stars[i].x * c.size.x, _stars[i].y * c.size.y)
-		c.draw_rect(Rect2(p.floor(), Vector2.ONE), Color(Colors.STAR, _star_alpha[i]))
+		var p := Vector2(_stars[i].x * c.size.x, _stars[i].y * c.size.y).floor()
+		points.append(p)
+		points.append(p + Vector2.RIGHT)
+		colors.append(Color(Colors.STAR, _star_alpha[i]))
+	c.draw_multiline_colors(points, colors, 1.0)
 
 func _draw_scanlines(c: Control) -> void:
 	# Faint CRT banding over the chart, matching the rest of the terminal UI
-	var line_color := Color(Colors.SPACE_BG, 0.22)
+	var points := PackedVector2Array()
 	var y := 0.0
 	while y < c.size.y:
-		c.draw_line(Vector2(0.0, y), Vector2(c.size.x, y), line_color, 1.0)
+		points.append(Vector2(0.0, y))
+		points.append(Vector2(c.size.x, y))
 		y += 3.0
+	c.draw_multiline(points, Color(Colors.SPACE_BG, 0.12), 1.0)
 
 func _draw_range_rings(c: Control, rect: Rect2) -> void:
 	# Distance rings from the sun at round intervals, labelled on the way out
@@ -364,11 +372,13 @@ func _draw_range_rings(c: Control, rect: Rect2) -> void:
 	for i in range(1, 13):
 		var distance := step * float(i)
 		var radius := distance * scale_factor
-		if not _ring_touches_rect(center, radius, rect):
+		var arc := _visible_arc(center, radius, rect)
+		if arc.y <= 0.0:
 			if radius > rect.size.length():
 				break
 			continue
-		c.draw_arc(center, radius, 0.0, TAU, 128, ring_color, 1.0, true)
+		var ring_points := clampi(int(radius * arc.y / 6.0), 8, 192)
+		c.draw_arc(center, radius, arc.x, arc.x + arc.y, ring_points, ring_color, 1.0, true)
 		var label_pos := center + Vector2.from_angle(-PI / 4.0) * (radius + 4.0)
 		if label_rect.has_point(label_pos):
 			c.draw_string(_font, label_pos, _format_distance(distance), HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE, label_color)
@@ -403,28 +413,33 @@ func _draw_child_orbits(c: Control, rect: Rect2) -> void:
 func _eccentricity(body: Node) -> float:
 	return clamp(body.eccentricity, 0.0, 0.99) if "eccentricity" in body else 0.0
 
-## Dashed ellipse (or circle when e == 0) in chart space.
+## Dashed ellipse (or circle when e == 0) in chart space. The dashes go out as a
+## single multiline, and only the arc that crosses the chart is generated at all:
+## a ring 20000px across otherwise costs thousands of draw calls a frame.
 func _draw_dashed_orbit(c: Control, rect: Rect2, center: Vector2, a: float, e: float, color: Color, width: float, min_radius: float = 0.0) -> void:
 	var radius_px := maxf(a * scale_factor, min_radius)
-	if radius_px < 1.5 or not _ring_touches_rect(center, radius_px, rect.grow(radius_px * e + 4.0)):
+	if radius_px < 1.5:
 		return
 
-	# Dashes are spaced by arc length, so they read the same at every orbit size,
-	# and offscreen ones are skipped instead of drawn.
-	var cull := rect.grow(24.0)
-	var groups := clampi(int(TAU * radius_px / DASH_PERIOD_PX), 12, 2000)
-	var step := TAU / float(groups)
-	for g in range(groups):
-		var points := PackedVector2Array()
-		var on_screen := false
-		for j in range(4):
-			var angle := step * (float(g) + 0.6 * float(j) / 3.0)
-			var r := a if e == 0.0 else a * (1.0 - e * e) / (1.0 + e * cos(angle))
-			var point := center + Vector2(cos(angle), sin(angle)) * maxf(r * scale_factor, min_radius)
-			points.append(point)
-			on_screen = on_screen or cull.has_point(point)
-		if on_screen:
-			c.draw_polyline(points, color, width, true)
+	# Eccentric orbits reach further than their semi-major axis, so the window is
+	# measured against a rect grown by that slack.
+	var arc := _visible_arc(center, radius_px, rect.grow(radius_px * e + 4.0))
+	if arc.y <= 0.0:
+		return
+
+	var dashes := clampi(int(radius_px * arc.y / DASH_PERIOD_PX), 1, 400)
+	var step := arc.y / float(dashes)
+	var points := PackedVector2Array()
+	for d in range(dashes):
+		var from_angle := arc.x + step * float(d)
+		var to_angle := from_angle + step * 0.6
+		points.append(_orbit_point(center, a, e, from_angle, min_radius))
+		points.append(_orbit_point(center, a, e, to_angle, min_radius))
+	c.draw_multiline(points, color, width)
+
+func _orbit_point(center: Vector2, a: float, e: float, angle: float, min_radius: float) -> Vector2:
+	var r := a if e == 0.0 else a * (1.0 - e * e) / (1.0 + e * cos(angle))
+	return center + Vector2.from_angle(angle) * maxf(r * scale_factor, min_radius)
 
 func _draw_sun(c: Control) -> void:
 	var pos := _map_pos(_sun_pos())
@@ -507,9 +522,12 @@ func _draw_nav_target(c: Control, rect: Rect2) -> void:
 
 	var r := 9.0
 	c.draw_arc(pos, r, 0.0, TAU, 32, Color(nav_color, 0.7), 1.0, true)
+	var ticks := PackedVector2Array()
 	for i in range(4):
-		var dir := Vector2.RIGHT.rotated(TAU * float(i) / 4.0)
-		c.draw_line(pos + dir * (r - 3.0), pos + dir * (r + 4.0), Color(nav_color, 0.7), 1.0)
+		var dir := Vector2.from_angle(TAU * float(i) / 4.0)
+		ticks.append(pos + dir * (r - 3.0))
+		ticks.append(pos + dir * (r + 4.0))
+	c.draw_multiline(ticks, Color(nav_color, 0.7), 1.0)
 
 	if not apart:
 		return
@@ -533,9 +551,13 @@ func _draw_ship(c: Control) -> void:
 
 	# Slowly turning bracket reticle
 	var spin := _time * 0.5
+	var brackets := PackedVector2Array()
 	for i in range(4):
 		var start := spin + TAU * float(i) / 4.0 + 0.22
-		c.draw_arc(pos, 13.0, start, start + 0.66, 10, Color(ship_color, 0.45), 1.0, true)
+		for seg in range(4):
+			brackets.append(pos + Vector2.from_angle(start + 0.66 * float(seg) / 4.0) * 13.0)
+			brackets.append(pos + Vector2.from_angle(start + 0.66 * float(seg + 1) / 4.0) * 13.0)
+	c.draw_multiline(brackets, Color(ship_color, 0.45), 1.0)
 
 	# Heading vector scaled by speed
 	var speed := ship.linear_velocity.length()
@@ -590,24 +612,30 @@ func draw_chrome(c: Control) -> void:
 func _draw_corner_brackets(c: Control, alpha: float) -> void:
 	var arm := 16.0
 	var inset := 7.0
-	var color := Color(Colors.PRIMARY, alpha)
+	var points := PackedVector2Array()
 	for corner in [Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1)]:
 		var origin := Vector2(
 			lerpf(inset, c.size.x - inset, corner.x),
 			lerpf(inset, c.size.y - inset, corner.y)
 		)
 		var dir := Vector2(1.0 if corner.x == 0 else -1.0, 1.0 if corner.y == 0 else -1.0)
-		c.draw_line(origin, origin + Vector2(arm * dir.x, 0.0), color, 2.0)
-		c.draw_line(origin, origin + Vector2(0.0, arm * dir.y), color, 2.0)
+		points.append(origin)
+		points.append(origin + Vector2(arm * dir.x, 0.0))
+		points.append(origin)
+		points.append(origin + Vector2(0.0, arm * dir.y))
+	c.draw_multiline(points, Color(Colors.PRIMARY, alpha), 2.0)
 
 func _draw_edge_ticks(c: Control, alpha: float) -> void:
 	# Instrument ruler along the top and bottom rails
-	var color := Color(Colors.PRIMARY, 0.18 * alpha)
+	var points := PackedVector2Array()
 	var x := 72.0
 	while x < c.size.x - 72.0:
-		c.draw_line(Vector2(x, BORDER_WIDTH), Vector2(x, BORDER_WIDTH + 5.0), color, 1.0)
-		c.draw_line(Vector2(x, c.size.y - BORDER_WIDTH), Vector2(x, c.size.y - BORDER_WIDTH - 5.0), color, 1.0)
+		points.append(Vector2(x, BORDER_WIDTH))
+		points.append(Vector2(x, BORDER_WIDTH + 5.0))
+		points.append(Vector2(x, c.size.y - BORDER_WIDTH))
+		points.append(Vector2(x, c.size.y - BORDER_WIDTH - 5.0))
 		x += 72.0
+	c.draw_multiline(points, Color(Colors.PRIMARY, 0.18 * alpha), 1.0)
 
 func _draw_tab(c: Control, text: String, font_size: int, color: Color, bottom: bool) -> void:
 	# Notch the label into the border, terminal-window style
@@ -650,9 +678,11 @@ func _draw_scale_bar(c: Control, alpha: float) -> void:
 	var color := Color(Colors.PRIMARY, 0.45 * alpha)
 	var origin := Vector2(READOUT_INSET, c.size.y - READOUT_INSET)
 
-	c.draw_line(origin, origin + Vector2(length, 0.0), color, 1.0)
-	c.draw_line(origin + Vector2(0.0, -4.0), origin + Vector2(0.0, 4.0), color, 1.0)
-	c.draw_line(origin + Vector2(length, -4.0), origin + Vector2(length, 4.0), color, 1.0)
+	c.draw_multiline(PackedVector2Array([
+		origin, origin + Vector2(length, 0.0),
+		origin + Vector2(0.0, -4.0), origin + Vector2(0.0, 4.0),
+		origin + Vector2(length, -4.0), origin + Vector2(length, 4.0)
+	]), color, 1.0)
 	c.draw_string(_font, origin + Vector2(0.0, -8.0), _format_distance(step), HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE, Color(Colors.PRIMARY, 0.6 * alpha))
 
 # --- Helpers -----------------------------------------------------------------
@@ -683,24 +713,43 @@ static func _format_distance(units: float) -> String:
 		return "%.1f Mm" % (units / 1000.0)
 	return "%.2f Gm" % (units / 1_000_000.0)
 
-## Does a circle cross the rect at all? Keeps offscreen orbits and rings cheap.
-static func _ring_touches_rect(center: Vector2, radius: float, rect: Rect2) -> bool:
+## The slice of a circle that can actually show inside the rect, as
+## (start_angle, span). A span of 0 means the ring misses the chart entirely, so
+## no geometry is built for it. Keeps cost tied to what is on screen rather than
+## to the zoom level.
+static func _visible_arc(center: Vector2, radius: float, rect: Rect2) -> Vector2:
 	var corners := [
 		rect.position,
 		rect.position + Vector2(rect.size.x, 0.0),
 		rect.position + Vector2(0.0, rect.size.y),
 		rect.end
 	]
+
 	var farthest := 0.0
 	for corner in corners:
 		farthest = maxf(farthest, center.distance_to(corner))
+	if radius > farthest + 2.0:
+		return Vector2.ZERO
 
-	var nearest := 0.0
-	if not rect.has_point(center):
-		var clamped := Vector2(
-			clampf(center.x, rect.position.x, rect.end.x),
-			clampf(center.y, rect.position.y, rect.end.y)
-		)
-		nearest = center.distance_to(clamped)
+	# Centre inside the chart: every angle is potentially visible
+	if rect.has_point(center):
+		return Vector2(0.0, TAU)
 
-	return radius >= nearest - 2.0 and radius <= farthest + 2.0
+	var clamped := Vector2(
+		clampf(center.x, rect.position.x, rect.end.x),
+		clampf(center.y, rect.position.y, rect.end.y)
+	)
+	if radius < center.distance_to(clamped) - 2.0:
+		return Vector2.ZERO
+
+	# From outside, the rect subtends less than half a turn, so the window is
+	# bounded by the most clockwise and counter-clockwise corners.
+	var axis := (rect.get_center() - center).angle()
+	var lowest := 0.0
+	var highest := 0.0
+	for corner in corners:
+		var offset := angle_difference(axis, (corner - center).angle())
+		lowest = minf(lowest, offset)
+		highest = maxf(highest, offset)
+
+	return Vector2(axis + lowest, highest - lowest)
