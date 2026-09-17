@@ -28,11 +28,6 @@ const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_de
 const MSG_SHIP_ABANDONED := preload("res://entities/Robot/radio/messages/ship_abandoned.tres")
 const MSG_TRACTOR_RESCUE := preload("res://entities/Robot/radio/messages/tractor_rescue.tres")
 
-## A pausing transmission waits until the flight keys have been let go for this long,
-## so a held or mashed SPACE (harvesting) can't dismiss it before it's read.
-const PAUSE_GRACE_SEC := 1.0
-const BUSY_ACTIONS: Array[StringName] = [&"action", &"thrust", &"reverse_thrust", &"turn_left", &"turn_right", &"boost"]
-
 var queue := RadioQueue.new()
 ## Save file for show-once flags; empty uses the game save (Playtest.save_path()).
 var save_path := ""
@@ -43,8 +38,6 @@ var _seen: Dictionary = {}  # StringName -> true
 var _ship: Ship = null
 var _pausing := false  # this radio paused the tree
 var _pause_started := 0.0
-var _deferred: Array[RadioConversation] = []  # pausing transmissions waiting for the player to back off
-var _last_busy := -INF  # seconds; last time a flight key was down
 
 func _ready() -> void:
 	EventBus.radio_message_requested.connect(request)
@@ -52,17 +45,13 @@ func _ready() -> void:
 	EventBus.ship_respawned.connect(_bind_ship)
 
 ## Queues a conversation. Show-once conversations already seen are dropped.
-## A pausing one requested while the player is on the keys is held back (QUEUED)
-## until they've let go for PAUSE_GRACE_SEC.
+## Tips go on air the moment they're triggered, even mid-flight: RadioPanel keeps a
+## held or mashed SPACE from dismissing a line that just appeared.
 func request(conv: RadioConversation) -> RadioQueue.Result:
 	if conv == null:
 		return RadioQueue.Result.REJECTED
 	if conv.once and has_seen(conv.id):
 		return RadioQueue.Result.REJECTED
-	if conv.pause_game and _player_busy(_now()):
-		if not _deferred.any(func(c: RadioConversation) -> bool: return c.id == conv.id):
-			_deferred.append(conv)
-		return RadioQueue.Result.QUEUED
 	return _push(conv)
 
 func _push(conv: RadioConversation) -> RadioQueue.Result:
@@ -97,36 +86,6 @@ func confirm() -> void:
 	_sync_pause()
 	transmission_ended.emit()
 	confirmed.emit(id)
-
-func _process(_delta: float) -> void:
-	poll_deferred(_now())
-
-## Tracks flight input and releases held-back transmissions once the player has
-## been hands-off for PAUSE_GRACE_SEC. `now` is in seconds.
-func poll_deferred(now: float) -> void:
-	for action in BUSY_ACTIONS:
-		if Input.is_action_pressed(action):
-			_last_busy = now
-			break
-	if _deferred.is_empty() or _player_busy(now):
-		return
-	var waiting := _deferred.duplicate()
-	_deferred.clear()
-	for conv in waiting:
-		if not (conv.once and has_seen(conv.id)):
-			_push(conv)
-
-func _player_busy(now: float) -> bool:
-	for action in BUSY_ACTIONS:
-		if Input.is_action_pressed(action):
-			return true
-	return now - _last_busy < PAUSE_GRACE_SEC
-
-func is_deferred(id: StringName) -> bool:
-	return _deferred.any(func(c: RadioConversation) -> bool: return c.id == id)
-
-func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0
 
 func current_line() -> RadioLine:
 	return queue.current_line()
@@ -201,7 +160,6 @@ func reset() -> void:
 
 func silence() -> void:
 	var was_active := queue.is_active()
-	_deferred.clear()
 	queue.clear()
 	_sync_pause(false)
 	if was_active:

@@ -7,7 +7,9 @@ description: Launch and play Retrograde to verify a change in the running game �
 
 Driver: `scripts/Playtest.gd` (autoload, inert unless launched with `--playtest`).
 Everything goes through real `InputEventKey`s, so the game sees what a player would do.
-Runs use `user://playtest_save.cfg`, so the player's real save is never touched.
+Each run gets its own `user://playtest/save_<pid>.cfg` (deleted when it ends), so the player's real
+save is never touched and parallel runs — including other worktrees, which share the user dir — can't
+clobber each other's saved state.
 
 ## Two modes
 

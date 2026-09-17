@@ -433,7 +433,10 @@ func _on_upgrade_pressed(upgrade: UpgradeItem) -> void:
 	var success := await store.purchase_upgrade(upgrade)
 	if success and visible:
 		_rebuild_buy_items()
-		_card.say("%s installed! She's running better already." % upgrade.display_name, &"happy")
+		var line := upgrade.purchase_line
+		if line == "":
+			line = "%s installed. Good as new." % upgrade.display_name
+		_card.say(line, &"happy")
 		_card.robot.glitch_burst(0.2)
 
 
