@@ -29,6 +29,13 @@ Action rows:
    ACTION NAME                    COST/VALUE    (unavailable/owned: Colors.PRIMARY_DIM #6B5A34)
 ```
 
+Full-screen menus with UNIT-7 (inventory, store) are built in code from shared parts:
+- `TerminalWindow` (`ui/TerminalWindow.gd`): dimmed backdrop, centered bordered window, title/hint tabs, `animate_in()`, plus static builders (`label`, `header`, `rule`, `spacer`, `filler`, `box`).
+- `RobotCard` (`ui/RobotCard.gd`): left column with the robot portrait, status tag, `say(text, expression)` typed dialogue and credits.
+- `SegmentGauge` (`ui/SegmentGauge.gd`): segmented bar / tier pips.
+
+`Typewriter` lays text out after shaping (`VC_CHARS_AFTER_SHAPING`) so wrapped words don't jump lines while typing.
+
 ## Robot Radio (guide robot help messages)
 
 ```
