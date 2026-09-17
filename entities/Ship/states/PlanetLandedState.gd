@@ -159,12 +159,12 @@ func _update_prompt() -> void:
 		_prompt = prompt
 		EventBus.action_message_changed.emit(prompt)
 
-## What the prompt under the ship offers next.
+## What the prompt under the ship offers next. (Thrust always lifts off; the prompt
+## stays about the seam.)
 func prompt_text() -> String:
-	var liftoff := EventBus.key_prompt("thrust", "LIFT OFF (%d FUEL)" % ceili(liftoff_cost()))
 	match drill.phase:
 		OreDrill.Phase.READY:
-			return "%s   %s" % [EventBus.action_prompt("DRILL"), liftoff]
+			return EventBus.action_prompt("DRILL")
 		OreDrill.Phase.DIGGING:
 			if drill.is_holding():
 				return ""
@@ -173,10 +173,10 @@ func prompt_text() -> String:
 					EventBus.action_prompt("DRILL %d/%d" % [drill.layer + 1, drill.layer_count()]),
 					EventBus.key_prompt("reverse_thrust", "BANK"),
 				]
-			return "%s   %s" % [EventBus.action_prompt("DRILL"), liftoff]
+			return EventBus.action_prompt("DRILL")
 	if drill.end_reason == "spent":
-		return "SEAM SPENT   %s" % liftoff
-	return "SEAM DRILLED OUT   %s" % liftoff
+		return "SEAM SPENT"
+	return "SEAM DRILLED OUT"
 
 func _flying() -> FlyingState:
 	return ship.state_machine.states.get("FlyingState") as FlyingState

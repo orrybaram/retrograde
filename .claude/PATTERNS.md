@@ -80,5 +80,9 @@ OreDrill (HarvestTiming per layer, GemData.drill_drops) -> ore.spend() -> GameSt
 - Save: `[scan] planets` and `[ore] regrow` (ore_id -> seconds left, never shown to the player).
   `Save.save_scanned_planets` / `Save.save_ore_regrowth` write only their section mid-flight; keep file IO
   out of code unit tests reach (the default save path in tests is the player's real save).
+- Scanning only reaches **inner orbit** (`Planet.scan_radius()`, the first gravity ring clear of
+  the surface), not the whole gravity field: you fly in close and hold there against the pull.
+- Drilling is the payday: `GemData.DRILL_DEPTH_WEIGHTS` skews to crystals/artifacts and drops
+  more per layer than a scrap hit, so a seam is worth several scrap nodes (see DrillTest).
 - Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `OreDrill.*`, `GemData.DRILL_*`,
-  `OreDeposit.REACH` / `DEPTH_*` / `*REGROW_TIME`.
+  `Planet.ORE_COUNT` / `MOON_ORE_COUNT`, `OreDeposit.REACH` / `DEPTH_*` / `*REGROW_TIME`.

@@ -117,7 +117,8 @@ assert not get_tree().paused "closing the tutorial unpauses"
 
 # Out of fuel: the robot offers to abandon ship (a confirm call), game keeps running
 eval ship.set("fuel", 0.5)
-hold thrust 0.5
+# Hold long enough that the low-fuel engine sputter can't swallow the whole burn
+hold thrust 2
 wait_until pt.state_name() == "StrandedState" 3
 assert not bus.is_harvest_available() "a stranded ship can't harvest the scrap beside it"
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 3

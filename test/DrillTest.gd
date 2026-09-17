@@ -41,32 +41,74 @@ func _seeded(seed_value := 7) -> RandomNumberGenerator:
 	return rng
 
 
-func _mean_tier(depth: int, perfect: bool) -> float:
+func _mean_tier(depth: int) -> float:
 	var rng := _seeded(depth)
 	var total := 0
 	for i in 2000:
-		total += GemData.drill_roll(depth, perfect, rng)
+		total += GemData.drill_roll(depth, rng)
 	return total / 2000.0
+
+
+## Credits from one full dig of `layers` layers starting at `start_depth`, all GOOD.
+func _dig_value(start_depth: int, layers: int, rng: RandomNumberGenerator) -> int:
+	var ids: Array[String] = []
+	for i in layers:
+		ids.append_array(GemData.drill_drops(start_depth + i, GOOD, rng))
+	return GemData.hold_value(_as_hold(ids))
+
+
+## Credits from breaking one scrap node: three hits, the last one the break, all GOOD.
+func _scrap_value(rng: RandomNumberGenerator) -> int:
+	var ids: Array[String] = []
+	for hit in 3:
+		ids.append_array(GemData.drops_for_hit(GOOD, hit == 2, false, rng))
+	return GemData.hold_value(_as_hold(ids))
+
+
+func _as_hold(ids: Array[String]) -> Dictionary:
+	var hold := {}
+	for id in ids:
+		hold[id] = hold.get(id, 0) + 1
+	return hold
+
+
+func test_a_dig_pays_far_better_than_a_scrap_node() -> void:
+	var rng := _seeded(3)
+	var dig := 0
+	var scrap := 0
+	for i in 200:
+		dig += _dig_value(0, OreDrill.LAYERS, rng)
+		scrap += _scrap_value(rng)
+	# A plain 3-layer seam is worth several scrap nodes, and a rich moon seam far more
+	assert_float(float(dig) / float(scrap)).is_greater(2.0)
+	var rich := 0
+	for i in 200:
+		rich += _dig_value(1, OreDrill.RICH_LAYERS, rng)
+	assert_float(float(rich) / float(dig)).is_greater(2.0)
 
 
 func test_deeper_layers_roll_better_gems() -> void:
 	for depth in GemData.DRILL_DEPTH_WEIGHTS.size() - 1:
-		assert_float(_mean_tier(depth + 1, false)).is_greater(_mean_tier(depth, false))
+		assert_float(_mean_tier(depth + 1)).is_greater(_mean_tier(depth))
 
 
-func test_perfect_bumps_a_layer_one_tier() -> void:
-	for depth in GemData.DRILL_DEPTH_WEIGHTS.size():
-		for s in 50:
-			var clean := GemData.drill_roll(depth, false, _seeded(s))
-			var perfect := GemData.drill_roll(depth, true, _seeded(s))
-			assert_int(perfect).is_equal(mini(clean + 1, GemData.Tier.ARTIFACT))
+func test_perfect_bumps_the_best_gem_in_the_layer() -> void:
+	assert_array(GemData.bump_best(["shard", "gem", "shard"])).is_equal(["shard", "crystal", "shard"])
+	assert_array(GemData.bump_best(["crystal", "artifact"])).is_equal(["crystal", "artifact"])
+	assert_array(GemData.bump_best([])).is_empty()
+	# One gem better per layer, not a whole layer of artifacts
+	var rng := _seeded()
+	for i in 30:
+		var perfect := GemData.drill_drops(4, PERFECT, rng)
+		assert_int(perfect.count("artifact")).is_less_equal(perfect.size() / 2 + 1)
 
 
 func test_layer_drop_counts_and_late_cracks() -> void:
 	var rng := _seeded()
 	for i in 50:
 		assert_int(GemData.drill_drops(1, GOOD, rng).size()).is_between(GemData.DRILL_MIN, GemData.DRILL_MAX)
-		assert_int(GemData.drill_drops(1, PERFECT, rng).size()).is_between(GemData.DRILL_MIN + 1, GemData.DRILL_MAX + 1)
+		assert_int(GemData.drill_drops(1, PERFECT, rng).size()).is_between(
+			GemData.DRILL_MIN + GemData.PERFECT_DRILL_BONUS, GemData.DRILL_MAX + GemData.PERFECT_DRILL_BONUS)
 		var late := GemData.drill_drops(4, LATE, rng)
 		assert_int(late.count("shard")).is_equal(late.size())
 

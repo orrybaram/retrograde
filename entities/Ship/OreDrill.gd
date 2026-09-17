@@ -7,6 +7,7 @@ class_name OreDrill
 ## hold's magnet. Deeper layers roll better gems, narrower zones on the last ones.
 ## An early release keeps (decaying) progress. Holding to OVERLOAD ends the dig with
 ## drill kickback. Between layers the player can bank (stop) and keep what was dug.
+## The bit stays in the hole between layers and sinks deeper with each one.
 ## Every finished dig spends the seam; a spent seam can't be drilled (phase starts DONE).
 ## Draws the drill bit and dust under the ship while it bites.
 
@@ -17,7 +18,8 @@ const RICH_LAYERS := 4
 const TROPHY_DEPTH := 3  # layers this deep get the narrow timing zone
 const KICKBACK_DAMAGE := 8.0
 const BIT_START := 12.0  # ship tail, local -x
-const BIT_LENGTH := 16.0
+const BIT_LENGTH := 14.0  # how far the bit sinks per layer
+const BIT_RETRACT := 6.0  # how far it pulls back between layers
 const DUST_COLOR := Colors.HULL_LIGHT
 
 var ore: OreDeposit = null
@@ -150,7 +152,9 @@ func _throw(drops: Array[String], grade: HarvestTiming.Grade, final: bool) -> vo
 	if not is_instance_valid(ship) or not ship.is_inside_tree():
 		return
 	var hole := to_global(Vector2(-BIT_START, 0))
-	Gem.burst(ship.get_parent(), hole, ore.velocity(), drops, final, rng)
+	# Always the gentle chip burst: the ship is parked right on top of the hole, and a
+	# wide scatter would throw half the haul out of the magnet's reach.
+	Gem.burst(ship.get_parent(), hole, ore.velocity(), drops, false, rng)
 	_juice(grade, GemData.best_of(drops), final)
 
 func _juice(grade: HarvestTiming.Grade, gem_id: String, final: bool) -> void:
@@ -166,13 +170,24 @@ func _set_holding(value: bool) -> void:
 func _process(_delta: float) -> void:
 	queue_redraw()
 
+## How far the bit is into the ground: one BIT_LENGTH per layer already broken, plus the
+## current layer's progress. It stays in the hole between layers (pulled back a little)
+## and only comes out when the dig ends.
+func bit_depth() -> float:
+	if phase != Phase.DIGGING:
+		return 0.0
+	var sunk := BIT_LENGTH * layer
+	if _holding and timing:
+		return sunk + BIT_LENGTH * timing.progress
+	return maxf(sunk - BIT_RETRACT, 0.0)
+
 func _draw() -> void:
-	if not _holding:
+	var depth_in := bit_depth()
+	if depth_in <= 0.0:
 		return
-	var jitter := randf_range(-1.0, 1.0)
-	var reach := BIT_LENGTH * (0.6 + 0.4 * timing.progress)
+	var jitter := randf_range(-1.0, 1.0) if _holding else 0.0
 	var base := Vector2(-BIT_START + 2.0, jitter)
-	var tip := Vector2(-BIT_START - reach, 0)
+	var tip := Vector2(-BIT_START - depth_in, 0)
 	draw_line(base, tip, Colors.HULL_LIGHT, 3.0)
 	draw_line(base + Vector2(0, -3), tip, Colors.HULL_MID, 1.0)
 	draw_line(base + Vector2(0, 3), tip, Colors.HULL_MID, 1.0)

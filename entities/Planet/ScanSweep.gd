@@ -2,7 +2,7 @@ extends Node2D
 class_name ScanSweep
 
 ## Amber radar sweep around a planet being scanned. A beam turns around the planet from
-## the surface out to the edge of the gravity field, starting at the ship's bearing and
+## the surface out to inner orbit (the scanner's reach), starting at the ship's bearing and
 ## passing back over it REVOLUTIONS times during the scan, trailing a fading wake.
 ## A ring just off the surface fills in step with the scan, growing both ways from the
 ## ship's side so the part the player can see fills first. On completion the ring
@@ -65,7 +65,7 @@ func _draw() -> void:
 	if not is_instance_valid(planet):
 		return
 	var inner := planet.radius + RIM_GAP
-	var outer := planet.field_radius()
+	var outer := planet.scan_radius()
 	var a := clampf(_alpha, 0.0, 1.0)
 	var beam := beam_angle()
 

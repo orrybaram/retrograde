@@ -6,6 +6,7 @@ press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -17,7 +18,7 @@ wait_until pt.state_name() == "FlyingState" 3
 
 # Skip the store: this scenario is about the seams
 eval gs.set("has_planet_scanner", true)
-assert pt.planet("Rook").get_ore_deposits().size() == 1 "Rook (a moon) grows one seam"
+assert pt.planet("Rook").get_ore_deposits().size() >= 3 "Rook (a moon) grows a few seams"
 assert pt.ore("Rook").rich "moon seams are rich"
 assert not pt.ore("Rook").visible "seam buried before the scan"
 assert not pt.ore("Rook").minimap_target.is_minimap_visible() "not on the minimap before the scan"
@@ -32,7 +33,7 @@ assert pt.ore("Rook").visible "the scan surfaces the seam"
 assert pt.ore("Rook").minimap_target.is_minimap_visible() "seam on the minimap"
 assert pt.snapshot().tracking.label == "ORE" "tracker points at the seam"
 wait_until not pt.node("scan_panel").is_typing() 5
-assert pt.node("scan_panel").body_text().contains("1 SEAMS") "readout counts the seam"
+assert pt.node("scan_panel").body_text().contains("%d SEAMS" % pt.planet("Rook").get_ore_deposits().size()) "readout counts the seams"
 wait 1.5
 
 # The hexes sit just under the surface and ride the orbit with the planet

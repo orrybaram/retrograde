@@ -6,6 +6,7 @@ press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -15,7 +16,7 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 eval gs.set("has_planet_scanner", true)
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 wait_until gs.is_planet_scanned("Veld/Rook") 6
 eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15
@@ -39,7 +40,7 @@ screenshot regrow_2_spent
 # --- Landing again: the spent seam refuses the drill ---
 hold thrust 0.1
 wait_until pt.state_name() == "FlyingState" 2
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 frames 5
 eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15
@@ -54,6 +55,8 @@ eval gs.tick_ore_regrowth(100)
 eval pt.redock()
 wait_until pt.visible_ui().has("SpacePortDialogue") 5
 press esc
+# The port autosaves when the tank is full, so let that land before clearing state
+wait_until ship.fuel == ship.max_fuel 15
 eval pt.set_meta("left_at_save", pt.ore("Rook").regrow_left())
 eval gs.spent_ore.clear()
 assert not pt.ore("Rook").is_spent() "cleared before reload"
@@ -72,7 +75,7 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 frames 5
 eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15

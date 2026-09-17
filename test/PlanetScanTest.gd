@@ -57,18 +57,35 @@ func test_switching_planets_restarts_the_meter() -> void:
 	assert_float(scan.progress).is_equal(0.0)
 
 
-func test_pick_finds_the_planet_whose_field_holds_the_ship() -> void:
+func test_pick_only_reaches_inner_orbit() -> void:
 	var planet := _planet(Vector2.ZERO, 100.0)
-	var field := planet.field_radius()
-	assert_object(PlanetScan.pick(Vector2(field - 1.0, 0), [planet])).is_same(planet)
-	assert_object(PlanetScan.pick(Vector2(field + 1.0, 0), [planet])).is_null()
+	var inner := planet.scan_radius()
+	assert_float(inner).is_greater(planet.radius)
+	assert_float(inner).is_less(planet.field_radius())
+	assert_object(PlanetScan.pick(Vector2(inner - 1.0, 0), [planet])).is_same(planet)
+	assert_object(PlanetScan.pick(Vector2(inner + 1.0, 0), [planet])).is_null()
+	# Being inside the gravity field is not enough
+	assert_object(PlanetScan.pick(Vector2(planet.field_radius() - 1.0, 0), [planet])).is_null()
+
+
+func test_inner_orbit_is_the_first_gravity_ring_clear_of_the_surface() -> void:
+	var rings := 6
+	var inner := GravityFieldVisual.inner_orbit_radius(100.0, 500.0, rings)
+	var below := []
+	for i in rings:
+		var r := GravityFieldVisual.ring_radius(i, rings, 100.0, 500.0)
+		if r <= 100.0:
+			below.append(r)
+		elif r < inner:
+			fail("ring %f sits between the surface and inner orbit" % r)
+	assert_array(below).is_not_empty()
 
 
 func test_pick_prefers_the_deeper_field_and_skips_sun_and_scanned() -> void:
 	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN)
 	var big := _planet(Vector2(1000, 0), 400.0)
 	var moon := _planet(Vector2(1300, 0), 50.0)
-	var ship_pos := Vector2(1320, 0)
+	var ship_pos := Vector2(1310, 0)
 	assert_object(PlanetScan.pick(ship_pos, [sun, big, moon])).is_same(moon)
 	_gs.mark_planet_scanned(moon.save_key())
 	assert_object(PlanetScan.pick(ship_pos, [sun, big, moon])).is_same(big)

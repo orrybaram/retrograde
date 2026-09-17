@@ -51,11 +51,26 @@ func test_hexes_sit_just_under_the_surface_and_are_stable() -> void:
 	for hex in hexes:
 		# Local +x points out of the surface, so the hexes are at negative x
 		assert_float(-hex["pos"].x).is_between(OreDeposit.DEPTH_MIN, OreDeposit.DEPTH_MAX)
-		assert_float(absf(hex["pos"].y)).is_less_equal(OreDeposit.REACH * OreDeposit.SPREAD)
+		assert_float(absf(hex["pos"].y)).is_less_equal(OreDeposit.CLUSTER)
 		assert_float(hex["size"]).is_between(OreDeposit.HEX_MIN, OreDeposit.HEX_MAX)
+		assert_float(hex["turn"]).is_between(0.0, TAU)
 	# Same seed, same seam
 	assert_array(OreDeposit.shape_hexes(false, 1234)).is_equal(hexes)
 	assert_array(OreDeposit.shape_hexes(false, 99)).is_not_equal(hexes)
+
+
+func test_hexes_are_scattered_not_strung_out_in_a_line() -> void:
+	# Depths vary as much as the sideways spread does, so a seam reads as a cluster
+	var depths := []
+	var sideways := []
+	for seed_value in 40:
+		for hex in OreDeposit.shape_hexes(true, seed_value):
+			depths.append(-hex["pos"].x)
+			sideways.append(hex["pos"].y)
+	var depth_span: float = depths.max() - depths.min()
+	var side_span: float = sideways.max() - sideways.min()
+	assert_float(depth_span).is_greater(OreDeposit.CLUSTER)
+	assert_float(depth_span / side_span).is_between(0.5, 2.0)
 
 
 func test_rich_seams_are_bigger() -> void:
@@ -133,19 +148,21 @@ func test_planets_grow_their_own_seams_but_the_sun_and_gas_giants_do_not() -> vo
 	assert_int(_grown_planet(400.0, Planet.PlanetType.GAS_GIANT).get_ore_deposits().size()).is_equal(0)
 	var rocky := _grown_planet(400.0)
 	assert_int(rocky.get_ore_deposits().size()).is_between(Planet.ORE_COUNT.x, Planet.ORE_COUNT.y)
+	assert_int(Planet.ORE_COUNT.x).is_greater(1)
 	for ore in rocky.get_ore_deposits():
 		assert_bool(ore.rich).is_false()
 		assert_float(ore.angle_degrees).is_between(0.0, 360.0)
 
 
-func test_a_moon_grows_one_rich_seam() -> void:
+func test_a_moon_grows_rich_seams() -> void:
 	var host := _grown_planet(4000.0)
 	var moon := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
 	moon.radius = 400.0
 	host.add_child(moon)
 	var seams := moon.get_ore_deposits()
-	assert_int(seams.size()).is_equal(1)
-	assert_bool(seams[0].rich).is_true()
+	assert_int(seams.size()).is_between(Planet.MOON_ORE_COUNT.x, Planet.MOON_ORE_COUNT.y)
+	for seam in seams:
+		assert_bool(seam.rich).is_true()
 
 
 func test_a_planet_grows_the_same_seams_every_session() -> void:

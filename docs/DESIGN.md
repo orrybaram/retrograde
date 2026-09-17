@@ -1401,14 +1401,14 @@ Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner*
 - Future tier 2: wider scan range, faster scan, or seams read deeper below the surface.
 
 #### Passive Scan
-- With the scanner installed, staying inside a planet's gravity field fills a scan meter (~4s). An amber sweep arc rotates around the planet while it fills.
-- Leaving the field before it completes resets the meter. Completed scans are permanent (saved).
+- With the scanner installed, holding in **inner orbit** (inside the first gravity ring clear of the surface) fills a scan meter (~4s). An amber sweep arc rotates around the planet while it fills. Cruising through the outer gravity field does nothing.
+- Dropping out of inner orbit before it completes resets the meter. Completed scans are permanent (saved).
 - On completion a small terminal readout types out: name/designation, `planet_type`, `habitability`, gravity strength, and ore seams found.
 - Unscanned planets show `? ? ?` on the minimap.
 - The gravity pull makes holding position part of the challenge - tune meter speed accordingly.
 
 #### Ore Seams
-- A planet grows its own seams: 1-3 per rocky/ice planet, 1 richer seam per moon, none on the sun or a gas giant (no ground to land on). Seeded from the planet's save key, so a planet has the same seams every session.
+- A planet grows its own seams: 6-8 per rocky/ice planet, 3-4 richer ones per moon, none on the sun or a gas giant (no ground to land on). Seeded from the planet's save key, so a planet has the same seams every session.
 - Visual: a few subtle hexagons sitting just under the surface (`OreDeposit.DEPTH_MIN`..`DEPTH_MAX`), breathing slowly. Shown on the minimap and in the tracking system.
 - Buried (invisible, untrackable, unlandable) until the planet is scanned; the scan surfaces them with a ping.
 
@@ -1420,8 +1420,9 @@ Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner*
 
 #### Drilling
 - Landing next to a seam offers the drill prompt; ACTION starts a `D R I L L` sequence reusing the `HarvestTiming` bar, 3-4 depth layers in a row.
-- Each successful layer adds gems; deeper layers roll higher `GemData` tiers. PERFECT bumps that layer one tier.
+- Each successful layer adds gems; deeper layers roll higher `GemData` tiers. PERFECT adds two gems and bumps the best one a tier. The bit stays in the hole and sinks deeper with every layer.
 - OVERLOAD ends the dig: keep what was dug, take small hull damage from drill kickback.
+- A seam is the payday: one dig is worth several scrap nodes, and a rich moon seam several times that again. Scrap is the trickle between digs.
 - The player can stop between layers and bank what they have (push-your-luck).
 
 #### Depletion

@@ -7,6 +7,7 @@ press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -16,7 +17,7 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 eval gs.set("has_planet_scanner", true)
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 wait_until gs.is_planet_scanned("Veld/Rook") 6
 eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15
@@ -47,7 +48,7 @@ up action
 wait_until pt.drill().phase == 2 2
 assert pt.drill().end_reason == "bottom" "dug to bedrock"
 burst drill_a_bedrock 6 0.1
-wait_until pt.item_count() == pt.drill().dug.size() 5
+wait_until pt.item_count() == pt.drill().dug.size() or inv.get_total_weight() >= ship.max_cargo_weight 8
 assert pt.state_name() == "PlanetLandedState" "still landed after the dig"
 assert str(pt.snapshot().action_message).contains("SEAM DRILLED OUT") "dig complete prompt"
 screenshot drill_a_done
@@ -56,7 +57,7 @@ wait_until pt.popup_counts() == inv.get_all_items() 3
 # --- B: bank after one layer ---
 hold thrust 0.1
 wait_until pt.state_name() == "FlyingState" 2
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 # The last dig spent the seam; skip its refill time (see regrow.play)
 eval gs.tick_ore_regrowth(1000)
 frames 5
@@ -70,13 +71,13 @@ wait_until pt.drill().layer == 1 2
 hold reverse_thrust 0.1
 wait_until pt.drill().phase == 2 1
 assert pt.drill().end_reason == "bank" "banked after one layer"
-wait_until pt.item_count() == pt.get_meta("held") + pt.drill().dug.size() 5
+wait_until pt.item_count() == pt.get_meta("held") + pt.drill().dug.size() or inv.get_total_weight() >= ship.max_cargo_weight 8
 assert pt.state_name() == "PlanetLandedState" "banking doesn't lift off"
 
 # --- C: overload ends the dig with kickback ---
 hold thrust 0.1
 wait_until pt.state_name() == "FlyingState" 2
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 # The last dig spent the seam; skip its refill time (see regrow.play)
 eval gs.tick_ore_regrowth(1000)
 frames 5

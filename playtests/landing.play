@@ -7,6 +7,7 @@ press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -24,7 +25,7 @@ assert pt.state_name() == "FlyingState" "no landing before the scan"
 
 # Scan Rook (scanner granted: this scenario is about landing)
 eval gs.set("has_planet_scanner", true)
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 wait_until gs.is_planet_scanned("Veld/Rook") 6
 assert pt.snapshot().tracking.label == "ORE" "tracking the seam"
 
@@ -42,7 +43,7 @@ wait 1.5
 assert pt.state_name() == "FlyingState" "sideways contact isn't a touchdown"
 
 # --- Throttled descent touches down ---
-eval pt.park_near_planet("Rook", 2600, 30)
+eval pt.park_near_planet("Rook", 2000, 30)
 frames 5
 eval pt.hover_over_ore("Rook", 150)
 frames 2
@@ -50,7 +51,7 @@ assert pt.state_name() == "FlyingState" "starts in flight above the seam"
 land Rook 15 15
 assert pt.state_name() == "PlanetLandedState" "touched down"
 assert get_node("/root/NavSystem").is_tracking_home() "arriving drops the seam target"
-assert str(pt.snapshot().action_message).contains("LIFT OFF") "landed prompt"
+assert str(pt.snapshot().action_message).contains("DRILL") "landed prompt offers the drill"
 wait 0.6
 screenshot landing_2_landed
 eval pt.set_meta("landed_fuel", ship.fuel)

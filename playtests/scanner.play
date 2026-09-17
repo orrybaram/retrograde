@@ -8,10 +8,11 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 # The controls and scrap tutorials pause the game; this scenario isn't about them
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
 assert not gs.has_planet_scanner "new game has no scanner"
 
-# --- Without the scanner, holding in a gravity field does nothing ---
+# --- Without the scanner, holding in inner orbit does nothing ---
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
@@ -19,7 +20,7 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
-eval pt.park_near_planet("Rook", 2600)
+eval pt.park_near_planet("Rook", 2000)
 wait 1
 assert pt.scanner().target() == null and pt.scanner().progress() == 0.0 "no scan without the scanner"
 assert not pt.node("scan_panel").visible "no scan panel without the scanner"
@@ -49,20 +50,20 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 
-# --- Leaving the field before it completes resets the meter ---
-eval pt.park_near_planet("Rook", 2600)
+# --- Leaving inner orbit before it completes resets the meter ---
+eval pt.park_near_planet("Rook", 2000)
 wait 1.5
 assert pt.scanner().target() == pt.planet("Rook") "scanning Rook"
 assert pt.scanner().progress() > 0.2 "meter fills"
 assert pt.node("scan_panel").body_text().contains("? ? ?") "unknown target while scanning"
 screenshot scanner_3_scanning
-eval pt.park_near_planet("Rook", 6000)
+eval pt.park_near_planet("Rook", 3000)
 frames 3
-assert pt.scanner().target() == null and pt.scanner().progress() == 0.0 "leaving the field resets"
+assert pt.scanner().target() == null and pt.scanner().progress() == 0.0 "leaving inner orbit resets"
 assert not gs.is_planet_scanned("Veld/Rook") "not scanned yet"
 
 # --- Holding for the full scan completes it ---
-eval pt.park_near_planet("Rook", 2600, 200)
+eval pt.park_near_planet("Rook", 2000, 200)
 wait 1.5
 burst scanner_4_sweep 8 0.12
 wait_until gs.is_planet_scanned("Veld/Rook") 4
@@ -79,6 +80,8 @@ assert pt.scanner().target() == null "a scanned planet isn't scanned again"
 eval pt.redock()
 wait_until pt.visible_ui().has("SpacePortDialogue") 5
 press esc
+# The port autosaves when the tank is full, so let that land before clearing state
+wait_until ship.fuel == ship.max_fuel 15
 eval gs.scanned_planets.clear()
 eval gs.set("has_planet_scanner", false)
 reload

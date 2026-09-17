@@ -3,7 +3,7 @@ class_name PlanetScan
 
 ## Scan meter for the Planetary Scanner. Fills while the same planet stays in range and
 ## resets when it drops out (or another planet takes over). Pure logic: PlanetScanner
-## feeds it the planet whose gravity field holds the ship each physics tick.
+## feeds it the planet whose inner orbit holds the ship each physics tick.
 
 const SCAN_TIME := 4.0
 
@@ -28,8 +28,10 @@ func update(planet: Planet, delta: float) -> bool:
 func reset() -> void:
 	update(null, 0.0)
 
-## The unscanned planet whose gravity field `pos` sits deepest in (relative to the
-## field's size, so a moon wins inside its parent's field). The sun is never scanned.
+## The unscanned planet whose inner orbit `pos` sits deepest in (relative to that
+## planet's scan range, so a moon wins inside its parent's field). The scanner only
+## reaches inner orbit - flying past the edge of the gravity field is not enough.
+## The sun is never scanned.
 static func pick(pos: Vector2, planets: Array) -> Planet:
 	var best: Planet = null
 	var best_depth := INF
@@ -37,7 +39,7 @@ static func pick(pos: Vector2, planets: Array) -> Planet:
 		var planet := node as Planet
 		if not planet or planet.planet_type == Planet.PlanetType.SUN or planet.is_scanned():
 			continue
-		var depth := pos.distance_to(planet.global_position) / planet.field_radius()
+		var depth := pos.distance_to(planet.global_position) / planet.scan_radius()
 		if depth <= 1.0 and depth < best_depth:
 			best = planet
 			best_depth = depth

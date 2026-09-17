@@ -40,8 +40,9 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 
 ## Surface gravity readouts divide by this (px/s^2 per unit mass) to show G.
 const STANDARD_GRAVITY := 50.0
-## How many ore seams a planet (not a moon) grows.
-const ORE_COUNT := Vector2i(1, 3)
+## How many ore seams a planet grows, and how many a moon grows (moon seams are rich).
+const ORE_COUNT := Vector2i(6, 8)
+const MOON_ORE_COUNT := Vector2i(3, 4)
 
 var parent_planet: Planet = null
 var minimap_target: PlanetMinimapTarget = null
@@ -81,9 +82,15 @@ func _get_gravity_strength() -> float:
 func surface_gravity() -> float:
 	return _get_gravity_strength() / (radius * radius) / STANDARD_GRAVITY
 
-## How far the gravity field (and the scanner's reach) extends from the centre.
+## How far the gravity field extends from the centre.
 func field_radius() -> float:
 	return radius * gravity_radius_multiplier
+
+## How close the ship has to be for the Planetary Scanner to work: inner orbit, the
+## first gravity ring clear of the surface.
+func scan_radius() -> float:
+	var rings: int = gravity_field_visual.ring_count if gravity_field_visual else 6
+	return GravityFieldVisual.inner_orbit_radius(radius, field_radius(), rings)
 
 ## Stable key for saves: "Name", or "Parent/Name" for moons.
 func save_key() -> String:
@@ -107,15 +114,16 @@ func get_ore_deposits() -> Array[OreDeposit]:
 			ores.append(child)
 	return ores
 
-## Grow this planet's ore seams: 1 rich seam on a moon, 1-3 on a planet, none on the sun
-## or a gas giant (no ground to land on). Seeded from the planet's save key, so a planet
-## has the same seams in the same places every session.
+## Grow this planet's ore seams: MOON_ORE_COUNT rich ones on a moon, ORE_COUNT on a
+## planet, none on the sun or a gas giant (no ground to land on). Seeded from the
+## planet's save key, so a planet has the same seams in the same places every session.
 func _spawn_ore() -> void:
 	if planet_type == PlanetType.SUN or planet_type == PlanetType.GAS_GIANT:
 		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(save_key())
-	var count := 1 if is_moon() else rng.randi_range(ORE_COUNT.x, ORE_COUNT.y)
+	var span := MOON_ORE_COUNT if is_moon() else ORE_COUNT
+	var count := rng.randi_range(span.x, span.y)
 	# Spread the seams apart so one landing is never in reach of two
 	var gap := 360.0 / count
 	for i in count:

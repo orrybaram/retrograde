@@ -16,9 +16,9 @@ class_name OreDeposit
 
 ## How far along the surface the ship may land from the seam's centre and still drill it.
 const REACH := 150.0
-const DEPTH_MIN := 26.0  # how far under the surface the hexes sit
-const DEPTH_MAX := 70.0
-const SPREAD := 0.55  # sideways spread, as a fraction of REACH
+const DEPTH_MIN := 22.0  # how far under the surface the hexes sit
+const DEPTH_MAX := 110.0
+const CLUSTER := 70.0  # radius of the scatter around the seam's centre
 const HEX_MIN := 9.0
 const HEX_MAX := 20.0
 const HEX_COUNT := Vector2i(2, 4)
@@ -78,11 +78,15 @@ static func shape_hexes(is_rich: bool, seed_value: int) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var span := RICH_HEX_COUNT if is_rich else HEX_COUNT
+	var centre := Vector2(-(DEPTH_MIN + DEPTH_MAX) / 2.0, 0.0)
 	var hexes: Array[Dictionary] = []
 	for i in rng.randi_range(span.x, span.y):
+		# Scattered evenly through a disc around the seam's centre, not strung out in a line
+		var at := centre + Vector2.from_angle(rng.randf() * TAU) * (sqrt(rng.randf()) * CLUSTER)
 		hexes.append({
-			"pos": Vector2(-rng.randf_range(DEPTH_MIN, DEPTH_MAX), rng.randf_range(-1.0, 1.0) * REACH * SPREAD),
+			"pos": Vector2(-clampf(-at.x, DEPTH_MIN, DEPTH_MAX), at.y),
 			"size": rng.randf_range(HEX_MIN, HEX_MAX) * (1.15 if is_rich else 1.0),
+			"turn": rng.randf() * TAU,
 			"phase": rng.randf() * TAU,
 		})
 	return hexes
@@ -172,7 +176,7 @@ func _draw() -> void:
 	var color := ore_color()
 	for hex in _hexes:
 		var breathe: float = 1.0 + SHIMMER * sin(_reveal_time * SHIMMER_SPEED + hex["phase"])
-		var points := hex_points(hex["pos"], hex["size"] * ease(t, 0.4) * breathe)
+		var points := hex_points(hex["pos"], hex["size"] * ease(t, 0.4) * breathe, hex["turn"])
 		draw_colored_polygon(points, Color(color, FILL_ALPHA * t))
 		points.append(points[0])
 		draw_polyline(points, Color(color, LINE_ALPHA * t), LINE_WIDTH)
@@ -180,11 +184,11 @@ func _draw() -> void:
 	if _reveal_time < REVEAL_TIME:
 		draw_arc(Vector2.ZERO, PING_RADIUS * t, 0.0, TAU, 48, Color(Colors.PRIMARY, 1.0 - t), 2.0)
 
-## A flat-topped hexagon of `size` around `at`.
-static func hex_points(at: Vector2, size: float) -> PackedVector2Array:
+## A hexagon of `size` around `at`, turned by `turn` radians.
+static func hex_points(at: Vector2, size: float, turn := 0.0) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	for i in 6:
-		points.append(at + Vector2.from_angle(TAU * i / 6.0) * size)
+		points.append(at + Vector2.from_angle(turn + TAU * i / 6.0) * size)
 	return points
 
 func _register_with_minimap() -> void:
