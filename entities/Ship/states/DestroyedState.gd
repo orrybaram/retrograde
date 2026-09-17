@@ -10,10 +10,6 @@ func enter() -> void:
 	if not is_ship_valid():
 		return
 	
-	# Hide ship visual
-	if ship.ship_polygon:
-		ship.ship_polygon.visible = false
-	
 	# Stop all particles
 	if ship.thruster_particles:
 		ship.thruster_particles.emitting = false
@@ -22,8 +18,11 @@ func enter() -> void:
 	if ship.side_thruster_particles:
 		ship.side_thruster_particles.emitting = false
 	
-	# Create explosion particles
 	_create_explosion()
+
+	# Hide ship visual (the explosion has already copied it into debris)
+	if ship.ship_polygon:
+		ship.ship_polygon.visible = false
 	
 	# Disable ship controls
 	ship.set_process(false)
@@ -38,27 +37,10 @@ func integrate_forces(_state: PhysicsDirectBodyState2D) -> void:
 	pass
 
 func _create_explosion() -> void:
-	if not is_ship_valid() or not ship.boost_particles:
+	var world := ship.get_parent()
+	if not world:
 		return
-	
-	# Create a simple explosion using existing particle system
-	# We'll use the boost particles for explosion effect
-	var material = ship.boost_particles.process_material as ParticleProcessMaterial
-	if material:
-		# Make explosion particles go in all directions
-		material.direction = Vector3(0, 0, 0)
-		material.spread = 360.0
-		material.initial_velocity_min = 30.0
-		material.initial_velocity_max = 100.0
-		material.scale_min = 2.0
-		material.scale_max = 8.0
-		material.color = Colors.EXPLOSION
-	
-	ship.boost_particles.amount = 200
-	ship.boost_particles.lifetime = 1
-	ship.boost_particles.emitting = true
-	ship.boost_particles.one_shot = true
-	
-	# Also create explosion at ship position
-	ship.boost_particles.position = Vector2.ZERO
-	ship.boost_particles.restart()
+	# Lives in the world, not on the ship, so hiding/resetting the ship doesn't touch it
+	var explosion := ShipExplosion.new()
+	world.add_child(explosion)
+	explosion.start(ship.ship_polygon, ship.linear_velocity, ship.camera, ship.camera_base_offset)
