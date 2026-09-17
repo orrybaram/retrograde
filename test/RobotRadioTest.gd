@@ -372,14 +372,16 @@ func test_confirm_calls_end_on_a_confirm_line() -> void:
 			assert_bool(conv.lines[i].is_confirm()).is_false()
 
 
-func test_scrap_tutorial_and_game_over_pause_but_beacon_offer_does_not() -> void:
+func test_tutorials_and_game_over_pause_but_beacon_offer_does_not() -> void:
+	assert_bool(RADIO_SCRIPT.MSG_DEPARTURE.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SHIP_DESTROYED.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_TOWED_HOME.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_TRACTOR_RESCUE.pause_game).is_true()
 	# Stranded pilots may still be drifting into the tractor beam
 	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL.pause_game).is_false()
-	assert_bool(RADIO_SCRIPT.MSG_DEPARTURE.pause_game).is_false()
+	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_false()
+	assert_bool(RADIO_SCRIPT.MSG_CARGO_FULL.pause_game).is_false()
 
 
 func test_low_fuel_outranks_tips() -> void:

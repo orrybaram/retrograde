@@ -37,7 +37,7 @@ func process(delta: float) -> void:
 		return
 
 	var new_can_harvest := false
-	if scrap_node.amount > 0 and not scrap_node._is_depleted:
+	if scrap_node.amount > 0 and not scrap_node._is_depleted and _ship_can_harvest(ship):
 		var relative_velocity := ship.linear_velocity - scrap_node.get_orbital_velocity()
 		if relative_velocity.length() < 100.0:
 			new_can_harvest = true
@@ -48,6 +48,12 @@ func process(delta: float) -> void:
 
 	if _can_harvest and Input.is_action_just_pressed("action") and _is_primary_target(ship, cone):
 		_try_start_harvest()
+
+## Only a ship under power harvests. A stranded ship's SPACE belongs to the robot's
+## beacon offer, and starting a harvest would pull it out of StrandedState.
+func _ship_can_harvest(ship: Ship) -> bool:
+	var state := ship.state_machine.current_state if ship.state_machine else null
+	return state is FlyingState or state is HarvestingState
 
 ## One extraction at a time. While the ship is focused on a live scrap, only that scrap
 ## answers the press; otherwise the nearest live scrap in the cone does.

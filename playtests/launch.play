@@ -5,7 +5,8 @@ assert main.current_game_state == 0 "boots to menu"
 assert pt.visible_ui().has("StartMenu") "start menu visible"
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
-# The scrap tutorial pauses the game; this scenario isn't about it
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 wait_until pt.state_name() == "LandedState" 5
 wait 0.5

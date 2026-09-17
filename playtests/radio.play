@@ -1,7 +1,7 @@
-# Robot radio: departing the dock opens a transmission from the guide robot. ENTER finishes
-# the typing, radio_next (TAB) steps through lines, finished lines auto-dismiss, a low-fuel
-# warning plays later, the scrap tutorial pauses the game until read, and running dry /
-# exploding become radio calls with a confirm line that relaunches.
+# Robot radio. The controls and scrap tutorials pause the game and wait for the player:
+# SPACE (TAB/ENTER aliases) finishes the speech, then moves on. Unpaused tips auto-dismiss
+# and leave SPACE to the ship. Running dry and losing the ship are radio calls whose
+# confirm line sends the beacon / relaunches.
 # Run: tools/play.sh playtests/radio.play   (frames land in .playtest/radio_*.png)
 
 press enter
@@ -15,45 +15,60 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 assert not pt.node("radio_panel").visible "no transmission before departure"
 
-# Departure -> basic controls
+# Departure -> controls tutorial, paused
 hold thrust 0.6
-wait_until pt.state_name() == "FlyingState" 3
-wait_until pt.node("radio_panel").visible 2
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_departure" "departure tip on air"
+wait_until pt.node("radio_panel").visible 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_departure" "controls tutorial on air"
+assert get_tree().paused "controls tutorial pauses the game"
+assert pt.state_name() == "FlyingState" "undocked"
 wait 0.6
 screenshot radio_01_typing
 assert pt.node("radio_panel").is_typing() "message types out"
 assert pt.node("radio_panel").robot.talking "robot talks while typing"
 assert pt.node("radio_panel").robot.expression == "hello" "line sets the robot's face"
-press enter
+press space
 frames 2
-assert not pt.node("radio_panel").is_typing() "ENTER finishes the typing"
+assert not pt.node("radio_panel").is_typing() "first SPACE finishes the speech"
 assert not pt.node("radio_panel").robot.talking "robot stops talking once the line is out"
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "first SPACE doesn't skip the line"
 assert pt.node("radio_panel").message_text().contains("Hold UP to burn") "key names filled in"
-assert pt.state_name() == "FlyingState" "ENTER doesn't touch the ship"
 screenshot radio_02_full_line
-
-# Non-blocking: steering still works with the panel up
-eval pt.set_meta("rot", ship.rotation)
-hold turn_left 0.5
-assert abs(ship.rotation - pt.get_meta("rot")) > 0.1 "ship turns while the robot talks"
-assert pt.node("radio_panel").visible "panel stays up while flying"
-
+wait 10
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "paused tutorial never times out"
+press space
+wait 0.2
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "second SPACE moves on"
 press radio_next
-wait 0.4
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "TAB advances to the next line"
+frames 2
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 and not pt.node("radio_panel").is_typing() "TAB is an alias: finishes the speech"
+press enter
+wait 0.3
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 2 "ENTER is an alias: moves on"
 screenshot radio_03_next_line
-press radio_next 2
-wait 0.5
-assert not pt.node("radio_panel").visible "TAB on the last line closes the transmission"
-assert get_tree().root.get_node("RobotRadio").has_seen("first_departure") "departure tip marked seen"
+press space
+frames 2
+press space
+wait 0.3
+assert not get_tree().root.get_node("RobotRadio").is_active() "SPACE on the last line closes"
+assert not get_tree().paused "closing the tutorial unpauses"
+frames 5
+assert pt.state_name() == "FlyingState" "the closing SPACE isn't also read as a dock press"
+assert pt.visible_ui().is_empty() "no dock menu from the closing SPACE"
+assert get_tree().root.get_node("RobotRadio").has_seen("first_departure") "controls tutorial marked seen"
 
-# Low fuel warning, left alone to auto-dismiss
+# Low fuel: an unpaused tip. The ship keeps flying, SPACE stays the action key.
 eval ship.set("fuel", 30.0)
 hold thrust 0.2
 wait_until pt.node("radio_panel").visible 3
 assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_low_fuel" "low-fuel warning on air"
-wait 1.2
+assert not get_tree().paused "warnings don't pause"
+eval pt.set_meta("rot", ship.rotation)
+hold turn_left 0.5
+assert abs(ship.rotation - pt.get_meta("rot")) > 0.1 "ship turns while the robot talks"
+press space
+frames 2
+assert pt.node("radio_panel").is_typing() or get_tree().root.get_node("RobotRadio").queue.line_index == 0 "SPACE doesn't drive an unpaused tip"
+wait 1
 screenshot radio_04_low_fuel
 wait_until not pt.node("radio_panel").visible 30
 assert not get_tree().root.get_node("RobotRadio").is_active() "warning auto-dismissed"
@@ -66,12 +81,13 @@ assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_scrap" 
 assert get_tree().paused "scrap tutorial pauses the game"
 wait 1.5
 screenshot radio_05_scrap_tip
-wait 12
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "paused tutorial never times out"
-press enter
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
 wait 0.2
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "ENTER moves a paused tutorial on"
-press radio_next
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "SPACE moves the tutorial on"
+press space
+frames 2
+press space
 wait_until pt.node("radio_panel").robot.expression == "glitch" 2
 wait 0.8
 screenshot radio_06_glitch_line
@@ -83,7 +99,12 @@ press escape
 wait_until not pt.node("pause_menu").visible 2
 assert get_tree().paused "tutorial still holds the pause after resume"
 wait_until pt.node("radio_panel").visible 2
-press radio_next 2
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait 0.2
+assert get_tree().root.get_node("RobotRadio").queue.line_index == 3 "on the last tutorial line"
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
 wait 0.3
 assert not get_tree().root.get_node("RobotRadio").is_active() "tutorial finished"
 assert not get_tree().paused "closing the tutorial unpauses"
@@ -92,6 +113,7 @@ assert not get_tree().paused "closing the tutorial unpauses"
 eval ship.set("fuel", 0.5)
 hold thrust 0.5
 wait_until pt.state_name() == "StrandedState" 3
+assert not bus.is_harvest_available() "a stranded ship can't harvest the scrap beside it"
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 3
 assert not get_tree().paused "beacon offer doesn't pause (you may be drifting home)"
 assert pt.node("radio_panel").choice_text() == "" "no confirm row on the intro line"
@@ -101,26 +123,31 @@ frames 2
 assert not pt.node("radio_panel").visible "radio hides behind menus"
 press i
 wait_until pt.node("radio_panel").visible 2
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 15
+press space
+frames 2
+press space
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
+assert pt.state_name() == "StrandedState" "SPACE on the radio doesn't start a harvest"
 wait_until not pt.node("radio_panel").is_typing() 5
 screenshot radio_07_beacon_offer
 assert pt.node("radio_panel").choice_text().contains("SEND RESCUE BEACON") "confirm row shown"
-press radio_next
-wait 0.2
-assert get_tree().root.get_node("RobotRadio").current_line().is_confirm() "TAB can't skip a confirm"
 wait 10
 assert get_tree().root.get_node("RobotRadio").current_line().is_confirm() "confirm never times out"
 assert main.current_game_state == 1 "nothing happens until confirmed"
-press enter
+press radio_next
 wait_until main.current_game_state == 2 10
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "towed_home" 3
 assert get_tree().paused "game-over call pauses"
-press radio_next
+press space
+frames 2
+press space
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
 wait_until not pt.node("radio_panel").is_typing() 5
 screenshot radio_08_towed_home
 assert pt.node("radio_panel").choice_text().contains("-10 CR") "tow fee filled in"
 press enter
 wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
+wait 0.3
 assert not get_tree().paused "relaunch unpauses"
 assert not get_tree().root.get_node("RobotRadio").is_active() "radio quiet after relaunch"
 
@@ -137,16 +164,18 @@ wait_until main.current_game_state == 2 10
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_destroyed" 3
 wait 0.5
 screenshot radio_09_destroyed
-press enter
-press enter
+press space
+frames 2
+press space
 wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
 wait_until not pt.node("radio_panel").is_typing() 5
 screenshot radio_10_relaunch
 assert pt.node("radio_panel").choice_text().contains("RELAUNCH  -20 CR") "relaunch fee filled in"
 press space
 wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
-assert not get_tree().paused "relaunch unpauses"
-assert gs.death_count == 2 "tow and explosion both count as deaths"
 # Let the dock's save-indicator timer finish so nothing is pending at quit
 wait 1
+assert not get_tree().paused "relaunch unpauses"
+assert pt.visible_ui().is_empty() "the confirming SPACE doesn't open the dock menu"
+assert gs.death_count == 2 "tow and explosion both count as deaths"
 quit

@@ -76,7 +76,9 @@ func confirm() -> void:
 	if line == null or not line.is_confirm():
 		return
 	var id := queue.current.id
-	silence()
+	queue.clear()
+	_sync_pause()
+	transmission_ended.emit()
 	confirmed.emit(id)
 
 func current_line() -> RadioLine:
@@ -89,7 +91,9 @@ func is_active() -> bool:
 func is_pausing() -> bool:
 	return _pausing
 
-func _sync_pause() -> void:
+## `after_key_press` delays the unpause (see _release_pause); code-driven
+## changes like silence() unpause right away so a menu can re-pause after.
+func _sync_pause(after_key_press: bool = true) -> void:
 	var want := queue.is_active() and queue.current.pause_game
 	if want == _pausing:
 		return
@@ -99,9 +103,22 @@ func _sync_pause() -> void:
 	if want:
 		_pause_started = Time.get_ticks_msec() / 1000.0
 		get_tree().paused = true
+	elif after_key_press:
+		_release_pause()
 	else:
-		get_tree().paused = false
-		EventBus.game_unpaused.emit(Time.get_ticks_msec() / 1000.0 - _pause_started)
+		_unpause()
+
+## Unpauses once the frame of the key press that closed the transmission has passed,
+## so gameplay doesn't also read that SPACE as a just-pressed action (dock, harvest).
+func _release_pause() -> void:
+	for i in 2:
+		await get_tree().physics_frame
+	if not _pausing:  # unless another pausing transmission started meanwhile
+		_unpause()
+
+func _unpause() -> void:
+	get_tree().paused = false
+	EventBus.game_unpaused.emit(Time.get_ticks_msec() / 1000.0 - _pause_started)
 
 # --- Show-once flags -----------------------------------------------------------
 
@@ -138,7 +155,7 @@ func reset() -> void:
 func silence() -> void:
 	var was_active := queue.is_active()
 	queue.clear()
-	_sync_pause()
+	_sync_pause(false)
 	if was_active:
 		transmission_ended.emit()
 

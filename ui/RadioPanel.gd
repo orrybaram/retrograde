@@ -2,10 +2,11 @@ class_name RadioPanel
 extends Control
 
 ## HUD transmission box for RobotRadio: the robot on the left, its message typed out
-## on the right. `radio_next` (TAB) advances/dismisses, ENTER finishes the typing, and
-## a finished line auto-dismisses after RadioLine.read_time(). Conversations that pause
-## the game wait instead (ENTER or TAB moves on). Confirm lines show `> ACTION` and wait
-## for ENTER/SPACE. Sits bottom-right, clear of the dashboard and the action message.
+## on the right. Continue (SPACE, with TAB/ENTER as aliases) finishes the speech, then
+## moves on: next line, confirm, or close. SPACE is also the flight action key, so it
+## only continues conversations that pause the game or ask for a confirm; other tips
+## take TAB/ENTER and auto-dismiss after RadioLine.read_time(). Paused and confirm lines
+## wait for the player. Sits bottom-right, clear of the dashboard and the action message.
 ## Hidden while a menu is open. Runs while paused. Added to the HUD at runtime.
 
 const PANEL_SIZE := Vector2(600, 202)
@@ -209,6 +210,11 @@ func _on_typing_finished() -> void:
 func _waits_for_player() -> bool:
 	return _line.is_confirm() or _conv.pause_game
 
+## SPACE doubles as the flight action key, so it only drives conversations that
+## hold the game or ask for a confirm (the ship isn't flying then).
+func _space_continues() -> bool:
+	return _conv.pause_game or _conv.lines.any(func(l: RadioLine) -> bool: return l.is_confirm())
+
 func _close() -> void:
 	_line = null
 	_conv = null
@@ -230,20 +236,19 @@ func _fade_to(alpha: float) -> void:
 				visible = false)
 
 func _update_hint() -> void:
-	var next_key := InputUtils.get_action_key_name("radio_next").to_upper()
-	var last := RobotRadio.queue.line_index + 1 >= RobotRadio.queue.current.lines.size() if RobotRadio.queue.current else true
-	var next_word := "CLOSE" if last and RobotRadio.queue.pending_count() == 0 else "NEXT"
 	var parts: Array[String] = []
 	if _conv and _conv.pause_game:
 		parts.append("PAUSED")
-	if _typewriter.is_typing():
-		parts.append("ENTER SKIP")
-	elif _line and _line.is_confirm():
-		parts.append("ENTER CONFIRM")
-	elif _conv and _conv.pause_game:
-		parts.append("ENTER " + next_word)
-	if _line and not _line.is_confirm():
-		parts.append("%s %s" % [next_key, next_word])
+	if _line and _space_continues():
+		var last := RobotRadio.queue.line_index + 1 >= _conv.lines.size() and RobotRadio.queue.pending_count() == 0
+		var word := "NEXT"
+		if _typewriter.is_typing():
+			word = "SKIP"
+		elif _line.is_confirm():
+			word = "CONFIRM"
+		elif last:
+			word = "CLOSE"
+		parts.append("%s %s" % [InputUtils.get_action_key_name("action").to_upper(), word])
 	_hint.text = "   ".join(parts)
 
 func _process(delta: float) -> void:
@@ -277,27 +282,22 @@ func _beep_new_chars() -> void:
 func _input(event: InputEvent) -> void:
 	if _line == null or not visible:
 		return
-	if event.is_action_pressed("radio_next"):
-		if not _line.is_confirm():
-			RobotRadio.advance()
-		get_viewport().set_input_as_handled()
+	var enter: bool = event is InputEventKey and event.pressed and not event.echo \
+			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER)
+	var space: bool = event.is_action_pressed("action") and _space_continues()
+	if not (space or enter or event.is_action_pressed("radio_next")):
 		return
-	if not (event is InputEventKey and event.pressed and not event.echo):
-		return
-	var enter: bool = event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER
-	# SPACE also accepts a confirm line, like the terminal menus
-	var space: bool = event.keycode == KEY_SPACE and _line.is_confirm()
-	if not (enter or space):
-		return
+	_continue()
+	get_viewport().set_input_as_handled()
+
+## One press: finish the speech, or else move on (confirm / next line / close).
+func _continue() -> void:
 	if _typewriter.is_typing():
 		_typewriter.skip()
 	elif _line.is_confirm():
 		RobotRadio.confirm()
-	elif enter and _conv.pause_game:
-		RobotRadio.advance()
 	else:
-		return
-	get_viewport().set_input_as_handled()
+		RobotRadio.advance()
 
 ## A menu (dock, store, map, inventory, pause, game over) is up: step aside.
 func _is_blocked() -> bool:
