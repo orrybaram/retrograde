@@ -60,7 +60,7 @@ func _set_show_gravity_rings(v: bool) -> void:
 func _set_color(c: Color) -> void:
 	color = c
 	# Update the visual if it exists
-	var visual = get_node_or_null("Circle") as PlanetVisual
+	var visual = get_node_or_null("PlanetVisual") as PlanetVisual
 	if visual:
 		visual.base_color = c
 
@@ -78,7 +78,7 @@ func _ready() -> void:
 	mass = massMultiplier * 1000000
 	
 	# Set initial color on visual
-	var visual = get_node_or_null("Circle") as PlanetVisual
+	var visual = get_node_or_null("PlanetVisual") as PlanetVisual
 	if visual:
 		visual.base_color = color
 		
