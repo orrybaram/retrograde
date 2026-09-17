@@ -16,6 +16,8 @@ var _timer: float = 0.0
 
 func setup(target: RichTextLabel) -> void:
 	_target = target
+	# Lay out the full text up front so words don't jump lines as they type out.
+	_target.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
 
 func type_text(text: String) -> void:
 	if not _target:
