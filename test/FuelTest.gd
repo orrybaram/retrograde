@@ -30,4 +30,4 @@ func test_fuel_tank_upgrades_scale_with_base() -> void:
 	for i in [1, 2, 3]:
 		var item := load("res://entities/Upgrades/items/FuelTank_%d.tres" % i) as UpgradeItem
 		values.append(item.effect_value)
-	assert_array(values).is_equal([50.0, 50.0, 100.0])
+	assert_array(values).is_equal([100.0, 150.0, 250.0])

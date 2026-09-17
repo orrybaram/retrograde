@@ -22,6 +22,9 @@ enum EffectType {
 @export_multiline var description: String = ""
 ## Tooltip/details description
 
+@export_multiline var purchase_line: String = ""
+## What the quartermaster says once it's fitted. Empty falls back to a generic line.
+
 @export var icon: Texture2D = null
 ## Optional icon for UI display
 

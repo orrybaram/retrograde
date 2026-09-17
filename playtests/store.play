@@ -8,7 +8,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
-eval gs.set("credits", 120)
+eval gs.set("credits", 690)
 eval ship.set("hull_strength", 70.0)
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -22,14 +22,14 @@ assert str(pt.screen_text()["StoreUI"]).contains("UNIT-7") "robot runs the store
 press enter
 wait 1.5
 screenshot store_buy
-# Repair (30 CR), then buy Hull Plating I (30 CR)
+# Repair (90 CR), then buy Hull Plating I (600 CR)
 press enter
 wait_until ship.hull_strength == ship.max_hull 2
-assert gs.credits == 90 "repair charged 30 CR"
+assert gs.credits == 600 "repair charged 90 CR"
 press down
 press enter
 wait_until gs.get_upgrade_level("hull") == 1 3
-assert ship.hull_strength == ship.max_hull and ship.max_hull == 105 "hull upgrade heals to the new max"
+assert ship.hull_strength == ship.max_hull and ship.max_hull == 150 "hull upgrade heals to the new max"
 eval gs.set("credits", 20)
 wait 1.5
 screenshot store_bought

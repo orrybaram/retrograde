@@ -7,9 +7,9 @@ script = ExtResource("1")
 upgrade_id = "hull_2"
 display_name = "Hull Plating II"
 description = "Layered composite armor from a decommissioned patrol craft. Still has the scorch marks."
+purchase_line = "Composite armor, patrol-craft surplus. The scorch marks came free."
 upgrade_path = "hull"
 tier = 2
-cost = 60
+cost = 2250
 effect_target = "max_hull"
-effect_value = 5.0
-
+effect_value = 75.0
