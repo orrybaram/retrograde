@@ -19,6 +19,16 @@
 
 For detailed patterns and examples, see `@.claude/PATTERNS.md`.
 
+## Running & Testing
+
+Godot 4.6 CLI is `godot` (symlink to `/Applications/Godot.app/Contents/MacOS/Godot`).
+
+- `tools/test.sh` — run all gdUnit4 suites in `test/` headless (exit 0 = pass). Single suite: `tools/test.sh -a res://test/TierDataTest.gd`
+- `tools/smoke.sh [frames]` — boot main scene headless, fails on any ERROR or path case mismatch
+- `godot --headless --path . --import` — reimport after adding files / `class_name`s
+- New tests: `test/<Name>Test.gd`, `extends GdUnitTestSuite`, `func test_*()`. Use `auto_free()` for nodes.
+- `res://` paths are case-sensitive on export — the folder is `entities/`, never `Entities/`.
+
 ## Scene Inspection
 
-**Never read `.tscn` files directly** — use `mcp__gdcli__scene_inspect` instead. It returns a structured summary at a fraction of the token cost.
+Prefer grepping `.tscn` files for specific lines over reading them whole — they are large and token-heavy.
