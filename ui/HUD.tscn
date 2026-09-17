@@ -132,6 +132,14 @@ theme_override_colors/font_color = Color(0.42, 0.353, 0.204, 1)
 theme_override_font_sizes/font_size = 14
 text = "/160"
 
+[node name="CreditsLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1377215094]
+layout_mode = 2
+size_flags_vertical = 8
+theme = ExtResource("3_jd13s")
+theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
+theme_override_font_sizes/font_size = 14
+text = "0 CR"
+
 [node name="ActionMessageLabel" type="Label" parent="." unique_id=583314362]
 layout_mode = 1
 anchors_preset = 7

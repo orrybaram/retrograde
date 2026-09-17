@@ -5,6 +5,7 @@ class_name ShipExplosion
 ## shockwave rings, streaking sparks, the hull shattered into burning debris,
 ## and a chain of smaller cook-off blasts that go off around (and on) the wreckage.
 ## Spawned into the world by DestroyedState; frees itself once everything has faded.
+## The blast stays at the point of impact; only the debris keeps the ship's momentum.
 
 const DURATION := 7.0
 const FLASH_TIME := 0.12
@@ -58,9 +59,10 @@ class Debris:
 	var spin := 0.0
 	var base_color: Color
 	var ember_timer := 0.0
+	var drift := Vector2.ZERO  ## Ship momentum the piece keeps (not damped)
 
 var rng := RandomNumberGenerator.new()
-var velocity := Vector2.ZERO  ## Wreck drift, matched to the ship so the camera stays on it
+var drift := Vector2.ZERO  ## Ship velocity at impact, carried by the debris
 
 var _time := 0.0
 var _blasts: Array[Blast] = []
@@ -93,7 +95,7 @@ func start(hull: Node2D, drift: Vector2 = Vector2.ZERO, camera: Camera2D = null,
 		rng.seed = seed_value
 	else:
 		rng.randomize()
-	velocity = drift
+	self.drift = drift
 	_camera = camera
 	_camera_base_offset = camera_base_offset
 	if hull:
@@ -112,7 +114,6 @@ func _process(delta: float) -> void:
 ## Steps the whole simulation. Public so tests can drive it deterministically.
 func advance(delta: float) -> void:
 	_time += delta
-	position += velocity * delta
 
 	for blast in _blasts:
 		if not blast.fired and _time >= blast.at:
@@ -201,6 +202,7 @@ func _add_debris(points: PackedVector2Array, color: Color) -> void:
 	d.vel = dir.rotated(rng.randf_range(-0.6, 0.6)) * rng.randf_range(50.0, 260.0)
 	d.spin = rng.randf_range(-9.0, 9.0)
 	d.ember_timer = rng.randf_range(0.0, 0.08)
+	d.drift = drift
 	_debris.append(d)
 
 func _schedule_blasts() -> void:
@@ -298,7 +300,7 @@ func _update_debris(delta: float) -> void:
 	var fade := 1.0 - clampf((_time - DEBRIS_FADE_START) / (DURATION - DEBRIS_FADE_START), 0.0, 1.0)
 	for d in _debris:
 		d.vel *= maxf(0.0, 1.0 - 0.35 * delta)
-		d.node.position += d.vel * delta
+		d.node.position += (d.vel + d.drift) * delta
 		d.node.rotation += d.spin * delta
 		var hot := d.base_color.lerp(Colors.ORANGE, 0.85).lerp(Colors.SUN, heat * heat)
 		d.node.color = Color(d.base_color.lerp(hot, heat), fade)
@@ -309,7 +311,7 @@ func _update_debris(delta: float) -> void:
 				d.ember_timer = rng.randf_range(0.06, 0.15) + _time * 0.06
 				var e := Spark.new()
 				e.pos = d.node.position
-				e.vel = d.vel * 0.15 + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(5.0, 25.0)
+				e.vel = d.vel * 0.15 + d.drift + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(5.0, 25.0)
 				e.life = rng.randf_range(0.4, 0.9)
 				e.color = Colors.ORANGE if rng.randf() < 0.6 else Colors.RUST_RED
 				e.drag = 1.0

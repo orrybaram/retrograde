@@ -11,6 +11,7 @@ var _gain_indicator_scene: PackedScene = preload("res://entities/resources/Resou
 const BATCH_WINDOW := 0.35
 const STACK_BASE := 30.0  # start above the ship, clear of the harvest meter below it
 const STACK_SPACING := 16.0
+const X_JITTER := 14.0  # popups scatter sideways a little instead of lining up
 
 var _pending: Dictionary = {}  # item_id -> count collected this window
 var shown: Array[Dictionary] = []  # every line shown: {amount, color, style} (read by playtests)
@@ -76,6 +77,7 @@ func show_gain_indicator(amount: int, position: Vector2, label: String, color: C
 	shown.append({"amount": amount, "color": color, "style": style})
 	_live = _live.filter(func(i): return is_instance_valid(i))
 	indicator.stack_offset = STACK_BASE + STACK_SPACING * _live.size()
+	indicator.x_offset = randf_range(-X_JITTER, X_JITTER)
 	_live.append(indicator)
 	canvas_layer.add_child(indicator)
 

@@ -164,18 +164,25 @@ func _start_typing() -> void:
 		lines.append("  / | | \\")
 		lines.append("")
 
-		lines.append("> SYSTEM FAILURE DETECTED")
-
 		if reason == "Ship Destroyed":
+			lines.append("> SYSTEM FAILURE DETECTED")
 			lines.append("> HULL INTEGRITY: 0%")
 			lines.append("> CRITICAL STRUCTURAL DAMAGE")
-		elif reason == "Out of Fuel":
+			lines.append("> INITIATING EMERGENCY PROTOCOLS...")
+		elif reason == "Ship Abandoned":
 			lines.append("> FUEL RESERVES DEPLETED")
-			lines.append("> LIFE SUPPORT OFFLINE")
+			lines.append("> SHIP ABANDONED")
+			# The hold isn't cleared until relaunch, so it still says what was aboard
+			if InventoryManager.get_total_value() > 0:
+				lines.append("> HULL LEFT ADRIFT - CARGO STILL ABOARD")
+				lines.append("> SALVAGE THE WRECK TO RECOVER IT")
+			else:
+				lines.append("> HULL LEFT ADRIFT")
+				lines.append("> SALVAGE THE WRECK FOR SCRAP")
 		else:
+			lines.append("> SYSTEM FAILURE DETECTED")
 			lines.append("> CATASTROPHIC FAILURE")
-
-		lines.append("> INITIATING EMERGENCY PROTOCOLS...")
+			lines.append("> INITIATING EMERGENCY PROTOCOLS...")
 		lines.append("")
 		lines.append("")
 		lines.append("> TOTAL DEATHS: %d" % death_count)
@@ -222,6 +229,16 @@ func _start_boot_sequence() -> void:
 		boot_lines.append("")
 		boot_lines.append("> EMERGENCY DOCK COMPLETE")
 		boot_lines.append("> SYSTEMS ONLINE")
+	elif reason == "Ship Abandoned":
+		boot_lines.append("> COMMISSIONING REPLACEMENT VESSEL...")
+		boot_lines.append("")
+		boot_lines.append("> ASSEMBLING HULL......................[OK]")
+		boot_lines.append("> LOADING NAVIGATION SYSTEMS...........[OK]")
+		boot_lines.append("> REFUELING TANKS......................[OK]")
+		boot_lines.append("> MARKING DERELICT ON SCANNERS.........[OK]")
+		boot_lines.append("")
+		boot_lines.append("> VESSEL READY")
+		boot_lines.append("> LAUNCHING...")
 	else:
 		boot_lines.append("> REBOOTING SYSTEMS...")
 		boot_lines.append("")

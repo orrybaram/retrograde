@@ -75,7 +75,7 @@ func _ready() -> void:
 		max_amount = amount
 
 	# Trophy roll for pre-placed (non-pooled) nodes. Pooled nodes roll in on_spawn().
-	if not has_meta("pool_variant"):
+	if not has_meta("pool_variant") and _rolls_trophy():
 		is_trophy = RNG.rng.randi() % 10 == 0
 
 	# Build state machine programmatically — no scene changes required
@@ -301,6 +301,13 @@ func _unregister_indicator() -> void:
 
 func max_hits() -> int:
 	return TROPHY_HITS if is_trophy else NORMAL_HITS
+
+func _rolls_trophy() -> bool:
+	return true
+
+## Gem ids knocked loose by a hit (called after hits_left is decremented).
+func drops_for_hit(grade: HarvestTiming.Grade, final: bool) -> Array[String]:
+	return GemData.drops_for_hit(grade, final, is_trophy, RNG.rng)
 
 func _pop_and_deplete() -> void:
 	var visual = _find_visual_node()

@@ -1,0 +1,60 @@
+# Dying drops 70% of the hold at the wreck. Those gems never expire, survive the
+# respawn, are saved, and can be flown back to and collected.
+# Run: tools/play.sh playtests/wreck.play   (frames land in .playtest/wreck_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.6
+wait_until pt.state_name() == "FlyingState" 3
+wait 1.5
+
+# 20 shards + 10 gems + 3 artifacts -> 14 + 7 + 2 = 23 at the wreck
+eval inv.add_item("shard", 20)
+eval inv.add_item("gem", 10)
+eval inv.add_item("artifact", 3)
+eval ship.set("linear_velocity", Vector2(250, 0))
+frames 1
+eval ship.explode()
+frames 2
+assert pt.wreck_gem_count() == 23 "70% of the hold spills at the wreck"
+assert ship.linear_velocity.length() < 0.1 "hidden hull stops at the impact"
+burst wreck_1_explosion 5 0.25
+wait 0.3
+assert ship.global_position.distance_to(pt.explosion().global_position) < 1.0 "camera stays on the blast"
+wait_until pt.explosion()._debris[0].node.position.length() > 200.0 2
+wait_until main.current_game_state == 2 10
+wait_until pt.node("game_over_menu")._boot_pending 15
+press enter
+wait_until main.current_game_state == 1 30
+wait_until pt.state_name() == "LandedState" 5
+assert pt.wreck_gem_count() == 23 "wreck gems survive the respawn"
+assert inv.get_total_value() == 0 "hold was lost"
+wait 32
+assert pt.wreck_gem_count() == 23 "wreck gems outlive the loose-gem lifetime"
+
+# Reload from the save: wreck gems come back
+eval main.call_deferred("load_game")
+frames 2
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait 1
+assert pt.wreck_gem_count() == 23 "wreck gems restored from the save"
+
+# Depart and warp next to the wreck: the magnet collects them
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.3
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.warp_to_wreck()
+wait 2
+screenshot wreck_2_pickup
+assert pt.wreck_gem_count() < 23 "flying through the wreck picks gems up"
+state

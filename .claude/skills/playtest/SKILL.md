@@ -68,6 +68,14 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/magnet.play` drops gems around the flying ship and checks the magnet pulls them in (range, fly-by, full hold).
 
+`playtests/dock.play` redocks with a stocked hold and empty tank: gems arc into the port while HUD credits roll up, the dialogue waits for the cash-in, fuel fills in ~5s (`.playtest/dock_*.png`).
+
+`playtests/wreck.play` blows the ship up with a stocked hold: 70% of it stays at the wreck through respawn, the loose-gem lifetime and a save reload, then gets collected (`pt.wreck_gem_count()`, `pt.warp_to_wreck()`).
+
+`playtests/abandon.play` runs dry: the prompt offers a tow inside a tractor beam and "abandon ship" outside it. The abandoned ship (`DerelictShip`, group `derelicts`) keeps the hold, survives respawn and reload, and five PERFECT salvage hits recover all of it (`pt.derelict_count()`, `pt.warp_to(pos)`).
+
+`playtests/minimap.play` screenshots the minimap markers (ship arrow, station silhouette + beacon, shaded planets, scrap chunks, derelict pinned to the rim).
+
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).
 
 ## Tips

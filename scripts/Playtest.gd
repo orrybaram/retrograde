@@ -511,6 +511,38 @@ func node(group: String) -> Node:
 func gem_count() -> int:
 	return Gem.active.size()
 
+## Gems left at wrecks (never expire).
+func wreck_gem_count() -> int:
+	return Gem.wreck_rows().size()
+
+## The live ship explosion, or null.
+func explosion() -> ShipExplosion:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	for child in ship.get_parent().get_children():
+		if child is ShipExplosion:
+			return child
+	return null
+
+## Teleport the ship onto the first wreck gem, at rest.
+func warp_to_wreck() -> void:
+	var rows := Gem.wreck_rows()
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if rows.is_empty() or not ship:
+		return
+	warp_to(Vector2(rows[0][1], rows[0][2]) + Vector2(30, 0))
+
+## Teleport the ship to `pos`, at rest.
+func warp_to(pos: Vector2) -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var rid := ship.get_rid()
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(ship.rotation, pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
+	ship.global_position = pos
+
+## Abandoned ships in the world.
+func derelict_count() -> int:
+	return get_tree().get_nodes_in_group("derelicts").size()
+
 ## Drop a loose gem `offset` px from the ship, moving at the ship's velocity plus `rel_velocity`.
 func spawn_gem(id: String, offset: Vector2, rel_velocity := Vector2.ZERO) -> Gem:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship

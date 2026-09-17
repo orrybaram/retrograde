@@ -11,6 +11,11 @@ var _docking_animation_duration: float = 0.5  # Duration of smooth docking anima
 var _initial_ship_position: Vector2 = Vector2.ZERO
 var _initial_ship_rotation: float = 0.0
 var _dialogue = null  # SpacePortDialogue
+var _cash_in: HoldCashIn = null
+var _refueling := false
+
+## Seconds for a port to fill an empty tank.
+const REFUEL_TIME := 5.0
 
 func enter() -> void:
 	super.enter()
@@ -59,39 +64,34 @@ func enter() -> void:
 	
 	var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
 
-	# Space ports: auto-refuel, cash in the hold, and refresh resources
-	if locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
-		ship.fuel = ship.max_fuel
-		ship.fuel_changed.emit()
-		var earned := InventoryManager.cash_in()
-		if earned > 0 and gs:
-			gs.credits += earned
-			EventBus.hold_cashed_in.emit(earned)
+	# Space ports: refuel over time, fly the hold into the port as credits, refresh resources
+	var at_port := locked_dockable.is_in_group("space_ports")
+	if at_port:
+		_refueling = true
+		_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
+		if _cash_in:
+			_cash_in.finished.connect(_on_cash_in_finished)
 		EventBus.resources_refresh_requested.emit()
 
 	# Auto-save on landing (wait a frame to ensure position is set)
 	await ship.get_tree().process_frame
-	if gs and ship:
-		# Show saving indicator
-		var hud = ship.get_tree().get_first_node_in_group("hud") as Control
-		if hud and hud.has_method("show_saving_indicator"):
-			hud.show_saving_indicator()
-		
-		Save.save(gs, ship)
-		
-		# Hide saving indicator after a brief delay
-		if hud and hud.has_method("hide_saving_indicator"):
-			await ship.get_tree().create_timer(0.5).timeout
-			hud.hide_saving_indicator()
-	
-	# Automatically open SpacePort dialogue if docked to a SpacePort (but not on spawn)
-	if not instant_dock and locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
-		_open_spaceport_dialogue()
+	_autosave()
+
+	# Automatically open SpacePort dialogue if docked to a SpacePort (but not on spawn),
+	# once the cash-in has played out.
+	if not instant_dock and at_port:
+		if is_instance_valid(_cash_in):
+			await _cash_in.finished
+		if locked_dockable and is_instance_valid(locked_dockable):
+			_open_spaceport_dialogue()
 	elif instant_dock and locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
 		_show_enter_spaceport_message()
 
 func exit() -> void:
 	super.exit()
+	var cash_in := _cash_in
+	_cash_in = null
+	_refueling = false
 	# Close dialogue if open
 	if _dialogue and is_instance_valid(_dialogue):
 		if _dialogue.dialogue_closed.is_connected(_on_dialogue_closed):
@@ -110,6 +110,11 @@ func exit() -> void:
 	# Zoom camera out when undocking
 	if ship and ship.camera:
 		ship.camera.zoom_camera_out()
+
+	# Taking off mid cash-in banks the rest immediately (after locked_dockable is
+	# cleared, so the enter() coroutine waiting on it doesn't reopen the dialogue)
+	if is_instance_valid(cash_in):
+		cash_in.finish()
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -131,6 +136,9 @@ func physics_process(delta: float) -> void:
 		_exit_to_flying()
 		return
 	
+	if _refueling:
+		_refuel(delta)
+
 	# Reset camera shake
 	if ship.camera:
 		ship.camera_shake_time = 0.0
@@ -279,6 +287,31 @@ func _toggle_dialogue() -> void:
 
 			if spaceport:
 				_dialogue.open_dialogue(spaceport)
+
+func _refuel(delta: float) -> void:
+	ship.fuel = minf(ship.fuel + ship.max_fuel / REFUEL_TIME * delta, ship.max_fuel)
+	ship.fuel_changed.emit()
+	if ship.fuel >= ship.max_fuel:
+		_refueling = false
+		_autosave()
+
+func _on_cash_in_finished(_total: int) -> void:
+	_autosave()
+
+func _autosave() -> void:
+	if not is_ship_valid():
+		return
+	var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
+	if not gs:
+		return
+	var hud = ship.get_tree().get_first_node_in_group("hud") as Control
+	if hud and hud.has_method("show_saving_indicator"):
+		hud.show_saving_indicator()
+	Save.save(gs, ship)
+	if hud and hud.has_method("hide_saving_indicator"):
+		await ship.get_tree().create_timer(0.5).timeout
+		if is_instance_valid(hud):
+			hud.hide_saving_indicator()
 
 func _exit_to_flying() -> void:
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
