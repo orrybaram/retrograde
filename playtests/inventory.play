@@ -1,0 +1,40 @@
+# Inventory screen: robot portrait, systems, upgrades, cargo.
+# Run: tools/play.sh playtests/inventory.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 1.0
+wait 0.5
+
+# Empty hold, no upgrades
+press i
+wait_until pt.visible_ui().has("InventoryUI") 2
+wait 0.6
+screenshot inventory_empty
+press i
+wait_until not pt.visible_ui().has("InventoryUI") 2
+
+# Stocked hold + upgrades
+eval inv.add_item("shard", 12)
+eval inv.add_item("gem", 5)
+eval inv.add_item("crystal", 2)
+eval gs.set_upgrade_level("hull", 3)
+eval gs.set_upgrade_level("fuel_tank", 1)
+eval gs.set("credits", 1240)
+press i
+wait_until pt.visible_ui().has("InventoryUI") 2
+wait 0.6
+screenshot inventory_stocked
+assert pt.screen_text().has("InventoryUI") "inventory text visible"
+assert str(pt.screen_text()["InventoryUI"]).contains("UNIT-7") "robot is the character"
+press escape
+wait_until not pt.visible_ui().has("InventoryUI") 2
+assert not get_tree().paused "ESC closes inventory without pausing"
