@@ -39,7 +39,7 @@ successful live exploration into one. A scenario stops at the first failing non-
 | `hold <key\|action> <sec>` / `down` / `up` / `release_all` | sustained input |
 | `face <group> [tol]` | steer with turn keys toward nearest node in group (`planets`, `space_ports`, `space_stations`, `resource_nodes`) |
 | `wait <sec>` / `frames <n>` / `timescale <n>` | advance time (wait is game time) |
-| `stage_harvest [dist] [trophy]` | park the flying ship `dist`px (default 40; cone reaches ~66) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_harvested`/`harvest_stopped` events |
+| `stage_harvest [dist] [trophy]` | park the flying ship `dist`px (default 40; harvest circle radius 60) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_harvested`/`harvest_stopped` events |
 | `burst <name> <n> <sec>` | n screenshots `sec` apart → `<name>_00.png…` (for judging motion/feel) |
 | `wait_until <expr> [timeout]` | poll expression |
 | `assert <expr> ["message"]` | record failure if falsy |
@@ -61,6 +61,8 @@ Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv`
 extractions (PERFECT release, early release + re-hold on a trophy, OVERLOAD). Release timing is driven with
 `wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start()` (also `zone_start`, `zone_end`).
 Frames land in `.playtest/harvest_*.png`; the transcript logs `harvest_finished {grade, tier}` events.
+
+`playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter and cargo HUD (`.playtest/alert_*.png`).
 
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.

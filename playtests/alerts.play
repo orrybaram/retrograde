@@ -1,0 +1,46 @@
+# Low-fuel vapor + engine sputter, cargo-full HUD, plus omnidirectional harvest range.
+# Run: tools/play.sh playtests/alerts.play   (frames land in .playtest/alert_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+assert ship.max_fuel == 200.0 "base tank doubled"
+eval ship.set("fuel", 45.0)
+wait 0.8
+screenshot alert_vapor_low
+eval ship.set("fuel", 15.0)
+wait 0.3
+down thrust
+wait_until ship.low_fuel_effect.is_coughing() 3
+frames 2
+assert not ship.thruster_particles.emitting "plume stops emitting during a cough"
+burst alert_sputter 6 0.06
+up thrust
+eval ship.set("fuel", 150.0)
+wait 0.2
+assert not ship.low_fuel_effect.is_coughing() "cough clears above threshold"
+wait 2.2
+assert ship.low_fuel_effect._puffs.is_empty() "vapor dissipates"
+eval inv.add_item("scrap", 5)
+wait 0.3
+screenshot alert_cargo_full
+assert ship.is_cargo_full() "hold is full"
+stage_harvest 40
+wait 0.2
+press action
+wait 0.2
+assert pt.item_count() == 5 "full hold refuses harvest"
+screenshot alert_cargo_blocked
+eval inv.clear_inventory()
+stage_harvest 40
+eval ship.set("rotation", ship.rotation + PI)
+frames 5
+assert pt.staged._state_machine.get_current_state_name() == "ScrapInRangeState" "scrap in range while facing away"
+quit

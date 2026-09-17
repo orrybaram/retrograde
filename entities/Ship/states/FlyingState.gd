@@ -89,8 +89,8 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		if ship.want_boost:
 			fuel_rate *= ship.boost_fuel_multiplier
 		
-		# Try to consume fuel - only thrust if we have fuel
-		if ship.consume_fuel(fuel_rate * state.step):
+		# Try to consume fuel - only thrust if we have fuel (a low-fuel cough cuts the engine)
+		if not _engine_coughing() and ship.consume_fuel(fuel_rate * state.step):
 			# Calculate thrust power (boost adds extra power)
 			var power = ship.thrust_power
 			if ship.want_boost:
@@ -105,8 +105,8 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		if ship.want_boost:
 			fuel_rate *= ship.boost_fuel_multiplier
 		
-		# Try to consume fuel - only thrust if we have fuel
-		if ship.consume_fuel(fuel_rate * state.step):
+		# Try to consume fuel - only thrust if we have fuel (a low-fuel cough cuts the engine)
+		if not _engine_coughing() and ship.consume_fuel(fuel_rate * state.step):
 			# Calculate thrust power (boost adds extra power)
 			var power = ship.thrust_power
 			if ship.want_boost:
@@ -115,12 +115,15 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			var force = Vector2.LEFT.rotated(ship.rotation) * power
 			state.apply_central_force(force)
 
+func _engine_coughing() -> bool:
+	return ship.low_fuel_effect != null and ship.low_fuel_effect.is_coughing()
+
 func _update_particles() -> void:
 	if not is_ship_valid() or not ship.thruster_particles or not ship.boost_particles:
 		return
 	
 	# Determine if we're thrusting (forward or reverse)
-	var is_thrusting = (ship.want_thrust or ship.want_reverse_thrust) and ship.fuel > 0.0
+	var is_thrusting = (ship.want_thrust or ship.want_reverse_thrust) and ship.fuel > 0.0 and not _engine_coughing()
 	
 	if is_thrusting:
 		# Update particle direction based on thrust direction

@@ -82,7 +82,7 @@ const INDICATOR = BLUE
 const PLANET_DEFAULT = ORANGE
 const OUTLINE = WHITE_FADED
 const EXPLOSION = ORANGE
-const DEBRIS = HULL_DARK
+const DEBRIS = HULL_MID
 
 # --- Resource tiers ---
 const TIER_SLAG = HULL_LIGHT

@@ -26,7 +26,7 @@ extends Node
 ##   screen                        text currently visible on UI layers
 ##   screenshot <name>             save <out>/<name>.png (skipped under --headless)
 ##   burst <name> <n> <interval>   n screenshots <interval> game-seconds apart (<name>_00.png ...)
-##   stage_harvest [dist] [trophy] put the flying ship <dist>px (default 40; cone reaches ~66) behind the nearest scrap,
+##   stage_harvest [dist] [trophy] put the flying ship <dist>px (default 40; harvest radius 60) behind the nearest scrap,
 ##                                 nose on it, velocity matched — ready to hold `action`.
 ##                                 `trophy` forces the node to be a trophy. Sets pt.staged
 ##                                 (its HarvestTiming is pt.staged.timing once a harvest starts).

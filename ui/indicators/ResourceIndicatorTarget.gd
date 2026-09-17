@@ -98,6 +98,7 @@ func get_indicator_info() -> Dictionary:
 	if ship and is_instance_valid(ship):
 		if ship.is_cargo_full():
 			lines.append({"text": "CARGO FULL", "color": Colors.DANGER})
+			lines.append({"text": "SELL AT PORT / UPGRADE HOLD", "color": Colors.TEXT_MUTED})
 		else:
 			lines.append({"text": "CARGO %d/%d" % [int(ship.get_cargo_weight()), int(ship.max_cargo_weight)], "color": Colors.TEXT_MUTED})
 

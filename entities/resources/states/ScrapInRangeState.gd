@@ -72,7 +72,7 @@ func _try_start_harvest() -> void:
 		return
 
 	if InventoryManager.get_remaining_capacity(ship.max_cargo_weight) <= 0:
-		EventBus.action_message_changed.emit("Cargo full!")
+		EventBus.report_cargo_full()
 		return
 
 	scrap_node._state_machine.change_state("ScrapHarvestingState")

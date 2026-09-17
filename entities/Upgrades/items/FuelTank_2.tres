@@ -11,4 +11,4 @@ upgrade_path = "fuel_tank"
 tier = 2
 cost = 80
 effect_target = "max_fuel"
-effect_value = 25.0
+effect_value = 50.0

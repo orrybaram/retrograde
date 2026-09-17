@@ -112,7 +112,6 @@ amount = 10
 process_material = SubResource("ParticleProcessMaterial_3")
 
 [node name="HarvestCone" parent="." unique_id=1751023026 instance=ExtResource("9_vnnms")]
-position = Vector2(9, 0)
 
 [node name="Body" type="Node2D" parent="." unique_id=195505946]
 

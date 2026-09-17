@@ -1,20 +1,27 @@
 extends Area2D
 class_name HarvestCone
 
-## Cone-shaped harvest detection area mounted on the ship.
-## Ship faces RIGHT (+X) in local space, so the cone points right.
-## Multiple scraps in the cone harvest simultaneously.
+## Harvest detection area mounted on the ship: a circle centred on the hull, so scrap
+## is reachable from any heading (the name is historical). Radius lives on the
+## CircleShape2D in HarvestCone.tscn. The nearest live scrap in range answers the press.
 
-@export var cone_length: float = 200.0
-@export var cone_angle_degrees: float = 60.0
+@export var radius: float = 60.0:
+	set(value):
+		radius = value
+		_apply_radius()
 
-@onready var collision_polygon: CollisionPolygon2D = $CollisionPolygon2D
+@onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
 var _scraps_in_cone: Array[ScrapNode] = []
 
 func _ready() -> void:
 	area_entered.connect(_on_area_entered)
 	area_exited.connect(_on_area_exited)
+	_apply_radius()
+
+func _apply_radius() -> void:
+	if collision_shape and collision_shape.shape is CircleShape2D:
+		(collision_shape.shape as CircleShape2D).radius = radius
 
 
 func has_scrap(scrap: ScrapNode) -> bool:

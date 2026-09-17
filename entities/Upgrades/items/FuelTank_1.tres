@@ -10,4 +10,4 @@ description = "Auxiliary tank strapped to the undercarriage. Leaks a little when
 upgrade_path = "fuel_tank"
 cost = 40
 effect_target = "max_fuel"
-effect_value = 25.0
+effect_value = 50.0

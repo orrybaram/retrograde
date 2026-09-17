@@ -16,13 +16,13 @@ class_name Ship
 @export var crash_damage_multiplier: float = 0.5  # Damage per unit of collision velocity
 @export var damage_threshold: float = 50.0  # Minimum impact speed to take damage (can be upgraded)
 
-@export var max_fuel: float = 100.0  # Maximum fuel capacity
+@export var max_fuel: float = 200.0  # Maximum fuel capacity
 
 @export var max_cargo_weight: float = 5.0  # Maximum cargo weight capacity
 
 # Base stats (stored at initialization, never modified by upgrades)
 var base_max_hull: float = 100.0
-var base_max_fuel: float = 100.0
+var base_max_fuel: float = 200.0
 var base_max_cargo_weight: float = 5.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
 @export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
@@ -44,7 +44,8 @@ var hull_strength: float:
 	set(value):
 		if health_component:
 			health_component.current_hp = clamp(value, 0.0, health_component.max_hp)
-var fuel: float = 100.0
+var fuel: float = 200.0
+var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
 
 # Landing lock system
 var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
@@ -109,7 +110,10 @@ func _ready() -> void:
 
 	# Initialize fuel
 	fuel = max_fuel
-	
+	low_fuel_effect = LowFuelEffect.new()
+	low_fuel_effect.name = "LowFuelEffect"
+	add_child(low_fuel_effect)
+
 	# Store initial mass as base_mass for cargo calculations
 	base_mass = mass
 	

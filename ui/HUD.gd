@@ -39,8 +39,7 @@ func _ready() -> void:
 
 	EventBus.action_message_changed.connect(_on_action_message_changed)
 	if EventBus.is_harvest_available():
-		var action_key = InputUtils.get_action_key_name("action")
-		_on_action_message_changed('Press "%s" to harvest' % [action_key])
+		_on_action_message_changed(EventBus.harvest_prompt())
 	else:
 		_on_action_message_changed("")
 
@@ -52,6 +51,10 @@ func _on_inventory_changed(item_id: String = "", new_quantity: int = 0) -> void:
 	var new_weight = InventoryManager.get_total_weight()
 	if new_weight > _last_cargo_weight and _pending_cargo_flights == 0:
 		_punch_cargo_label()
+	# Hold just filled: stop the harvest prompt inviting a harvest that can't happen.
+	var max_cargo := ship.max_cargo_weight if ship and is_instance_valid(ship) else 5.0
+	if new_weight >= max_cargo and _last_cargo_weight < max_cargo and EventBus.is_harvest_available():
+		_on_action_message_changed(EventBus.harvest_prompt())
 	_last_cargo_weight = new_weight
 
 func _on_cargo_changed(_current_weight: float, _max_weight: float) -> void:
@@ -134,7 +137,11 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	var cargo_weight = InventoryManager.get_total_weight()
 	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 5
 	current_cargo_label.text = "%d" % int(cargo_weight)
-	max_cargo_label.text = "/%d" % max_cargo
+	var cargo_full: bool = cargo_weight >= max_cargo
+	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo
+	var cargo_color := Colors.DANGER if cargo_full else Colors.PRIMARY
+	current_cargo_label.add_theme_color_override("font_color", cargo_color)
+	max_cargo_label.add_theme_color_override("font_color", Colors.DANGER if cargo_full else Colors.PRIMARY_DIM)
 
 	if ship and is_instance_valid(ship):
 		if ship.is_locked_to_planet():
@@ -161,6 +168,11 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 				fuel_progress_bar.bar_color = Colors.FUEL_THREE_QUARTERS
 			else:
 				fuel_progress_bar.bar_color = Colors.FUEL_FULL
+			# Blink the gauge once it's low; faster when critical.
+			var fuel_level := LowFuelEffect.level_for(fuel, max_fuel)
+			var blink_period := 0.5 if fuel_level == LowFuelEffect.Level.CRITICAL else 1.0
+			var dim := fuel_level != LowFuelEffect.Level.OK and fmod(Time.get_ticks_msec() / 1000.0, blink_period) > blink_period * 0.6
+			fuel_progress_bar.modulate.a = 0.35 if dim else 1.0
 
 		# Update hull segment bar
 		var hull = ship.hull_strength if "hull_strength" in ship else 0.0

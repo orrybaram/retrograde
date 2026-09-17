@@ -58,7 +58,7 @@ func _finish(grade: HarvestTiming.Grade) -> void:
 	var tier_name := TierData.get_display_name(tier)
 
 	if not InventoryManager.can_add_item(tier_item_id, 1, max_cargo):
-		EventBus.action_message_changed.emit("Cargo full!")
+		EventBus.report_cargo_full()
 		scrap_node.timing.progress = 0.0
 		scrap_node.sync_harvest_visual()
 		scrap_node._state_machine.change_state("ScrapInRangeState")
