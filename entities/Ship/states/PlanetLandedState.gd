@@ -62,7 +62,7 @@ func exit() -> void:
 	super.exit()
 	if is_instance_valid(drill):
 		drill.abort()
-		drill.queue_free()
+		_free_drill()
 	drill = null
 	site = null
 	_launching = false
@@ -94,7 +94,7 @@ func physics_process(delta: float) -> void:
 		return
 	if drill.phase == SiteDrill.Phase.DONE and not site.is_spent():
 		# Regrown while we sat here: a fresh dig
-		drill.queue_free()
+		_free_drill()
 		drill = SiteDrill.attach(ship, site)
 	var was_done := drill.phase == SiteDrill.Phase.DONE
 	if Input.is_action_just_pressed("reverse_thrust"):
@@ -141,6 +141,11 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		planet.global_position + _start_offset.lerp(_offset, t))
 	state.linear_velocity = planet.linear_velocity
 	state.angular_velocity = 0.0
+
+## Detach now so a new SiteDrill can take the name this frame.
+func _free_drill() -> void:
+	ship.remove_child(drill)
+	drill.queue_free()
 
 ## Keep the spent site across a quit without saving the landed ship itself.
 func _save_spent_sites() -> void:

@@ -91,6 +91,17 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/regrow.play` spends Rook's site with a banked dig (dim beacon, `SITE SPENT` prompt, drill refuses), checks the regrow timer survives a redock + reload, then fast-forwards it (`eval gs.tick_site_regrowth(sec)`) and digs again (`.playtest/regrow_*.png`). `pt.site("Rook").is_spent()`, `.regrow_left()`.
 
+## Recording a video
+```bash
+godot --path . --write-movie .playtest/video/showcase.avi --fixed-fps 30 \
+  -- --playtest=res://playtests/showcase.play --playtest-out="$PWD/.playtest/video" --playtest-fps=30
+ffmpeg -i .playtest/video/showcase.avi -c:v libx264 -crf 22 -pix_fmt yuv420p out.mp4
+```
+`playtests/showcase.play` is a captioned tour of the scanner / landing / drill loop (no asserts).
+`--playtest-fps=<n>` holds each frame back to real time: Movie Maker renders faster than real time,
+but orbits run on the wall clock, so without it the physics and the planets drift apart (landings fail).
+`eval pt.caption("...")` puts a caption in the top-left corner; `pt.caption("")` clears it.
+
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.
 - Screenshots need a window (not `--headless`). Read the PNG to actually look at it.

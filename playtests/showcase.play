@@ -1,0 +1,124 @@
+# Planetary Scanner & Landing showcase, captioned, for recording a video:
+#   godot --path . --write-movie .playtest/showcase.avi --fixed-fps 30 -- --playtest=res://playtests/showcase.play
+# (see also tools/play.sh). Not an assertion suite; see scanner/sites/landing/drill/regrow.play.
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+wait_until pt.state_name() == "LandedState" 5
+eval gs.set("credits", 100)
+eval pt.caption("PLANETARY SCANNER  //  buy it at the home station")
+wait 1.5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+wait 0.6
+press enter
+wait_until pt.visible_ui().has("StoreUI") 2
+wait 0.8
+press enter
+wait 0.6
+press down
+wait 0.25
+press down
+wait 0.25
+press down
+wait 0.25
+press down
+wait 1.8
+press enter
+wait_until gs.has_planet_scanner 3
+wait 1.2
+press esc
+wait 0.3
+press esc
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+wait 0.4
+press enter
+wait_until pt.visible_ui().is_empty() 2
+
+eval pt.caption("Unscanned planets read  ? ? ?  on the minimap")
+hold thrust 0.6
+wait 2.5
+
+eval pt.caption("Hold inside a gravity field to scan  //  leaving resets the meter")
+eval pt.park_near_planet("Rook", 2000, 20)
+wait 1.6
+eval pt.park_near_planet("Rook", 5200, 20)
+wait 1.4
+eval pt.caption("Stay in the field: the sweep fills the meter")
+eval pt.park_near_planet("Rook", 2000, 20)
+wait_until gs.is_planet_scanned("Veld/Rook") 6
+eval pt.caption("Scan complete  //  survey readout + landing site revealed")
+wait 3.5
+
+eval pt.caption("The site is tracked, and rides the planet's orbit")
+eval pt.park_near_planet("Rook", 1900, 8)
+wait 2.5
+
+eval pt.caption("Too fast onto the pad: hull damage and a bounce")
+wait 0.8
+eval pt.hover_over_site("Rook", 40, 0, 110)
+wait 3
+
+eval pt.caption("Slow, nose up, over the pad: touchdown")
+eval pt.park_near_planet("Rook", 2600, 30)
+frames 5
+eval pt.hover_over_site("Rook", 90)
+land Rook 20 20
+wait 1.2
+eval pt.caption("Landed: riding the orbit, no fuel burn")
+wait 2.5
+
+eval pt.caption("Hold SPACE to drill  //  release in the zone  //  deeper layers, better gems")
+wait 1.0
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start() 3
+up action
+wait 1.4
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start + 0.01 3
+up action
+wait 1.4
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start() 3
+up action
+wait 1.4
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start() 3
+up action
+wait 1.0
+eval pt.caption("Bedrock  //  the site is spent: its beacon dims")
+wait 3.5
+
+eval pt.caption("Liftoff burns fuel: planet gravity x cargo weight")
+hold thrust 0.15
+wait 2.5
+
+eval pt.caption("A spent site refuses the drill until it regrows")
+eval pt.park_near_planet("Rook", 2600, 30)
+frames 5
+eval pt.hover_over_site("Rook", 90)
+land Rook 20 20
+wait 1.0
+hold action 1.2
+wait 2.0
+
+eval pt.caption("Push your luck: hold too long and the drill kicks back")
+eval gs.tick_site_regrowth(1000)
+wait 1.5
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start + 0.01 3
+up action
+wait 1.2
+down action
+wait_until pt.drill().phase == 2 4
+up action
+wait 3
+
+eval pt.caption("Regrows after ~5 min of play (rich moon sites take longer)  //  saved")
+eval gs.tick_site_regrowth(1000)
+wait 3.5
+eval pt.caption("")
+wait 0.5

@@ -42,7 +42,8 @@ extends Node
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
 ##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
 ##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
-##       pt.site(planet), pt.hover_over_site(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.drill())
+##       pt.site(planet), pt.hover_over_site(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.drill(),
+##       pt.caption(text) (on-screen caption for recorded videos))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
@@ -56,6 +57,7 @@ var staged: ScrapNode = null  # last node picked by stage_harvest, for expressio
 var last_drops: Array[String] = []  # gem ids from the most recent harvest hit: pt.last_drops
 
 var _held: Dictionary = {}  # keycode -> true
+var _caption: Label = null
 var _action_message := ""
 var _server: TCPServer
 var _log_file: FileAccess
@@ -84,6 +86,10 @@ func _ready() -> void:
 		_emit({"event": "drill_struck", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "layer": layer, "final": final}))
 	EventBus.dig_ended.connect(func(_s, reason: String, layers: int): _emit({"event": "dig_ended", "reason": reason, "layers": layers}))
 
+	var pace_fps := float(_arg_value("--playtest-fps", "0"))
+	if pace_fps > 0.0:
+		_frame_usec = int(1_000_000.0 / pace_fps)
+
 	# Watchdog: a stuck scenario must never hang the caller.
 	var timeout := float(_arg_value("--playtest-timeout", "0" if target == "serve" else "300"))
 	if timeout > 0:
@@ -95,6 +101,20 @@ func _ready() -> void:
 		_serve.call_deferred(int(_arg_value("--playtest-port", str(DEFAULT_PORT))))
 	else:
 		_run_file.call_deferred(target)
+
+## Frame pacing for recordings: Movie Maker renders as fast as it can, but orbits run on
+## the wall clock, so a recording would drift from how the game actually plays. With
+## --playtest-fps=<n> each frame is held back to real time.
+var _pace_usec := 0
+var _frame_usec := 0
+
+func _process(_delta: float) -> void:
+	if _frame_usec <= 0:
+		return
+	var elapsed := Time.get_ticks_usec() - _pace_usec
+	if _pace_usec > 0 and elapsed < _frame_usec:
+		OS.delay_usec(_frame_usec - elapsed)
+	_pace_usec = Time.get_ticks_usec()
 
 func save_path() -> String:
 	return SAVE_PATH if active else "user://save.cfg"
@@ -651,6 +671,33 @@ func redock() -> void:
 func scanner() -> PlanetScanner:
 	var ship := get_tree().get_first_node_in_group("ship")
 	return ship.get_node_or_null("PlanetScanner") if ship else null
+
+## Show `text` as a caption at the top of the screen (for recorded videos); "" hides it.
+func caption(text: String) -> void:
+	var label := _caption
+	if not is_instance_valid(label):
+		var layer := CanvasLayer.new()
+		layer.layer = 100
+		layer.name = "CaptionLayer"
+		add_child(layer)
+		label = Label.new()
+		label.name = "Caption"
+		# Top left: the scan panel owns the top right, the minimap the bottom left
+		label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		label.offset_left = 16
+		label.offset_top = 16
+		label.add_theme_font_size_override("font_size", 16)
+		label.add_theme_color_override("font_color", Colors.PRIMARY)
+		var box := StyleBoxFlat.new()
+		box.bg_color = Colors.UI_BACKGROUND
+		box.border_color = Colors.UI_BORDER
+		box.set_border_width_all(2)
+		box.set_content_margin_all(10)
+		label.add_theme_stylebox_override("normal", box)
+		layer.add_child(label)
+		_caption = label
+	label.text = text
+	label.visible = text != ""
 
 ## Abandoned ships in the world.
 func derelict_count() -> int:

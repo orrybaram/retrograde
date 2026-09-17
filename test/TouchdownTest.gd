@@ -152,3 +152,16 @@ func test_liftoff_without_enough_fuel_burns_the_tank_dry() -> void:
 	assert_bool(depleted[0]).is_true()
 	await await_millis(100)
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("PlanetLandedState")
+
+
+func test_a_site_regrowing_under_a_landed_ship_gets_a_fresh_drill() -> void:
+	var planet := _planet(400.0)
+	var site := _site(planet, 0.0)
+	site.spend()
+	var ship := _landed_ship(planet, site)
+	var state := ship.state_machine.current_state as PlanetLandedState
+	assert_str(state.drill.end_reason).is_equal("spent")
+	_gs.tick_site_regrowth(LandingSite.RICH_REGROW_TIME)
+	await await_millis(100)
+	assert_int(state.drill.phase).is_equal(SiteDrill.Phase.READY)
+	assert_object(ship.get_node_or_null("SiteDrill")).is_same(state.drill)
