@@ -4,7 +4,8 @@ class_name PlanetScanner
 ## The Planetary Scanner upgrade at work. While the ship holds inside an unscanned
 ## planet's gravity field, a PlanetScan meter fills and a ScanSweep turns around the
 ## planet; leaving the field resets it. A finished scan is recorded in GameState,
-## written to the save and announced with EventBus.planet_scanned.
+## written to the save and announced with EventBus.planet_scanned (which reveals its
+## landing sites); the nav tracker then points at the nearest site.
 ## Inert until GameState.has_planet_scanner. Added to the Ship at runtime.
 
 var scan := PlanetScan.new()
@@ -60,6 +61,18 @@ func _complete(planet: Planet) -> void:
 	_gs.mark_planet_scanned(planet.save_key())
 	Save.save_scanned_planets(PackedStringArray(_gs.scanned_planets.keys()))
 	EventBus.planet_scanned.emit(planet)
+	# Point the way to the closest site found, unless the player is headed somewhere else
+	var site := nearest_site(planet, _ship.global_position)
+	if site and NavSystem.is_tracking_home():
+		NavSystem.track(site.tracking_target())
+
+## The planet's closest landing site to `pos`, or null when it has none.
+static func nearest_site(planet: Planet, pos: Vector2) -> LandingSite:
+	var best: LandingSite = null
+	for site in planet.get_landing_sites():
+		if best == null or pos.distance_squared_to(site.global_position) < pos.distance_squared_to(best.global_position):
+			best = site
+	return best
 
 func _end_sweep(completed: bool) -> void:
 	if is_instance_valid(_sweep):
