@@ -24,7 +24,7 @@ hold thrust 4
 wait_until pt.snapshot().tracking.closing_speed > 0 5
 screenshot track_03_returning
 
-# Future: waypoints swap the single tracked target.
+# Waypoints swap the single tracked target (set from the chart in waypoint.play).
 eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(-4000, 1400))
 wait 0.2
 assert pt.snapshot().tracking.label == "WAYPOINT" "waypoint replaces home"

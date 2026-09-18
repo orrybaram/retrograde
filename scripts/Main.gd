@@ -54,6 +54,7 @@ func _ready() -> void:
 		start_menu.start_game.connect(_on_start_game)
 		start_menu.load_game.connect(_on_load_game)
 	RobotRadio.confirmed.connect(_on_radio_confirmed)
+	RobotRadio.line_started.connect(_on_radio_line_started)
 	if pause_menu:
 		pause_menu.quit_to_menu.connect(_on_quit_to_menu)
 	
@@ -105,6 +106,17 @@ func _input(event: InputEvent) -> void:
 			elif system_map and system_map.visible:
 				system_map.close_map()
 				get_viewport().set_input_as_handled()
+
+## A transmission that pauses the game has to be answered, and the radio panel
+## steps aside for any open menu. So the menus go instead: otherwise the pause
+## holds with nothing on screen able to clear it.
+func _on_radio_line_started(_line: RadioLine, conversation: RadioConversation) -> void:
+	if conversation == null or not conversation.pause_game:
+		return
+	if inventory_ui and inventory_ui.visible:
+		inventory_ui.close_inventory()
+	if system_map and system_map.visible:
+		system_map.close_map()
 
 func _toggle_inventory() -> void:
 	if not inventory_ui:
