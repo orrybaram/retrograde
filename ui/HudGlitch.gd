@@ -10,10 +10,15 @@ class_name HudGlitch
 ## longer and longer cuts. The radio panel is left alone on purpose — the robot is
 ## the one voice still telling you what to do.
 ##
-## Two things drive it, and the louder one wins:
+## Three things drive it, and the loudest one wins:
 ## - The Void, a slow swell over half a minute that ends with the panel not coming back.
 ## - A hit on the hull, a hard spike that decays in a fraction of a second. The
 ##   instruments take the blow with the ship, then steady up.
+## - Titan Influence, a floor that rises one step per Module online and never drops.
+##   The first two pass; this one doesn't, so after the first Gate the dashboard is
+##   never quite clean again. It stays under ROT_THRESHOLD by design (TitanInfluence),
+##   and it never pushes the panel around: the Titan only dims the readouts and blinks
+##   them out, more often with each Module, so five Modules in the HUD is still legible.
 ## Low hull deliberately does NOT drive it: a player down to their last few blocks
 ## needs to be able to READ the hull bar, so that alarm is carried by HullSegmentBar,
 ## HullAlarm and the ship itself instead of by rotting the numbers.
@@ -42,7 +47,11 @@ var _written: Array[String] = [] ## what we last wrote, to tell ours from theirs
 var _anchor := Vector2.ZERO
 var _cut_left := 0.0  ## seconds remaining in the current dropout
 var _next_cut := 0.0  ## seconds until the next one
+var _blink_left := 0.0  ## seconds remaining in the Titan's own blink
+var _next_blink := 0.0  ## seconds until the next one
 var _hit := 0.0       ## the decaying kick from the last hull hit
+var _acute := false   ## something is wrong right now, as opposed to always
+var _gs: GameState = null
 var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
@@ -62,9 +71,20 @@ func _on_ship_damaged(amount: float, hull_ratio: float) -> void:
 func hit(strength: float) -> void:
 	_hit = maxf(_hit, clampf(strength, 0.0, 1.0))
 
-## The loudest thing currently wrong. The Void swells, a hit spikes.
+## The loudest thing currently wrong. The Void swells, a hit spikes, and under both
+## sits however much of the Titan is already awake.
 func severity() -> float:
-	return maxf(VoidZone.dread, _hit)
+	return maxf(maxf(VoidZone.dread, _hit), baseline())
+
+## The Titan's share, which is simply how many Modules are online. Nothing to recover
+## from: this is where the readouts sit from now on.
+func baseline() -> float:
+	return TitanInfluence.baseline_glitch(_influence())
+
+func _influence() -> int:
+	if not is_instance_valid(_gs):
+		_gs = get_tree().get_first_node_in_group("game_state") as GameState
+	return _gs.titan_influence() if _gs else 0
 
 func _process(delta: float) -> void:
 	_bind()
@@ -72,19 +92,40 @@ func _process(delta: float) -> void:
 		return
 
 	_hit = maxf(_hit - HIT_DECAY * delta, 0.0)
+	var acute := maxf(VoidZone.dread, _hit) > 0.001
 	var sev := severity()
-	if sev <= 0.001:
-		if _cut_left > 0.0 or dashboard.position != _anchor:
+
+	if not acute:
+		# Nothing is acutely wrong any more, so undo what the Void or a hit did to the
+		# panel — but only on the way out, because the Titan's baseline runs blinks of
+		# its own below and a restore every frame would hold the dashboard dark.
+		if _acute or (sev <= 0.001 and not _pristine()):
 			restore()
-		# Clear of it all, so wherever the dashboard sits now is home. Keeps the
+		# The panel is still now, so wherever the dashboard sits is home. Keeps the
 		# anchor honest through layout passes and resolution changes.
 		_anchor = dashboard.position
+	_acute = acute
+
+	if sev <= 0.001:
 		return
 
-	_advance_cuts(delta, sev)
-	dashboard.position = _anchor + Vector2(_rng.randfn(0.0, 1.0), _rng.randfn(0.0, 1.0)) * MAX_JITTER * sev * sev
-	dashboard.modulate.a = 0.0 if _cut_left > 0.0 else lerpf(1.0, 0.55, sev)
+	# Rot, wander and dropouts belong to whatever is acutely wrong. The Titan doesn't
+	# push the dashboard around at all — it sits underneath, dimming the readouts and
+	# blinking them, because a HUD that never stopped shaking couldn't be lived with.
+	if acute:
+		_advance_cuts(delta, sev)
+		dashboard.position = _anchor + Vector2(_rng.randfn(0.0, 1.0), _rng.randfn(0.0, 1.0)) * MAX_JITTER * sev * sev
+	_advance_blink(delta)
+	dashboard.modulate.a = 0.0 if _cut_left > 0.0 or _blink_left > 0.0 else lerpf(1.0, 0.55, sev)
 	_rot_labels(sev)
+
+## Nothing of ours left on the panel: lit, still, and where the layout put it. Checked
+## whenever there is no reason for a glitch at all, which includes a new game taking the
+## Modules back offline mid-blink.
+func _pristine() -> bool:
+	return _cut_left <= 0.0 and _blink_left <= 0.0 \
+			and is_equal_approx(dashboard.modulate.a, 1.0) \
+			and dashboard.position == _anchor
 
 ## Deferred until the dashboard has been laid out, so the anchor we snap back to
 ## is the one HUD._fit_dashboard settled on.
@@ -114,6 +155,24 @@ func _advance_cuts(delta: float, sev: float) -> void:
 	_next_cut = _rng.randf_range(0.15, lerpf(4.0, 0.12, severity_curve))
 	if sev >= BLACKOUT:
 		_cut_left = maxf(_cut_left, _next_cut)
+
+## The Titan's own dropout, on its own clock. The cuts above come off a curve tuned for
+## the Void's swell, which down at the baseline barely moves between one Module and
+## five; the whole point here is that every Gate the player powers shows, so the Titan
+## keeps its own schedule: the same short blink, steadily more often.
+func _advance_blink(delta: float) -> void:
+	if _blink_left > 0.0:
+		_blink_left -= delta
+		return
+	var gap := TitanInfluence.blink_gap(_influence())
+	if is_inf(gap):
+		return
+	_next_blink -= delta
+	if _next_blink > 0.0:
+		return
+	_blink_left = TitanInfluence.BLINK_SEC
+	var spread := TitanInfluence.BLINK_GAP_SPREAD
+	_next_blink = gap * _rng.randf_range(1.0 - spread, 1.0 + spread)
 
 func _rot_labels(sev: float) -> void:
 	var rot := smoothstep(ROT_THRESHOLD, 1.0, sev) * MAX_ROT
@@ -153,6 +212,7 @@ func _on_respawned() -> void:
 func restore() -> void:
 	_cut_left = 0.0
 	_next_cut = 0.0
+	_blink_left = 0.0
 	if dashboard:
 		dashboard.position = _anchor
 		dashboard.modulate.a = 1.0

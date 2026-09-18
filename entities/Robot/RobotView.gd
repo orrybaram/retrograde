@@ -26,6 +26,7 @@ var _time := 0.0
 var _next_blink := 2.5
 var _blink_left := 0.0
 var _glitch_left := 0.0
+var _titan_left := 0.0
 var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
@@ -39,6 +40,12 @@ func set_expression(v: StringName) -> void:
 
 func glitch_burst(duration: float = 0.18) -> void:
 	_glitch_left = maxf(_glitch_left, duration)
+
+## The Titan showing through the guide: the same face, in the Titan's color, for a
+## moment. Raised from outside (RadioPanel, off Titan Influence) — the robot has no
+## idea it happened and says nothing about it.
+func titan_flash(duration: float = TitanInfluence.FACE_FLASH_SEC) -> void:
+	_titan_left = maxf(_titan_left, duration)
 
 func blink() -> void:
 	_blink_left = BLINK_TIME
@@ -68,6 +75,7 @@ func _process(delta: float) -> void:
 		_next_blink = _rng.randf_range(2.0, 5.0)
 	_blink_left = maxf(_blink_left - delta, 0.0)
 	_glitch_left = maxf(_glitch_left - delta, 0.0)
+	_titan_left = maxf(_titan_left - delta, 0.0)
 	# The broken faces tear themselves up whatever the caller asked for.
 	var rate := 3.0 if expression == &"glitch" or expression == &"lost" else glitch_rate
 	if rate > 0.0 and _rng.randf() < rate * delta:
@@ -331,6 +339,9 @@ func _power_color() -> Color:
 	return Colors.DANGER if expression == &"dead" or expression == &"lost" else Colors.SUCCESS
 
 func _face_color() -> Color:
+	# Purple is the Titan's alone, so a flash of it reads as something else on the line.
+	if _titan_left > 0.0:
+		return Colors.TITAN
 	match expression:
 		&"titan":
 			return Colors.TITAN
