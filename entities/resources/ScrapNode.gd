@@ -110,7 +110,8 @@ func _load_shape() -> void:
 			child.free()
 			break
 
-	var packed: PackedScene = _SHAPE_SCENES[RNG.rng.randi() % _SHAPE_SCENES.size()]
+	var scenes := _shape_scenes()
+	var packed: PackedScene = scenes[RNG.rng.randi() % scenes.size()]
 	_shape_instance = packed.instantiate() as Node2D
 	if not _shape_instance:
 		return
@@ -120,6 +121,11 @@ func _load_shape() -> void:
 	if cshape and cshape.shape is CircleShape2D:
 		(cshape.shape as CircleShape2D).radius = _shape_instance.get("collision_radius")
 
+
+## The shapes this node can be built from, one picked at random. Subclasses override it
+## to look like something in particular rather than like generic wreckage.
+func _shape_scenes() -> Array:
+	return _SHAPE_SCENES
 
 func _register_with_minimap() -> void:
 	if skip_minimap_registration:

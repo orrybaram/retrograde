@@ -1,7 +1,8 @@
 extends Control
 
 ## In-game HUD: fuel bar, hull segment bar, cargo weight, banked credits, velocity readout,
-## and the robot's radio panel. Subscribes to ship signals. (Action prompts live in IndicatorManager.)
+## the transit scanner, and the robot's radio panel. Subscribes to ship signals.
+## (Action prompts live in IndicatorManager.)
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
 @onready var fuel_progress_bar: ProgressBarWidget = $"DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar"
@@ -29,10 +30,12 @@ func _ready() -> void:
 		fuel_progress_bar.background_color = Colors.PRIMARY_DIM
 	add_child(HarvestMeter.new())
 	var radio := RadioPanel.new()
+	var scanner := ScannerPanel.new()
 	var tracking := TrackingIndicator.new()
 	tracking.blockers = [dashboard, radio]
 	add_child(tracking)
 	add_child(radio)
+	add_child(scanner)
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
 	if gs:

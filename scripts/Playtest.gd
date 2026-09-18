@@ -26,7 +26,9 @@ extends Node
 ##   screen                        text currently visible on UI layers
 ##   screenshot <name>             save <out>/<name>.png (skipped under --headless)
 ##   burst <name> <n> <interval>   n screenshots <interval> game-seconds apart (<name>_00.png ...)
-##   stage_harvest [dist] [trophy] put the flying ship <dist>px (default 40; harvest radius 60) behind the nearest scrap,
+##   stage_harvest [dist] [trophy|plain] [kind:<Kind>]
+##                                 put the flying ship <dist>px (default 40; harvest radius 60) behind the nearest scrap,
+##                                 `plain` forces an ordinary 3-hit node, `kind:Container` picks that sort only.
 ##                                 nose on it, velocity matched — ready to hold `action`.
 ##                                 `trophy` forces the node to be a trophy. Sets pt.staged
 ##                                 (its HarvestTiming is pt.staged.timing once a harvest starts).
@@ -54,6 +56,7 @@ var out_dir := ""
 var failures: Array[String] = []
 var staged: ScrapNode = null  # last node picked by stage_harvest, for expressions: pt.staged
 var last_drops: Array[String] = []  # gem ids from the most recent harvest hit: pt.last_drops
+var notes: Dictionary = {}  # scratch values a scenario wants to compare later: pt.remember/pt.recall
 
 var _held: Dictionary = {}  # keycode -> true
 var _action_message := ""
@@ -263,7 +266,12 @@ func execute(line: String) -> Dictionary:
 				await _game_seconds(float(args[2]))
 			reply["paths"] = paths
 		"stage_harvest":
-			await _stage_harvest(float(args[0]) if args.size() > 0 and args[0].is_valid_float() else 40.0, args.has("trophy"), reply)
+			var want_kind := ""
+			for arg in args:
+				if arg.begins_with("kind:"):
+					want_kind = arg.substr(5)
+			await _stage_harvest(float(args[0]) if args.size() > 0 and args[0].is_valid_float() else 40.0,
+				args.has("trophy"), args.has("plain"), want_kind, reply)
 		"timescale":
 			Engine.time_scale = float(args[0])
 		"log":
@@ -357,22 +365,29 @@ func _face(group: String, tolerance: float, reply: Dictionary) -> void:
 
 ## Skip the flight: park the ship just behind the nearest live scrap node, nose on it,
 ## velocity matched, so the next `hold action` starts a harvest.
-func _stage_harvest(dist: float, trophy: bool, reply: Dictionary) -> void:
+func _stage_harvest(dist: float, trophy: bool, plain: bool, want_kind: String, reply: Dictionary) -> void:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	var scrap: ScrapNode = null
 	var best := INF
 	for n in get_tree().get_nodes_in_group("resource_nodes"):
 		if n is ScrapNode and n.is_visible_in_tree() and not n._is_depleted and n.amount > 0:
+			if want_kind != "" and (n as ScrapNode).kind != want_kind:
+				continue
 			var d := ship.global_position.distance_squared_to(n.global_position)
 			if d < best:
 				best = d
 				scrap = n
 	if not ship or not scrap:
 		reply["ok"] = false
-		reply["error"] = "stage_harvest: no ship or no live scrap node"
+		reply["error"] = "stage_harvest: no ship or no live %s node" % (want_kind if want_kind != "" else "scrap")
 		return
 	if trophy and not scrap.is_trophy:
 		scrap.is_trophy = true
+	# A trophy roll would otherwise make the hit count vary run to run
+	if plain and scrap.is_trophy:
+		scrap.is_trophy = false
+		scrap.hits_left = ScrapNode.NORMAL_HITS
+		scrap.health_component.reset()
 	if ship.state_machine.get_current_state_name() != "FlyingState":
 		ship.state_machine.change_state("FlyingState")
 	# Distant nodes only update their orbit every 60 frames; mark it in range so it
@@ -541,6 +556,46 @@ func warp_to_wreck() -> void:
 	warp_to(Vector2(rows[0][1], rows[0][2]) + Vector2(30, 0))
 
 ## Teleport the ship to `pos`, at rest.
+## Harvestable nodes of a given ScrapNode.kind ("Scrap", "Container", "Derelict").
+func count_kind(kind: String) -> int:
+	var total := 0
+	for node in get_tree().get_nodes_in_group("resource_nodes"):
+		if node is ScrapNode and (node as ScrapNode).kind == kind:
+			total += 1
+	return total
+
+## The closest harvestable node of `kind`, for warping to and salvaging.
+func nearest_kind(kind: String) -> ScrapNode:
+	var ship := get_tree().get_first_node_in_group("ship") as Node2D
+	if not ship:
+		return null
+	var best: ScrapNode = null
+	var best_d := INF
+	for node in get_tree().get_nodes_in_group("resource_nodes"):
+		if not (node is ScrapNode) or (node as ScrapNode).kind != kind:
+			continue
+		var d: float = ship.global_position.distance_squared_to((node as Node2D).global_position)
+		if d < best_d:
+			best_d = d
+			best = node
+	return best
+
+## Write the save file now, without having to dock or die for it.
+func save_now() -> void:
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if gs and ship:
+		Save.save(gs, ship)
+
+## Park a value under `key` so a later assert can compare against it. Scenarios have no
+## variables of their own, so this is how a run says "the same as before".
+func remember(key: String, value: Variant) -> Variant:
+	notes[key] = value
+	return value
+
+func recall(key: String, fallback: Variant = null) -> Variant:
+	return notes.get(key, fallback)
+
 func warp_to(pos: Vector2) -> void:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	var rid := ship.get_rid()

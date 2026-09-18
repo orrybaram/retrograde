@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterTable" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/encounters/EncounterTable.gd" id="1"]
+[ext_resource type="Resource" path="res://entities/encounters/defs/debris_cluster.tres" id="2"]
+[ext_resource type="Resource" path="res://entities/encounters/defs/lone_container.tres" id="3"]
+[ext_resource type="Resource" path="res://entities/encounters/defs/small_derelict.tres" id="4"]
+[ext_resource type="Resource" path="res://entities/encounters/defs/clone_wreck.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
+min_per_cell = 0
+max_per_cell = 2
