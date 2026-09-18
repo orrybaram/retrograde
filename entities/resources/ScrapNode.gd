@@ -122,6 +122,11 @@ func _load_shape() -> void:
 		(cshape.shape as CircleShape2D).radius = _shape_instance.get("collision_radius")
 
 
+## Whether a trophy breathes to draw the eye. Off for anything whose shape is the point:
+## a rare lump of scrap wants noticing, a sealed container wants to look sealed.
+func _pulses_when_trophy() -> bool:
+	return true
+
 ## The shapes this node can be built from, one picked at random. Subclasses override it
 ## to look like something in particular rather than like generic wreckage.
 func _shape_scenes() -> Array:
@@ -357,7 +362,7 @@ func _activate_trophy() -> void:
 	health_component.reset()
 
 	# Subtle scale pulse to catch the eye
-	var visual = _find_visual_node()
+	var visual = _find_visual_node() if _pulses_when_trophy() else null
 	if visual:
 		_trophy_pulse_tween = create_tween().set_loops()
 		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale * 1.15, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)

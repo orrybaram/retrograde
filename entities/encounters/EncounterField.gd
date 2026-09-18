@@ -49,7 +49,12 @@ var _cells: Dictionary = {}      # Vector2i(band, sector) -> Array[EncounterCont
 var _consumed: Dictionary = {}   # slot key -> true
 var _claimed: Dictionary = {}    # slot key -> def id, for encounters with a budget
 var _handlers: Dictionary = {}   # Node -> Callable, the bound resource_depleted listener
-var _elapsed: float = 0.0        # game seconds the rings have been turning
+## Game seconds the rings have turned, kept the way OrbitalMotion keeps a planet's: banked
+## time plus wall time since this stretch began, minus any pause. Using _process(delta)
+## instead would look identical at normal speed and drift apart under Engine.time_scale,
+## which OrbitalMotion ignores — the rings would then disagree with the nodes riding them.
+var _clock_base: float = 0.0
+var _clock_start: float = 0.0
 var _ship: Node2D = null
 var _sun: Planet = null
 var _current_cell := Vector2i.ZERO
@@ -62,6 +67,15 @@ static func get_instance(tree: SceneTree) -> EncounterField:
 func _ready() -> void:
 	add_to_group("encounter_field")
 	EventBus.planets_restored.connect(_on_planets_restored)
+	EventBus.game_unpaused.connect(_on_game_unpaused)
+	_clock_start = _now()
+
+func _now() -> float:
+	return Time.get_ticks_msec() / 1000.0
+
+## Time spent paused never turned the rings, exactly as OrbitalMotion treats it.
+func _on_game_unpaused(pause_duration: float) -> void:
+	_clock_start += pause_duration
 
 # --- Lifecycle ---------------------------------------------------------------
 
@@ -71,7 +85,8 @@ func reset() -> void:
 	_release_all()
 	_consumed.clear()
 	_claimed.clear()
-	_elapsed = 0.0
+	_clock_base = 0.0
+	_clock_start = _now()
 	_streaming = false
 
 ## Everything worth saving. The cells themselves come back from the seed.
@@ -79,7 +94,7 @@ func snapshot() -> Dictionary:
 	var claims := PackedStringArray()
 	for slot in _claimed:
 		claims.append("%s=%s" % [slot, _claimed[slot]])
-	return {"consumed": consumed_keys(), "claimed": claims, "elapsed": _elapsed}
+	return {"consumed": consumed_keys(), "claimed": claims, "elapsed": elapsed()}
 
 ## Restore a saved field. Call before streaming starts, or the first cells will come back
 ## unturned and holding scrap the player already took.
@@ -90,7 +105,8 @@ func restore(data: Dictionary) -> void:
 		var parts := claim.split("=", true, 1)
 		if parts.size() == 2:
 			_claimed[parts[0]] = parts[1]
-	_elapsed = float(data.get("elapsed", 0.0))
+	_clock_base = float(data.get("elapsed", 0.0))
+	_clock_start = _now()
 
 func load_consumed(keys: PackedStringArray) -> void:
 	_consumed.clear()
@@ -101,7 +117,7 @@ func consumed_keys() -> PackedStringArray:
 	return PackedStringArray(_consumed.keys())
 
 func elapsed() -> float:
-	return _elapsed
+	return _clock_base if not _streaming else _clock_base + (_now() - _clock_start)
 
 ## Everything the loaded cells are holding right now, counted in nodes.
 func node_count() -> int:
@@ -136,6 +152,7 @@ func _on_planets_restored() -> void:
 		return
 	_release_all()
 	_streaming = true
+	_clock_start = _now()
 	_check_timer = 0.0
 	_ship = null
 	_sun = null
@@ -144,9 +161,6 @@ func _on_planets_restored() -> void:
 func _process(delta: float) -> void:
 	if not _streaming:
 		return
-	# Game seconds only: _process doesn't run while the tree is paused, which is the same
-	# stretch of time OrbitalMotion skips, so the rings and the nodes on them stay in step.
-	_elapsed += delta
 	_check_timer -= delta
 	if _check_timer > 0.0:
 		return
@@ -191,7 +205,7 @@ func band_rate(band: int) -> float:
 
 ## How far a ring has turned from its zero.
 func band_rotation(band: int) -> float:
-	return fposmod(band_rate(band) * _elapsed, TAU)
+	return fposmod(band_rate(band) * elapsed(), TAU)
 
 func cell_of(world_position: Vector2) -> Vector2i:
 	var offset := world_position - centre()
@@ -292,7 +306,7 @@ func _generate(cell: Vector2i) -> Array[EncounterContact]:
 		return contacts
 
 	var rng := RNG.get_seeded_rng(cell_seed(cell))
-	var count := rng.randi_range(table.min_per_cell, table.max_per_cell)
+	var count := table.roll_count(rng)
 	var index := 0
 
 	for i in count:

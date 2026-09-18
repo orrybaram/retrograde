@@ -50,10 +50,10 @@ screenshot abandon_1_prompt
 press action
 frames 2
 assert pt.derelict_count() == 1 "ship left adrift"
-assert pt.node("derelicts").loot.size() == 33 "whole hold aboard"
+assert pt.abandoned_ship().loot.size() == 33 "whole hold aboard"
 assert not ship.ship_polygon.visible "player hull replaced by the derelict"
 wait 1
-assert ship.global_position.distance_to(pt.node("derelicts").global_position) < 6.0 "camera rides with the derelict"
+assert ship.global_position.distance_to(pt.abandoned_ship().global_position) < 6.0 "camera rides with the derelict"
 screenshot abandon_2_adrift
 wait_until main.current_game_state == 2 10
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
@@ -74,7 +74,7 @@ assert inv.get_total_value() == 0 "new ship starts empty"
 eval main.call_deferred("load_game")
 wait 3
 assert pt.derelict_count() == 1 "derelict restored from the save"
-assert pt.node("derelicts").loot.size() == 33 "hold still aboard after reload"
+assert pt.abandoned_ship().loot.size() == 33 "hold still aboard after reload"
 
 # --- Salvage it: five PERFECT hits recover everything ---
 press action
@@ -84,7 +84,7 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.3
 wait_until pt.state_name() == "FlyingState" 3
-eval pt.warp_to(pt.node("derelicts").global_position + Vector2(-60, 0))
+eval pt.warp_to(pt.abandoned_ship().global_position + Vector2(-60, 0))
 frames 3
 stage_harvest 40
 assert pt.staged is DerelictShip "staged the derelict"

@@ -9,3 +9,8 @@ const _SHAPE := preload("res://entities/resources/ScrapShapes/ContainerShape.tsc
 
 func _shape_scenes() -> Array:
 	return [_SHAPE]
+
+## It keeps the sparkles, but it doesn't breathe — a container is a solid object, and a
+## pulsing one reads as soft.
+func _pulses_when_trophy() -> bool:
+	return false

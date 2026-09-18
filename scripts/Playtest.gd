@@ -26,6 +26,9 @@ extends Node
 ##   screen                        text currently visible on UI layers
 ##   screenshot <name>             save <out>/<name>.png (skipped under --headless)
 ##   burst <name> <n> <interval>   n screenshots <interval> game-seconds apart (<name>_00.png ...)
+##   seek <Kind> [hops]            warp around deep space until something of that kind is streaming
+##                                 nearby, and park there. The void is sparse by design, so a
+##                                 scenario can't assume a given spot holds a container or a wreck.
 ##   stage_harvest [dist] [trophy|plain] [kind:<Kind>]
 ##                                 put the flying ship <dist>px (default 40; harvest radius 60) behind the nearest scrap,
 ##                                 `plain` forces an ordinary 3-hit node, `kind:Container` picks that sort only.
@@ -265,6 +268,9 @@ func execute(line: String) -> Dictionary:
 				paths.append(p)
 				await _game_seconds(float(args[2]))
 			reply["paths"] = paths
+		"seek":
+			await _seek_kind(args[0] if args.size() > 0 else "Scrap",
+				int(args[1]) if args.size() > 1 and args[1].is_valid_int() else 60, reply)
 		"stage_harvest":
 			var want_kind := ""
 			for arg in args:
@@ -364,6 +370,54 @@ func _face(group: String, tolerance: float, reply: Dictionary) -> void:
 	await _frames(1)
 
 ## Skip the flight: park the ship just behind the nearest live scrap node, nose on it,
+## Nodes of `kind` that the encounter field put there. A planet's own ring doesn't count:
+## seeking is about finding a populated stretch of the void, and the station's ring would
+## satisfy every search from the dock.
+func _deep_count(kind: String) -> int:
+	var total := 0
+	for node in get_tree().get_nodes_in_group("resource_nodes"):
+		if node is ScrapNode and (node as ScrapNode).kind == kind and (node as OrbitalNode).spawner_key != "":
+			total += 1
+	return total
+
+## Hunt deep space for a node of `kind`, parking the ship where one is found. Hops follow
+## a fixed sequence, so a scenario that finds one finds the same one every run.
+## Planets sweep encounters out of their gravity fields as they orbit, so a stretch of
+## void with one nearby quietly gains and loses nodes. Seek keeps well clear of that.
+const SEEK_PLANET_CLEARANCE := 60000.0
+
+func _seek_kind(kind: String, hops: int, reply: Dictionary) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 90210
+	for i in hops:
+		# Out past the sun's exclusion, inside Veld's orbit. Always hop first: starting
+		# docked, the station's ring is right there.
+		warp_to(Vector2.RIGHT.rotated(rng.randf() * TAU) * rng.randf_range(60000.0, 250000.0))
+		for _f in 24:
+			await get_tree().process_frame
+		var planet: Variant = nearest("planets")
+		if planet != null and float(planet["distance"]) < SEEK_PLANET_CLEARANCE:
+			continue
+		if _deep_count(kind) > 0:
+			var found := nearest_kind(kind)
+			if found:
+				# Park on it rather than wherever the hop landed. Left at arm's length the
+				# ring can carry it out of the loaded cells before the scenario gets to it.
+				warp_to(found.global_position + Vector2(120, 0))
+				# Long enough for the field to reconcile (it checks every 0.25s) and
+				# release whatever the move dropped out of the window, so the caller
+				# isn't handed a node that is about to go back to the pool.
+				for _s in 30:
+					await get_tree().process_frame
+				if not is_instance_valid(found) or _deep_count(kind) == 0:
+					continue
+				reply["at"] = [found.global_position.x, found.global_position.y]
+			reply["hops"] = i + 1
+			reply["found"] = kind
+			return
+	reply["ok"] = false
+	reply["error"] = "seek: no %s found in %d hops" % [kind, hops]
+
 ## velocity matched, so the next `hold action` starts a harvest.
 func _stage_harvest(dist: float, trophy: bool, plain: bool, want_kind: String, reply: Dictionary) -> void:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
@@ -604,8 +658,21 @@ func warp_to(pos: Vector2) -> void:
 	ship.global_position = pos
 
 ## Abandoned ships in the world.
+## Ships the player abandoned. Wrecks the encounter field put in deep space share the
+## group but are not the player's, so they don't count here.
 func derelict_count() -> int:
-	return get_tree().get_nodes_in_group("derelicts").size()
+	var total := 0
+	for node in get_tree().get_nodes_in_group("derelicts"):
+		if node is DerelictShip and not (node as DerelictShip).transient:
+			total += 1
+	return total
+
+## The ship the player abandoned, ignoring any deep-space wreck that happens to be loaded.
+func abandoned_ship() -> DerelictShip:
+	for node in get_tree().get_nodes_in_group("derelicts"):
+		if node is DerelictShip and not (node as DerelictShip).transient:
+			return node
+	return null
 
 ## Drop a loose gem `offset` px from the ship, moving at the ship's velocity plus `rel_velocity`.
 func spawn_gem(id: String, offset: Vector2, rel_velocity := Vector2.ZERO) -> Gem:

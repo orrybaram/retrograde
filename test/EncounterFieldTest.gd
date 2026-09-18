@@ -354,6 +354,129 @@ func test_the_shipped_table_builds_a_cluster_of_pooled_nodes() -> void:
 		assert_bool(ResourceNodePool.RESOURCE_SCENES.has(entry["variant"])).is_true()
 
 
+# --- How empty the void is ---------------------------------------------------
+
+func test_most_cells_hold_nothing() -> void:
+	# The dial that decides whether finding something is an event or scenery.
+	var table := _table()
+	table.chance_per_cell = 0.3
+	table.min_per_cell = 1
+	table.max_per_cell = 1
+	var field := _field(table)
+
+	var populated := 0
+	for sector in range(0, 200):
+		if not field._generate(Vector2i(DEEP, sector)).is_empty():
+			populated += 1
+	assert_int(populated).is_between(40, 80)  # 0.3 of 200, with room for the roll
+
+
+func test_the_shipped_void_is_mostly_void() -> void:
+	var table: EncounterTable = load("res://entities/encounters/tables/deep_space.tres")
+	assert_float(table.chance_per_cell).is_less(0.5)
+
+
+func test_an_empty_cell_never_shifts_what_a_full_one_would_hold() -> void:
+	# roll_count always draws exactly one number, so a cell coming up empty can't slide
+	# the rest of the sequence and change its neighbours.
+	var table := EncounterTable.new()
+	table.chance_per_cell = 0.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4
+	assert_int(table.roll_count(rng)).is_equal(0)
+
+	var control := RandomNumberGenerator.new()
+	control.seed = 4
+	control.randf()
+	assert_float(rng.randf()).is_equal(control.randf())
+
+
+func test_a_certain_table_always_fires() -> void:
+	var table := EncounterTable.new()
+	table.chance_per_cell = 1.0
+	table.min_per_cell = 2
+	table.max_per_cell = 2
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	for i in 20:
+		assert_int(table.roll_count(rng)).is_equal(2)
+
+
+# --- Contacts ----------------------------------------------------------------
+
+func test_a_cluster_of_many_pieces_is_one_contact() -> void:
+	var field := _field()
+	var cell := Vector2i(DEEP, 2)
+	var contacts := field._generate(cell)
+	field._cells[cell] = contacts
+
+	assert_int(contacts.size()).is_equal(1)
+	assert_int(contacts[0].remaining()).is_greater(1)
+	assert_int(field.node_count()).is_equal(contacts[0].remaining())
+
+
+func test_a_contact_sits_in_the_middle_of_what_is_left() -> void:
+	var field := _field()
+	var contact := EncounterContact.new("DEBRIS")
+	for offset in [Vector2(-100, 0), Vector2(100, 0), Vector2(0, 300)]:
+		var node := Node2D.new()
+		field.add_child(node)
+		node.global_position = offset
+		contact.add(node)
+
+	assert_vector(contact.position()).is_equal_approx(Vector2(0, 100), Vector2.ONE)
+
+	# Salvage one and it re-centres on the rest
+	var taken := contact.nodes[2]
+	contact.drop(taken)
+	taken.queue_free()
+	assert_int(contact.remaining()).is_equal(2)
+	assert_vector(contact.position()).is_equal_approx(Vector2.ZERO, Vector2.ONE)
+
+
+func test_an_emptied_contact_stops_reporting() -> void:
+	var field := _field()
+	var contact := EncounterContact.new("DEBRIS")
+	assert_bool(contact.is_alive()).is_false()
+
+	var node := Node2D.new()
+	field.add_child(node)
+	contact.add(node)
+	assert_bool(contact.is_alive()).is_true()
+
+	contact.drop(node)
+	node.queue_free()
+	assert_bool(contact.is_alive()).is_false()
+
+
+func test_only_what_is_within_reach_is_reported_nearest_first() -> void:
+	var field := _field(_table(2))
+	var origin := field.cell_centre(Vector2i(DEEP, 2))
+	for sector in [1, 2, 3]:
+		var cell := Vector2i(DEEP, sector)
+		field._cells[cell] = field._generate(cell)
+
+	var near := field.contacts_in_range(origin, 10000.0)
+	assert_int(near.size()).is_greater(0)
+	var previous := -1.0
+	for contact in near:
+		var d := contact.position().distance_to(origin)
+		assert_float(d).is_less_equal(10000.0)
+		assert_float(d).is_greater_equal(previous)
+		previous = d
+
+	# A long way off, the same space is silent
+	assert_array(field.contacts_in_range(origin + Vector2(80000, 0), 10000.0)).is_empty()
+
+
+func test_a_clone_wreck_is_labelled_like_any_other_wreck() -> void:
+	# Nothing should be able to tell them apart before you get there.
+	var clone: EncounterDef = load("res://entities/encounters/defs/clone_wreck.tres")
+	var plain: EncounterDef = load("res://entities/encounters/defs/small_derelict.tres")
+	assert_str(clone.contact_label).is_equal(plain.contact_label)
+	assert_str(clone.contact_label).is_equal("DERELICT")
+
+
 # --- Budgeted encounters -----------------------------------------------------
 
 func _budgeted_table(budget: int) -> EncounterTable:
@@ -429,6 +552,28 @@ func test_a_container_comes_out_trophy_grade() -> void:
 	assert_str(node.kind).is_equal("Container")
 	assert_float(absf(node._rotation_speed)).is_between(def.min_drift_spin, def.max_drift_spin)
 	def.release(node)
+
+
+func test_a_container_does_not_breathe() -> void:
+	# It keeps the sparkles that mark it as worth taking, but a pulsing box reads as soft.
+	var def: ContainerDef = load("res://entities/encounters/defs/lone_container.tres")
+	var field := _field()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var box := def.build(field, def.plan(rng, Vector2(140000.0, 0.0))[0]) as ScrapNode
+
+	assert_bool(box.is_trophy).is_true()
+	assert_object(box.sparkle_particles).is_not_null()
+	assert_object(box._trophy_pulse_tween).is_null()
+	def.release(box)
+
+
+func test_ordinary_trophy_scrap_still_breathes() -> void:
+	# The pulse is how a rare lump of scrap catches the eye; only containers opt out.
+	var scrap := auto_free(ResourceNodePool.get_instance("Scrap1", self)) as ScrapNode
+	scrap.is_trophy = true
+	assert_object(scrap._trophy_pulse_tween).is_not_null()
+	ResourceNodePool.return_instance(scrap)
 
 
 func test_a_wreck_carries_a_hold_worth_salvaging() -> void:
@@ -538,7 +683,13 @@ func test_a_spawned_node_is_set_adrift_on_its_rings_rate() -> void:
 	add_child(sun)
 	sun.global_position = Vector2.ZERO
 
-	var table: EncounterTable = load("res://entities/encounters/tables/deep_space.tres")
+	# Clusters only, and certain to fire: this is about the orbit a spawned node is put
+	# on, and a clone wreck would decline to build with no player ship to copy.
+	# duplicate() keeps that out of the shared resource other tests load.
+	var table := (load("res://entities/encounters/tables/deep_space.tres") as EncounterTable).duplicate()
+	var clusters: Array[EncounterDef] = [load("res://entities/encounters/defs/debris_cluster.tres")]
+	table.entries = clusters
+	table.chance_per_cell = 1.0
 	var field := _field(table)
 	var nodes := _nodes(field._generate(Vector2i(DEEP, 7)))
 	assert_int(nodes.size()).is_greater(0)

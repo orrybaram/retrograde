@@ -109,19 +109,29 @@ military-era echo.
 
 ### 3.4 Contacts
 
-`EncounterContact` is one encounter as the scanner sees it: the nodes it put there, and
-what it reads as. A debris cluster is eight nodes but **one** contact.
-
-That grouping is the whole reason the scanner works. The decision it exists to support is
-"detour or stay on course", and eight rows for one knot of scrap would drown that. The
+`EncounterContact` is one encounter as anything looking at it sees it: the nodes it put
+there, and what it reads as. A debris cluster is eight nodes but **one** contact. The
 field builds a contact per encounter as it generates a cell, drops nodes from it as they
-are salvaged, and forgets it once it is empty. `contacts_in_range()` is what the HUD asks.
+are salvaged, and forgets it once it is empty.
 
 Labels come from `EncounterDef.contact_label`, and encounters may deliberately share one:
-a **clone wreck reads as an ordinary `DERELICT`**, because from out there that is all the
-scanner can tell. You detour for routine salvage and find your own ship.
+a **clone wreck reads as an ordinary `DERELICT`**, because from out there that is all
+anything could tell. You detour for routine salvage and find your own ship.
 
-### 3.5 Slot keys and consumption
+There is no HUD panel reading these at the moment — see Phase 4. The grouping is kept
+because it is how the field models what it has placed, and because anything that ever
+reports contacts needs it.
+
+### 3.5 How sparse the void is
+
+`EncounterTable.chance_per_cell` is the dial. Most cells hold nothing; a cell that fires
+gets `min_per_cell`–`max_per_cell` encounters. Shipped values: **0.3 and one**, so about
+three cells in ten hold a single encounter.
+
+`roll_count()` always draws exactly one number whatever the outcome, so a cell coming up
+empty cannot slide the sequence and change what its neighbours hold.
+
+### 3.6 Slot keys and consumption
 
 Every spawned node gets a stable key: `"<band>:<sector>:<index>"`, where `index` is the
 node's position in the cell's deterministic generation order. It's written to the node's
@@ -168,9 +178,12 @@ of the system. Nothing is locked to anything else, which is the whole point.
 shape and nothing drifts out of the cell that owns it. It also means a node reports a real
 `get_orbital_velocity()`, so flying into one bounces off what it is actually doing.
 
-**The clock.** `EncounterField` accumulates game seconds in `_process`, which doesn't run
-while the tree is paused — the same stretch `OrbitalMotion` skips, so the rings and the
-nodes riding them stay in step. That float is saved and restored with the consumed set.
+**The clock.** The rings turn on exactly the clock `OrbitalMotion` uses for planets:
+banked seconds plus wall time since this stretch began, minus any pause. It has to be the
+same clock. An earlier version accumulated `_process(delta)` instead, which looks identical
+at normal speed but scales with `Engine.time_scale`, and `OrbitalMotion` does not — so the
+rings would race ahead of the nodes riding them. The banked total is saved and restored
+alongside the consumed set.
 
 ### Phase 3 — Content breadth ✅ (three of five)
 
@@ -211,35 +224,16 @@ its velocity to salvage it would have slid out of harvest range partway through.
   transmissions look like the cheerful guide talking, and would be hard to undo later.
   They need an ambient presentation first — a small piece of UI work, not content work.
 
-### Phase 4 — Scanner signals ✅
+### Phase 4 — Scanner signals (built, then removed)
 
-`ui/ScannerPanel.gd`, a bordered terminal panel in the HUD's top-right corner — the other
-three corners are taken by the dashboard, the minimap and the radio.
+A HUD panel listing contacts by bearing and distance was built and then taken out again:
+it was more instrument than the game wanted, and naming what was out there before you got
+there took something away from going to look.
 
-```
-S C A N
-DEBRIS      -049    4.7 km
-DEBRIS      -034    4.9 km
-CONTAINER   -139    6.4 km
-DERELICT    -151    7.0 km
-CONTAINER   +021    8.3 km
-```
-
-Five rows at most, nearest first. **Bearings are relative to the ship's nose**, the way
-the player actually has to fly: negative to port, positive to starboard, `+000°` dead
-ahead. Signed and zero-padded so the column never jitters. Distance reuses
-`TrackingSolution.format_distance`.
-
-Range is 10,000, matching `Minimap.world_range`, so the list and the minimap always agree
-about what is out there. A scanner upgrade would raise it — that is the axis the design
-doc means by "a good scanner shows more signals at greater range".
-
-The panel hides itself when there is nothing in range, when docked, and outside play.
-`ANOMALY` and `UNKNOWN` belong to Phase 5.
-
-One layout note worth keeping: the panel is placed by hand rather than by anchors.
-Anchored top-right with `GROW_DIRECTION_BEGIN`, the rows ran off the screen edge as they
-grew; `_place()` resets both containers and pins the right edge itself.
+What survives is `EncounterContact` (§3.4) and `contacts_in_range()`, which is where any
+future version of this would start. The design doc's decision — detour or stay on course —
+is still unbuilt, and so is the upgrade axis behind it (range, and the unreliable
+`UNKNOWN` contacts a late-game scanner picks up).
 
 ### Phase 5 — Anomalies and Titan events
 
@@ -272,10 +266,12 @@ Drift is visible moment to moment, but "this crossing is different from last tim
 long-session effect, not a per-trip one. Speeding the field up would make it clash with
 the planets it flies past.
 
-**The scanner has no cost.** It shows everything in range for free, always. The design
-doc's upgrade axis (range, and the unreliable `UNKNOWN` contacts a late-game scanner
-picks up) is what makes it a progression, and none of that exists yet.
+**Balance is unexamined.** Four encounter types with weights picked by eye (cluster 1.0,
+container 0.35, derelict 0.12, clone wreck 0.04) and a 0.3 chance that a cell holds
+anything. Whether a container is worth the fuel to reach it has not been played against
+the economy at all.
 
-**Balance is unexamined.** There are now four encounter types with weights picked by eye
-(cluster 1.0, container 0.35, derelict 0.12, clone wreck 0.04). Whether a container is
-worth the fuel to reach it has not been played against the economy at all.
+**Deep space is sparse enough that tests have to hunt for things.** `playtests/encounters.play`
+uses a `seek` command that warps around the void until it finds what it needs, rather than
+assuming a given spot holds a container. Anything asserting on a particular location will
+break the next time the rarity dial moves.
