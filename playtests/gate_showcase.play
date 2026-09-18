@@ -46,12 +46,12 @@ eval pt.caption("")
 wait_until not pt.node("gate_terminal").is_booting() 8
 wait 1.2
 
-eval pt.caption("Module online  //  Titan Influence 1 / 5  //  it never goes back off")
+eval pt.caption("Module online  //  1 of 5  //  it never goes back off")
 wait 3.0
 press enter
 wait_until pt.visible_ui().is_empty() 2
 
-eval pt.caption("The ring carries the Titan's purple from here on")
+eval pt.caption("The ring carries the Module's purple from here on")
 hold thrust 0.7
 wait_until pt.state_name() == "FlyingState" 3
 wait 3.0

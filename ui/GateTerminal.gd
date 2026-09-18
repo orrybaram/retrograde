@@ -146,7 +146,7 @@ func _refresh_hub() -> void:
 	var powered := gate != null and gate.is_powered()
 	_status.text = TerminalWindow.spaced("MODULE ONLINE" if powered else "MODULE OFFLINE")
 	_status.add_theme_color_override("font_color", Colors.TITAN if powered else Colors.PRIMARY)
-	_credits.text = "TITAN INFLUENCE  %d / %d          CREDITS  %d CR" % [
+	_credits.text = "MODULES ONLINE  %d / %d          CREDITS  %d CR" % [
 		gs.titan_influence() if gs else 0, MODULE_COUNT, gs.credits if gs else 0]
 	_frame.set_hint("UP/DN SELECT   ENTER CONFIRM   ESC LEAVE")
 
