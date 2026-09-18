@@ -80,6 +80,10 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/void.play` flies past the last orbit into the Void: the robot's warning, the stars draining, the dashboard rotting and dropping out, turning back in time, then staying too long and being consumed (`ConsumedState`, no wreck and no derelict) and relaunching. State is under `state.void` (`inside`, `depth`, `dread`, `shroud`, `exposure`); the autoload is `get_node("/root/VoidZone")`.
 
+`playtests/waypoint.play` sets tracking points on the star chart: the mark starts on the ship, the arrow keys drive it out into
+empty space (`pt.node("system_map").cursor_world`), ENTER takes it as a `WAYPOINT`, ENTER over a body tracks the body instead so
+the target rides its orbit, and DEL hands tracking back to home base (`.playtest/mark_*.png`).
+
 `playtests/minimap.play` screenshots the minimap markers (ship arrow, station silhouette + beacon, shaded planets, scrap chunks, derelict pinned to the rim).
 
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).
