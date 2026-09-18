@@ -20,6 +20,7 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
+assert not pt.node("radio_panel").visible "no scanner briefing before the purchase"
 eval pt.park_near_planet("Rook", 2000)
 wait 1
 assert pt.scanner().target() == null and pt.scanner().progress() == 0.0 "no scan without the scanner"
@@ -49,6 +50,16 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
+
+# --- Clearing the dock with the array aboard puts the guide on the comms ---
+wait_until pt.node("radio_panel").visible 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "scanner_bought" "scanner briefing on air"
+assert get_tree().paused "the briefing holds the game"
+wait_until not pt.node("radio_panel").is_typing() 5
+assert pt.node("radio_panel").message_text().contains("Older than I am") "the guide knows the array"
+screenshot scanner_2b_briefing
+eval get_tree().root.get_node("RobotRadio").silence()
+wait_until not get_tree().paused 3
 
 # --- Leaving inner orbit before it completes resets the meter ---
 eval pt.park_near_planet("Rook", 2000)

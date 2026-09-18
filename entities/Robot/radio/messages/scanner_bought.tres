@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "That survey array you bought? Older than I am. Still works."
+expression = &"hello"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Fly close to a planet and hold there. Sit in the gravity, don't fight it."
+expression = &"neutral"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "Give it long enough and it maps the whole rock. Ore seams and all."
+expression = &"happy"
+
+[sub_resource type="Resource" id="line_4"]
+script = ExtResource("2_line")
+text = "Drift out of the well and it loses the thread. Patience, pilot."
+expression = &"wink"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"scanner_bought"
+priority = 1
+once = true
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4")])
