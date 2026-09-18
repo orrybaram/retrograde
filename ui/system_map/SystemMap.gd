@@ -48,6 +48,22 @@ const CURSOR_SNAP_PX := 14.0
 const CURSOR_EDGE_MARGIN := 26.0
 ## Seconds the confirm pulse takes to fade after a tracking point is set.
 const MARK_FLASH_TIME := 0.5
+## A freshly Charted region draws itself in rather than appearing: how long one piece
+## of it takes, and the head start each piece has over the next.
+const REVEAL_TIME := 0.9
+const REVEAL_STAGGER := 0.15
+## The powered Gate's glyph: a small ring with the same mouth the Gate itself leaves open.
+const GATE_GLYPH_RADIUS := 5.0
+const GATE_MOUTH := deg_to_rad(52.0)
+## How far apart two Gates have to read on screen before the link between them is worth drawing.
+const GATE_LINK_MIN_PX := 6.0
+## How far below its own line a Gate's name sits, clear of the planet's name beside it.
+const GATE_LABEL_DROP := 9.0
+
+## The order the pieces of a Charted region arrive in, outwards from the planet.
+enum Reveal { PLANET, ORBIT, MOON, STATION, GATE }
+## How long a whole region takes to arrive: the last piece's head start plus its own ramp.
+const REVEAL_SPAN := REVEAL_TIME + REVEAL_STAGGER * float(Reveal.GATE)
 
 @export_group("Colors")
 @export var background_color: Color = Colors.UI_BACKGROUND
@@ -60,6 +76,7 @@ const MARK_FLASH_TIME := 0.5
 @export var ship_color: Color = Colors.PRIMARY
 @export var space_station_color: Color = Colors.HULL_LIGHT
 @export var nav_color: Color = Colors.NAV
+@export var gate_color: Color = Colors.TITAN
 @export var void_color: Color = Colors.DANGER
 
 @export_group("Display")
@@ -99,6 +116,12 @@ var _time: float = 0.0
 var _stars: PackedVector2Array = PackedVector2Array()  ## Unit-square star positions
 var _star_alpha: PackedFloat32Array = PackedFloat32Array()
 var _mark_flash: float = 0.0  ## 1 -> 0 confirm pulse after a tracking point is set
+## Regions the chart has already drawn, keyed by the region planet's save_key(), and
+## how far into its reveal each newly Charted one is.
+var _charted_known: Dictionary = {}
+var _reveals: Dictionary = {}
+var _primed: bool = false  ## Whether the saved Modules have been taken as already drawn
+var _game_state: GameState = null
 
 func _ready() -> void:
 	visible = false
@@ -132,6 +155,10 @@ func _ready() -> void:
 	# Find references
 	_find_celestial_bodies()
 	ship = get_tree().get_first_node_in_group("ship") as Ship
+
+	# Modules already online when the world loads are simply on the chart; only ones
+	# powered from here on get the staged reveal.
+	EventBus.planets_restored.connect(_prime_charted)
 
 func _build_starfield() -> void:
 	# One fixed field so the chart backdrop is stable between openings.
@@ -184,6 +211,7 @@ func _process(delta: float) -> void:
 		_handle_panning(delta)
 		_calculate_scale()
 		_handle_cursor(delta)
+		_advance_reveals(delta)
 		_mark_flash = maxf(_mark_flash - delta / MARK_FLASH_TIME, 0.0)
 		_chart.queue_redraw()
 		_chrome.queue_redraw()
@@ -254,6 +282,7 @@ func open_map() -> void:
 		zoom_level = default_zoom_level
 
 	# Calculate scale first (needed for centering calculation)
+	_refresh_charted()
 	_layout()
 	_calculate_scale()
 	_refocus()
@@ -447,23 +476,29 @@ func _snap_body() -> Node2D:
 			best = body
 	return best
 
-## Everything the mark can lock onto: the sun, planets, moons and stations.
+## Everything the mark can lock onto: whatever the chart has Charted, plus the powered
+## Gates. An uncharted planet is not on the chart, so the mark passes straight over it —
+## the position is still bare space, and a waypoint can be set on it like any other.
 func _snap_candidates() -> Array[Node2D]:
 	var bodies: Array[Node2D] = []
-	if sun and is_instance_valid(sun):
+	if sun and is_instance_valid(sun) and _charted(sun):
 		bodies.append(sun)
 	for planet in planets:
-		if planet and is_instance_valid(planet):
+		if planet and is_instance_valid(planet) and _charted(planet):
 			bodies.append(planet)
 	for node in get_tree().get_nodes_in_group("space_stations"):
-		var station := node as Node2D
-		if station and is_instance_valid(station):
+		var station := node as SpaceStation
+		if station and is_instance_valid(station) and _charted(station.parent_planet):
 			bodies.append(station)
+	for gate in _powered_gates():
+		bodies.append(gate)
 	return bodies
 
 func _body_label(body: Node2D) -> String:
 	if body is Planet:
 		return (body as Planet).planet_name.to_upper()
+	if body is Gate:
+		return _gate_label(body as Gate)
 	return NavSystem.HOME_LABEL if body == _home_station() else "STATION"
 
 func _home_station() -> Node2D:
@@ -474,7 +509,117 @@ func _home_station() -> Node2D:
 static func _arrival_radius(body: Node2D) -> float:
 	if body is Planet:
 		return maxf((body as Planet).radius * 1.5, 200.0)
+	if body is Gate:
+		return Gate.RADIUS * 1.5
 	return 200.0
+
+# --- Charted regions ---------------------------------------------------------
+
+## The chart is the Titan's own map, handed over one region at a time: powering a
+## planet's Gate charts that planet, its orbit, its moons and their orbits, its station
+## and the Gate itself (docs/adr/0002). Nothing else is drawn, however close the ship
+## has flown to it — the minimap is what covers "what is near me".
+##
+## Home is the exception. The player's own planet and its station are on the chart from
+## the first minute; the orbit that carries them around their planet is not, and arrives
+## with that planet's Gate like the rest of the region.
+
+func _game_state_node() -> GameState:
+	if _game_state == null or not is_instance_valid(_game_state):
+		_game_state = get_tree().get_first_node_in_group("game_state") as GameState
+	return _game_state
+
+## The planet whose Gate charts a body: a moon belongs to its planet's region.
+static func region_planet(body: Planet, sun_body: Planet) -> Planet:
+	if body and body.parent_planet and body.parent_planet != sun_body:
+		return body.parent_planet
+	return body
+
+## True once a region's Gate is powered, which is what puts its orbits on the chart.
+static func is_region_charted(body: Planet, sun_body: Planet, gs: GameState) -> bool:
+	var root := region_planet(body, sun_body)
+	return root != null and gs != null and gs.is_gate_powered(root.save_key())
+
+## True when the chart draws the body itself: its region is Charted, or it is home.
+static func is_charted(body: Planet, sun_body: Planet, home: Planet, gs: GameState) -> bool:
+	if body == null:
+		return false
+	if home != null and body == home:
+		return true
+	return is_region_charted(body, sun_body, gs)
+
+func _charted(body: Planet) -> bool:
+	return is_charted(body, sun, _home_planet(), _game_state_node())
+
+func _region_charted(body: Planet) -> bool:
+	return is_region_charted(body, sun, _game_state_node())
+
+## The planet the player's base orbits. Its region is on the chart from the start.
+func _home_planet() -> Planet:
+	var station := _home_station() as SpaceStation
+	return station.parent_planet if station and is_instance_valid(station) else null
+
+func _region_key(body: Planet) -> String:
+	var root := region_planet(body, sun)
+	return root.save_key() if root else ""
+
+## Every Gate whose Module is online.
+func _powered_gates() -> Array[Gate]:
+	var powered: Array[Gate] = []
+	for node in get_tree().get_nodes_in_group("gates"):
+		var gate := node as Gate
+		if gate and is_instance_valid(gate) and gate.is_powered():
+			powered.append(gate)
+	return powered
+
+# --- Reveal ------------------------------------------------------------------
+
+## Take the Modules already online as regions the chart has always held, so loading a
+## save does not replay every reveal the player has already been given.
+func _prime_charted() -> void:
+	_primed = true
+	_reveals.clear()
+	for gate in _powered_gates():
+		_charted_known[gate.save_key()] = true
+
+## Anything charted since the chart was last open draws itself in on this opening.
+func _refresh_charted() -> void:
+	if not _primed:
+		_prime_charted()
+		return
+	for gate in _powered_gates():
+		var key := gate.save_key()
+		if key != "" and not _charted_known.has(key):
+			_charted_known[key] = true
+			_reveals[key] = 0.0
+
+## The reveal waits for the frame to finish drawing itself on, then hands the region
+## over piece by piece rather than switching it on.
+func _advance_reveals(delta: float) -> void:
+	if _reveals.is_empty() or _anim < 1.0:
+		return
+	for key in _reveals.keys():
+		var elapsed: float = _reveals[key] + delta
+		if elapsed >= REVEAL_SPAN:
+			_reveals.erase(key)
+		else:
+			_reveals[key] = elapsed
+
+## How far into its reveal one piece of a region is; 1.0 for a region the chart has
+## held all along.
+func _reveal(key: String, stage: int) -> float:
+	return _reveal_stage(_reveals[key], stage) if _reveals.has(key) else 1.0
+
+## Bodies that were already on the chart before their region was Charted — home and its
+## station — never draw themselves in again. The orbits under them still do.
+func _body_reveal(body: Planet, stage: int) -> float:
+	if body != null and body == _home_planet():
+		return 1.0
+	return _reveal(_region_key(body), stage)
+
+## Each piece of the region starts a beat after the one before it.
+static func _reveal_stage(elapsed: float, stage: int) -> float:
+	return _ease_out(clampf((elapsed - REVEAL_STAGGER * float(stage)) / REVEAL_TIME, 0.0, 1.0))
 
 # --- Chart -------------------------------------------------------------------
 
@@ -501,9 +646,13 @@ func draw_chart(c: Control) -> void:
 	_draw_range_rings(c, rect)
 	_draw_orbits(c, rect)
 	_draw_child_orbits(c, rect)
-	_draw_sun(c)
+	# The sun holds the Core, and the Core's own Gate is the last thing to take power,
+	# so the middle of the chart stays empty for the whole game.
+	if _charted(sun):
+		_draw_sun(c)
 	_draw_planets(c, rect)
 	_draw_stations(c, rect)
+	_draw_gates(c, rect)
 	_draw_nav_target(c, rect)
 	_draw_ship(c)
 	_draw_cursor(c)
@@ -669,7 +818,12 @@ func _draw_orbits(c: Control, rect: Rect2) -> void:
 		# Moons orbit their parent planet, not the sun
 		if planet.parent_planet and planet.parent_planet != sun:
 			continue
-		_draw_dashed_orbit(c, rect, center, planet.orbital_distance, _eccentricity(planet), orbit_color, 1.0)
+		if not _region_charted(planet):
+			continue
+		var reveal := _reveal(_region_key(planet), Reveal.ORBIT)
+		if reveal <= 0.0:
+			continue
+		_draw_dashed_orbit(c, rect, center, planet.orbital_distance, _eccentricity(planet), Color(orbit_color, orbit_color.a * reveal), 1.0)
 
 func _draw_child_orbits(c: Control, rect: Rect2) -> void:
 	# Moons and stations both orbit a parent planet, drawn in the same dashed style
@@ -678,15 +832,27 @@ func _draw_child_orbits(c: Control, rect: Rect2) -> void:
 			continue
 		if not planet.parent_planet or planet.parent_planet == sun:
 			continue
+		# A moon's orbit belongs to its planet's region, home's moon included: the path
+		# the base rides round is drawn only once that planet's Gate is powered.
+		if not _region_charted(planet):
+			continue
+		var reveal := _reveal(_region_key(planet), Reveal.MOON)
+		if reveal <= 0.0:
+			continue
 		var center := _map_pos(planet.parent_planet.global_position)
-		_draw_dashed_orbit(c, rect, center, planet.orbital_distance, _eccentricity(planet), moon_orbit_color, 1.5, 6.0)
+		_draw_dashed_orbit(c, rect, center, planet.orbital_distance, _eccentricity(planet), Color(moon_orbit_color, moon_orbit_color.a * reveal), 1.5, 6.0)
 
 	for node in get_tree().get_nodes_in_group("space_stations"):
 		var station := node as SpaceStation
 		if not station or not is_instance_valid(station) or not station.parent_planet:
 			continue
+		if not _charted(station.parent_planet):
+			continue
+		var reveal := _body_reveal(station.parent_planet, Reveal.STATION)
+		if reveal <= 0.0:
+			continue
 		var center := _map_pos(station.parent_planet.global_position)
-		_draw_dashed_orbit(c, rect, center, station.orbital_distance, _eccentricity(station), space_station_orbit_color, 1.5, 6.0)
+		_draw_dashed_orbit(c, rect, center, station.orbital_distance, _eccentricity(station), Color(space_station_orbit_color, space_station_orbit_color.a * reveal), 1.5, 6.0)
 
 func _eccentricity(body: Node) -> float:
 	return clamp(body.eccentricity, 0.0, 0.99) if "eccentricity" in body else 0.0
@@ -734,36 +900,51 @@ func _draw_planets(c: Control, rect: Rect2) -> void:
 	for planet in planets:
 		if not planet or not is_instance_valid(planet):
 			continue
+		if not _charted(planet):
+			continue
 
 		var pos := _map_pos(planet.global_position)
 		var radius := maxf(planet.radius * scale_factor * planet_size_multiplier, 2.0)
 		if not rect.grow(radius + 8.0).has_point(pos):
 			continue
 
-		c.draw_circle(pos, radius, planet.color)
-		c.draw_arc(pos, radius + 1.5, 0.0, TAU, 40, Color(planet.color, 0.45), 1.0, true)
+		var is_moon := planet.parent_planet != null and planet.parent_planet != sun
+		var reveal := _body_reveal(planet, Reveal.MOON if is_moon else Reveal.PLANET)
+		if reveal <= 0.0:
+			continue
+
+		c.draw_circle(pos, radius, Color(planet.color, planet.color.a * reveal))
+		c.draw_arc(pos, radius + 1.5, 0.0, TAU, 40, Color(planet.color, 0.45 * reveal), 1.0, true)
 
 		# Moons stay unlabelled unless they are big enough to read against
-		var is_moon := planet.parent_planet != null and planet.parent_planet != sun
 		if not is_moon or radius >= 3.5:
-			_draw_body_label(c, pos, radius, planet.planet_name, Color(Colors.PRIMARY, 0.55 if not is_moon else 0.35))
+			var label_alpha := (0.55 if not is_moon else 0.35) * reveal
+			_draw_body_label(c, pos, radius, planet.planet_name, Color(Colors.PRIMARY, label_alpha))
 
-func _draw_body_label(c: Control, pos: Vector2, radius: float, text: String, color: Color) -> void:
+## `drop` sets the label below the body's own line, so a Gate sitting on top of its
+## planet at full zoom-out doesn't write over the planet's name.
+func _draw_body_label(c: Control, pos: Vector2, radius: float, text: String, color: Color, drop: float = 0.0) -> void:
 	if text.is_empty():
 		return
 	var leader_start := pos + Vector2(radius + 3.0, 0.0)
-	var leader_end := leader_start + Vector2(5.0, 0.0)
+	var leader_end := leader_start + Vector2(5.0, drop)
 	c.draw_line(leader_start, leader_end, Color(color, color.a * 0.5), 1.0)
 	c.draw_string(_font, leader_end + Vector2(4.0, 3.0), text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE, color)
 
 func _draw_stations(c: Control, rect: Rect2) -> void:
 	for node in get_tree().get_nodes_in_group("space_stations"):
-		var station := node as Node2D
+		var station := node as SpaceStation
 		if not station or not is_instance_valid(station):
+			continue
+		if not _charted(station.parent_planet):
 			continue
 
 		var pos := _map_pos(station.global_position)
 		if not rect.grow(16.0).has_point(pos):
+			continue
+
+		var reveal := _body_reveal(station.parent_planet, Reveal.STATION)
+		if reveal <= 0.0:
 			continue
 
 		# Hollow diamond, so stations never read as a planet
@@ -773,14 +954,57 @@ func _draw_stations(c: Control, rect: Rect2) -> void:
 			pos + Vector2(0.0, r), pos + Vector2(-r, 0.0),
 			pos + Vector2(0.0, -r)
 		])
-		c.draw_polygon(diamond.slice(0, 4), PackedColorArray([Color(Colors.SPACE_BG, 0.9)]))
-		c.draw_polyline(diamond, space_station_color, 1.2, true)
-		c.draw_line(pos + Vector2(-r - 3.0, 0.0), pos + Vector2(r + 3.0, 0.0), Color(space_station_color, 0.4), 1.0)
+		c.draw_polygon(diamond.slice(0, 4), PackedColorArray([Color(Colors.SPACE_BG, 0.9 * reveal)]))
+		c.draw_polyline(diamond, Color(space_station_color, space_station_color.a * reveal), 1.2, true)
+		c.draw_line(pos + Vector2(-r - 3.0, 0.0), pos + Vector2(r + 3.0, 0.0), Color(space_station_color, 0.4 * reveal), 1.0)
 
 		# Only label it once it has pulled clear of its planet's own label
-		var station_body := node as SpaceStation
-		if station_body and station_body.orbital_distance * scale_factor > 16.0:
-			_draw_body_label(c, pos, r + 2.0, "STATION", Color(space_station_color, 0.6))
+		if station.orbital_distance * scale_factor > 16.0:
+			_draw_body_label(c, pos, r + 2.0, "STATION", Color(space_station_color, 0.6 * reveal))
+
+## Powered Gates, and the Titan's links between every pair of them. The network is the
+## thing the player is putting back together, so it is drawn as it grows.
+func _draw_gates(c: Control, rect: Rect2) -> void:
+	var powered := _powered_gates()
+	if powered.is_empty():
+		return
+
+	_draw_gate_links(c, rect, powered)
+
+	for gate in powered:
+		var pos := _map_pos(gate.global_position)
+		if not rect.grow(20.0).has_point(pos):
+			continue
+		var reveal := _reveal(gate.save_key(), Reveal.GATE)
+		if reveal <= 0.0:
+			continue
+
+		# The glyph is the Gate seen from above: a ring with the cradle's mouth in it
+		var start := PI / 2.0 + GATE_MOUTH / 2.0
+		var span := TAU - GATE_MOUTH
+		c.draw_arc(pos, GATE_GLYPH_RADIUS + 2.0, start, start + span, 24, Color(gate_color, 0.18 * reveal), 3.0, true)
+		c.draw_arc(pos, GATE_GLYPH_RADIUS, start, start + span, 24, Color(gate_color, 0.9 * reveal), 1.4, true)
+		c.draw_circle(pos, 1.4, Color(gate_color, reveal))
+		_draw_body_label(c, pos, GATE_GLYPH_RADIUS + 2.0, _gate_label(gate), Color(gate_color, 0.7 * reveal), GATE_LABEL_DROP)
+
+## A line between every pair of powered Gates: what one Module can reach from another.
+func _draw_gate_links(c: Control, rect: Rect2, powered: Array[Gate]) -> void:
+	for i in range(powered.size()):
+		for j in range(i + 1, powered.size()):
+			var from := _map_pos(powered[i].global_position)
+			var to := _map_pos(powered[j].global_position)
+			if from.distance_to(to) < GATE_LINK_MIN_PX:
+				continue
+			var leg := _clip_segment(from, to, rect.grow(8.0))
+			if leg.size() != 2:
+				continue
+			var reveal := minf(_reveal(powered[i].save_key(), Reveal.GATE), _reveal(powered[j].save_key(), Reveal.GATE))
+			c.draw_line(leg[0], leg[1], Color(gate_color, 0.3 * reveal), 1.0, true)
+
+## A Gate is named for the Module it powers.
+func _gate_label(gate: Gate) -> String:
+	var planet := gate.parent_planet
+	return "%s GATE" % (planet.planet_name if planet else gate.save_key()).to_upper()
 
 func _draw_nav_target(c: Control, rect: Rect2) -> void:
 	var target := NavSystem.get_target()
