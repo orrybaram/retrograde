@@ -65,7 +65,9 @@ assert pt.state_name() == "GateDockedState" "still in the cradle"
 press action
 wait_until pt.visible_ui().has("GateTerminal") 2
 
-# DEPART is selected once the Module is online
+# TRANSIT, REFUEL then DEPART once the Module is online
+assert pt.node("gate_terminal")._menu_items.size() == 3 "a powered Gate offers transit, fuel and the door"
+press down 2
 press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.6

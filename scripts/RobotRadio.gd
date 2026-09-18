@@ -26,6 +26,7 @@ const MSG_HULL_CRITICAL := preload("res://entities/Robot/radio/messages/hull_cri
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
 const MSG_SCANNER := preload("res://entities/Robot/radio/messages/scanner_bought.tres")
+const MSG_FIRST_TRANSIT := preload("res://entities/Robot/radio/messages/first_transit.tres")
 const MSG_OUT_OF_FUEL := preload("res://entities/Robot/radio/messages/out_of_fuel.tres")
 const MSG_OUT_OF_FUEL_BEAM := preload("res://entities/Robot/radio/messages/out_of_fuel_beam.tres")
 const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_destroyed.tres")
