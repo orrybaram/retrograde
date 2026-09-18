@@ -84,6 +84,12 @@ const OUTLINE = WHITE_FADED
 const EXPLOSION = ORANGE
 const DEBRIS = HULL_MID
 
+# --- Ore seams (rock buried in the crust, broken apart to find gems) ---
+const ORE_ROCK = HULL_DARK        # the body of a buried chunk
+const ORE_ROCK_EDGE = HULL_MID    # its rim
+const ORE_ROCK_FACET = HULL_LIGHT # cleave lines across a chunk
+const ORE_FLECK = MUSTARD_PALE    # mineral speckle, the hint of gems inside
+
 # --- Gem tiers (currency) ---
 const GEM_SHARD = MUSTARD_PALE
 const GEM_GEM = MUSTARD

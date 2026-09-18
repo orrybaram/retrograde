@@ -5,15 +5,16 @@ class_name PlanetLandedState
 ## Entered from FlyingState on a gentle touchdown (see Touchdown). The ship settles on
 ## the ground and then locks to the planet, riding its orbit; engines are off, so no fuel
 ## burns. `action` drills the seam (OreDrill), reverse thrust banks between layers.
-## Thrust lifts off, burning Touchdown.liftoff_cost() in one go: with too little fuel
-## the engines burn out and the ship is stranded.
+## Thrust lifts off. Nothing is thrown and nothing is charged: the ship is released where
+## it stands, at rest relative to the planet, and climbs out of the gravity well on its
+## own engines for as long as the player holds thrust. A heavy planet or a full hold makes
+## that climb longer, so it burns more thruster fuel - and running dry on the way up
+## strands the ship where it sits.
 ## Owns the landed camera zoom, the drill and the landed action prompt.
 
 const CAMERA_ZOOM := Vector2(1.5, 1.5)
 const LANDED_HEIGHT := 13.0  # ship centre above the surface (tail length)
 const SETTLE_TIME := 0.35
-const LIFTOFF_SPEED := 110.0
-const LIFTOFF_CLEARANCE := 3.0
 
 var ore: OreDeposit = null
 var drill: OreDrill = null
@@ -79,9 +80,6 @@ static func ground_offset(deposit: OreDeposit, ship_position: Vector2) -> Vector
 	var clamped := deposit.global_rotation + clampf(angle_difference(deposit.global_rotation, bearing), -reach, reach)
 	return Vector2.from_angle(clamped) * (deposit.surface_radius() + LANDED_HEIGHT)
 
-func liftoff_cost() -> float:
-	return Touchdown.liftoff_cost(ore.planet.surface_gravity(), ship.get_cargo_weight())
-
 func physics_process(delta: float) -> void:
 	if not is_ship_valid() or not ore:
 		return
@@ -108,14 +106,9 @@ func physics_process(delta: float) -> void:
 		_save_spent_ore()
 	_update_prompt()
 
-## Burn the liftoff fuel and launch. Too little fuel burns the tank dry instead.
+## Release the ship. Nothing is charged for it: the climb is the player's to fly, on
+## ordinary thruster fuel, and running the tank dry on the way up strands them.
 func lift_off() -> void:
-	var cost := liftoff_cost()
-	if ship.fuel < cost:
-		EventBus.action_message_changed.emit("NOT ENOUGH FUEL - ENGINES DRY")
-		ship.consume_fuel(ship.fuel)
-		return
-	ship.consume_fuel(cost)
 	var was_done := drill.phase == OreDrill.Phase.DONE
 	drill.abort()
 	if drill.phase == OreDrill.Phase.DONE and not was_done:
@@ -129,10 +122,12 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	var planet := ore.planet
 	var up := _offset.normalized()
 	if _launching:
-		state.transform = Transform2D(up.angle(), planet.global_position + _offset + up * LIFTOFF_CLEARANCE)
-		state.linear_velocity = planet.linear_velocity + up * LIFTOFF_SPEED
+		# Released where it stands, matching the planet, with no push of its own: from
+		# here the engines do the lifting and gravity fights them.
+		state.linear_velocity = planet.linear_velocity
 		state.angular_velocity = 0.0
 		_launching = false
+		_flying().ignore_ground_for(FlyingState.LIFTOFF_GRACE)
 		_exit_to_flying.call_deferred()
 		return
 	var t := ease(clampf(_settle / SETTLE_TIME, 0.0, 1.0), 0.5)

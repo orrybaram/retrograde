@@ -1409,14 +1409,14 @@ Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner*
 
 #### Ore Seams
 - A planet grows its own seams: 6-8 per rocky/ice planet, 3-4 richer ones per moon, none on the sun or a gas giant (no ground to land on). Seeded from the planet's save key, so a planet has the same seams every session.
-- Visual: a few subtle hexagons sitting just under the surface (`OreDeposit.DEPTH_MIN`..`DEPTH_MAX`), breathing slowly. Shown on the minimap and in the tracking system.
+- Visual: a handful of rough rock chunks sitting just under the surface (`OreDeposit.DEPTH_MIN`..`DEPTH_MAX`) - dark bodies (`Colors.ORE_ROCK`) with lit rims, cleave lines and a few mineral flecks, so a seam reads as part of the crust that has to be broken apart, not as a glowing marker. Shown on the minimap and in the tracking system.
 - Buried (invisible, untrackable, unlandable) until the planet is scanned; the scan surfaces them with a ping.
 
 #### Touchdown (`PlanetLandedState`)
 - To land: touch the plain surface within `OreDeposit.REACH` of a seam, with low speed relative to the planet and the nose roughly away from the planet's centre. There is no pad - any ground near the seam will do.
 - Too fast → hull damage + bounce.
 - Once landed, the ship locks to the planet and follows its orbit. Thrust and fuel drain stop.
-- Thrust to lift off. Liftoff costs a burst of fuel scaled by planet gravity × cargo weight - a light risk when the hold is full.
+- Thrust to lift off. Nothing is thrown and nothing is charged: the ship is released where it stands, at rest relative to the planet, and climbs out on its own engines for as long as the player holds thrust. Heavy gravity or a full hold makes the climb longer, so it burns more thruster fuel on its own - and running the tank dry on the way up strands the ship where it sits. Let go early and it simply settles back down, undamaged.
 
 #### Drilling
 - Landing next to a seam offers the drill prompt; ACTION starts a `D R I L L` sequence reusing the `HarvestTiming` bar, 3-4 depth layers in a row.
@@ -1426,7 +1426,8 @@ Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner*
 - The player can stop between layers and bank what they have (push-your-luck).
 
 #### Depletion
-- After a dig the seam is spent: its hexes dim to `Colors.PRIMARY_DIM` and the drill refuses it.
+- Drilling eats the seam from the top down: the drill reports its progress to `OreDeposit.set_dug()` and the chunks crumble away one by one, shallowest first.
+- After a dig the seam is spent: the last rock breaks up and the seam leaves the view, the minimap and the tracker; the drill refuses it.
 - It refills after ~5 min of game time (richer seams take longer). No countdown is ever shown - the seam just comes back.
 - Seam state persists in `Save.gd` alongside planet orbital angles.
 

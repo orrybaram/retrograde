@@ -8,18 +8,33 @@ class_name FlyingState
 
 var ALIGNMENT_ANGLE_THRESHOLD_DEGREES: float = 30.0
 var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after entering state
+## A ship breaking ground is released still touching the surface, so the ground rules are
+## held off this long - otherwise it would be judged as landing again the same instant.
+const LIFTOFF_GRACE := 0.9
+
 var _state_enter_time: float = 0.0
 var _touchdown_pending := false
+var _ground_grace := 0.0
 
 func enter() -> void:
 	super.enter()
 	_state_enter_time = Time.get_ticks_msec() / 1000.0
 	_touchdown_pending = false
+	# _ground_grace is deliberately left alone: PlanetLandedState sets it on the way out,
+	# before this runs.
+
+## Hold off the ground rules (touchdown and crash damage) for `seconds`.
+func ignore_ground_for(seconds: float) -> void:
+	_ground_grace = maxf(_ground_grace, seconds)
+
+func is_ignoring_ground() -> bool:
+	return _ground_grace > 0.0
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
 		return
-	
+	_ground_grace = maxf(_ground_grace - delta, 0.0)
+
 	# Don't process ship input if any blocking UI is open
 	if _is_ui_blocking_input():
 		ship.want_turn_left = false
@@ -127,6 +142,10 @@ func _ground_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_ve
 	var ore := Touchdown.ore_under(planet, state.transform.origin)
 	if not ore:
 		return false
+	# Just broke ground: still scraping the surface on the way up, so no touchdown and no
+	# crash damage until the ship has had a moment to climb clear.
+	if _ground_grace > 0.0:
+		return true
 	if _touchdown_pending:
 		return true
 	var up := planet.global_position.direction_to(state.transform.origin)

@@ -9,6 +9,8 @@ class_name OreDrill
 ## drill kickback. Between layers the player can bank (stop) and keep what was dug.
 ## The bit stays in the hole between layers and sinks deeper with each one.
 ## Every finished dig spends the seam; a spent seam can't be drilled (phase starts DONE).
+## The dig's progress is reported to the seam (OreDeposit.set_dug) so its rock visibly
+## crumbles away as the bit works through it.
 ## Draws the drill bit and dust under the ship while it bites.
 
 enum Phase { READY, DIGGING, DONE }
@@ -72,6 +74,14 @@ func depth() -> int:
 
 func is_holding() -> bool:
 	return _holding
+
+## How much of the seam this dig has broken through (0..1): the layers already broken
+## plus the sweep in progress. A finished dig has taken the lot.
+func dug_share() -> float:
+	if phase == Phase.DONE:
+		return 1.0
+	var progress := timing.progress if _holding and timing else 0.0
+	return clampf((float(layer) + progress) / float(layer_count()), 0.0, 1.0)
 
 ## True between layers of a dig that has dug something (the player may bank).
 func can_bank() -> bool:
@@ -168,6 +178,9 @@ func _set_holding(value: bool) -> void:
 		_dust.emitting = value
 
 func _process(_delta: float) -> void:
+	# A finished dig hands the seam the rest via spend(), so only report a live one
+	if is_instance_valid(ore) and phase != Phase.DONE:
+		ore.set_dug(dug_share())
 	queue_redraw()
 
 ## How far the bit is into the ground: one BIT_LENGTH per layer already broken, plus the

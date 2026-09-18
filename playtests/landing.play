@@ -1,6 +1,7 @@
 # Touchdown and liftoff on plain ground over Rook's ore seam. Hard landings bounce and hurt,
 # sideways contact doesn't land, a throttled descent touches down; the landed ship
-# rides the orbit without burning fuel, and thrust lifts off for a gravity x cargo fee.
+# rides the orbit without burning fuel, and thrust releases it to fly off under its own
+# engines - no fee, just the thruster fuel the climb takes.
 # Run: tools/play.sh playtests/landing.play   (frames land in .playtest/landing_*.png)
 
 press enter
@@ -65,23 +66,26 @@ assert pt.altitude("Rook") < 16 "sits on the surface"
 assert ship.camera.zoom.x > 1.4 "landed zoom"
 screenshot landing_3_riding
 
-# --- Liftoff costs fuel scaled by gravity x cargo ---
+# --- Liftoff is free; the ship flies itself off under thrust ---
 eval inv.add_item("crystal", 20)
-eval pt.set_meta("cost", ship.state_machine.current_state.liftoff_cost())
-assert pt.get_meta("cost") > 8 * pt.planet("Rook").surface_gravity() "cargo raises the liftoff cost"
-hold thrust 0.1
+down thrust
 wait_until pt.state_name() == "FlyingState" 2
-assert pt.get_meta("landed_fuel") - ship.fuel >= pt.get_meta("cost") "liftoff burned its fee"
+assert abs(ship.linear_velocity.length() - pt.planet("Rook").linear_velocity.length()) < 25 "released at rest, not launched"
 burst landing_4_liftoff 4 0.15
-wait_until pt.altitude("Rook") > 20 2
-assert pt.state_name() == "FlyingState" "climbing away without landing again"
+wait_until pt.altitude("Rook") > 60 4
+up thrust
+assert pt.state_name() == "FlyingState" "climbing away under thrust without landing again"
+assert pt.get_meta("landed_fuel") - ship.fuel < 30 "only the climb costs fuel, no launch fee"
 
-# --- Too little fuel: the engines burn out on the ground ---
+# --- Too little fuel to climb out: the tank runs dry on the way up and strands the ship.
+# Breaking ground is free, so this is the honest failure now: not "you can't afford to
+# leave" but "you spent your last fuel trying to". 5 fuel still gets off Rook; 2 doesn't.
 eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15
 wait 0.5
-eval ship.set("fuel", 5.0)
-hold thrust 0.1
-wait_until pt.state_name() == "StrandedState" 3
-assert ship.fuel == 0 "tank burned dry"
+eval ship.set("fuel", 2.0)
+down thrust
+wait_until pt.state_name() == "StrandedState" 5
+up thrust
+assert ship.fuel == 0 "tank burned dry climbing"
 state

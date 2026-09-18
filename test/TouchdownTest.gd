@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## Tests for landing near an ore seam: reach detection, touchdown vs hard landing,
-## bounce, liftoff fuel cost, and the PlanetLandedState lock / liftoff.
+## bounce, and the PlanetLandedState lock / liftoff.
 
 const LAND := Touchdown.Result.LAND
 const HARD := Touchdown.Result.HARD
@@ -81,16 +81,15 @@ func test_hard_landing_damages_and_bounces_out() -> void:
 	var v := Touchdown.bounce_velocity(Vector2(-200, 40), Vector2.RIGHT, planet_vel)
 	assert_float((v - planet_vel).x).is_equal_approx(200.0 * Touchdown.BOUNCE, 0.001)
 	assert_float((v - planet_vel).y).is_equal_approx(20.0, 0.001)
-	var soft := Touchdown.bounce_velocity(Vector2(-45, 0), Vector2.RIGHT, Vector2.ZERO)
-	assert_float(soft.x).is_equal(Touchdown.MIN_BOUNCE_SPEED)
-
-
-func test_liftoff_cost_scales_with_gravity_and_cargo() -> void:
-	var base := Touchdown.liftoff_cost(1.0, 0.0)
-	assert_float(base).is_equal(Touchdown.LIFTOFF_FUEL_PER_G)
-	assert_float(Touchdown.liftoff_cost(2.0, 0.0)).is_equal_approx(base * 2.0, 0.001)
-	assert_float(Touchdown.liftoff_cost(1.0, 80.0)).is_equal_approx(base * 2.0, 0.001)
-	assert_float(Touchdown.liftoff_cost(0.5, 160.0)).is_equal_approx(base * 1.5, 0.001)
+	# Each bounce keeps only BOUNCE of the impact, so falling back on the same spot
+	# converges on a landing instead of bouncing off forever
+	var speed := 200.0
+	var bounces := 0
+	while speed >= Touchdown.LANDING_SPEED and bounces < 20:
+		speed = absf(Touchdown.bounce_velocity(Vector2(-speed, 0), Vector2.RIGHT, Vector2.ZERO).x)
+		bounces += 1
+	assert_float(speed).is_less(Touchdown.LANDING_SPEED)
+	assert_int(bounces).is_less(20)
 
 
 func test_landed_pose_is_held_within_reach_of_the_seam() -> void:
@@ -127,35 +126,42 @@ func test_landed_ship_locks_to_the_planet_and_burns_no_fuel() -> void:
 	assert_float(ship.fuel).is_equal(fuel)
 
 
-func test_liftoff_burns_fuel_and_flies_away() -> void:
+func test_liftoff_costs_nothing_and_releases_the_ship_under_its_own_power() -> void:
 	var planet := _planet(400.0)
 	var ore := _ore(planet, 0.0)
 	var ship := _landed_ship(planet, ore)
 	InventoryManager.add_item("crystal", 20)
 	var state := ship.state_machine.current_state as PlanetLandedState
-	var cost := state.liftoff_cost()
-	assert_float(cost).is_equal_approx(Touchdown.liftoff_cost(planet.surface_gravity(), 40.0), 0.001)
 	var fuel := ship.fuel
 	state.lift_off()
-	assert_float(ship.fuel).is_equal_approx(fuel - cost, 0.001)
+	# Breaking ground is free - only the climb costs fuel, and that is ordinary thrust
+	assert_float(ship.fuel).is_equal(fuel)
 	await await_millis(100)
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
-	assert_float((ship.linear_velocity - planet.linear_velocity).dot(Vector2.RIGHT)).is_greater(0.0)
+	# Nothing is thrown: the ship is handed over at rest relative to the planet and has to
+	# fly itself off the surface
+	assert_float((ship.linear_velocity - planet.linear_velocity).length()).is_less(1.0)
+	# ...and the ground rules are held off so it isn't judged as landing again at once
+	var flying := ship.state_machine.current_state as FlyingState
+	assert_bool(flying.is_ignoring_ground()).is_true()
 
 
-func test_liftoff_without_enough_fuel_burns_the_tank_dry() -> void:
+func test_an_empty_tank_still_releases_the_ship_it_just_cannot_climb() -> void:
 	var planet := _planet(400.0)
 	var ore := _ore(planet, 0.0)
 	var ship := _landed_ship(planet, ore)
 	var state := ship.state_machine.current_state as PlanetLandedState
-	ship.fuel = state.liftoff_cost() * 0.5
+	ship.fuel = 0.0
 	var depleted := [false]
 	ship.fuel_depleted.connect(func(): depleted[0] = true)
 	state.lift_off()
+	# Nothing is taken and nothing is faked: with no fuel the engines simply never fire,
+	# so the ship comes straight back down (see landing.play for the stranding it leads to)
 	assert_float(ship.fuel).is_equal(0.0)
-	assert_bool(depleted[0]).is_true()
+	assert_bool(depleted[0]).is_false()
 	await await_millis(100)
-	assert_str(ship.state_machine.get_current_state_name()).is_equal("PlanetLandedState")
+	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
+	assert_float((ship.linear_velocity - planet.linear_velocity).length()).is_less(1.0)
 
 
 func test_a_seam_refilling_under_a_landed_ship_gets_a_fresh_drill() -> void:

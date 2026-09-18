@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 
-## Tests for ore depletion: a dig spends the seam, spent seams refuse the drill and go
-## dim, they refill on play time, and their timers survive a save.
+## Tests for ore depletion: drilling crumbles the rock away, a dig spends the seam, a
+## spent seam refuses the drill and leaves the view and the map, seams refill on play
+## time, and their timers survive a save.
 
 const SAVE_FILE := "user://ore_test_save.cfg"
 
@@ -47,15 +48,60 @@ func _dig_one_layer(drill: OreDrill) -> void:
 		drill.tick(0.0, false)
 
 
-func test_spending_dims_the_seam_and_starts_its_timer() -> void:
+func test_spending_breaks_the_seam_up_and_starts_its_timer() -> void:
 	var ore := _ore()
+	var marker := OreMinimapTarget.new(ore)
 	assert_bool(ore.is_spent()).is_false()
-	assert_object(ore.ore_color()).is_equal(Colors.PRIMARY)
+	assert_float(ore.remaining()).is_equal(1.0)
+	assert_bool(marker.is_minimap_visible()).is_true()
+
 	ore.spend()
 	assert_bool(ore.is_spent()).is_true()
 	assert_float(ore.regrow_left()).is_equal(OreDeposit.REGROW_TIME)
-	assert_object(ore.ore_color()).is_equal(Colors.PRIMARY_DIM)
-	assert_object(OreMinimapTarget.new(ore).get_minimap_color()).is_equal(Colors.PRIMARY_DIM)
+	assert_bool(marker.is_minimap_visible()).is_false()
+	# The last rock crumbles over CRUMBLE_TIME...
+	assert_bool(ore.visible).is_true()
+	ore._process(OreDeposit.CRUMBLE_TIME)
+	assert_float(ore.remaining()).is_equal(0.0)
+	# ...and the seam stays on screen while its debris is still in the air
+	assert_bool(ore.visible).is_true()
+	ore._process(OreDeposit.SHARD_LIFE.y)
+	assert_int(ore.debris_count()).is_equal(0)
+	assert_bool(ore.visible).is_false()
+
+
+func test_breaking_a_chunk_throws_rock() -> void:
+	var ore := _ore()
+	assert_int(ore.debris_count()).is_equal(0)
+	ore.set_dug(0.5)
+	ore._process(0.05)
+	assert_int(ore.debris_count()).is_greater(0)
+	# The splinters settle rather than hanging around
+	ore._process(OreDeposit.SHARD_LIFE.y + 0.1)
+	assert_int(ore.debris_count()).is_equal(0)
+
+
+func test_drilling_crumbles_the_rock_away_as_it_goes() -> void:
+	var ore := _ore()
+	var drill := _drill(ore)
+	_dig_one_layer(drill)
+	assert_float(drill.dug_share()).is_equal_approx(1.0 / float(drill.layer_count()), 0.001)
+	ore.set_dug(drill.dug_share())
+	ore._process(OreDeposit.CRUMBLE_TIME)
+	assert_float(ore.remaining()).is_equal_approx(1.0 - 1.0 / float(drill.layer_count()), 0.001)
+	assert_bool(ore.visible).is_true()
+	# A seam only ever erodes: an early release that loses progress doesn't put rock back
+	ore.set_dug(0.0)
+	assert_float(ore.remaining()).is_equal_approx(1.0 - 1.0 / float(drill.layer_count()), 0.001)
+
+
+func test_a_seam_spent_before_it_surfaces_is_never_shown() -> void:
+	var ore := _ore()
+	ore.spend()
+	ore.refresh()  # as a restored save does
+	assert_float(ore.remaining()).is_equal(0.0)
+	assert_bool(ore.visible).is_false()
+	assert_bool(ore.tracking_target().is_valid()).is_false()
 
 
 func test_rich_seams_take_longer_to_refill() -> void:
@@ -112,17 +158,19 @@ func test_seams_refill_after_their_time() -> void:
 	_gs.tick_ore_regrowth(1.0)
 	assert_bool(ore.is_spent()).is_false()
 	assert_dict(_gs.spent_ore).is_empty()
-	assert_object(ore.ore_color()).is_equal(Colors.PRIMARY)
 	assert_int(_drill(ore).phase).is_equal(OreDrill.Phase.READY)
 
 
-func test_refilling_shows_the_seam_surfacing_again() -> void:
+func test_refilling_shows_fresh_rock_surfacing_again() -> void:
 	var ore := _ore()
 	ore.spend()
 	ore._process(2.0)
+	assert_bool(ore.visible).is_false()
 	_gs.tick_ore_regrowth(OreDeposit.REGROW_TIME)
 	ore._process(0.1)
 	assert_float(ore._reveal_time).is_equal_approx(0.1, 0.001)
+	assert_float(ore.remaining()).is_equal(1.0)
+	assert_bool(ore.visible).is_true()
 
 
 func test_new_game_refills_everything() -> void:

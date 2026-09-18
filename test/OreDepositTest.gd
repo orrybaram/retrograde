@@ -45,28 +45,31 @@ func test_seam_sits_on_the_surface_facing_out() -> void:
 	assert_float(ore.reach_angle()).is_equal_approx(OreDeposit.REACH / 400.0, 0.0001)
 
 
-func test_hexes_sit_just_under_the_surface_and_are_stable() -> void:
-	var hexes := OreDeposit.shape_hexes(false, 1234)
-	assert_int(hexes.size()).is_between(OreDeposit.HEX_COUNT.x, OreDeposit.HEX_COUNT.y)
-	for hex in hexes:
-		# Local +x points out of the surface, so the hexes are at negative x
-		assert_float(-hex["pos"].x).is_between(OreDeposit.DEPTH_MIN, OreDeposit.DEPTH_MAX)
-		assert_float(absf(hex["pos"].y)).is_less_equal(OreDeposit.CLUSTER)
-		assert_float(hex["size"]).is_between(OreDeposit.HEX_MIN, OreDeposit.HEX_MAX)
-		assert_float(hex["turn"]).is_between(0.0, TAU)
+func test_chunks_sit_just_under_the_surface_and_are_stable() -> void:
+	var chunks := OreDeposit.shape_chunks(false, 1234)
+	assert_int(chunks.size()).is_between(OreDeposit.CHUNK_COUNT.x, OreDeposit.CHUNK_COUNT.y)
+	for chunk in chunks:
+		# Local +x points out of the surface, so the chunks are at negative x
+		assert_float(-chunk["pos"].x).is_between(OreDeposit.DEPTH_MIN, OreDeposit.DEPTH_MAX)
+		assert_float(absf(chunk["pos"].y)).is_less_equal(OreDeposit.CLUSTER)
+		assert_float(chunk["size"]).is_between(OreDeposit.CHUNK_MIN, OreDeposit.CHUNK_MAX)
+		assert_float(chunk["turn"]).is_between(0.0, TAU)
+	# Ordered shallowest first, the order the bit reaches them in
+	for i in chunks.size() - 1:
+		assert_float(-chunks[i]["pos"].x).is_less_equal(-chunks[i + 1]["pos"].x)
 	# Same seed, same seam
-	assert_array(OreDeposit.shape_hexes(false, 1234)).is_equal(hexes)
-	assert_array(OreDeposit.shape_hexes(false, 99)).is_not_equal(hexes)
+	assert_array(OreDeposit.shape_chunks(false, 1234)).is_equal(chunks)
+	assert_array(OreDeposit.shape_chunks(false, 99)).is_not_equal(chunks)
 
 
-func test_hexes_are_scattered_not_strung_out_in_a_line() -> void:
+func test_chunks_are_scattered_not_strung_out_in_a_line() -> void:
 	# Depths vary as much as the sideways spread does, so a seam reads as a cluster
 	var depths := []
 	var sideways := []
 	for seed_value in 40:
-		for hex in OreDeposit.shape_hexes(true, seed_value):
-			depths.append(-hex["pos"].x)
-			sideways.append(hex["pos"].y)
+		for chunk in OreDeposit.shape_chunks(true, seed_value):
+			depths.append(-chunk["pos"].x)
+			sideways.append(chunk["pos"].y)
 	var depth_span: float = depths.max() - depths.min()
 	var side_span: float = sideways.max() - sideways.min()
 	assert_float(depth_span).is_greater(OreDeposit.CLUSTER)
@@ -74,9 +77,9 @@ func test_hexes_are_scattered_not_strung_out_in_a_line() -> void:
 
 
 func test_rich_seams_are_bigger() -> void:
-	var plain := OreDeposit.shape_hexes(false, 7)
-	var rich := OreDeposit.shape_hexes(true, 7)
-	assert_int(rich.size()).is_between(OreDeposit.RICH_HEX_COUNT.x, OreDeposit.RICH_HEX_COUNT.y)
+	var plain := OreDeposit.shape_chunks(false, 7)
+	var rich := OreDeposit.shape_chunks(true, 7)
+	assert_int(rich.size()).is_between(OreDeposit.RICH_CHUNK_COUNT.x, OreDeposit.RICH_CHUNK_COUNT.y)
 	assert_int(rich.size()).is_greater(plain.size())
 
 
