@@ -14,6 +14,9 @@ uniform vec4 nebula_color: source_color = vec4(0.180, 0.165, 0.125, 1.0);
 uniform vec4 star_color_warm: source_color = vec4(0.949, 0.910, 0.824, 1.0);
 uniform vec4 star_color_cool: source_color = vec4(0.435, 0.722, 0.824, 1.0);
 uniform float nebula_strength: hint_range(0.0, 1.0, 0.01) = 0.8;
+// 1.0 = the sky as it should be, 0.0 = the Void. Faint stars wink out first as
+// this falls, then the survivors dim, then the olive-black itself goes to nothing.
+uniform float star_fade: hint_range(0.0, 1.0, 0.01) = 1.0;
 
 void fragment() {
 	vec2 uv = UV;
@@ -31,7 +34,9 @@ void fragment() {
 		// Sample noise for star mask
 		float noise_sample = texture(noise_texture, sample_coords).r;
 		float star_intensity = pow(noise_sample, density);
-		float star_mask = step(step_size, star_intensity);
+		// Raising the cutoff as the sky dies takes the dimmest stars out first,
+		// so the field thins rather than fading as one sheet.
+		float star_mask = step(step_size + (1.0 - star_fade) * (1.0 - step_size), star_intensity);
 		
 		// Generate random color per star using offset noise samples
 		float r = texture(noise_texture, sample_coords + vec2(0.31, 0.17)).r;
@@ -50,5 +55,5 @@ void fragment() {
 	float haze = 0.5 + 0.25 * sin(haze_uv.x * 3.1 + 1.3) + 0.25 * sin(haze_uv.y * 2.3 + haze_uv.x * 1.7);
 	haze *= smoothstep(1.4, 0.1, distance(UV, vec2(0.75, 0.3)));
 	vec3 background = mix(space_color.rgb, nebula_color.rgb, clamp(haze, 0.0, 1.0) * nebula_strength);
-	COLOR = vec4(background + star_color, 1.0);
+	COLOR = vec4((background + star_color * star_fade) * star_fade, 1.0);
 }

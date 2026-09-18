@@ -3,7 +3,8 @@ class_name Ship
 
 ## Player ship entity. Owns fuel, hull (via HealthComponent), cargo weight, and
 ## input intent flags. Behavior is delegated to states via StateMachine:
-## FlyingState → LandedState / HarvestingState / StrandedState / DestroyedState.
+## FlyingState → LandedState (docked) / PlanetLandedState (on a landing site) /
+## HarvestingState / StrandedState / DestroyedState.
 ## Signals: fuel_changed, fuel_depleted, cargo_changed.
 
 @export var thrust_power: float = 350.0
@@ -89,6 +90,7 @@ var original_boost_lifetime: float = 1.5
 
 func _ready() -> void:
 	add_to_group("ship")
+	z_index = 2  # over planets, stations and landing pads it sits on
 	contact_monitor = true
 	max_contacts_reported = 4
 	can_sleep = false  # keep body awake while testing input; turn back on later if you like
@@ -117,6 +119,10 @@ func _ready() -> void:
 	var magnet := GemMagnet.new()
 	magnet.name = "GemMagnet"
 	add_child(magnet)
+
+	var scanner := PlanetScanner.new()
+	scanner.name = "PlanetScanner"
+	add_child(scanner)
 
 	# Store initial mass as base_mass for cargo calculations
 	base_mass = mass
@@ -157,7 +163,7 @@ func _process(_dt: float) -> void:
 	var now := Time.get_ticks_usec()
 	var real_dt := (now - _last_frame_usec) / 1_000_000.0 if _last_frame_usec > 0 else 0.0
 	_last_frame_usec = now
-	if real_dt < 0.1 and not is_destroyed():
+	if real_dt < 0.1 and not is_gone():
 		var catch_up := HarvestJuice.hitstop_catch_up(linear_velocity, real_dt)
 		if catch_up != Vector2.ZERO:
 			global_position += catch_up
@@ -174,7 +180,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 
 
 func take_damage(amount: float) -> void:
-	if is_destroyed():
+	if is_gone():
 		return
 
 	# Trigger camera shake on damage
@@ -196,9 +202,18 @@ func explode() -> void:
 func is_destroyed() -> bool:
 	return state_machine and state_machine.current_state is DestroyedState
 
+## Destroyed or taken by the Void: either way the hull is gone and nothing —
+## damage, hitstop catch-up, harvesting — should still be acting on it.
+func is_gone() -> bool:
+	return state_machine and (state_machine.current_state is DestroyedState or state_machine.current_state is ConsumedState)
+
 ## Helper method to check if ship is locked to planet
 func is_locked_to_planet() -> bool:
 	return state_machine and state_machine.current_state is LandedState
+
+## True while sitting on a planet's landing site.
+func is_landed_on_planet() -> bool:
+	return state_machine and state_machine.current_state is PlanetLandedState
 
 ## Reset boost particles to original state (after explosion)
 func reset_boost_particles() -> void:
@@ -286,8 +301,7 @@ func reapply_all_upgrades(game_state: GameState) -> void:
 					UpgradeItem.EffectType.MULTIPLY_STAT:
 						_apply_multiply_stat_from_upgrade(upgrade)
 					UpgradeItem.EffectType.UNLOCK_FEATURE:
-						# Unlock features are handled in GameState, skip here
-						pass
+						upgrade._apply_unlock_feature(game_state)
 	
 	# Update hull and fuel to match new max values
 	health_component.max_hp = max_hull

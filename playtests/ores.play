@@ -1,0 +1,55 @@
+# Ore seams: buried until their planet is scanned, then subtle hexes just under the
+# surface that ride the orbit, show on the minimap and become the tracked target.
+# Run: tools/play.sh playtests/ores.play   (frames land in .playtest/ores_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+
+# Skip the store: this scenario is about the seams
+eval gs.set("has_planet_scanner", true)
+assert pt.planet("Rook").get_ore_deposits().size() >= 3 "Rook (a moon) grows a few seams"
+assert pt.ore("Rook").rich "moon seams are rich"
+assert not pt.ore("Rook").visible "seam buried before the scan"
+assert not pt.ore("Rook").minimap_target.is_minimap_visible() "not on the minimap before the scan"
+assert pt.planet("Sonder").get_ore_deposits().is_empty() "gas giants have no ground to land on"
+eval pt.park_near_planet("Rook", 1900, 8)
+wait 0.5
+screenshot ores_1_buried
+wait_until gs.is_planet_scanned("Veld/Rook") 6
+wait 0.3
+screenshot ores_2_surfaced
+assert pt.ore("Rook").visible "the scan surfaces the seam"
+assert pt.ore("Rook").minimap_target.is_minimap_visible() "seam on the minimap"
+assert pt.snapshot().tracking.label == "ORE" "tracker points at the seam"
+wait_until not pt.node("scan_panel").is_typing() 5
+assert pt.node("scan_panel").body_text().contains("%d SEAMS" % pt.planet("Rook").get_ore_deposits().size()) "readout counts the seams"
+wait 1.5
+
+# The hexes sit just under the surface and ride the orbit with the planet
+eval pt.set_meta("ore_start", pt.ore("Rook").global_position)
+wait 2
+assert pt.ore("Rook").global_position.distance_to(pt.get_meta("ore_start")) > 20 "seam moves with the orbit"
+assert abs((pt.ore("Rook").global_position - pt.planet("Rook").global_position).length() - pt.planet("Rook").radius) < 1 "seam sits at the surface"
+
+# Close up, and from afar with the tracking chevron
+eval pt.hover_over_ore("Rook", 220)
+wait 0.4
+screenshot ores_3_close
+# Landing clears the seam target (you have arrived), so point at it again from afar
+eval pt.park_near_planet("Rook", 3600, 60)
+eval get_node("/root/NavSystem").track(pt.ore("Rook").tracking_target())
+wait 0.5
+screenshot ores_4_tracking
+assert pt.snapshot().tracking.label == "ORE" "still tracking the seam from afar"
+state

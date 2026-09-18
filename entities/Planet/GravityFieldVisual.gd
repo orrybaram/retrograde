@@ -4,6 +4,11 @@ class_name GravityFieldVisual
 ## Draws concentric gravity-field rings around a planet using inverse-square falloff.
 ## Ring count, outline color, and width are exported. Radius and base strength are
 ## read from the parent Planet at draw time.
+## The ring geometry is shared (see ring_radius): the scanner only reaches inner orbit,
+## the first ring clear of the surface.
+
+## The innermost ring sits this far inside the surface.
+const RING_INSET := 100.0
 
 var planet: Planet = null
 @export var base_color: Color = Color(0, 0, 0, 0.0): set = _set_base_color
@@ -57,12 +62,27 @@ func _set_outline_color(c: Color) -> void:
 	outline_color = c
 	queue_redraw()
 
+## Radius of ring `index` of `count`, drawn from just inside the surface out to the edge
+## of the gravity field.
+static func ring_radius(index: int, count: int, planet_radius: float, max_radius: float) -> float:
+	var t := float(index) / float(count - 1) if count > 1 else 1.0
+	return lerpf(planet_radius - RING_INSET, max_radius, t)
+
+## Inner orbit: the first ring that clears the surface. The planet scanner only reaches
+## this far, so scanning means flying in close and holding there against the pull.
+static func inner_orbit_radius(planet_radius: float, max_radius: float, count: int) -> float:
+	for i in count:
+		var r := ring_radius(i, count, planet_radius, max_radius)
+		if r > planet_radius:
+			return r
+	return max_radius
+
 func _draw() -> void:
 	var planet_radius = _get_radius()
 	# Get max_radius_multiplier from Planet to ensure visual matches physics
 	var max_radius_multiplier = planet.gravity_radius_multiplier if planet else 20.0
 	var max_radius = planet_radius * max_radius_multiplier
-	var min_radius = planet_radius - 100.0
+	var min_radius = planet_radius - RING_INSET
 	# Fill
 	draw_circle(Vector2.ZERO, max_radius, base_color)
 
@@ -71,8 +91,7 @@ func _draw() -> void:
 		for i in range(ring_count):
 			# Evenly distribute rings from planet surface to max gravity radius
 			# i=0 is innermost (closest to planet), i=ring_count-1 is outermost (at collision boundary)
-			var t = float(i) / float(ring_count - 1) if ring_count > 1 else 1.0
-			var ring_radius = lerp(min_radius, max_radius, t)
+			var ring_radius := GravityFieldVisual.ring_radius(i, ring_count, planet_radius, max_radius)
 			
 			# Calculate opacity: decreases from inner (full) to outer (lowest)
 			var opacity_ratio = 1.0 - (float(i) / float(ring_count))

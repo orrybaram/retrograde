@@ -22,13 +22,16 @@ enum MainGameState {
 @onready var encounter_field: EncounterField = $EncounterField
 
 ## Relaunch fee per game-over reason (a tractor-beam rescue is free).
-const RELAUNCH_PENALTY := {"Ship Destroyed": 20, "Ship Abandoned": 10}
+const RELAUNCH_PENALTY := {"Ship Destroyed": 20, "Ship Abandoned": 10, "Consumed": 30}
 ## What the robot radios after each game-over reason. Its confirm line relaunches.
 const GAME_OVER_MESSAGES := {
 	"Ship Destroyed": RobotRadio.MSG_SHIP_DESTROYED,
 	"Ship Abandoned": RobotRadio.MSG_SHIP_ABANDONED,
 	"Tractor Beam": RobotRadio.MSG_TRACTOR_RESCUE,
+	"Consumed": RobotRadio.MSG_VOID_CONSUMED,
 }
+## The dark takes a moment to finish closing before the robot tries the radio.
+const CONSUMED_SILENCE := 2.4
 
 var current_game_state: MainGameState = MainGameState.MENU
 var last_game_over_reason: String = ""
@@ -40,6 +43,7 @@ func _ready() -> void:
 		start_menu.start_game.connect(_on_start_game)
 		start_menu.load_game.connect(_on_load_game)
 	RobotRadio.confirmed.connect(_on_radio_confirmed)
+	RobotRadio.line_started.connect(_on_radio_line_started)
 	if pause_menu:
 		pause_menu.quit_to_menu.connect(_on_quit_to_menu)
 	
@@ -49,6 +53,9 @@ func _ready() -> void:
 
 	# Stranded ship: abandon it (or get towed inside a tractor beam)
 	EventBus.abandon_ship_requested.connect(_on_abandon_ship_requested)
+
+	# The Void ran its clock out
+	VoidZone.consumed.connect(_on_void_consumed)
 	
 	# Start with menu visible and game paused
 	if start_menu:
@@ -88,6 +95,17 @@ func _input(event: InputEvent) -> void:
 			elif system_map and system_map.visible:
 				system_map.close_map()
 				get_viewport().set_input_as_handled()
+
+## A transmission that pauses the game has to be answered, and the radio panel
+## steps aside for any open menu. So the menus go instead: otherwise the pause
+## holds with nothing on screen able to clear it.
+func _on_radio_line_started(_line: RadioLine, conversation: RadioConversation) -> void:
+	if conversation == null or not conversation.pause_game:
+		return
+	if inventory_ui and inventory_ui.visible:
+		inventory_ui.close_inventory()
+	if system_map and system_map.visible:
+		system_map.close_map()
 
 func _toggle_inventory() -> void:
 	if not inventory_ui:
@@ -170,6 +188,18 @@ func _on_abandon_ship_requested() -> void:
 		if derelict and stranded:
 			stranded.abandon_to(derelict)
 		_show_game_over_delayed("Ship Abandoned")
+
+## Thirty seconds past the last orbit and the dark has the ship. Nothing explodes
+## and nothing is left behind, so there's no wreck to salvage — just the silence
+## before the robot works out what happened.
+func _on_void_consumed() -> void:
+	if current_game_state != MainGameState.PLAYING or game_over_pending:
+		return
+	game_over_pending = true
+	if ship and ship.state_machine and ship.state_machine.has_state("ConsumedState"):
+		ship.state_machine.change_state("ConsumedState")
+	await get_tree().create_timer(CONSUMED_SILENCE).timeout
+	show_game_over("Consumed")
 
 func _on_quit_to_menu() -> void:
 	current_game_state = MainGameState.MENU

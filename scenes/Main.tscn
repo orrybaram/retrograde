@@ -20,6 +20,7 @@
 [ext_resource type="Script" path="res://scenes/SpaceDust.gd" id="23_dust"]
 [ext_resource type="Script" path="res://entities/encounters/EncounterField.gd" id="24_enc"]
 [ext_resource type="Resource" path="res://entities/encounters/tables/deep_space.tres" id="25_enct"]
+[ext_resource type="Script" path="res://scenes/VoidShroud.gd" id="24_void"]
 
 [node name="Main" type="Node2D" unique_id=1692069879]
 script = ExtResource("1")
@@ -57,8 +58,6 @@ table = ExtResource("25_enct")
 [node name="HUD" parent="CanvasLayer" unique_id=466394536 instance=ExtResource("8")]
 offset_left = 13.0
 offset_top = 12.0
-offset_right = 13.0
-offset_bottom = 12.0
 mouse_filter = 0
 
 [node name="StartMenu" parent="CanvasLayer" unique_id=669522817 instance=ExtResource("11")]
@@ -76,3 +75,7 @@ mouse_filter = 0
 [node name="SystemMap" parent="CanvasLayer" unique_id=1107096874 instance=ExtResource("19")]
 
 [node name="PauseMenu" parent="CanvasLayer" unique_id=125140598 instance=ExtResource("22")]
+
+[node name="VoidShroud" type="CanvasLayer" parent="."]
+layer = 40
+script = ExtResource("24_void")

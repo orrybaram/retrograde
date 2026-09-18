@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+; Nothing the robot says gets through from out here. `text` is what it meant;
+; `garbled` is what the pilot actually receives, and the red `lost` face is the
+; only part of the transmission that still carries anything.
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "P-pilot? Pilot. Your carrier just... stopped. Not cut. S-s-stopped."
+expression = &"lost"
+glitch = true
+garbled = true
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "There's no wreck. There's no heat. There's no you. I hate it out there."
+expression = &"lost"
+glitch = true
+garbled = true
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "New hull's on the pad. Stay inside the orbits and I'll stay talking."
+expression = &"lost"
+glitch = true
+garbled = true
+confirm = "RELAUNCH  -{penalty} CR"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"void_consumed"
+priority = 3
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])

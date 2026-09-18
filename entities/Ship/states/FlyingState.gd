@@ -8,16 +8,33 @@ class_name FlyingState
 
 var ALIGNMENT_ANGLE_THRESHOLD_DEGREES: float = 30.0
 var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after entering state
+## A ship breaking ground is released still touching the surface, so the ground rules are
+## held off this long - otherwise it would be judged as landing again the same instant.
+const LIFTOFF_GRACE := 0.9
+
 var _state_enter_time: float = 0.0
+var _touchdown_pending := false
+var _ground_grace := 0.0
 
 func enter() -> void:
 	super.enter()
 	_state_enter_time = Time.get_ticks_msec() / 1000.0
+	_touchdown_pending = false
+	# _ground_grace is deliberately left alone: PlanetLandedState sets it on the way out,
+	# before this runs.
+
+## Hold off the ground rules (touchdown and crash damage) for `seconds`.
+func ignore_ground_for(seconds: float) -> void:
+	_ground_grace = maxf(_ground_grace, seconds)
+
+func is_ignoring_ground() -> bool:
+	return _ground_grace > 0.0
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
 		return
-	
+	_ground_grace = maxf(_ground_grace - delta, 0.0)
+
 	# Don't process ship input if any blocking UI is open
 	if _is_ui_blocking_input():
 		ship.want_turn_left = false
@@ -64,6 +81,9 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 				continue
 
 			var ship_speed = state.get_contact_local_velocity_at_position(i)
+			# Ground near an ore seam has its own rules (touch down, or a hard landing)
+			if collider is Planet and _ground_contact(state, collider, ship_speed):
+				break
 
 			var collider_speed = collider.linear_velocity
 			var relative_velocity = ship_speed - collider_speed
@@ -114,6 +134,32 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			
 			var force = Vector2.LEFT.rotated(ship.rotation) * power
 			state.apply_central_force(force)
+
+## Contact with a planet within reach of one of its revealed ore seams: touch down
+## gently, or take damage and bounce. Returns true when the ship is over a seam (the
+## ordinary crash damage doesn't apply there).
+func _ground_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_velocity: Vector2) -> bool:
+	var ore := Touchdown.ore_under(planet, state.transform.origin)
+	if not ore:
+		return false
+	# Just broke ground: still scraping the surface on the way up, so no touchdown and no
+	# crash damage until the ship has had a moment to climb clear.
+	if _ground_grace > 0.0:
+		return true
+	if _touchdown_pending:
+		return true
+	var up := planet.global_position.direction_to(state.transform.origin)
+	var rel := contact_velocity - planet.linear_velocity
+	match Touchdown.judge(rel, state.transform.get_rotation(), up):
+		Touchdown.Result.LAND:
+			_touchdown_pending = true
+			ship.set_meta("pending_ore", ore)
+			ship.state_machine.change_state.call_deferred("PlanetLandedState")
+		Touchdown.Result.HARD:
+			ship.take_damage(Touchdown.hard_damage(rel.length(), ship.crash_damage_multiplier))
+			state.linear_velocity = Touchdown.bounce_velocity(rel, up, planet.linear_velocity)
+			EventBus.action_message_changed.emit("TOO FAST TO LAND")
+	return true
 
 func _engine_coughing() -> bool:
 	return ship.low_fuel_effect != null and ship.low_fuel_effect.is_coughing()

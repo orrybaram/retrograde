@@ -43,9 +43,11 @@ successful live exploration into one. A scenario stops at the first failing non-
 | `wait <sec>` / `frames <n>` / `timescale <n>` | advance time (wait is game time) |
 | `seek <Kind> [hops]` | warp around deep space until a node of that kind (`Scrap`, `Container`, `Derelict`) is streaming nearby, and park there; fails if none turns up. Deep space is sparse, so scenarios can't assume a given spot holds one |
 | `stage_harvest [dist] [trophy\|plain] [kind:<Kind>]` | park the flying ship `dist`px (default 40; harvest circle radius 60) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_depleted`/`harvest_stopped` events. `plain` forces an ordinary 3-hit node, `trophy` forces a 5-hit one, `kind:Container` picks only that sort (`Scrap`, `Container`, `Derelict`) |
+| `land <planet> [descent] [sec]` | autopilot: taps `thrust` to fall onto the planet at ≤ `descent` px/s (default 15) until `PlanetLandedState`; start nose-up over a seam with `pt.hover_over_ore` |
 | `burst <name> <n> <sec>` | n screenshots `sec` apart → `<name>_00.png…` (for judging motion/feel) |
 | `wait_until <expr> [timeout]` | poll expression |
 | `assert <expr> ["message"]` | record failure if falsy |
+| `reload` | reload from the save (as CONTINUE does) and wait for the load to finish |
 | `eval <expr>` / `state` / `screen` / `screenshot <name>` / `log <text>` / `quit` | observe |
 
 Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv` (InventoryManager), `bus`
@@ -77,15 +79,45 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/abandon.play` runs dry: the robot radios a tow offer inside a tractor beam and "abandon ship" outside it. The abandoned ship (`DerelictShip`, group `derelicts`) keeps the hold, survives respawn and reload, and five PERFECT salvage hits recover all of it (`pt.derelict_count()` and `pt.abandoned_ship()` — both ignore deep-space wrecks, which share the `derelicts` group — and `pt.warp_to(pos)`).
 
+`playtests/void.play` flies past the last orbit into the Void: the robot's warning, the stars draining, the dashboard rotting and dropping out, turning back in time, then staying too long and being consumed (`ConsumedState`, no wreck and no derelict) and relaunching. State is under `state.void` (`inside`, `depth`, `dread`, `shroud`, `exposure`); the autoload is `get_node("/root/VoidZone")`.
+
+`playtests/waypoint.play` sets tracking points on the star chart: the mark starts on the ship, the arrow keys drive it out into
+empty space (`pt.node("system_map").cursor_world`), ENTER takes it as a `WAYPOINT`, ENTER over a body tracks the body instead so
+the target rides its orbit, and DEL hands tracking back to home base (`.playtest/mark_*.png`).
+
 `playtests/minimap.play` screenshots the minimap markers (ship arrow, station silhouette + beacon, shaded planets, scrap chunks, derelict pinned to the rim).
 
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).
 
 `playtests/radio.play` departs the dock and checks the guide robot's transmission: typing, ENTER skip, TAB (`press radio_next`) advance/close, low-fuel auto-dismiss, the paused scrap tutorial, the out-of-fuel abandon-ship confirm, the abandon and explosion relaunch calls, and hiding behind menus (`.playtest/radio_*.png`). The controls (on undock) and scrap tutorials pause the game, so other scenarios first run `eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")` / `("first_scrap")`. `press space` (or `enter`/`radio_next`) finishes a line, then moves on. Game over is a radio call now: confirm it the same way (no GameOverMenu). The panel is `pt.node("radio_panel")`; the queue is `get_tree().root.get_node("RobotRadio")`. Expressions can't use `&"..."` literals — compare StringNames to plain strings.
 
+`playtests/scanner.play` checks the Planetary Scanner: nothing scans without it, buying it at the home store (`gs.has_planet_scanner`), holding in Rook's gravity field fills the meter (leaving resets it), the typed survey readout (`pt.node("scan_panel").body_text()`), the sweep (`.playtest/scanner_4_sweep_*.png`) and the scan surviving a reload. Helpers: `pt.planet(name)`, `pt.park_near_planet(name, dist, [angle_deg])` (parks riding along with the planet, nose away), `pt.scanner()` (`.progress()`, `.target()`), `pt.redock()` (warp to the home port and dock).
+
+`playtests/ores.play` scans Rook (scanner granted with `eval gs.set("has_planet_scanner", true)`) and checks its ore seam: buried before, surfaced with a ping, on the minimap, tracked as `ORE`, riding the orbit (`.playtest/ores_*.png`). Seams: `pt.ore("Rook")`, `pt.planet("Rook").get_ore_deposits()`.
+
+`playtests/landing.play` lands on Rook's ground next to its seam (`PlanetLandedState`, not `LandedState`, which is docking): buried seams refuse, a fast drop bounces and hurts, sideways doesn't land, `land Rook` touches down, the landed ship rides the orbit with no fuel burn, thrust releases it to climb away on its own engines (no fee, no impulse), and too little fuel to make the climb runs the tank dry into `StrandedState` (`.playtest/landing_*.png`). Helpers: `pt.ore(planet)`, `pt.hover_over_ore(planet, height, [tilt_deg], [descent])`, `pt.altitude(planet)`, `pt.rel_speed(planet)`. Teleporting straight off the ground can re-use its contact for a frame: park away and wait a few frames first.
+
+`playtests/drill.play` lands by Rook's rich seam and drills: four PERFECT layers to bedrock with the gems reaching the hold, banking (`press reverse_thrust`) after one layer, and an OVERLOAD kickback (`.playtest/drill_*.png`). Drive layers like harvest hits: `down action`, `wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start()`, `up action`. `pt.drill()` has `.layer`, `.layer_count()`, `.phase` (0 READY, 1 DIGGING, 2 DONE), `.end_reason`, `.dug`; the transcript logs `drill_struck` and `dig_ended`.
+
+`playtests/regrow.play` spends Rook's seam with a banked dig (dim hexes, `SEAM SPENT` prompt, drill refuses), checks the refill timer survives a redock + reload, then fast-forwards it (`eval gs.tick_ore_regrowth(sec)`) and digs again (`.playtest/regrow_*.png`). `pt.ore("Rook").is_spent()`, `.regrow_left()`.
+
+## Recording a video
+```bash
+godot --path . --write-movie .playtest/video/showcase.avi --fixed-fps 30 \
+  -- --playtest=res://playtests/showcase.play --playtest-out="$PWD/.playtest/video" --playtest-fps=30
+ffmpeg -i .playtest/video/showcase.avi -c:v libx264 -crf 22 -pix_fmt yuv420p out.mp4
+```
+`playtests/showcase.play` is a captioned tour of the scanner / ore / landing / drill loop (no asserts).
+`--playtest-fps=<n>` holds each frame back to real time: Movie Maker renders faster than real time,
+but orbits run on the wall clock, so without it the physics and the planets drift apart (landings fail).
+`eval pt.caption("...")` puts a caption in the top-left corner; `pt.caption("")` clears it.
+
 ## Tips
 - Godot releases held keys when the window loses focus; the driver re-presses anything held by `down`/`hold`.
 - Screenshots need a window (not `--headless`). Read the PNG to actually look at it.
 - If a session wedges: `kill $(cat .playtest/godot.pid)`. Log: `.playtest/godot.log`.
 - Scenario runs have a 300s real-time watchdog (`--timeout S` to change).
+- Reloading: use `reload`, not `eval main.call_deferred("load_game")` + a wait. Loads are async, and a docked ship autosaves while it refuels, so sentinel values can end up in the save.
+- Flight keys are read in physics ticks: headless runs uncapped, so a `press thrust` tap can fall between ticks. Use `hold thrust 0.1`.
+- Expressions can't assign: use `eval gs.set("credits", 100)`. Start coroutines with `eval main.call_deferred("load_game")`.
 - After adding driver commands, update the doc comment at the top of `scripts/Playtest.gd` and this file.

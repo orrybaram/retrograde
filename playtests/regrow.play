@@ -1,0 +1,97 @@
+# Ore depletion: a dig crumbles the rock away and spends the seam (gone from view and
+# map, the drill refuses), the refill timer survives a save + reload, and the seam comes
+# back after its time.
+# Run: tools/play.sh playtests/regrow.play   (frames land in .playtest/regrow_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval gs.set("has_planet_scanner", true)
+eval pt.park_near_planet("Rook", 2000, 30)
+wait_until gs.is_planet_scanned("Veld/Rook") 6
+eval pt.hover_over_ore("Rook", 60)
+land Rook 15 15
+wait 0.5
+screenshot regrow_1_fresh
+
+# --- Dig one layer and bank: the seam is spent ---
+assert not pt.ore("Rook").is_spent() "full seam"
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start 3
+up action
+wait_until pt.drill().layer == 1 2
+wait 0.5
+assert pt.ore("Rook").remaining() < 1 "the broken layer took rock with it"
+assert pt.ore("Rook").visible "the rest of the seam is still there"
+screenshot regrow_1b_part_dug
+hold reverse_thrust 0.1
+wait_until pt.drill().phase == 2 1
+assert pt.ore("Rook").is_spent() "digging spends the seam"
+assert pt.ore("Rook").regrow_left() > 440 "rich seam refills in ~7.5 min"
+assert not pt.ore("Rook").minimap_target.is_minimap_visible() "and takes it off the map"
+wait 1.5
+assert pt.ore("Rook").remaining() == 0 "the rock is all dug out"
+assert not pt.ore("Rook").visible "the dug-out seam is gone from view"
+screenshot regrow_2_spent
+
+# --- Landing again: the spent seam refuses the drill ---
+hold thrust 0.1
+wait_until pt.state_name() == "FlyingState" 2
+eval pt.park_near_planet("Rook", 2000, 30)
+frames 5
+eval pt.hover_over_ore("Rook", 60)
+land Rook 15 15
+wait 0.3
+assert str(pt.snapshot().action_message).contains("SEAM SPENT") "prompt says the seam is spent"
+hold action 1
+assert pt.drill().layer == 0 and pt.drill().end_reason == "spent" "no drilling a spent seam"
+assert pt.item_count() > 0 "the first dig's gems are still aboard"
+
+# --- The timer is saved; a reload keeps the site spent ---
+eval gs.tick_ore_regrowth(100)
+eval pt.redock()
+wait_until pt.visible_ui().has("SpacePortDialogue") 5
+press esc
+# The port autosaves when the tank is full, so let that land before clearing state
+wait_until ship.fuel == ship.max_fuel 15
+eval pt.set_meta("left_at_save", pt.ore("Rook").regrow_left())
+eval gs.spent_ore.clear()
+assert not pt.ore("Rook").is_spent() "cleared before reload"
+reload
+assert pt.ore("Rook").is_spent() "spent state restored from the save"
+assert abs(pt.ore("Rook").regrow_left() - pt.get_meta("left_at_save")) < 5 "refill timer restored"
+assert pt.ore("Rook").regrow_left() < 360 "time already waited counts"
+
+# --- Refilled after its time: fresh rock, drillable again ---
+eval gs.tick_ore_regrowth(pt.ore("Rook").regrow_left() + 1)
+assert not pt.ore("Rook").is_spent() "seam refilled"
+assert pt.ore("Rook").minimap_target.is_minimap_visible() "back on the map"
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.park_near_planet("Rook", 2000, 30)
+frames 5
+eval pt.hover_over_ore("Rook", 60)
+land Rook 15 15
+wait 0.5
+screenshot regrow_3_regrown
+assert str(pt.snapshot().action_message).contains("DRILL") "drill offered again"
+down action
+wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start 3
+up action
+wait_until pt.drill().layer == 1 2
+state

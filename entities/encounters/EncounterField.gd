@@ -35,6 +35,10 @@ const MAX_DRIFT_SPEED := 30.0             # px/s, a ceiling for the innermost ri
 ## Rings closer in than this hold nothing — the sun's own gravity well owns that space.
 ## `_is_clear()` is the exact test; this is the cheap one that skips the roll entirely.
 const SUN_EXCLUSION := 20000.0
+## And nothing past the last orbit either. Out there is the Void (scripts/VoidZone.gd),
+## where nothing reflects and nothing answers; salvage floating in it would both spoil
+## that and bait the player across a line they can't safely cross.
+const VOID_EXCLUSION := VoidZone.EDGE_RADIUS
 ## Clearance from a planet's gravity field before deep space will place anything, so
 ## encounters never land inside the orbital rings the planet spawners already fill.
 const PLANET_CLEARANCE := 4000.0
@@ -302,7 +306,8 @@ func _unhook(node: Node) -> void:
 ## node whether or not it is built, so a slot key means the same thing in every session.
 func _generate(cell: Vector2i) -> Array[EncounterContact]:
 	var contacts: Array[EncounterContact] = []
-	if not table or band_mid(cell.x) < SUN_EXCLUSION:
+	var radius := band_mid(cell.x)
+	if not table or radius < SUN_EXCLUSION or radius >= VOID_EXCLUSION:
 		return contacts
 
 	var rng := RNG.get_seeded_rng(cell_seed(cell))
@@ -310,7 +315,7 @@ func _generate(cell: Vector2i) -> Array[EncounterContact]:
 	var index := 0
 
 	for i in count:
-		var def := table.pick(rng, band_mid(cell.x))
+		var def := table.pick(rng, radius)
 		var origin := _point_in_cell(cell, rng)
 		if not def:
 			continue

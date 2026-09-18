@@ -16,6 +16,7 @@ const FACES := {
 	&"surprise": [" O   O ", "   0   "],
 	&"dead": [" X   X ", "  ___  "],
 	&"glitch": [" 0 #  O", " _/-\\% "],
+	&"lost": [" %   # ", "  ###  "],
 	&"hello": [" HELLO ", " PILOT "],
 	&"loading": ["       ", "[==-  ]"],
 	&"sleep": [" -   - ", "     z "],

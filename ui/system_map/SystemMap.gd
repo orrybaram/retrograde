@@ -4,6 +4,9 @@ class_name SystemMap
 ## Fullscreen star chart: a dimmed backdrop behind a generously padded terminal
 ## frame that expands open from the middle, and a clipped chart view holding the
 ## sun, orbits, planets, stations, the ship reticle and the current nav target.
+##
+## The arrow keys drive a mark across the chart; ENTER hands it to the NavSystem,
+## either as the body it has locked onto or as a fixed waypoint out in the black.
 
 signal map_closed
 
@@ -33,6 +36,18 @@ const READOUT_INSET := 18.0
 const DASH_PERIOD_PX := 20.0
 const STAR_COUNT := 160
 const STARFIELD_SEED := 20260917
+## Hazard hatching: spacing between the diagonals, and how far the chart reaches
+## past the void's edge so the band is always visible at full zoom-out.
+const HATCH_SPACING_PX := 13.0
+const VOID_CHART_MARGIN := 1.02
+## Where the single "THE VOID" label sits, from the deep line (0) out to the chart rim (1).
+const VOID_LABEL_DEPTH := 0.5
+## How close the mark has to be, on screen, to lock onto a body instead of bare space.
+const CURSOR_SNAP_PX := 14.0
+## How far the mark stays clear of the chart edge before the view scrolls after it.
+const CURSOR_EDGE_MARGIN := 26.0
+## Seconds the confirm pulse takes to fade after a tracking point is set.
+const MARK_FLASH_TIME := 0.5
 
 @export_group("Colors")
 @export var background_color: Color = Colors.UI_BACKGROUND
@@ -45,6 +60,7 @@ const STARFIELD_SEED := 20260917
 @export var ship_color: Color = Colors.PRIMARY
 @export var space_station_color: Color = Colors.HULL_LIGHT
 @export var nav_color: Color = Colors.NAV
+@export var void_color: Color = Colors.DANGER
 
 @export_group("Display")
 @export var screen_margin_ratio: Vector2 = Vector2(0.065, 0.085)  ## Frame inset as a fraction of the screen
@@ -60,6 +76,7 @@ const STARFIELD_SEED := 20260917
 @export var max_zoom_level: float = 50.0  ## Maximum zoom level
 @export var zoom_speed: float = 1.5  ## Zoom multiplier per key press
 @export var pan_speed: float = 500.0  ## Pixels per second panning speed
+@export var cursor_speed: float = 420.0  ## Pixels per second the mark travels across the chart
 
 var sun: Planet = null
 var planets: Array[Planet] = []
@@ -69,6 +86,7 @@ var scale_factor: float = 1.0  ## Current scale (base_scale_factor * zoom_level)
 var map_center: Vector2 = Vector2.ZERO  ## Chart-local center of the view
 var zoom_level: float = 0.0  ## Current zoom multiplier (0 until the first open; preserved after)
 var pan_offset: Vector2 = Vector2.ZERO  ## Current pan offset from center
+var cursor_world: Vector2 = Vector2.ZERO  ## World position the mark sits on
 
 var _backdrop: ColorRect
 var _chart: ChartCanvas
@@ -80,10 +98,14 @@ var _anim_dir: int = 0  ## +1 opening, -1 closing, 0 settled
 var _time: float = 0.0
 var _stars: PackedVector2Array = PackedVector2Array()  ## Unit-square star positions
 var _star_alpha: PackedFloat32Array = PackedFloat32Array()
+var _mark_flash: float = 0.0  ## 1 -> 0 confirm pulse after a tracking point is set
 
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	# The chart keeps working while a transmission holds the game, so it can always
+	# be closed again. Without this, dying with the map up is a dead end.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("system_map")
 	_font = get_theme_default_font()
 
@@ -161,6 +183,8 @@ func _process(delta: float) -> void:
 	if visible:
 		_handle_panning(delta)
 		_calculate_scale()
+		_handle_cursor(delta)
+		_mark_flash = maxf(_mark_flash - delta / MARK_FLASH_TIME, 0.0)
 		_chart.queue_redraw()
 		_chrome.queue_redraw()
 
@@ -200,9 +224,18 @@ func _input(event: InputEvent) -> void:
 		elif event.keycode == KEY_MINUS or event.keycode == KEY_UNDERSCORE:
 			_zoom_out()
 			get_viewport().set_input_as_handled()
-		# Recenter on the ship with C
+		# Recenter on the ship with C, bringing the mark back with the view
 		elif event.keycode == KEY_C:
 			_center_on_player()
+			_reset_cursor()
+			get_viewport().set_input_as_handled()
+		# Hand whatever the mark is sitting on to the nav system
+		elif event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			_set_tracking_point()
+			get_viewport().set_input_as_handled()
+		# Drop the tracking point and fall back to home base
+		elif event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE:
+			NavSystem.track_home()
 			get_viewport().set_input_as_handled()
 
 func _gui_input(event: InputEvent) -> void:
@@ -224,6 +257,8 @@ func open_map() -> void:
 	_layout()
 	_calculate_scale()
 	_refocus()
+	_reset_cursor()
+	_mark_flash = 0.0
 
 	visible = true
 	_anim_dir = 1
@@ -241,14 +276,14 @@ func is_open() -> bool:
 func _handle_panning(delta: float) -> void:
 	var pan_direction = Vector2.ZERO
 
-	# Arrow keys or WASD for panning
-	if Input.is_action_pressed("ui_right") or Input.is_key_pressed(KEY_D):
+	# WASD pans the view; the arrow keys belong to the mark
+	if Input.is_key_pressed(KEY_D):
 		pan_direction.x -= 1.0
-	if Input.is_action_pressed("ui_left") or Input.is_key_pressed(KEY_A):
+	if Input.is_key_pressed(KEY_A):
 		pan_direction.x += 1.0
-	if Input.is_action_pressed("ui_down") or Input.is_key_pressed(KEY_S):
+	if Input.is_key_pressed(KEY_S):
 		pan_direction.y -= 1.0
-	if Input.is_action_pressed("ui_up") or Input.is_key_pressed(KEY_W):
+	if Input.is_key_pressed(KEY_W):
 		pan_direction.y += 1.0
 
 	# Normalize diagonal movement
@@ -256,6 +291,7 @@ func _handle_panning(delta: float) -> void:
 		pan_direction = pan_direction.normalized()
 		var new_pan_offset = pan_offset + pan_direction * pan_speed * delta
 		pan_offset = _clamp_pan_offset(new_pan_offset)
+		_clamp_cursor_to_view()
 
 func _clamp_pan_offset(offset: Vector2) -> Vector2:
 	if planets.is_empty():
@@ -263,7 +299,7 @@ func _clamp_pan_offset(offset: Vector2) -> Vector2:
 
 	# The sun may be pushed to the rim of the chart but no further, so anything
 	# inside the system (the ship included) can be brought to the middle.
-	var limit := Vector2.ONE * (_system_radius() * scale_factor) + _chart.size * 0.4
+	var limit := Vector2.ONE * (_chart_radius() * scale_factor) + _chart.size * 0.4
 	return Vector2(
 		clampf(offset.x, -limit.x, limit.x),
 		clampf(offset.y, -limit.y, limit.y)
@@ -275,6 +311,11 @@ func _system_radius() -> float:
 		if planet and is_instance_valid(planet) and (not planet.parent_planet or planet.parent_planet == sun):
 			max_distance = max(max_distance, planet.orbital_distance)
 	return max_distance
+
+## What the chart has to hold: the outermost orbit, or far enough out that the
+## void's hazard band reads as a ring around the system rather than a corner.
+func _chart_radius() -> float:
+	return maxf(_system_radius() + 1000.0, VoidZone.DEEP_RADIUS * VOID_CHART_MARGIN)
 
 func _zoom_in() -> void:
 	zoom_level = clamp(zoom_level * zoom_speed, min_zoom_level, max_zoom_level)
@@ -292,6 +333,7 @@ func _refocus() -> void:
 		pan_offset = Vector2.ZERO
 	else:
 		_center_on_player()
+	_clamp_cursor_to_view()
 
 func _center_on_player() -> void:
 	# Pan so the ship sits at the middle of the chart; fall back to the sun
@@ -306,11 +348,124 @@ func _calculate_scale() -> void:
 		scale_factor = base_scale_factor * zoom_level
 		return
 
-	# Fit the outermost orbit (plus a margin) inside the padded chart at zoom 1
-	var span = _system_radius() + 1000.0
+	# Fit the outermost orbit and the edge of the void inside the padded chart at zoom 1
+	var span = _chart_radius()
 	var available_size = min(_chart.size.x, _chart.size.y) - padding * 2.0
 	base_scale_factor = available_size / (span * 2.0)
 	scale_factor = base_scale_factor * zoom_level
+
+# --- The mark ----------------------------------------------------------------
+
+## Arrow keys drive the mark. It crosses the chart at a steady speed whatever the
+## zoom, and shoves the view along once it reaches the edge, so the whole system
+## is reachable without touching the pan keys.
+func _handle_cursor(delta: float) -> void:
+	var direction := Vector2.ZERO
+	if Input.is_key_pressed(KEY_RIGHT):
+		direction.x += 1.0
+	if Input.is_key_pressed(KEY_LEFT):
+		direction.x -= 1.0
+	if Input.is_key_pressed(KEY_DOWN):
+		direction.y += 1.0
+	if Input.is_key_pressed(KEY_UP):
+		direction.y -= 1.0
+	if direction == Vector2.ZERO:
+		return
+
+	cursor_world += direction.normalized() * cursor_speed * delta / maxf(scale_factor, 0.0001)
+	cursor_world = _clamp_cursor_world(cursor_world)
+	_scroll_to_cursor()
+	_clamp_cursor_to_view()
+
+## The mark starts on the ship, where the player is already looking.
+func _reset_cursor() -> void:
+	cursor_world = ship.global_position if ship and is_instance_valid(ship) else _sun_pos()
+	_clamp_cursor_to_view()
+
+## The mark stays within the charted disc. That still reaches into the void — a
+## waypoint out there is a legitimate, if unwise, thing to want.
+func _clamp_cursor_world(world_pos: Vector2) -> Vector2:
+	var origin := _sun_pos()
+	return origin + (world_pos - origin).limit_length(_chart_radius())
+
+## Drag the view after the mark once it runs into the edge of the chart.
+func _scroll_to_cursor() -> void:
+	var bounds := _cursor_bounds()
+	if bounds.size.x <= 0.0 or bounds.size.y <= 0.0:
+		return
+	var at := _map_pos(cursor_world)
+	var inside := at.clamp(bounds.position, bounds.end)
+	if not at.is_equal_approx(inside):
+		pan_offset = _clamp_pan_offset(pan_offset + (inside - at))
+
+## Keep the mark on the chart when the view moves out from under it.
+func _clamp_cursor_to_view() -> void:
+	var bounds := _cursor_bounds()
+	if bounds.size.x <= 0.0 or bounds.size.y <= 0.0:
+		return
+	var at := _map_pos(cursor_world)
+	var inside := at.clamp(bounds.position, bounds.end)
+	if not at.is_equal_approx(inside):
+		cursor_world = _unmap_pos(inside)
+
+func _cursor_bounds() -> Rect2:
+	return Rect2(Vector2.ZERO, _chart.size).grow(-CURSOR_EDGE_MARGIN)
+
+## ENTER: hand the mark to the nav system. A body under it is tracked as a body,
+## so the marker rides the orbit; bare space becomes a fixed waypoint.
+func _set_tracking_point() -> void:
+	var body := _snap_body()
+	if body == null:
+		NavSystem.track_point(cursor_world)
+	else:
+		cursor_world = body.global_position
+		if body == _home_station():
+			NavSystem.track_home()
+		else:
+			NavSystem.track(NodeTrackingTarget.new(body, _body_label(body), _arrival_radius(body)))
+	_mark_flash = 1.0
+
+## The body under the mark, when one is close enough on screen to be what the
+## player means by it. Nearest wins, so crowded orbits still resolve.
+func _snap_body() -> Node2D:
+	var best: Node2D = null
+	var best_distance := CURSOR_SNAP_PX
+	var at := _map_pos(cursor_world)
+	for body in _snap_candidates():
+		var distance := _map_pos(body.global_position).distance_to(at)
+		if distance < best_distance:
+			best_distance = distance
+			best = body
+	return best
+
+## Everything the mark can lock onto: the sun, planets, moons and stations.
+func _snap_candidates() -> Array[Node2D]:
+	var bodies: Array[Node2D] = []
+	if sun and is_instance_valid(sun):
+		bodies.append(sun)
+	for planet in planets:
+		if planet and is_instance_valid(planet):
+			bodies.append(planet)
+	for node in get_tree().get_nodes_in_group("space_stations"):
+		var station := node as Node2D
+		if station and is_instance_valid(station):
+			bodies.append(station)
+	return bodies
+
+func _body_label(body: Node2D) -> String:
+	if body is Planet:
+		return (body as Planet).planet_name.to_upper()
+	return NavSystem.HOME_LABEL if body == _home_station() else "STATION"
+
+func _home_station() -> Node2D:
+	return get_tree().get_first_node_in_group("space_stations") as Node2D
+
+## Close enough to count as arrived: clear of a planet's own bulk, or the same
+## short hop home base uses for a station.
+static func _arrival_radius(body: Node2D) -> float:
+	if body is Planet:
+		return maxf((body as Planet).radius * 1.5, 200.0)
+	return 200.0
 
 # --- Chart -------------------------------------------------------------------
 
@@ -321,6 +476,10 @@ func _sun_pos() -> Vector2:
 func _map_pos(world_pos: Vector2) -> Vector2:
 	return map_center + pan_offset + (world_pos - _sun_pos()) * scale_factor
 
+## Chart-local pixel position -> world position. The inverse of _map_pos.
+func _unmap_pos(chart_pos: Vector2) -> Vector2:
+	return _sun_pos() + (chart_pos - map_center - pan_offset) / maxf(scale_factor, 0.0001)
+
 func draw_chart(c: Control) -> void:
 	var rect := Rect2(Vector2.ZERO, c.size)
 	c.draw_rect(rect, background_color)
@@ -329,6 +488,7 @@ func draw_chart(c: Control) -> void:
 	if not sun or not is_instance_valid(sun):
 		return
 
+	_draw_void(c, rect)
 	_draw_range_rings(c, rect)
 	_draw_orbits(c, rect)
 	_draw_child_orbits(c, rect)
@@ -337,6 +497,7 @@ func draw_chart(c: Control) -> void:
 	_draw_stations(c, rect)
 	_draw_nav_target(c, rect)
 	_draw_ship(c)
+	_draw_cursor(c)
 	_draw_scanlines(c)
 
 func _draw_starfield(c: Control) -> void:
@@ -359,6 +520,113 @@ func _draw_scanlines(c: Control) -> void:
 		points.append(Vector2(c.size.x, y))
 		y += 3.0
 	c.draw_multiline(points, Color(Colors.SPACE_BG, 0.12), 1.0)
+
+## Everything past the last orbit, struck through with hazard hatching: one set of
+## diagonals from the edge out, a second set crossing them past DEEP_RADIUS where
+## there is nothing left to see by. The boundary itself pulses once the ship is in it.
+func _draw_void(c: Control, rect: Rect2) -> void:
+	var center := _map_pos(_sun_pos())
+	var edge := VoidZone.EDGE_RADIUS * scale_factor
+	var deep := VoidZone.DEEP_RADIUS * scale_factor
+	var alarm := VoidZone.shroud
+	# Two passes at the same angle, the second offset half a step, so the hatching
+	# simply doubles in density past DEEP_RADIUS instead of changing character.
+	_draw_hatching(c, rect, center, edge, 0.0, Color(void_color, 0.11 + 0.07 * alarm))
+	_draw_hatching(c, rect, center, deep, HATCH_SPACING_PX / 2.0, Color(void_color, 0.09 + 0.07 * alarm))
+
+	# The boundary: a hairline normally, breathing red while the ship is past it.
+	var boundary := Color(void_color, lerpf(0.3, 0.75, alarm * (0.6 + 0.4 * sin(_time * 4.0))))
+	_draw_void_arc(c, rect, center, edge, boundary)
+	_draw_void_arc(c, rect, center, deep, Color(void_color, boundary.a * 0.4))
+
+	_draw_void_label(c, rect, center, maxf(edge, deep))
+
+## One set of parallel diagonals across the chart, clipped to the outside of a
+## circle. Each line contributes at most two segments, so the whole band costs a
+## single multiline however far out the chart is panned. `phase` shifts the set
+## sideways, which is how the deep band doubles its own density.
+func _draw_hatching(c: Control, rect: Rect2, center: Vector2, radius: float, phase: float, color: Color) -> void:
+	if color.a <= 0.002:
+		return
+	var direction := Vector2.from_angle(PI / 4.0)
+	var normal := direction.orthogonal()
+	# Walk the diagonals across the chart's diagonal span, measured from its middle.
+	var span := rect.size.length()
+	var half := span / 2.0
+	var origin := rect.get_center()
+	var points := PackedVector2Array()
+
+	var offset := -half + phase
+	while offset <= half:
+		var line_start := origin + normal * offset - direction * half
+		_append_outside_circle(points, line_start, direction, span, center, radius)
+		offset += HATCH_SPACING_PX
+	if not points.is_empty():
+		c.draw_multiline(points, color, 1.0)
+
+## An arc of the void's boundary, drawn only where it crosses the chart.
+func _draw_void_arc(c: Control, rect: Rect2, center: Vector2, radius: float, color: Color) -> void:
+	var arc := _visible_arc(center, radius, rect)
+	if arc.y <= 0.0:
+		return
+	c.draw_arc(center, radius, arc.x, arc.x + arc.y, clampi(int(radius * arc.y / 5.0), 12, 256), color, 1.0, true)
+
+## Appends the parts of the segment start -> start + direction * length that fall
+## outside the circle, as point pairs.
+static func _append_outside_circle(points: PackedVector2Array, start: Vector2, direction: Vector2, length: float, center: Vector2, radius: float) -> void:
+	var to_center := start - center
+	# |start + t*direction - center|^2 = radius^2, with direction normalized.
+	var b := to_center.dot(direction)
+	var discriminant := b * b - (to_center.length_squared() - radius * radius)
+	if discriminant <= 0.0:
+		# The line misses the circle entirely, so it's wholly in or wholly out.
+		if to_center.length() > radius:
+			points.append(start)
+			points.append(start + direction * length)
+		return
+
+	var root := sqrt(discriminant)
+	var t_in := clampf(-b - root, 0.0, length)
+	var t_out := clampf(-b + root, 0.0, length)
+	if t_in > 0.5:
+		points.append(start)
+		points.append(start + direction * t_in)
+	if t_out < length - 0.5:
+		points.append(start + direction * t_out)
+		points.append(start + direction * length)
+
+## One "THE VOID", set out in the dark rather than on the boundary — the label
+## belongs to the emptiness, not to the line around the system. Sides first,
+## since a 16:9 chart has the most room there; whichever way fits wins.
+func _draw_void_label(c: Control, rect: Rect2, center: Vector2, inner: float) -> void:
+	var text := TerminalWindow.spaced_title("THE VOID")
+	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE).x
+	var inset := rect.grow(-14.0)
+
+	for direction: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		# Sit it partway from the deep line out to the rim, so it reads as being
+		# well inside the void rather than labelling the edge of it.
+		var rim := _rim_distance(center, direction, rect)
+		if rim <= inner:
+			continue
+		var at := center + direction * lerpf(inner, rim, VOID_LABEL_DEPTH) - Vector2(width / 2.0, 0.0)
+		if not inset.has_point(at) or not inset.has_point(at + Vector2(width, 0.0)):
+			continue
+		# Blank the hatching behind the text so it stays readable
+		c.draw_rect(Rect2(at - Vector2(3.0, SMALL_SIZE), Vector2(width + 6.0, SMALL_SIZE + 5.0)), Color(Colors.UI_BACKGROUND_SOLID, 0.85))
+		c.draw_string(_font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE, Color(void_color, 0.55))
+		return
+
+## How far the chart reaches from `center` along a cardinal `direction` before
+## leaving `rect`. Zero once the center has been panned off that side.
+static func _rim_distance(center: Vector2, direction: Vector2, rect: Rect2) -> float:
+	if direction.x > 0.0:
+		return maxf(rect.end.x - center.x, 0.0)
+	if direction.x < 0.0:
+		return maxf(center.x - rect.position.x, 0.0)
+	if direction.y > 0.0:
+		return maxf(rect.end.y - center.y, 0.0)
+	return maxf(center.y - rect.position.y, 0.0)
 
 func _draw_range_rings(c: Control, rect: Rect2) -> void:
 	# Distance rings from the sun at round intervals, labelled on the way out
@@ -511,15 +779,20 @@ func _draw_nav_target(c: Control, rect: Rect2) -> void:
 		return
 
 	var pos := _map_pos(target.get_position())
-	if not rect.grow(24.0).has_point(pos):
-		return
+	var ship_pos := _map_pos(ship.global_position) if ship and is_instance_valid(ship) else pos
+	var apart := ship_pos.distance_to(pos) > 30.0
 
 	# Dotted run from the ship to the marker: blue is navigation only. Docked at
 	# the target, the two markers coincide, so the leg and label are dropped.
-	var ship_pos := _map_pos(ship.global_position) if ship and is_instance_valid(ship) else pos
-	var apart := ship_pos.distance_to(pos) > 30.0
+	# Zoomed in, either end can sit a long way off the chart, so only the stretch
+	# that crosses it is dashed — the leg still points the way out.
 	if apart:
-		c.draw_dashed_line(ship_pos, pos, Color(nav_color, 0.22), 1.0, 5.0)
+		var leg := _clip_segment(ship_pos, pos, rect.grow(8.0))
+		if leg.size() == 2:
+			c.draw_dashed_line(leg[0], leg[1], Color(nav_color, 0.22), 1.0, 5.0)
+
+	if not rect.grow(24.0).has_point(pos):
+		return
 
 	var r := 9.0
 	c.draw_arc(pos, r, 0.0, TAU, 32, Color(nav_color, 0.7), 1.0, true)
@@ -576,6 +849,29 @@ func _draw_ship(c: Control) -> void:
 	outline.append(points[0])
 	c.draw_polyline(outline, Color(Colors.SPACE_BG, 0.8), 1.0, true)
 
+## The mark: a broken crosshair the arrow keys drive around, ringed once it has
+## locked onto a body. Blue, because all of it is navigation.
+func _draw_cursor(c: Control) -> void:
+	var body := _snap_body()
+	var at := _map_pos(body.global_position if body else cursor_world)
+	var gap := 4.0
+	var arm := 7.0
+
+	var ticks := PackedVector2Array()
+	for direction: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		ticks.append(at + direction * gap)
+		ticks.append(at + direction * (gap + arm))
+	c.draw_multiline(ticks, Color(nav_color, 0.85), 1.0)
+
+	if body:
+		c.draw_arc(at, gap + 2.0, 0.0, TAU, 24, Color(nav_color, 0.45), 1.0, true)
+	else:
+		c.draw_rect(Rect2(at - Vector2.ONE, Vector2(2.0, 2.0)), Color(nav_color, 0.85))
+
+	# A ring going out from the mark confirms the point was taken
+	if _mark_flash > 0.0:
+		c.draw_arc(at, lerpf(26.0, 6.0, _mark_flash), 0.0, TAU, 32, Color(nav_color, _mark_flash * 0.6), 1.0, true)
+
 # --- Chrome ------------------------------------------------------------------
 
 func draw_chrome(c: Control) -> void:
@@ -606,9 +902,16 @@ func draw_chrome(c: Control) -> void:
 	_draw_corner_brackets(c, text_a)
 	_draw_edge_ticks(c, text_a)
 	_draw_tab(c, TerminalWindow.spaced_title("SYSTEM MAP"), TITLE_SIZE, Color(Colors.PRIMARY, text_a), false)
-	_draw_tab(c, "[ +/- ] ZOOM   [ WASD ] PAN   [ C ] CENTER   [ M ] CLOSE", SMALL_SIZE, Color(Colors.PRIMARY_DIM, text_a), true)
+	_draw_tab(c, _hint_text(), SMALL_SIZE, Color(Colors.PRIMARY_DIM, text_a), true)
 	_draw_readout(c, text_a)
 	_draw_scale_bar(c, text_a)
+
+## Controls strip. Dropping the point is only offered once there is one to drop.
+func _hint_text() -> String:
+	var hint := "[ +/- ] ZOOM   [ WASD ] PAN   [ ARROWS ] MARK   [ ENTER ] TRACK"
+	if NavSystem.get_target() != null and not NavSystem.is_tracking_home():
+		hint += "   [ DEL ] CLEAR"
+	return hint + "   [ C ] CENTER   [ M ] CLOSE"
 
 func _draw_corner_brackets(c: Control, alpha: float) -> void:
 	var arm := 16.0
@@ -660,6 +963,13 @@ func _draw_readout(c: Control, alpha: float) -> void:
 		var relative := ship.global_position - _sun_pos()
 		rows.append(["SHIP", "%+.1f / %+.1f Mm" % [relative.x / 1000.0, relative.y / 1000.0]])
 
+	var marked := _snap_body()
+	if marked:
+		rows.append(["MARK", _body_label(marked)])
+	else:
+		var offset := cursor_world - _sun_pos()
+		rows.append(["MARK", "%+.1f / %+.1f Mm" % [offset.x / 1000.0, offset.y / 1000.0]])
+
 	var target := NavSystem.get_target()
 	if target and target.is_valid() and ship and is_instance_valid(ship):
 		rows.append(["NAV", "%s  %s" % [
@@ -672,6 +982,13 @@ func _draw_readout(c: Control, alpha: float) -> void:
 		c.draw_string(_font, Vector2(READOUT_INSET, y), row[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, key_color)
 		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), row[1], HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, value_color)
 		y += _font.get_height(TEXT_SIZE) + 3.0
+
+	# The chart is the one instrument the void leaves half-working, so the clock
+	# lives here rather than on the dashboard that's busy falling apart.
+	if VoidZone.is_inside():
+		var left := VoidZone.time_left()
+		c.draw_string(_font, Vector2(READOUT_INSET, y), "VOID", HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, 0.6 * alpha))
+		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), "%.1f s" % left, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, alpha))
 
 func _draw_scale_bar(c: Control, alpha: float) -> void:
 	var step := _nice_step(120.0 / scale_factor)
@@ -713,6 +1030,32 @@ static func _format_distance(units: float) -> String:
 	if units < 1_000_000.0:
 		return "%.1f Mm" % (units / 1000.0)
 	return "%.2f Gm" % (units / 1_000_000.0)
+
+## The part of the segment a -> b that lies inside `rect`, as [start, end], or
+## empty when the segment misses it altogether. Liang-Barsky, so a leg running
+## clear across the chart costs the same whether its ends are on it or not.
+static func _clip_segment(a: Vector2, b: Vector2, rect: Rect2) -> PackedVector2Array:
+	var d := b - a
+	var edge := PackedFloat32Array([-d.x, d.x, -d.y, d.y])
+	var room := PackedFloat32Array([
+		a.x - rect.position.x, rect.end.x - a.x,
+		a.y - rect.position.y, rect.end.y - a.y
+	])
+	var enter := 0.0
+	var exit := 1.0
+	for i in range(4):
+		if is_zero_approx(edge[i]):
+			if room[i] < 0.0:
+				return PackedVector2Array()
+			continue
+		var t := room[i] / edge[i]
+		if edge[i] < 0.0:
+			enter = maxf(enter, t)
+		else:
+			exit = minf(exit, t)
+	if enter > exit:
+		return PackedVector2Array()
+	return PackedVector2Array([a + d * enter, a + d * exit])
 
 ## The slice of a circle that can actually show inside the rect, as
 ## (start_angle, span). A span of 0 means the ring misses the chart entirely, so

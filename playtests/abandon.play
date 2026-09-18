@@ -71,8 +71,7 @@ assert pt.derelict_count() == 1 "derelict survives the respawn"
 assert inv.get_total_value() == 0 "new ship starts empty"
 
 # --- Reload: the derelict comes back from the save ---
-eval main.call_deferred("load_game")
-wait 3
+reload
 assert pt.derelict_count() == 1 "derelict restored from the save"
 assert pt.abandoned_ship().loot.size() == 33 "hold still aboard after reload"
 

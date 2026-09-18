@@ -36,13 +36,27 @@ Full-screen menus with UNIT-7 (inventory, store) are built in code from shared p
 
 `Typewriter` lays text out after shaping (`VC_CHARS_AFTER_SHAPING`) so wrapped words don't jump lines while typing.
 
+## The Void (hazard past the last orbit)
+
+```
+VoidZone (autoload: depth / dread / shroud, the 30s clock)
+  -> StarField (star_fade uniform)     the sky drains
+  -> VoidShroud (CanvasLayer 40)       the dark closes in, static, tears
+  -> VoidGlitch (child of HUD)         readouts rot, panel jitters and cuts out
+  -> SystemMap._draw_void              diagonal hazard hatching + boundary arcs
+  -> Main._on_void_consumed            ConsumedState, then the game-over radio
+```
+
+`depth` is distance past `EDGE_RADIUS`; `dread` is the survival clock; `shroud = max(depth, dread)` is what every visual reads. `EDGE_RADIUS` must stay clear of the home station's apoapsis (~295000) — `VoidZoneTest` guards that.
+
 ## Robot Radio (guide robot help messages)
 
 ```
 EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + show-once flags) -> RadioPanel (HUD)
 ```
 
-- Data: `RadioConversation` (id, priority, once, lines) of `RadioLine` (speaker, text, expression, glitch).
+- Data: `RadioConversation` (id, priority, once, lines) of `RadioLine` (speaker, text, expression, glitch, garbled).
+- `garbled` renders the line as line noise of the same shape (and keeps re-scrambling after it types), while `text` still holds what was meant. `expression` picks the face color in `RobotView._face_color()`: `titan` purple, `dead`/`lost` red, everything else mustard.
   Bundled messages live in `entities/Robot/radio/messages/*.tres`. `{key:<action>}` in text becomes the bound key.
 - Higher priority interrupts (the interrupted one replays after); otherwise queued by priority, FIFO.
 - `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
@@ -62,3 +76,27 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
   (StrandedState: abandon ship, or a tractor-beam tow inside a station's beam) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).
 - Only a powered ship (Flying/Harvesting) can harvest, so a stranded ship's SPACE stays with the radio.
 - `{name}` placeholders come from `conv.with_vars({...})`.
+
+## Planetary Scanner & Landing (DESIGN.md 4.10)
+
+```
+PlanetScanner (on Ship) -> PlanetScan (meter) + ScanSweep (on Planet) -> GameState.scanned_planets -> EventBus.planet_scanned
+OreDeposit (child of Planet, grown by Planet._spawn_ore) -> surfaced on scan; minimap + OreTrackingTarget
+FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom, prompt, OreDrill)
+OreDrill (HarvestTiming per layer, GemData.drill_drops) -> ore.spend() -> GameState.spent_ore (refill timers)
+```
+
+- `LandedState` is docking at a port; landing on a planet is `PlanetLandedState`.
+- Ore seams are hexagons just under the surface, seeded from the planet's save key, so they are
+  the same every session and need no authoring in `HomeSystem.tscn`. There is no landing pad:
+  land on plain ground within `OreDeposit.REACH` of a seam.
+- Unlocks: upgrade path `planet_scanner`, flag `GameState.has_planet_scanner` (separate from Scanner PULSE).
+- Save: `[scan] planets` and `[ore] regrow` (ore_id -> seconds left, never shown to the player).
+  `Save.save_scanned_planets` / `Save.save_ore_regrowth` write only their section mid-flight; keep file IO
+  out of code unit tests reach (the default save path in tests is the player's real save).
+- Scanning only reaches **inner orbit** (`Planet.scan_radius()`, the first gravity ring clear of
+  the surface), not the whole gravity field: you fly in close and hold there against the pull.
+- Drilling is the payday: `GemData.DRILL_DEPTH_WEIGHTS` skews to crystals/artifacts and drops
+  more per layer than a scrap hit, so a seam is worth several scrap nodes (see DrillTest).
+- Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `OreDrill.*`, `GemData.DRILL_*`,
+  `Planet.ORE_COUNT` / `MOON_ORE_COUNT`, `OreDeposit.REACH` / `DEPTH_*` / `*REGROW_TIME`.

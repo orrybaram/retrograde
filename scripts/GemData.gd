@@ -28,6 +28,20 @@ const PERFECT_BREAK_BONUS := 2
 const TROPHY_BREAK_BONUS := 3
 const WRECK_SHARE := 0.7  # of the hold left floating where the ship blew up
 
+## Drilling an ore seam: gem odds per depth (layer index, +1 on rich seams). Scrap is
+## the trickle you live on; a seam is the payday, so these skew hard to the top tiers
+## and drop more per layer than a scrap hit does.
+const DRILL_DEPTH_WEIGHTS := [
+	{Tier.SHARD: 35, Tier.GEM: 55, Tier.CRYSTAL: 10},
+	{Tier.SHARD: 15, Tier.GEM: 55, Tier.CRYSTAL: 28, Tier.ARTIFACT: 2},
+	{Tier.GEM: 45, Tier.CRYSTAL: 50, Tier.ARTIFACT: 5},
+	{Tier.GEM: 25, Tier.CRYSTAL: 65, Tier.ARTIFACT: 10},
+	{Tier.GEM: 10, Tier.CRYSTAL: 70, Tier.ARTIFACT: 20},
+]
+const DRILL_MIN := 4
+const DRILL_MAX := 6
+const PERFECT_DRILL_BONUS := 2
+
 ## Item ids for one hit. Botched timing (LATE / OVERLOAD) still breaks off gems, but only shards.
 static func drops_for_hit(grade: HarvestTiming.Grade, final: bool, trophy: bool, rng: RandomNumberGenerator) -> Array[String]:
 	var perfect := grade == HarvestTiming.Grade.PERFECT
@@ -57,6 +71,34 @@ static func roll(grade: HarvestTiming.Grade, trophy: bool, rng: RandomNumberGene
 		HarvestTiming.Grade.GOOD:
 			return item_id(_weighted(TROPHY_ROLL_WEIGHTS if trophy else ROLL_WEIGHTS, rng))
 	return item_id(Tier.SHARD)
+
+## Item ids dug out of one drill layer at `depth` (see DRILL_DEPTH_WEIGHTS). PERFECT adds
+## PERFECT_DRILL_BONUS gems and bumps the best one a tier; LATE only cracks off shards.
+static func drill_drops(depth: int, grade: HarvestTiming.Grade, rng: RandomNumberGenerator) -> Array[String]:
+	var perfect := grade == HarvestTiming.Grade.PERFECT
+	var count := rng.randi_range(DRILL_MIN, DRILL_MAX) + (PERFECT_DRILL_BONUS if perfect else 0)
+	var drops: Array[String] = []
+	for i in count:
+		if grade == HarvestTiming.Grade.LATE:
+			drops.append(item_id(Tier.SHARD))
+		else:
+			drops.append(item_id(drill_roll(depth, rng)))
+	return bump_best(drops) if perfect else drops
+
+## One gem tier from a drill layer at `depth`.
+static func drill_roll(depth: int, rng: RandomNumberGenerator) -> Tier:
+	return _weighted(DRILL_DEPTH_WEIGHTS[clampi(depth, 0, DRILL_DEPTH_WEIGHTS.size() - 1)], rng)
+
+## Lifts the best gem in `ids` one tier (a PERFECT layer's bonus).
+static func bump_best(ids: Array[String]) -> Array[String]:
+	if ids.is_empty():
+		return ids
+	var best := 0
+	for i in ids.size():
+		if tier_of(ids[i]) > tier_of(ids[best]):
+			best = i
+	ids[best] = item_id(mini(tier_of(ids[best]) + 1, Tier.ARTIFACT) as Tier)
+	return ids
 
 static func _weighted(weights: Dictionary, rng: RandomNumberGenerator) -> Tier:
 	var total := 0

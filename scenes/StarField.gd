@@ -4,9 +4,15 @@ class_name StarField
 ## Parallax sensitivity - how much ship movement affects star offset
 @export var parallax_scale: float = 0.00005
 
+## How fast the sky dies going in, and comes back coming out. The void takes the
+## stars faster than it gives them back.
+@export var fade_out_speed: float = 0.45
+@export var fade_in_speed: float = 0.9
+
 var _ship: RigidBody2D = null
 var _material: ShaderMaterial = null
 var _accumulated_offset: Vector2 = Vector2.ZERO
+var _star_fade: float = 1.0
 
 @onready var _color_rect: ColorRect = $ColorRect
 
@@ -37,22 +43,35 @@ func _find_ship() -> void:
 func _on_ship_respawned() -> void:
 	# Reset accumulated offset when ship respawns
 	_accumulated_offset = Vector2.ZERO
+	_star_fade = 1.0
 	if _material:
 		_material.set_shader_parameter("speed_x", 0.0)
 		_material.set_shader_parameter("speed_y", 0.0)
+		_material.set_shader_parameter("star_fade", 1.0)
 
 
 func _process(delta: float) -> void:
 	if not _material:
 		return
-	
+
+	_update_void_fade(delta)
+
 	if not _ship:
 		_find_ship()
 		return
-	
+
 	# Accumulate offset based on ship velocity over time
 	# This creates continuous scrolling while moving
 	_accumulated_offset += _ship.linear_velocity * delta * parallax_scale * -1.0
 	
 	_material.set_shader_parameter("speed_x", -_accumulated_offset.x)
 	_material.set_shader_parameter("speed_y", -_accumulated_offset.y)
+
+
+## The void puts the stars out. Eased rather than snapped so crossing the edge
+## reads as the sky draining, not as a light switch.
+func _update_void_fade(delta: float) -> void:
+	var target := 1.0 - VoidZone.shroud
+	var speed := fade_out_speed if target < _star_fade else fade_in_speed
+	_star_fade = move_toward(_star_fade, target, speed * delta)
+	_material.set_shader_parameter("star_fade", _star_fade)

@@ -259,6 +259,22 @@ func test_rings_near_the_sun_stay_empty() -> void:
 	assert_int(checked).is_greater(0)
 
 
+func test_nothing_is_placed_out_in_the_void() -> void:
+	# Past the last orbit is VoidZone's, where nothing reflects and nothing answers.
+	# Salvage floating there would spoil it and bait the player over a line they can't
+	# safely cross.
+	var field := _field()
+	var first_void_band := field.band_of(VoidZone.EDGE_RADIUS) + 1
+	for band in range(first_void_band, first_void_band + 6):
+		assert_float(field.band_mid(band)).is_greater(VoidZone.EDGE_RADIUS)
+		assert_array(_nodes(field._generate(Vector2i(band, 0)))).is_empty()
+
+	# ...and the last ring inside it still works
+	var last_inside := field.band_of(VoidZone.EDGE_RADIUS) - 1
+	assert_float(field.band_mid(last_inside)).is_less(VoidZone.EDGE_RADIUS)
+	assert_int(_nodes(field._generate(Vector2i(last_inside, 0))).size()).is_greater(0)
+
+
 func test_encounters_keep_clear_of_planet_gravity_fields() -> void:
 	var cell := Vector2i(DEEP, 4)
 	var field := _field()

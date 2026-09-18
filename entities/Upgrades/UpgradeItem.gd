@@ -142,10 +142,13 @@ func _apply_multiply_stat(ship: Ship) -> void:
 			push_warning("UpgradeItem: Unknown MULTIPLY_STAT target: %s" % effect_target)
 
 
+## Also called by Ship.reapply_all_upgrades so unlocks survive load/respawn.
 func _apply_unlock_feature(game_state: GameState) -> void:
 	match effect_target:
 		"has_drone_bay":
 			game_state.has_drone_bay = true
+		"has_planet_scanner":
+			game_state.has_planet_scanner = true
 		_:
 			push_warning("UpgradeItem: Unknown UNLOCK_FEATURE target: %s" % effect_target)
 
