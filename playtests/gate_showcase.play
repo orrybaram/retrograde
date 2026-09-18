@@ -1,0 +1,67 @@
+# Gate showcase, captioned, for recording a video:
+#   godot --path . --write-movie .playtest/video/gate.avi --fixed-fps 30 -- --playtest=res://playtests/gate_showcase.play
+# (see also tools/play.sh). Not an assertion suite; see gate.play for that.
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+wait_until pt.state_name() == "LandedState" 20
+eval gs.set("credits", 1000)
+
+eval pt.caption("A GATE ORBITS EVERY PLANET  //  dormant, waiting to be switched on")
+wait 1.6
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+wait 0.6
+press down
+wait 0.4
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+wait 2.0
+
+eval pt.caption("In scanner range it draws as a ring on the minimap  //  nothing points you at it")
+eval pt.park_at_gate("Veld", 2600.0)
+wait 3.5
+
+eval pt.caption("Veld's Gate: dark hull, one slow amber blinker, a cradle across the mouth")
+eval pt.park_at_gate("Veld", 220.0)
+eval ship.set("linear_velocity", ship.linear_velocity + Vector2(0, 45))
+wait 3.2
+
+eval pt.caption("Dock like a port: slow, lined up, [SPACE]")
+wait 0.6
+press action
+wait_until pt.state_name() == "GateDockedState" 3
+wait 1.4
+
+eval pt.caption("The Gate's own terminal  //  600 CR to bring Veld's Module online")
+wait 3.0
+press enter
+wait_until gs.titan_influence() == 1 3
+eval pt.caption("")
+wait_until not pt.node("gate_terminal").is_booting() 8
+wait 1.2
+
+eval pt.caption("Module online  //  Titan Influence 1 / 5  //  it never goes back off")
+wait 3.0
+press enter
+wait_until pt.visible_ui().is_empty() 2
+
+eval pt.caption("The ring carries the Titan's purple from here on")
+hold thrust 0.7
+wait_until pt.state_name() == "FlyingState" 3
+wait 3.0
+
+eval pt.caption("Powered on the spot and saved  //  it is still lit after a reload")
+wait 2.0
+reload
+wait_until main.current_game_state == 1 10
+wait 1.0
+eval pt.caption("Back in the cradle, Module still online, credits still spent")
+wait 3.0
+eval pt.caption("")
+wait 0.6
