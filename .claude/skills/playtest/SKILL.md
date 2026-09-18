@@ -91,6 +91,12 @@ without pausing, and the Module survives a reload (`.playtest/gate_*.png`). Help
 `pt.park_at_gate(planet, dist)` (lined up on the cradle, matched to the Gate's orbit). FlyingState refuses to
 dock for ~2s after an undock, so park, `wait 2.2`, park again, then `press action`.
 
+`playtests/chart.play` checks the star chart starts blank and fills in: home and its station alone on a new
+chart, powering Veld's Gate drawing the region in a piece at a time, the mark refusing an uncharted planet but
+still taking a waypoint on it, a purple link between two powered Gates, and both regions surviving a reload
+(`.playtest/chart_*.png`). Powering a Gate by hand (`eval pt.gate("Veld").power(gs)`) doesn't save on its own —
+`eval pt.save_now()` before a `reload`.
+
 `playtests/minimap.play` screenshots the minimap markers (ship arrow, station silhouette + beacon, shaded planets, scrap chunks, derelict pinned to the rim).
 
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).

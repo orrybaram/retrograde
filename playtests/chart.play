@@ -1,0 +1,78 @@
+# The Chart starts blank and is filled in by powering Gates: it opens holding only Rook,
+# its station and the void, and a planet's region arrives — named, live and drawn in a
+# piece at a time — when that planet's Gate is powered (docs/adr/0002).
+# Run: tools/play.sh playtests/chart.play   (frames land in .playtest/chart_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+wait_until pt.state_name() == "LandedState" 5
+eval gs.set("credits", 5000)
+
+# A new chart holds home and nothing else
+press m
+wait 1.2
+assert pt.visible_ui().has("SystemMap") "the chart is open"
+screenshot chart_1_blank
+assert pt.node("system_map")._charted(pt.planet("Rook")) "home is on the chart from the first minute"
+assert not pt.node("system_map")._charted(pt.planet("Veld")) "Veld waits for its Gate"
+assert not pt.node("system_map")._charted(pt.planet("Crom")) "so does Crom"
+assert not pt.node("system_map")._charted(pt.node("system_map").sun) "the sun waits for the Core"
+assert not pt.node("system_map")._region_charted(pt.planet("Rook")) "the orbit home rides round Veld is Veld's to hand over"
+assert pt.node("system_map")._snap_candidates().size() == 2 "only home and its station can be marked"
+
+# Powering Veld's Gate charts the whole region
+press m
+wait 0.5
+eval pt.gate("Veld").power(gs)
+assert gs.titan_influence() == 1 "Veld's Module is online"
+press m
+wait 0.45
+screenshot chart_2_arriving
+wait 2.0
+screenshot chart_3_veld_charted
+assert pt.node("system_map")._charted(pt.planet("Veld")) "Veld is on the chart"
+assert pt.node("system_map")._region_charted(pt.planet("Rook")) "and so is the orbit home rides round it"
+assert pt.node("system_map")._body_label(pt.gate("Veld")) == "VELD GATE" "the Gate is named"
+
+# The mark can be driven onto what the chart holds, and onto the Gate
+eval pt.node("system_map").set("cursor_world", pt.planet("Veld").global_position)
+assert pt.node("system_map")._snap_body() == pt.planet("Veld") "a charted planet can be marked"
+eval pt.node("system_map").set("cursor_world", pt.gate("Veld").global_position)
+assert pt.node("system_map")._snap_body() == pt.gate("Veld") "and so can its Gate"
+
+# An uncharted planet is bare space: the mark passes over it, a waypoint still lands on it
+eval pt.node("system_map").set("cursor_world", pt.planet("Sonder").global_position)
+assert pt.node("system_map")._snap_body() == null "an uncharted planet cannot be marked"
+press enter
+assert get_node("/root/NavSystem").get_target().get_label() == "WAYPOINT" "but a waypoint can be set where it is"
+
+# A second Module online draws the link between the two Gates
+press m
+wait 0.5
+eval pt.gate("Crom").power(gs)
+assert gs.titan_influence() == 2 "two Modules online"
+press m
+wait 2.4
+press minus 5
+wait 0.8
+screenshot chart_4_network
+assert pt.node("system_map")._charted(pt.planet("Crom")) "Crom is on the chart"
+assert pt.node("system_map")._charted(pt.planet("Dross")) "with its moons"
+assert not pt.node("system_map")._charted(pt.planet("Roke")) "and nothing else"
+
+# The regions stay charted across a reload, and are not handed over a second time
+press m
+wait 0.5
+eval pt.save_now()
+reload
+wait_until main.current_game_state == 1 10
+assert gs.titan_influence() == 2 "both Modules are still online"
+press m
+wait 1.2
+screenshot chart_5_reloaded
+assert pt.node("system_map")._charted(pt.planet("Veld")) "Veld is still charted"
+assert pt.node("system_map")._charted(pt.planet("Crom")) "Crom is still charted"
+state
