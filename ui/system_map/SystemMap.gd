@@ -71,7 +71,7 @@ const MARK_FLASH_TIME := 0.5
 @export var ship_size: float = 8.0  ## Ship indicator size
 
 @export_group("Zoom and Pan")
-@export var default_zoom_level: float = 1.0  ## Default zoom multiplier
+@export var default_zoom_level: float = 25.0  ## Default zoom multiplier
 @export var min_zoom_level: float = 1.0  ## Minimum zoom level (1.0 fits the whole system)
 @export var max_zoom_level: float = 50.0  ## Maximum zoom level
 @export var zoom_speed: float = 1.5  ## Zoom multiplier per key press
@@ -318,16 +318,25 @@ func _chart_radius() -> float:
 	return maxf(_system_radius() + 1000.0, VoidZone.DEEP_RADIUS * VOID_CHART_MARGIN)
 
 func _zoom_in() -> void:
-	zoom_level = clamp(zoom_level * zoom_speed, min_zoom_level, max_zoom_level)
-	_calculate_scale()
-	_refocus()
+	_zoom_to(zoom_level * zoom_speed)
 
 func _zoom_out() -> void:
-	zoom_level = clamp(zoom_level / zoom_speed, min_zoom_level, max_zoom_level)
-	_calculate_scale()
-	_refocus()
+	_zoom_to(zoom_level / zoom_speed)
 
-## Fully zoomed out frames the whole system; any closer follows the ship.
+## Zoom around the mark: whatever it sits on stays put on screen, so the player
+## closes in on what they are looking at instead of being yanked to the ship.
+func _zoom_to(level: float) -> void:
+	var anchor := _map_pos(cursor_world)
+	zoom_level = clamp(level, min_zoom_level, max_zoom_level)
+	_calculate_scale()
+	if is_equal_approx(zoom_level, min_zoom_level):
+		# Fully zoomed out always frames the whole system.
+		pan_offset = Vector2.ZERO
+	else:
+		pan_offset = _clamp_pan_offset(pan_offset + (anchor - _map_pos(cursor_world)))
+	_clamp_cursor_to_view()
+
+## Opening frames the view on the ship, where the mark starts.
 func _refocus() -> void:
 	if is_equal_approx(zoom_level, min_zoom_level):
 		pan_offset = Vector2.ZERO
