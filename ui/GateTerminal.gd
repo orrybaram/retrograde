@@ -9,6 +9,10 @@ class_name GateTerminal
 ## launch key skips, and then the hub comes back showing the Module online. Once it is,
 ## the hub carries the two things a link is good for: transit to another powered Gate,
 ## and a tank the Titan fills for nothing while the ship sits in the cradle.
+##
+## The Core's Gate at the Sun Station reads the same terminal, but its row counts
+## Modules instead of credits and does nothing yet: see `_core_row()`.
+##
 ## Built in code; the scene tree holds only the root.
 
 signal terminal_closed
@@ -23,7 +27,7 @@ const TEXT_SIZE := TerminalWindow.TEXT_SIZE
 const SMALL_SIZE := TerminalWindow.SMALL_SIZE
 const ROW_HEIGHT := 26.0
 const RIGHT_WIDTH := 130.0
-const MODULE_COUNT := 5
+const MODULE_COUNT := Gate.MODULE_COUNT
 
 ## Boot log pacing: characters a second, the beat between lines, and the hold at the end.
 const BOOT_CHARS_PER_SEC := 27.0
@@ -158,15 +162,18 @@ func close() -> void:
 # --- Hub ---------------------------------------------------------------------
 
 func _refresh_hub() -> void:
+	var core := gate != null and gate.is_core
 	var powered := gate != null and gate.is_powered()
-	_status.text = TerminalWindow.spaced("MODULE ONLINE" if powered else "MODULE OFFLINE")
+	_status.text = TerminalWindow.spaced(_status_line(core, powered))
 	_status.add_theme_color_override("font_color", Colors.TITAN if powered else Colors.PRIMARY)
 	_credits.text = "MODULES ONLINE  %d / %d          CREDITS  %d CR" % [
 		gs.titan_influence() if gs else 0, MODULE_COUNT, gs.credits if gs else 0]
 	_frame.set_hint("UP/DN SELECT   ENTER CONFIRM   ESC LEAVE")
 
 	_menu_items.clear()
-	if powered:
+	if core:
+		_menu_items.append(_core_row())
+	elif powered:
 		_menu_items.append({
 			"enabled": true,
 			"action": _open_transit,
@@ -274,6 +281,34 @@ func set_refuel_readout(text: String) -> void:
 		if i < _right_labels.size() and _right_labels[i]:
 			_right_labels[i].text = text
 		return
+
+## The Core is the Titan's sixth part, not a Module, so it gets its own headline.
+func _status_line(core: bool, powered: bool) -> String:
+	if core:
+		return "CORE OFFLINE"
+	return "MODULE ONLINE" if powered else "MODULE OFFLINE"
+
+## The Core's Gate asks for Modules, not credits. Until all five are online the row is
+## dim and reads back how far off that is; at five it offers the Core. Taking it does
+## nothing yet — what happens when the Core comes online is a later endgame issue —
+## so the row logs a placeholder and leaves every bit of state alone.
+func _core_row() -> Dictionary:
+	if gate != null and gate.modules_ready(gs):
+		return {
+			"enabled": true,
+			"action": _on_core_power_pressed,
+			"label": "POWER CORE",
+			"right": "",
+		}
+	return {
+		"enabled": false,
+		"action": Callable(),
+		"label": "POWER INSUFFICIENT",
+		"right": "%d/%d MODULES ONLINE" % [gs.titan_influence() if gs else 0, MODULE_COUNT],
+	}
+
+func _on_core_power_pressed() -> void:
+	print("[GateTerminal] POWER CORE: the Core's Gate is inert until the endgame lands.")
 
 ## The boot log speaks for itself: the hub's readouts step aside while it runs rather
 ## than sit above it saying the Module is still offline.

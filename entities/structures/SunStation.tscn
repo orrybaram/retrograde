@@ -1,0 +1,7 @@
+[gd_scene load_steps=3 format=3 uid="uid://c5unst4t10n01"]
+
+[ext_resource type="PackedScene" uid="uid://b8k2j3m4n5p6q" path="res://entities/structures/SpaceStation.tscn" id="1"]
+[ext_resource type="Script" path="res://entities/structures/SunStation.gd" id="2"]
+
+[node name="SunStation" instance=ExtResource("1")]
+script = ExtResource("2")

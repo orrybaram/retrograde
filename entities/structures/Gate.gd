@@ -15,6 +15,9 @@ class_name Gate
 ## Unidentified until flown to (CONTEXT.md): the minimap calls it `? ? ?` until the ship
 ## gets inside Identifiable.RANGE of it, at which point the Guide says what it is and the
 ## label reads GATE. The Guide never points at one beforehand (docs/adr/0002).
+##
+## One Gate in the system is not a planet's: the Core's Gate at the Sun Station, which
+## waits on all five Modules rather than on credits (`is_core`).
 
 const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 const MSG_IDENTIFIED = preload("res://entities/Robot/radio/messages/gate_identified.tres")
@@ -37,8 +40,18 @@ const BLINK_DUTY := 0.18
 ## What the minimap calls a Gate once the Guide has named it.
 const LABEL := "GATE"
 
+## The Modules the Titan is made of, one per planet. The Core is a separate, final
+## state, not a sixth Module.
+const MODULE_COUNT := 5
+
 ## What the Titan asks for this Module, in credits.
 @export var power_cost: int = 600
+
+## The Core's Gate, beside the Sun Station: the Titan's sixth part rather than a
+## planet's Module. It takes power only once all five Modules are online, it is never
+## a transit destination, and powering it is the endgame — still to be designed, so
+## for now it sits there inert.
+@export var is_core: bool = false
 
 # Orbital parameters (passed to OrbitalMotion component)
 @export var orbital_distance: float = 10000.0
@@ -150,9 +163,23 @@ func identify_if_near(ship_position: Vector2) -> bool:
 func can_afford(gs: GameState) -> bool:
 	return gs != null and gs.credits >= power_cost
 
+## True once every Module is online, which is all the Core's Gate is waiting for. A
+## planet's Gate only ever waits on credits.
+func modules_ready(gs: GameState) -> bool:
+	return gs != null and gs.titan_influence() >= MODULE_COUNT
+
+## Whether this Gate can be reached through the network once it is powered. The Core's
+## Gate is the endgame, never somewhere to travel to.
+func offers_transit() -> bool:
+	return not is_core
+
 ## Pay the cost and bring this planet's Module online. Returns false if it is already
 ## online or the credits aren't there; nothing is charged in that case.
 func power(gs: GameState) -> bool:
+	# The Core is not a Module, and what happens when it comes online is a later
+	# endgame issue: its Gate charges nothing and brings nothing online yet.
+	if is_core:
+		return false
 	var key := save_key()
 	if gs == null or key == "" or gs.is_gate_powered(key) or not can_afford(gs):
 		return false

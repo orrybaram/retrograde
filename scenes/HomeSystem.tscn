@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://b8k2j3m4n5p6q" path="res://entities/structures/SpaceStation.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://entities/resources/OrbitalRingSpawner.tscn" id="2_vpsiu"]
 [ext_resource type="PackedScene" path="res://entities/structures/Gate.tscn" id="3_gate"]
+[ext_resource type="PackedScene" path="res://entities/structures/SunStation.tscn" id="4_sunst"]
 
 [node name="HomeSystem" type="Node2D" unique_id=1363253957]
 
@@ -198,3 +199,17 @@ power_cost = 5000
 orbital_distance = 19800.0
 orbital_speed = 3.0
 initial_angle_degrees = 15.0
+
+[node name="SunStation" parent="Sun" unique_id=200000016 instance=ExtResource("4_sunst")]
+position = Vector2(20000, 0)
+orbital_distance = 20000.0
+orbital_speed = 3.0
+initial_angle_degrees = 0.0
+
+[node name="Gate" parent="Sun" unique_id=200000017 instance=ExtResource("3_gate")]
+position = Vector2(19805.4, 2783.5)
+is_core = true
+power_cost = 0
+orbital_distance = 20000.0
+orbital_speed = 3.0
+initial_angle_degrees = 8.0
