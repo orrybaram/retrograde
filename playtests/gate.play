@@ -1,0 +1,83 @@
+# Powering a dormant Gate: fly in on Veld's Gate, dock in its cradle, pay for it, watch
+# the boot log bring the Module online, and check it is still online after a reload.
+# Run: tools/play.sh playtests/gate.play   (frames land in .playtest/gate_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+
+assert get_tree().get_nodes_in_group("gates").size() == 5 "one dormant Gate per planet"
+assert pt.gate("Veld").minimap_target != null "the Gate is on the minimap"
+assert gs.titan_influence() == 0 "every Module starts offline"
+assert not pt.gate("Veld").is_powered() "Veld's Gate starts dormant"
+assert pt.gate("Veld").power_cost == 600 "Veld's Gate asks for 600 CR"
+eval gs.set("credits", 1000)
+
+# In scanner range of Veld's Gate: it shows on the minimap as a ring with its blinker
+eval pt.park_at_gate("Veld", 3000.0)
+frames 2
+screenshot gate_0_minimap
+
+# Lined up on the cradle, matched to the Gate's orbit, the way flying in leaves you
+eval pt.park_at_gate("Veld", 30.0)
+frames 2
+screenshot gate_1_dormant
+# FlyingState holds off docking for a couple of seconds after an undock
+wait 2.2
+eval pt.park_at_gate("Veld", 30.0)
+frames 2
+assert pt.nearest("gates").distance < 140 "parked in the ring"
+press action
+wait_until pt.state_name() == "GateDockedState" 3
+wait_until pt.visible_ui().has("GateTerminal") 2
+wait 0.5
+screenshot gate_2_terminal
+
+# POWER GATE is the first row; ENTER takes it
+press enter
+wait_until gs.titan_influence() == 1 2
+assert gs.credits == 400 "the Gate took its 600 CR"
+assert pt.gate("Veld").is_powered() "Veld's Module is online"
+wait 0.9
+screenshot gate_3_boot_log
+wait_until not pt.node("gate_terminal").is_booting() 8
+wait 0.3
+screenshot gate_4_powered
+assert pt.state_name() == "GateDockedState" "the boot log doesn't undock the ship"
+assert ship.hull_strength == ship.max_hull "powering a Gate costs no hull"
+
+# ESC leaves the terminal without pausing, and the action key brings it back
+press esc
+wait_until pt.visible_ui().is_empty() 2
+assert not get_tree().paused "ESC closes the terminal instead of pausing"
+assert pt.state_name() == "GateDockedState" "still in the cradle"
+press action
+wait_until pt.visible_ui().has("GateTerminal") 2
+
+# DEPART is selected once the Module is online
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.6
+wait_until pt.state_name() == "FlyingState" 3
+wait 0.4
+screenshot gate_5_lit
+
+# The Module stays online across a reload, and the ship comes back to its Gate
+reload
+wait_until main.current_game_state == 1 10
+assert gs.titan_influence() == 1 "the Module is still online after a reload"
+assert pt.gate("Veld").is_powered() "Veld's Gate is still lit after a reload"
+assert gs.credits == 400 "the credits it cost are still spent"
+assert pt.state_name() == "GateDockedState" "a saved Gate dock comes back as a Gate dock"
+state

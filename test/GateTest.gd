@@ -1,0 +1,205 @@
+extends GdUnitTestSuite
+
+## Tests for the dormant Gate: what powering one costs and what it brings online, the
+## docked state the ship sits in while it does it, and the powered Modules surviving a save.
+
+const SAVE_FILE := "user://gate_test_save.cfg"
+
+var _gs: GameState
+
+
+func before_test() -> void:
+	_gs = auto_free(GameState.new()) as GameState
+	_gs.set_process(false)
+	add_child(_gs)
+
+
+func after_test() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_FILE))
+
+
+func _planet(planet_name := "Veld") -> Planet:
+	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	planet.name = planet_name
+	planet.radius = 400.0
+	planet.enable_orbiting = false
+	add_child(planet)
+	for grown in planet.get_ore_deposits():
+		grown.free()
+	return planet
+
+
+func _gate(planet: Planet, cost := 600) -> Gate:
+	var gate := auto_free(load("res://entities/structures/Gate.tscn").instantiate()) as Gate
+	gate.power_cost = cost
+	gate.enable_orbiting = false
+	planet.add_child(gate)
+	return gate
+
+
+func _ship() -> Ship:
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	add_child(ship)
+	return ship
+
+
+## Dock the ship the way flying in does: hand over the dockable, change state.
+func _dock_at(ship: Ship, dockable: Node2D) -> void:
+	ship.global_position = dockable.get_dock_position()
+	ship.set_meta("pending_dockable", dockable)
+	ship.state_machine.change_state(FlyingState.docked_state_for(dockable))
+
+
+# --- Powering ----------------------------------------------------------------
+
+func test_a_gate_starts_dormant_and_knows_its_planet() -> void:
+	var gate := _gate(_planet("Crom"))
+	assert_str(gate.save_key()).is_equal("Crom")
+	assert_bool(gate.is_powered()).is_false()
+	assert_int(_gs.titan_influence()).is_equal(0)
+
+
+func test_powering_a_gate_spends_the_credits_and_brings_its_module_online() -> void:
+	var gate := _gate(_planet("Veld"), 600)
+	_gs.credits = 1000
+	assert_bool(gate.power(_gs)).is_true()
+	assert_int(_gs.credits).is_equal(400)
+	assert_bool(gate.is_powered()).is_true()
+	assert_int(_gs.titan_influence()).is_equal(1)
+
+
+func test_a_gate_the_player_cannot_pay_for_stays_dormant() -> void:
+	var gate := _gate(_planet("Sonder"), 2000)
+	_gs.credits = 1999
+	assert_bool(gate.can_afford(_gs)).is_false()
+	assert_bool(gate.power(_gs)).is_false()
+	assert_int(_gs.credits).is_equal(1999)
+	assert_bool(gate.is_powered()).is_false()
+
+
+## A Module never goes back offline, so its Gate is never charged for twice.
+func test_a_powered_gate_refuses_a_second_payment() -> void:
+	var gate := _gate(_planet("Roke"), 600)
+	_gs.credits = 2000
+	assert_bool(gate.power(_gs)).is_true()
+	assert_bool(gate.power(_gs)).is_false()
+	assert_int(_gs.credits).is_equal(1400)
+	assert_int(_gs.titan_influence()).is_equal(1)
+
+
+func test_each_planets_module_counts_once_toward_titan_influence() -> void:
+	_gs.credits = 10000
+	_gate(_planet("Veld"), 600).power(_gs)
+	_gate(_planet("Crom"), 1200).power(_gs)
+	assert_int(_gs.titan_influence()).is_equal(2)
+	assert_int(_gs.credits).is_equal(8200)
+
+
+## Purple is the Titan's; a dormant Gate is just dark hull out there.
+func test_the_minimap_marker_takes_the_titans_color_once_powered() -> void:
+	var gate := _gate(_planet("Veld"), 600)
+	var marker := GateMinimapTarget.new(gate)
+	assert_object(marker.get_minimap_color()).is_equal(Colors.HULL_LIGHT)
+	_gs.credits = 600
+	gate.power(_gs)
+	assert_object(marker.get_minimap_color()).is_equal(Colors.TITAN)
+
+
+func test_new_game_powers_every_module_back_down() -> void:
+	var gate := _gate(_planet("Veld"), 600)
+	_gs.credits = 600
+	gate.power(_gs)
+	_gs.reset_all_state()
+	assert_dict(_gs.powered_gates).is_empty()
+	assert_int(_gs.titan_influence()).is_equal(0)
+	assert_bool(gate.is_powered()).is_false()
+
+
+# --- Docked state ------------------------------------------------------------
+
+func test_a_gate_docks_into_its_own_state_and_a_port_does_not() -> void:
+	var gate := _gate(_planet("Veld"))
+	assert_str(FlyingState.docked_state_for(gate)).is_equal("GateDockedState")
+	var port := auto_free(load("res://entities/structures/SpacePort.tscn").instantiate()) as SpacePort
+	add_child(port)
+	assert_str(FlyingState.docked_state_for(port)).is_equal("LandedState")
+
+
+func test_docking_at_a_gate_clamps_the_ship_to_it() -> void:
+	var gate := _gate(_planet("Veld"))
+	var ship := _ship()
+	_dock_at(ship, gate)
+	assert_str(ship.state_machine.get_current_state_name()).is_equal("GateDockedState")
+	var state := ship.state_machine.current_state as GateDockedState
+	assert_object(state.locked_dockable).is_same(gate)
+
+
+## The cradle sits at the bottom of the ring, and that is what the ship docks to.
+func test_the_dock_point_is_the_cradle_not_the_ring_centre() -> void:
+	var gate := _gate(_planet("Veld"))
+	gate.global_position = Vector2(500, -200)
+	assert_vector(gate.get_dock_position()).is_equal_approx(
+		Vector2(500, -200 + Gate.RADIUS), Vector2.ONE * 0.01)
+	assert_float(gate.get_dock_distance()).is_equal(60.0)
+
+
+func test_drifting_out_of_the_cradle_releases_the_ship() -> void:
+	var gate := _gate(_planet("Veld"))
+	var ship := _ship()
+	_dock_at(ship, gate)
+	var state := ship.state_machine.current_state as GateDockedState
+	ship.global_position = gate.get_dock_position() + Vector2(gate.get_dock_distance() + 10.0, 0)
+	state.physics_process(0.016)
+	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
+
+
+func test_a_gate_that_goes_away_releases_the_ship() -> void:
+	var gate := _gate(_planet("Veld"))
+	var ship := _ship()
+	_dock_at(ship, gate)
+	var state := ship.state_machine.current_state as GateDockedState
+	gate.get_parent().remove_child(gate)
+	gate.free()
+	state.physics_process(0.016)
+	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
+
+
+func test_docking_without_a_gate_falls_straight_back_to_flying() -> void:
+	var ship := _ship()
+	ship.state_machine.change_state("GateDockedState")
+	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
+
+
+func test_a_ship_docked_at_a_gate_is_saved_against_that_gate() -> void:
+	var planet := _planet("Veld")
+	var gate := _gate(planet)
+	var ship := _ship()
+	_dock_at(ship, gate)
+	assert_str(Save._get_dockable_key_from_ship(ship)).is_equal("Veld/Gate")
+
+
+# --- Saving ------------------------------------------------------------------
+
+func test_powered_gates_round_trip_through_the_save() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("stats", "credits", 42)
+	cfg.save(SAVE_FILE)
+	Save.save_powered_gates(PackedStringArray(["Sun/Veld", "Sun/Crom"]), SAVE_FILE)
+	assert_array(Array(Save.load_powered_gates(SAVE_FILE))).contains_exactly(["Sun/Veld", "Sun/Crom"])
+	cfg.load(SAVE_FILE)
+	assert_int(cfg.get_value("stats", "credits")).is_equal(42)
+	assert_array(Array(cfg.get_value(Save.GATE_SECTION, Save.GATE_POWERED_KEY))).contains_exactly(
+		["Sun/Veld", "Sun/Crom"])
+
+
+func test_gate_save_needs_an_existing_save() -> void:
+	Save.save_powered_gates(PackedStringArray(["Sun/Veld"]), SAVE_FILE)
+	assert_bool(FileAccess.file_exists(SAVE_FILE)).is_false()
+	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
+
+
+func test_a_save_from_before_gates_reads_as_nothing_powered() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("stats", "credits", 7)
+	cfg.save(SAVE_FILE)
+	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)

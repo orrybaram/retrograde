@@ -396,13 +396,18 @@ func _attempt_dock() -> void:
 	if angle_diff > angle_threshold:
 		return  # Ship is not aligned correctly
 	
-	# Transition to LandedState with the dockable entity
-	# Store dockable reference on ship for LandedState to pick up
+	# Hand the dockable to the docked state, which picks it back up in enter()
 	ship.set_meta("pending_dockable", _nearby_dockable)
 	
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
-	if state_machine and state_machine.has_state("LandedState"):
-		state_machine.change_state("LandedState")
+	var docked_state = docked_state_for(_nearby_dockable)
+	if state_machine and state_machine.has_state(docked_state):
+		state_machine.change_state(docked_state)
+
+## Which docked state a dockable belongs in: a Gate has its own, everything else
+## docks like a port.
+static func docked_state_for(dockable: Node2D) -> String:
+	return "GateDockedState" if dockable.is_in_group("gates") else "LandedState"
 
 func _is_ui_blocking_input() -> bool:
 	if not ship or not is_instance_valid(ship):

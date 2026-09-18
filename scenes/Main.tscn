@@ -22,6 +22,8 @@
 [ext_resource type="Resource" path="res://entities/encounters/tables/deep_space.tres" id="25_enct"]
 [ext_resource type="Script" path="res://scenes/VoidShroud.gd" id="24_void"]
 [ext_resource type="Script" path="res://scenes/HullAlarm.gd" id="25_hull"]
+[ext_resource type="Script" path="res://ui/GateTerminal.gd" id="26_gate"]
+[ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="27_term"]
 
 [node name="Main" type="Node2D" unique_id=1692069879]
 script = ExtResource("1")
@@ -72,6 +74,17 @@ mouse_filter = 0
 [node name="InventoryUI" parent="CanvasLayer" unique_id=215892337 instance=ExtResource("16")]
 
 [node name="SystemMap" parent="CanvasLayer" unique_id=1107096874 instance=ExtResource("19")]
+
+[node name="GateTerminal" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("27_term")
+script = ExtResource("26_gate")
 
 [node name="PauseMenu" parent="CanvasLayer" unique_id=125140598 instance=ExtResource("22")]
 

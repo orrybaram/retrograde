@@ -86,7 +86,8 @@ FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom, 
 OreDrill (HarvestTiming per layer, GemData.drill_drops) -> ore.spend() -> GameState.spent_ore (refill timers)
 ```
 
-- `LandedState` is docking at a port; landing on a planet is `PlanetLandedState`.
+- `LandedState` is docking at a port; landing on a planet is `PlanetLandedState`;
+  docking at a Gate is `GateDockedState`.
 - Ore seams are hexagons just under the surface, seeded from the planet's save key, so they are
   the same every session and need no authoring in `HomeSystem.tscn`. There is no landing pad:
   land on plain ground within `OreDeposit.REACH` of a seam.
@@ -100,3 +101,22 @@ OreDrill (HarvestTiming per layer, GemData.drill_drops) -> ore.spend() -> GameSt
   more per layer than a scrap hit, so a seam is worth several scrap nodes (see DrillTest).
 - Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `OreDrill.*`, `GemData.DRILL_*`,
   `Planet.ORE_COUNT` / `MOON_ORE_COUNT`, `OreDeposit.REACH` / `DEPTH_*` / `*REGROW_TIME`.
+
+## Gates (CONTEXT.md, docs/adr/0001)
+
+```
+Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
+  -> FlyingState._attempt_dock -> GateDockedState (clamps to the cradle, owns zoom)
+    -> GateTerminal (CanvasLayer) -> Gate.power(gs) -> GameState.powered_gates -> Save `[gates] powered`
+```
+
+- One dormant Gate per planet, placed in `HomeSystem.tscn` at `field_radius() x 1.5`. Its
+  `save_key()` is the planet's, so the Module and its planet share one key.
+- `GameState.titan_influence()` is how many Modules are online (0-5); the Core in the sun is a
+  separate final state, not step 6. A Module never goes back offline.
+- The dock surface is the cradle at the bottom of the ring, not the node origin:
+  `Gate.get_dock_transform()`. Approach rules are the port's (distance 60, same alignment).
+- The Gate is deliberately not pinned to the minimap rim - the minimap shows scanner range and
+  nothing more, so a Gate has to be flown to (docs/adr/0002).
+- Save: `[gates] powered`, written on power-up (a full autosave, which also banks the credits
+  it cost) and on the normal save path. `Save.save_powered_gates` writes only that section.

@@ -85,6 +85,12 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 empty space (`pt.node("system_map").cursor_world`), ENTER takes it as a `WAYPOINT`, ENTER over a body tracks the body instead so
 the target rides its orbit, and DEL hands tracking back to home base (`.playtest/mark_*.png`).
 
+`playtests/gate.play` flies in on Veld's dormant Gate, docks in its cradle, pays the 600 CR, and checks the
+boot log brings the Module online (`gs.titan_influence()`), the ring lights purple, ESC leaves the terminal
+without pausing, and the Module survives a reload (`.playtest/gate_*.png`). Helpers: `pt.gate("Veld")`,
+`pt.park_at_gate(planet, dist)` (lined up on the cradle, matched to the Gate's orbit). FlyingState refuses to
+dock for ~2s after an undock, so park, `wait 2.2`, park again, then `press action`.
+
 `playtests/minimap.play` screenshots the minimap markers (ship arrow, station silhouette + beacon, shaded planets, scrap chunks, derelict pinned to the rim).
 
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).

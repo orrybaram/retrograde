@@ -61,15 +61,16 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 	ship.linear_velocity = dock_velocity
 	ship.angular_velocity = 0.0
 	
-	# Set metadata for LandedState
+	# Set metadata for the docked state
 	ship.set_meta("pending_dockable", dockable)
 	if instant:
 		ship.set_meta("instant_dock", true)
 	
-	# Transition to LandedState
+	# Dock the way flying in would have: a Gate has its own state
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
-	if state_machine and state_machine.has_state("LandedState"):
-		state_machine.change_state("LandedState")
+	var docked_state = FlyingState.docked_state_for(dockable)
+	if state_machine and state_machine.has_state(docked_state):
+		state_machine.change_state(docked_state)
 	
 	print("Ship spawned at dock: ", dockable.name, " position: ", spawn_pos)
 	spawn_complete.emit()

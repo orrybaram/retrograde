@@ -22,6 +22,10 @@ var scanned_planets: Dictionary = {}
 ## Dug-out ore seams: OreDeposit.ore_id() -> seconds of play left until they refill.
 var spent_ore: Dictionary = {}
 
+## Gates the player has powered, keyed by the planet's Planet.save_key(). One powered
+## Gate is one Module online, and a Module never goes back offline. Permanent.
+var powered_gates: Dictionary = {}
+
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
 
@@ -52,6 +56,17 @@ func is_planet_scanned(key: String) -> bool:
 
 func mark_planet_scanned(key: String) -> void:
 	scanned_planets[key] = true
+
+func is_gate_powered(key: String) -> bool:
+	return powered_gates.has(key)
+
+func mark_gate_powered(key: String) -> void:
+	powered_gates[key] = true
+
+## How awake the Titan is, 0 to 5: one step per Module online. Every "wrongness"
+## effect reads from this. (The Core in the sun is a separate final state, not step 6.)
+func titan_influence() -> int:
+	return powered_gates.size()
 
 func spend_ore(ore_id: String, regrow_seconds: float) -> void:
 	spent_ore[ore_id] = regrow_seconds
@@ -85,6 +100,7 @@ func reset_all_state() -> void:
 	has_planet_scanner = false
 	scanned_planets.clear()
 	spent_ore.clear()
+	powered_gates.clear()
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()

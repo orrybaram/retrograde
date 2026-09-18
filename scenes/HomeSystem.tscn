@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://dyj33wc7mamja" path="res://entities/Planet/Planet.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://b8k2j3m4n5p6q" path="res://entities/structures/SpaceStation.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://entities/resources/OrbitalRingSpawner.tscn" id="2_vpsiu"]
+[ext_resource type="PackedScene" path="res://entities/structures/Gate.tscn" id="3_gate"]
 
 [node name="HomeSystem" type="Node2D" unique_id=1363253957]
 
@@ -163,16 +164,37 @@ orbital_distance = 6000.0
 orbital_speed = 20.0
 initial_angle_degrees = 180.0
 
+[node name="Gate" parent="Sun/Veld" unique_id=200000011 instance=ExtResource("3_gate")]
+position = Vector2(8273.3, 6942.1)
+power_cost = 600
+orbital_distance = 10800.0
+orbital_speed = 3.0
+initial_angle_degrees = 40.0
 
+[node name="Gate" parent="Sun/Crom" unique_id=200000012 instance=ExtResource("3_gate")]
+position = Vector2(-11031, 9256.1)
+power_cost = 1200
+orbital_distance = 14400.0
+orbital_speed = 3.0
+initial_angle_degrees = 140.0
 
+[node name="Gate" parent="Sun/Sonder" unique_id=200000013 instance=ExtResource("3_gate")]
+position = Vector2(-22062.1, -18512.3)
+power_cost = 2000
+orbital_distance = 28800.0
+orbital_speed = 3.0
+initial_angle_degrees = 220.0
 
+[node name="Gate" parent="Sun/Roke" unique_id=200000014 instance=ExtResource("3_gate")]
+position = Vector2(6300, -10911.9)
+power_cost = 3200
+orbital_distance = 12600.0
+orbital_speed = 3.0
+initial_angle_degrees = 300.0
 
-
-
-
-
-
-
-
-
-
+[node name="Gate" parent="Sun/TERRA-0" unique_id=200000015 instance=ExtResource("3_gate")]
+position = Vector2(19125.3, 5124.6)
+power_cost = 5000
+orbital_distance = 19800.0
+orbital_speed = 3.0
+initial_angle_degrees = 15.0

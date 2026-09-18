@@ -80,6 +80,9 @@ func _show_pause_menu() -> void:
 	var store = get_tree().get_first_node_in_group("store_ui") as StoreUI
 	if store and store.visible:
 		return
+	var gate_terminal = get_tree().get_first_node_in_group("gate_terminal") as GateTerminal
+	if gate_terminal and gate_terminal.visible:
+		return
 	var system_map = get_tree().get_first_node_in_group("system_map") as SystemMap
 	if system_map and system_map.visible:
 		return

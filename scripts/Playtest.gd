@@ -756,6 +756,29 @@ func park_near_planet(planet_name: String, dist: float, angle_deg := 180.0, orbi
 	ship.global_position = pos
 	ship.rotation = dir.angle()
 
+## A planet's Gate by planet node name, e.g. pt.gate("Veld").
+func gate(planet_name: String) -> Gate:
+	var p := planet(planet_name)
+	if not p:
+		return null
+	return p.get_node_or_null("Gate") as Gate
+
+## Park the ship on the approach to a Gate's cradle: `dist` px off it, lined up on the
+## dock and matched to its orbit, which is where a player flying in ends up.
+func park_at_gate(planet_name: String, dist := 30.0) -> void:
+	var g := gate(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if not g or not ship:
+		return
+	var rot := g.get_dock_rotation() + PI / -2.0
+	var pos := g.get_dock_position() + Vector2.from_angle(rot) * dist
+	var rid := ship.get_rid()
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rot, pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, g.get_dock_velocity())
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_position = pos
+	ship.rotation = rot
+
 ## Speed of a circular orbit `dist` px out: PlanetGravityField pulls with
 ## mass * G / dist^2, so v = sqrt(pull * dist / ship mass).
 static func orbital_speed(p: Planet, ship: Ship, dist: float) -> float:

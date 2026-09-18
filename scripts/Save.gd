@@ -4,7 +4,7 @@ class_name Save
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, scanned planets, dug-out ore seams
-## (seconds until they refill), and which radio tips were seen.
+## (seconds until they refill), powered Gates, and which radio tips were seen.
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
@@ -16,6 +16,8 @@ const SCAN_SECTION := "scan"
 const SCAN_PLANETS_KEY := "planets"
 const ORE_SECTION := "ore"
 const ORE_REGROW_KEY := "regrow"
+const GATE_SECTION := "gates"
+const GATE_POWERED_KEY := "powered"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -69,6 +71,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, RobotRadio.seen_ids())
 	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray(gs.scanned_planets.keys()))
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
+	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -148,6 +151,24 @@ static func load_ore_regrowth(path: String = "") -> Dictionary:
 			out[str(ore_id)] = float(spent[ore_id])
 	return out
 
+## Writes only the powered Gates into an existing save, keeping the rest, so a Gate
+## powered at the far end of the system is kept the moment its Module comes online.
+## With no save yet this does nothing; the next full save() writes them.
+static func save_powered_gates(keys: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, keys)
+	cfg.save(file)
+
+## The planet keys whose Gates are powered — one per Module online.
+static func load_powered_gates(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray()))
+
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
 static func _get_planet_key(planet: Planet) -> String:
@@ -180,6 +201,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	for key in load_scanned_planets():
 		gs.mark_planet_scanned(key)
 	gs.spent_ore = load_ore_regrowth()
+	gs.powered_gates.clear()
+	for gate_key in load_powered_gates():
+		gs.mark_gate_powered(gate_key)
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}
@@ -275,17 +299,17 @@ static func _get_dockable_key_from_ship(ship: Ship) -> String:
 	if not ship:
 		return ""
 	
-	# Check if ship is in LandedState
+	# Both docked states hold what the ship is clamped to: a port, or a Gate.
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
 	if not state_machine:
 		return ""
 	
 	var current_state = state_machine.current_state
-	if not current_state or not current_state is LandedState:
-		return ""
-	
-	var landed_state = current_state as LandedState
-	var locked_dockable = landed_state.locked_dockable
+	var locked_dockable: Node2D = null
+	if current_state is LandedState:
+		locked_dockable = (current_state as LandedState).locked_dockable
+	elif current_state is GateDockedState:
+		locked_dockable = (current_state as GateDockedState).locked_dockable
 	if not locked_dockable or not is_instance_valid(locked_dockable):
 		return ""
 	
