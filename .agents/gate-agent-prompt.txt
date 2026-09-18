@@ -1,0 +1,27 @@
+You are implementing GitHub issue #{number}: {title}
+
+{body}
+
+Before writing code:
+- Read CLAUDE.md and .claude/PATTERNS.md for the project's rules (Colors autoload, monospace, arrow-key UI, state machines, case-sensitive res:// paths).
+- Read CONTEXT.md for the domain glossary. Use its vocabulary in code, comments and UI text: Titan, Module, Gate, Core, Sun Station, Titan Influence, Automaton, Unidentified, Chart, Charted. Never write "warp gate", "teleport" or "containment".
+- Read docs/adr/0001-titan-is-powered-down-not-contained.md and docs/adr/0002-chart-starts-blank-and-is-filled-by-gates.md. The Titan is powered down, not imprisoned; the player only ever restores.
+
+The Gate foundation is already on main (issue #68). Build on it; do not reimplement or rename it:
+- `entities/structures/Gate.gd` (`class_name Gate`): `save_key()`, `is_powered()`, `can_afford(gs)`, `power(gs)`, the `Dockable` methods, `RADIUS`, `DOCK_DISTANCE`, `@export power_cost`. Five Gates are already placed in `scenes/HomeSystem.tscn` under Veld, Crom, Sonder, Roke and TERRA-0.
+- `scripts/GameState.gd`: `powered_gates` (keyed by the planet's `save_key()`), `is_gate_powered(key)`, `mark_gate_powered(key)`, `titan_influence()`.
+- `scripts/Save.gd`: `[gates] powered`, via `save_powered_gates()` / `load_powered_gates()`.
+- `ui/GateTerminal.gd`: the docked terminal, with `terminal_closed` and `gate_powered(gate)` signals and a row list built by `_refresh_hub()`.
+- `entities/Ship/states/GateDockedState.gd`: the docked ship state that opens the terminal.
+- `ui/minimap/GateMinimapTarget.gd`: the Gate's minimap entry.
+
+While working:
+- Work only on this issue's scope. The other issues in this feature are being built in parallel by other agents, so keep your diff narrow and do not refactor shared files beyond what your acceptance criteria need.
+- Follow the acceptance criteria exactly; they are the definition of done.
+- Add gdUnit4 tests under test/ where the criteria call for them. Keep file IO out of unit tests' reach (the default save path in tests is the player's real save). `test/GateTest.gd` shows the existing patterns.
+
+Before finishing:
+- Run tools/test.sh and tools/smoke.sh. Both must pass.
+- Commit your work on this workspace's branch with a message explaining the behavior, not the layers.
+- End the commit message with: Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+- Do not merge to main and do not touch other issues' files.
