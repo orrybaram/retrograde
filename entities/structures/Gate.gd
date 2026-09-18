@@ -11,8 +11,13 @@ class_name Gate
 ## Orbits its parent planet with the same OrbitalMotion component the station uses, and
 ## docks with the same rules as a port: the cradle is the dock surface, the ship comes
 ## in slow and lined up, and GateDockedState clamps it there.
+##
+## Unidentified until flown to (CONTEXT.md): the minimap calls it `? ? ?` until the ship
+## gets inside Identifiable.RANGE of it, at which point the Guide says what it is and the
+## label reads GATE. The Guide never points at one beforehand (docs/adr/0002).
 
 const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
+const MSG_IDENTIFIED = preload("res://entities/Robot/radio/messages/gate_identified.tres")
 
 ## Ring radius; the Gate reads about 200 px across.
 const RADIUS := 100.0
@@ -29,6 +34,8 @@ const POWER_UP_TIME := 1.6
 ## One slow blinker while dormant: seconds per cycle, and the share of it lit.
 const BLINK_PERIOD := 2.4
 const BLINK_DUTY := 0.18
+## What the minimap calls a Gate once the Guide has named it.
+const LABEL := "GATE"
 
 ## What the Titan asks for this Module, in credits.
 @export var power_cost: int = 600
@@ -43,10 +50,13 @@ var initial_angle: float:
 
 var parent_planet: Planet = null
 var minimap_target: GateMinimapTarget = null
+## Off in tests so identifying a Gate never touches a save file (RobotRadio does the same).
+var persist := true
 
 var _orbital_motion = null  # OrbitalMotion
 var _clock := 0.0
 var _glow := 0.0  # 0 dormant, 1 fully powered; ramps on power-up
+var _ship: Node2D = null  # cached for the identification check
 
 ## Get current orbital angle (delegates to OrbitalMotion)
 var orbital_angle: float:
@@ -111,6 +121,31 @@ func is_powered() -> bool:
 	var gs := _game_state()
 	return gs != null and gs.is_gate_powered(save_key())
 
+## True once the Guide has named this Gate. Until then the minimap reads `? ? ?`.
+func is_identified() -> bool:
+	var gs := _game_state()
+	return gs != null and gs.is_gate_identified(save_key())
+
+## Names the Gate. The Guide's line is `once` per save, so only the first Gate the
+## player ever reaches gets a word about it; every later one flips silently.
+## Returns true when this call is what identified it.
+func identify() -> bool:
+	var gs := _game_state()
+	var key := save_key()
+	if gs == null or key == "" or gs.is_gate_identified(key):
+		return false
+	gs.mark_gate_identified(key)
+	EventBus.radio_message_requested.emit(MSG_IDENTIFIED)
+	if persist:
+		Save.save_identified_gates(PackedStringArray(gs.identified_gates.keys()))
+	return true
+
+## Identifies the Gate once the ship is close enough to make it out, and not before.
+func identify_if_near(ship_position: Vector2) -> bool:
+	if is_identified() or not Identifiable.in_range(ship_position, global_position):
+		return false
+	return identify()
+
 ## Whether the player can pay for it right now.
 func can_afford(gs: GameState) -> bool:
 	return gs != null and gs.credits >= power_cost
@@ -152,7 +187,17 @@ func _process(delta: float) -> void:
 	_clock += delta
 	if is_powered() and _glow < 1.0:
 		_glow = minf(_glow + delta / POWER_UP_TIME, 1.0)
+	_watch_for_the_ship()
 	queue_redraw()
+
+## The only trigger for identification: the player flying within reach of the thing.
+func _watch_for_the_ship() -> void:
+	if is_identified():
+		return
+	if not is_instance_valid(_ship):
+		_ship = get_tree().get_first_node_in_group("ship") as Node2D
+	if is_instance_valid(_ship):
+		identify_if_near(_ship.global_position)
 
 func _draw() -> void:
 	var hull := Colors.HULL_DARK.lerp(Colors.TITAN.darkened(0.62), _glow)

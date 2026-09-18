@@ -41,6 +41,13 @@ func enter() -> void:
 	if ship.camera:
 		ship.camera.zoom_camera_in(CAMERA_ZOOM)
 
+	# Reaching a Gate is what names it. In open flight that has already happened long
+	# before the cradle, but a ship that spawns docked at one skips the approach, so the
+	# Guide gets its word in before the terminal takes the screen.
+	var gate := locked_dockable as Gate
+	if gate:
+		gate.identify()
+
 	if instant:
 		_show_prompt()
 	else:

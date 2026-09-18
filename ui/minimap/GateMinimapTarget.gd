@@ -5,6 +5,9 @@ class_name GateMinimapTarget
 ## hull with the blinker still going round; powered it carries the Titan's purple.
 ## Deliberately does NOT pin to the rim: the minimap shows what is in scanner range and
 ## no more, so a Gate has to be flown to rather than pointed at (docs/adr/0002).
+##
+## Labelled underneath: `? ? ?` until the Guide has named the Gate, GATE after
+## (CONTEXT.md, Unidentified).
 
 const SIZE := 6.0
 
@@ -33,9 +36,15 @@ func is_minimap_visible() -> bool:
 func get_minimap_node() -> Node2D:
 	return gate
 
+## `? ? ?` for a Gate nobody has reached yet, GATE once the Guide has named it.
+func label() -> String:
+	return Identifiable.label(_identified(), Gate.LABEL)
+
 func draw_marker(map: Minimap, pos: Vector2, size: float, _view_rotation: float) -> void:
 	var color := get_minimap_color()
 	map.draw_arc(pos, size, 0.0, TAU, 20, color, 1.6)
+	# Mustard is the UI color, so the label stays mustard even on a purple ring
+	Identifiable.draw_label(map, pos, size, label(), Colors.PRIMARY)
 	if _powered():
 		map.draw_arc(pos, size + 2.0, 0.0, TAU, 20, Color(Colors.TITAN, 0.35), 1.0)
 		return
@@ -45,3 +54,6 @@ func draw_marker(map: Minimap, pos: Vector2, size: float, _view_rotation: float)
 
 func _powered() -> bool:
 	return gate != null and is_instance_valid(gate) and gate.is_powered()
+
+func _identified() -> bool:
+	return gate != null and is_instance_valid(gate) and gate.is_identified()

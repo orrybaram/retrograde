@@ -26,6 +26,11 @@ var spent_ore: Dictionary = {}
 ## Gate is one Module online, and a Module never goes back offline. Permanent.
 var powered_gates: Dictionary = {}
 
+## Gates the Guide has named, keyed by the planet's Planet.save_key(). A Gate reads as
+## `? ? ?` on the minimap until the player flies close enough to be told what it is
+## (CONTEXT.md, Unidentified). Permanent.
+var identified_gates: Dictionary = {}
+
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
 
@@ -62,6 +67,12 @@ func is_gate_powered(key: String) -> bool:
 
 func mark_gate_powered(key: String) -> void:
 	powered_gates[key] = true
+
+func is_gate_identified(key: String) -> bool:
+	return identified_gates.has(key)
+
+func mark_gate_identified(key: String) -> void:
+	identified_gates[key] = true
 
 ## How awake the Titan is, 0 to 5: one step per Module online. Every "wrongness"
 ## effect reads from this. (The Core in the sun is a separate final state, not step 6.)
@@ -101,6 +112,7 @@ func reset_all_state() -> void:
 	scanned_planets.clear()
 	spent_ore.clear()
 	powered_gates.clear()
+	identified_gates.clear()
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()
