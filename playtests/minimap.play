@@ -1,5 +1,6 @@
 # Minimap markers: cream heading arrow for the ship, station silhouette with a blue
-# beacon, shaded planets, scrap chunks, and an abandoned ship pinned to the rim.
+# beacon, shaded planets, scrap chunks, and an abandoned ship pinned to the rim as an
+# anonymous contact ring — what it is stays a surprise until you get there.
 # Run: tools/play.sh playtests/minimap.play   (frames land in .playtest/minimap_*.png)
 
 press enter
@@ -58,7 +59,8 @@ wait 0.5
 assert pt.abandoned_ship().minimap_target.pins_to_edge() "far derelict stays on the rim"
 screenshot minimap_4_derelict_far
 
-# Nav target: blue diamond at a near waypoint, held on the rim for a far one
+# Nav target: blue diamond around a near waypoint, a small bearing arrow on the rim
+# for one that hasn't come onto the map yet
 eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(3000, -2500))
 wait 0.2
 screenshot minimap_5_waypoint_near

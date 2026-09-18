@@ -23,6 +23,7 @@ class_name Minimap
 
 const SHIP_SIZE := 7.0
 const NAV_SIZE := 9.0
+const NAV_POINTER_SIZE := 4.0 # the rim arrow that only gives the bearing
 const EDGE_INSET := 11.0 # how far inside the rim pinned markers sit
 const NAV_MARGIN := 4.0 # clearance the nav diamond keeps around the marker it rings
 
@@ -144,18 +145,22 @@ func _to_minimap(center: Vector2, world_pos: Vector2, ship_rotation: float, pin:
 		minimap_pos = minimap_pos.normalized() * (display_radius - EDGE_INSET)
 	return center + minimap_pos
 
-## The nav target (waypoint, or home): a blue diamond outline, held on the rim when far.
-## It is drawn under the markers, so it takes the size of whatever it sits on —
+## The nav target (waypoint, or home): a blue diamond outline around whatever it sits
+## on. It is drawn under the markers, so it takes the size of whatever it sits on —
 ## otherwise tracking a planet close up buries the diamond inside its disc.
+## Still out of range, there is nothing to ring: a small arrow on the rim just gives
+## the bearing until the thing itself comes onto the map.
 func _draw_nav_target(center: Vector2, ship_rotation: float, visible_targets: Array[MinimapTarget]) -> void:
 	var target := NavSystem.get_target()
 	if not target:
 		return
-	# Held on the rim, the diamond stands alone — there is no marker out there to
-	# ring, so it goes back to its own size rather than a planet's.
 	var in_range = _to_minimap(center, target.get_position(), ship_rotation, false)
-	var pos: Vector2 = in_range if in_range != null else _to_minimap(center, target.get_position(), ship_rotation, true)
-	var marker_size := _nav_marker_size(target, visible_targets) if in_range != null else NAV_SIZE
+	if in_range == null:
+		var pinned: Vector2 = _to_minimap(center, target.get_position(), ship_rotation, true)
+		draw_pointer(self, pinned, NAV_POINTER_SIZE, (pinned - center).angle(), nav_color)
+		return
+	var pos: Vector2 = in_range
+	var marker_size := _nav_marker_size(target, visible_targets)
 	var points := PackedVector2Array([
 		pos + Vector2(0, -marker_size), pos + Vector2(marker_size, 0),
 		pos + Vector2(0, marker_size), pos + Vector2(-marker_size, 0), pos + Vector2(0, -marker_size),
@@ -181,6 +186,14 @@ static func now() -> float:
 static func draw_chevron(canvas: CanvasItem, pos: Vector2, marker_size: float, angle: float, color: Color) -> void:
 	var points := PackedVector2Array()
 	for p in [Vector2(1.0, 0.0), Vector2(-0.8, 0.7), Vector2(-0.4, 0.0), Vector2(-0.8, -0.7)]:
+		points.append(pos + (p * marker_size).rotated(angle))
+	canvas.draw_colored_polygon(points, color)
+
+## Small solid triangle pointing along `angle` (0 = +x). A bearing, not a thing:
+## blunter than the ship arrowhead so the two never read as the same mark.
+static func draw_pointer(canvas: CanvasItem, pos: Vector2, marker_size: float, angle: float, color: Color) -> void:
+	var points := PackedVector2Array()
+	for p in [Vector2(1.0, 0.0), Vector2(-0.7, 0.85), Vector2(-0.7, -0.85)]:
 		points.append(pos + (p * marker_size).rotated(angle))
 	canvas.draw_colored_polygon(points, color)
 
