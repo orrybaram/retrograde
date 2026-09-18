@@ -3,12 +3,18 @@ class_name LoadingScreen
 
 ## Loading screen displayed during solar system generation
 
-@onready var terminal_label: RichTextLabel = $"VBoxContainer/TerminalLabel"
+@onready var terminal_label: RichTextLabel = $"Center/VBoxContainer/Panel/Margin/TerminalLabel"
 
 var _animation_tween: Tween = null
 @export var line_count: int = 150
 @export var duration: float = 3.0  # Longer duration to cover resource spawning
 ## Number of lines to display in the terminal animation
+## Generation usually finishes long before the terminal has scrolled. The boot
+## sequence is meant to be read (docs/DESIGN.md "Minute 0-1"), so it stays up for
+## at least this long instead of flashing past.
+const MIN_VISIBLE := 3.0
+
+var _shown_at := 0.0
 
 var _boot_messages: Array[String] = [
 	"Initializing navigation systems",
@@ -16,6 +22,9 @@ var _boot_messages: Array[String] = [
 	"Calibrating sensors",
 	"Establishing communication protocols",
 	"Scanning for celestial bodies",
+	# Sits between two mundane lines on purpose: nobody reads it the first time
+	# (docs/DESIGN.md "The First 10 Minutes").
+	"Synchronizing clone manifest",
 	"Generating orbital calculations",
 	"Finalizing generation",
 ]
@@ -25,10 +34,16 @@ func _ready() -> void:
 	visible = false
 
 func show_loading() -> void:
+	_shown_at = Time.get_ticks_msec() / 1000.0
 	visible = true
 	_start_terminal_animation()
 
-func hide_loading() -> void:
+## Waits out the rest of MIN_VISIBLE first, so a fast generation still gets read.
+## `hold` is false under the playtest driver, which shouldn't sit through it.
+func hide_loading(hold: bool = true) -> void:
+	var elapsed := Time.get_ticks_msec() / 1000.0 - _shown_at
+	if hold and elapsed < MIN_VISIBLE:
+		await get_tree().create_timer(MIN_VISIBLE - elapsed, true, false, true).timeout
 	_stop_terminal_animation()
 	visible = false
 

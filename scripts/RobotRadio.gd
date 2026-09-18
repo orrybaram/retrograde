@@ -18,7 +18,8 @@ signal confirmed(id: StringName)
 ## Placeholder until the guide gets a name (docs/DESIGN.md 5.3).
 const SPEAKER_NAME := "UNIT-7"
 
-const MSG_DEPARTURE := preload("res://entities/Robot/radio/messages/first_departure.tres")
+const MSG_WAKE := preload("res://entities/Robot/radio/messages/first_wake.tres")
+const MSG_BOOST_HINT := preload("res://entities/Robot/radio/messages/boost_hint.tres")
 const MSG_LOW_FUEL := preload("res://entities/Robot/radio/messages/first_low_fuel.tres")
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
@@ -35,10 +36,16 @@ var save_path := ""
 ## Off in tests so flags never touch a save file.
 var persist := true
 
+## Nothing teaches boosting any more — the wake-up call is story, not controls. If the
+## player hasn't found it after this much play, the guide mentions it.
+const BOOST_HINT_AFTER := 300.0
+
 var _seen: Dictionary = {}  # StringName -> true
 var _ship: Ship = null
 var _pausing := false  # this radio paused the tree
 var _pause_started := 0.0
+var _played := 0.0  # seconds of unpaused play since the session began
+var _watching_boost := false
 
 func _ready() -> void:
 	EventBus.radio_message_requested.connect(request)
@@ -151,6 +158,7 @@ func load_seen(ids: PackedStringArray) -> void:
 	for id in ids:
 		_seen[StringName(id)] = true
 	silence()
+	watch_for_boost()
 
 ## New game: every tip plays again.
 func reset() -> void:
@@ -158,6 +166,7 @@ func reset() -> void:
 	if persist:
 		Save.save_radio_seen(seen_ids(), save_path)
 	silence()
+	watch_for_boost()
 
 func silence() -> void:
 	var was_active := queue.is_active()
@@ -175,11 +184,32 @@ func _bind_ship() -> void:
 	_ship = ship
 	ship.fuel_changed.connect(func() -> void: check_fuel(ship.fuel, ship.max_fuel))
 	ship.cargo_changed.connect(check_cargo)
-	ship.state_machine.state_changed.connect(on_ship_state_changed)
 
-func on_ship_state_changed(from: State, to: State) -> void:
-	if from is LandedState and to is FlyingState:
-		request(MSG_DEPARTURE)
+## Starts the boost clock for a session. Nothing happens if the hint is already spent.
+func watch_for_boost() -> void:
+	_played = 0.0
+	_watching_boost = not has_seen(MSG_BOOST_HINT.id)
+
+## Pausable, so time spent reading a transmission or sitting in a menu doesn't count.
+func _process(delta: float) -> void:
+	if not _watching_boost or _ship == null:
+		return
+	tick_boost_watch(delta, _ship.want_boost and _ship.want_thrust,
+			_ship.state_machine.current_state is FlyingState)
+
+## One step of the boost clock, taken apart from the ship so it can be driven directly.
+## The hint is held back until the player is actually flying, so it doesn't cut across
+## a dock or a dig.
+func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
+	if not _watching_boost:
+		return
+	if boosting:
+		_watching_boost = false  # they worked it out on their own
+		return
+	_played += delta
+	if _played >= BOOST_HINT_AFTER and flying:
+		_watching_boost = false
+		request(MSG_BOOST_HINT)
 
 func check_fuel(fuel: float, max_fuel: float) -> void:
 	if max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:

@@ -56,8 +56,6 @@ mouse_filter = 0
 
 [node name="StartMenu" parent="CanvasLayer" unique_id=669522817 instance=ExtResource("11")]
 
-[node name="LoadingScreen" parent="CanvasLayer" unique_id=63229698 instance=ExtResource("21")]
-
 [node name="IndicatorManager" parent="CanvasLayer" unique_id=627728021 instance=ExtResource("13")]
 
 [node name="SpacePortDialogue" parent="CanvasLayer" unique_id=1695530301 instance=ExtResource("14")]
@@ -69,6 +67,8 @@ mouse_filter = 0
 [node name="SystemMap" parent="CanvasLayer" unique_id=1107096874 instance=ExtResource("19")]
 
 [node name="PauseMenu" parent="CanvasLayer" unique_id=125140598 instance=ExtResource("22")]
+
+[node name="LoadingScreen" parent="CanvasLayer" unique_id=63229698 instance=ExtResource("21")]
 
 [node name="VoidShroud" type="CanvasLayer" parent="."]
 layer = 40

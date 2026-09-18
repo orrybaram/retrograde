@@ -1,4 +1,4 @@
-# Robot radio. The controls and scrap tutorials pause the game and wait for the player:
+# Robot radio. Tutorials pause the game and wait for the player:
 # SPACE (TAB/ENTER aliases) finishes the speech, then moves on. Unpaused tips auto-dismiss
 # and leave SPACE to the ship. Running dry and losing the ship are radio calls whose
 # confirm line abandons ship / relaunches.
@@ -15,51 +15,12 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 assert not pt.node("radio_panel").visible "no transmission before departure"
 
-# Departure -> controls tutorial, paused
+# Undocking says nothing any more: the opening transmission is the whole tutorial
+# and it plays at the dock (playtests/intro.play), not on the way out.
 hold thrust 0.6
-wait_until pt.node("radio_panel").visible 3
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_departure" "controls tutorial on air"
-assert get_tree().paused "controls tutorial pauses the game"
 assert pt.state_name() == "FlyingState" "undocked"
-wait 0.6
-screenshot radio_01_typing
-assert pt.node("radio_panel").is_typing() "message types out"
-assert pt.node("radio_panel").robot.talking "robot talks while typing"
-assert pt.node("radio_panel").robot.expression == "hello" "line sets the robot's face"
-press space
-frames 2
-assert not pt.node("radio_panel").is_typing() "first SPACE finishes the speech"
-assert not pt.node("radio_panel").robot.talking "robot stops talking once the line is out"
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "first SPACE doesn't skip the line"
-assert pt.node("radio_panel").message_text().contains("Hold UP to burn") "key names filled in"
-screenshot radio_02_full_line
-wait 10
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "paused tutorial never times out"
-press space
-wait 0.2
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "second SPACE moves on"
-press radio_next
-frames 2
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 and not pt.node("radio_panel").is_typing() "TAB is an alias: finishes the speech"
-press enter
-wait 0.3
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 2 "ENTER is an alias: moves on"
-screenshot radio_03_next_line
-press space
-frames 2
-press space
-wait 0.3
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 3 "on the last controls line"
-press space
-frames 2
-press space
-wait 0.3
-assert not get_tree().root.get_node("RobotRadio").is_active() "SPACE on the last line closes"
-assert not get_tree().paused "closing the tutorial unpauses"
-frames 5
-assert pt.state_name() == "FlyingState" "the closing SPACE isn't also read as a dock press"
-assert pt.visible_ui().is_empty() "no dock menu from the closing SPACE"
-assert get_tree().root.get_node("RobotRadio").has_seen("first_departure") "controls tutorial marked seen"
+wait 1
+assert not pt.node("radio_panel").visible "departure is quiet now"
 
 # Low fuel: a tutorial, so it pauses and SPACE drives it
 eval ship.set("fuel", 30.0)

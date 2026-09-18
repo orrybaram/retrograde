@@ -334,16 +334,37 @@ func test_confirming_a_paused_call_unpauses() -> void:
 
 # --- Triggers --------------------------------------------------------------------
 
-func test_departure_fires_once_on_undock() -> void:
+func test_boost_hint_waits_out_the_clock_then_fires_in_flight() -> void:
 	var radio := _radio()
-	var landed: State = auto_free(LandedState.new())
-	var flying: State = auto_free(FlyingState.new())
-	radio.on_ship_state_changed(flying, landed)
-	assert_bool(radio.is_active()).is_false()
-	radio.on_ship_state_changed(landed, flying)
-	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_DEPARTURE)
-	radio.silence()
-	radio.on_ship_state_changed(landed, flying)
+	radio.watch_for_boost()
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER - 1.0, false, true)
+	assert_bool(radio.is_active()).override_failure_message("fired early").is_false()
+	radio.tick_boost_watch(1.0, false, true)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_BOOST_HINT)
+
+
+func test_boost_hint_never_fires_once_the_player_boosts() -> void:
+	var radio := _radio()
+	radio.watch_for_boost()
+	radio.tick_boost_watch(1.0, true, true)
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, true)
+	assert_bool(radio.is_active()).override_failure_message("hinted at a player who boosts").is_false()
+
+
+func test_boost_hint_holds_until_the_ship_is_flying() -> void:
+	var radio := _radio()
+	radio.watch_for_boost()
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, false)
+	assert_bool(radio.is_active()).override_failure_message("cut across a dock").is_false()
+	radio.tick_boost_watch(0.1, false, true)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_BOOST_HINT)
+
+
+func test_boost_hint_is_not_rearmed_once_seen() -> void:
+	var radio := _radio()
+	radio.mark_seen(RADIO_SCRIPT.MSG_BOOST_HINT.id)
+	radio.watch_for_boost()
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, true)
 	assert_bool(radio.is_active()).is_false()
 
 
@@ -375,7 +396,8 @@ func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
 
 # --- Data ------------------------------------------------------------------------
 
-const TIPS := [RADIO_SCRIPT.MSG_DEPARTURE, RADIO_SCRIPT.MSG_LOW_FUEL, RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP]
+const TIPS := [RADIO_SCRIPT.MSG_WAKE, RADIO_SCRIPT.MSG_BOOST_HINT, RADIO_SCRIPT.MSG_LOW_FUEL,
+	RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP]
 const CONFIRM_CALLS := [RADIO_SCRIPT.MSG_OUT_OF_FUEL, RADIO_SCRIPT.MSG_SHIP_DESTROYED,
 	RADIO_SCRIPT.MSG_SHIP_ABANDONED, RADIO_SCRIPT.MSG_TRACTOR_RESCUE, RADIO_SCRIPT.MSG_OUT_OF_FUEL_BEAM]
 
@@ -407,7 +429,8 @@ func test_confirm_calls_end_on_a_confirm_line() -> void:
 
 
 func test_tutorials_and_game_over_pause_but_beacon_offer_does_not() -> void:
-	assert_bool(RADIO_SCRIPT.MSG_DEPARTURE.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_WAKE.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_BOOST_HINT.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_CARGO_FULL.pause_game).is_true()

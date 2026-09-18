@@ -5,28 +5,33 @@
 
 [sub_resource type="Resource" id="line_1"]
 script = ExtResource("2_line")
-text = "Clear of the dock! Hold {key:thrust} to burn, {key:turn_left} and {key:turn_right} to turn."
+text = "There you are. Took a while this time."
 expression = &"hello"
 
 [sub_resource type="Resource" id="line_2"]
 script = ExtResource("2_line")
-text = "{key:reverse_thrust} fires the retros. {key:boost} boosts, but it drinks fuel fast!"
+text = "Systems look good. You feeling okay?"
 expression = &"happy"
 
 [sub_resource type="Resource" id="line_3"]
 script = ExtResource("2_line")
-text = "Lost? Press M for the system map. Any port will top off your tank."
-expression = &"wink"
+text = "..."
+expression = &"neutral"
 
 [sub_resource type="Resource" id="line_4"]
 script = ExtResource("2_line")
-text = "Now let's go find some scrap! Salvage out here sells for good credits at port."
+text = "Anyway. There's scrap out there. Always is."
 expression = &"happy"
+
+[sub_resource type="Resource" id="line_5"]
+script = ExtResource("2_line")
+text = "Debris ring hugging Rook, just inside our orbit. Worth a look."
+expression = &"wink"
 
 [resource]
 script = ExtResource("1_conv")
-id = &"first_departure"
+id = &"first_wake"
 priority = 1
 once = true
 pause_game = true
-lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4")])
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4"), SubResource("line_5")])

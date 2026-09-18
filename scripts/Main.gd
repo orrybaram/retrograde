@@ -31,12 +31,24 @@ const GAME_OVER_MESSAGES := {
 }
 ## The dark takes a moment to finish closing before the robot tries the radio.
 const CONSUMED_SILENCE := 2.4
+## Waking up (docs/DESIGN.md "Minute 1-2"): the screen holds dark for a beat before
+## the world comes up, so a run opens on silence instead of a cut.
+const WAKE_BLACK_HOLD := 0.8
+const WAKE_FADE_TIME := 1.8
 
 var current_game_state: MainGameState = MainGameState.MENU
 var last_game_over_reason: String = ""
+## Waking up runs on a real playthrough, but not under the playtest driver: it would
+## darken every scenario's opening frames and push back its first key press.
+## playtests/intro.play sets this to cover the sequence itself.
+var force_wake_sequence := false
+## Black sheet above every layer, used for the wake-up fade. Built in code so it
+## sits outside CanvasLayer (Playtest.visible_ui() only scans that one).
+var _fade_rect: ColorRect = null
 
 func _ready() -> void:
 	add_to_group("main")
+	_build_fade_overlay()
 	# Connect menu signals
 	if start_menu:
 		start_menu.start_game.connect(_on_start_game)
@@ -188,6 +200,47 @@ func _on_void_consumed() -> void:
 	await get_tree().create_timer(CONSUMED_SILENCE).timeout
 	show_game_over("Consumed")
 
+## Checked when a game starts, not at init: Playtest.active is still false while the
+## main scene is being built, so reading it any earlier is a race.
+func _wake_enabled() -> bool:
+	return force_wake_sequence or not Playtest.active
+
+## A full-screen sheet on its own layer, above the HUD and every UI panel.
+func _build_fade_overlay() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "FadeLayer"
+	layer.layer = 45  # above VoidShroud (40), which mustn't show through the dark
+	add_child(layer)
+	_fade_rect = ColorRect.new()
+	_fade_rect.name = "FadeRect"
+	_fade_rect.color = Color(Colors.SPACE_BG, 0.0)
+	_fade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade_rect.process_mode = Node.PROCESS_MODE_ALWAYS  # so it tweens while paused
+	_fade_rect.visible = false
+	layer.add_child(_fade_rect)
+
+## Goes dark immediately. Called while the loading screen still covers the screen,
+## so hiding that screen reveals black rather than the world.
+func _black_out() -> void:
+	if _fade_rect == null:
+		return
+	_fade_rect.color.a = 1.0
+	_fade_rect.visible = true
+
+## Holds the dark for a beat, then brings the world up. Deliberately does not pause:
+## the ship latches onto its dock over the frames right after spawning, and freezing
+## the tree here leaves it adrift in FlyingState instead of docked.
+func _wake_from_black() -> void:
+	if _fade_rect == null:
+		return
+	_black_out()
+	await get_tree().create_timer(WAKE_BLACK_HOLD, true, false, true).timeout
+	var tween := _fade_rect.create_tween()
+	tween.tween_property(_fade_rect, "color:a", 0.0, WAKE_FADE_TIME)
+	await tween.finished
+	_fade_rect.visible = false
+
 func _on_quit_to_menu() -> void:
 	current_game_state = MainGameState.MENU
 	RobotRadio.silence()
@@ -237,9 +290,15 @@ func start_game() -> void:
 	# This triggers spawners to start
 	EventBus.planets_restored.emit()
 
-	# Hide loading screen
+	# Go dark behind the loading screen, so hiding it reveals black, not a hard cut
+	var wake := _wake_enabled()
+	# Order matters: the boot terminal holds for a few seconds, and going dark before
+	# that would hide it behind the fade sheet. Blacking out straight after it hides
+	# happens in the same frame, so the world never flashes through.
 	if loading_screen:
-		loading_screen.hide_loading()
+		await loading_screen.hide_loading(wake)
+	if wake:
+		_black_out()
 
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
@@ -249,6 +308,11 @@ func start_game() -> void:
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 	EventBus.ship_respawned.emit()
+
+	# A beat of silence in the dark, then the guide is already waiting on the comms
+	if wake:
+		await _wake_from_black()
+		RobotRadio.request(RobotRadio.MSG_WAKE)
 
 func load_game() -> void:
 	if start_menu:
@@ -296,9 +360,15 @@ func load_game() -> void:
 		else:
 			push_warning("No dock found for load game")
 
-	# Hide loading screen
+	# Go dark behind the loading screen, so hiding it reveals black, not a hard cut
+	var wake := _wake_enabled()
+	# Order matters: the boot terminal holds for a few seconds, and going dark before
+	# that would hide it behind the fade sheet. Blacking out straight after it hides
+	# happens in the same frame, so the world never flashes through.
 	if loading_screen:
-		loading_screen.hide_loading()
+		await loading_screen.hide_loading(wake)
+	if wake:
+		_black_out()
 
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
@@ -308,6 +378,10 @@ func load_game() -> void:
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 	EventBus.ship_respawned.emit()
+
+	# Every waking starts the same way, continue or not
+	if wake:
+		await _wake_from_black()
 
 func _show_game_over_delayed(reason: String) -> void:
 	# Let the explosion play out before the robot calls in
@@ -336,7 +410,14 @@ func show_game_over(reason: String) -> void:
 func reset_game() -> void:
 	game_over_pending = false
 	Gem.clear_all(true)  # wreck gems stay where the ship blew up
-	
+
+	# A relaunch is another clone coming up, so it boots the same way a new game does
+	var wake := _wake_enabled()
+	if loading_screen:
+		loading_screen.show_loading()
+	if ship and ship.ship_polygon:
+		ship.ship_polygon.visible = false
+
 	# Calculate relaunch costs before resetting ship
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	var penalty_cost: int = 0
@@ -378,10 +459,8 @@ func reset_game() -> void:
 		ship.set_process(true)
 		ship.set_physics_process(true)
 		
-		# Show ship visual again
-		if ship.ship_polygon:
-			ship.ship_polygon.visible = true
-		
+		# The ship stays hidden until it has been placed back on its dock, below
+
 		# Reset boost particles material to original state
 		ship.reset_boost_particles()
 	
@@ -399,7 +478,17 @@ func reset_game() -> void:
 			await ship_spawner.spawn_at_dock(dock)
 		else:
 			push_warning("No dock found for respawn")
-	
+
+	# Order matters: the boot terminal holds for a few seconds, and going dark before
+	# that would hide it behind the fade sheet. Blacking out straight after it hides
+	# happens in the same frame, so the world never flashes through.
+	if loading_screen:
+		await loading_screen.hide_loading(wake)
+	if wake:
+		_black_out()
+	if ship and ship.ship_polygon:
+		ship.ship_polygon.visible = true
+
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 
@@ -410,3 +499,7 @@ func reset_game() -> void:
 
 	EventBus.ship_respawned.emit()
 	EventBus.resources_refresh_requested.emit()
+
+	# Come up out of the dark the same way a new game does
+	if wake:
+		await _wake_from_black()
