@@ -24,8 +24,14 @@ var orbital_angle: float:
 	get:
 		return _orbital_motion.orbital_angle if _orbital_motion else 0.0
 
+## The group this station registers under. Home tracking, the chart's home label and
+## the Void's guard all read the first node in "space_stations", so a station that is
+## not the player's home base (the Sun Station) takes a group of its own.
+func station_group() -> StringName:
+	return &"space_stations"
+
 func _ready() -> void:
-	add_to_group("space_stations")
+	add_to_group(station_group())
 	
 	# Check if parent node is a Planet - setup orbital motion
 	var parent = get_parent()

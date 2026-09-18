@@ -11,6 +11,9 @@ class_name Gate
 ## Orbits its parent planet with the same OrbitalMotion component the station uses, and
 ## docks with the same rules as a port: the cradle is the dock surface, the ship comes
 ## in slow and lined up, and GateDockedState clamps it there.
+##
+## One Gate in the system is not a planet's: the Core's Gate at the Sun Station, which
+## waits on all five Modules rather than on credits (`is_core`).
 
 const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 
@@ -30,8 +33,18 @@ const POWER_UP_TIME := 1.6
 const BLINK_PERIOD := 2.4
 const BLINK_DUTY := 0.18
 
+## The Modules the Titan is made of, one per planet. The Core is a separate, final
+## state, not a sixth Module.
+const MODULE_COUNT := 5
+
 ## What the Titan asks for this Module, in credits.
 @export var power_cost: int = 600
+
+## The Core's Gate, beside the Sun Station: the Titan's sixth part rather than a
+## planet's Module. It takes power only once all five Modules are online, it is never
+## a transit destination, and powering it is the endgame — still to be designed, so
+## for now it sits there inert.
+@export var is_core: bool = false
 
 # Orbital parameters (passed to OrbitalMotion component)
 @export var orbital_distance: float = 10000.0
@@ -115,9 +128,23 @@ func is_powered() -> bool:
 func can_afford(gs: GameState) -> bool:
 	return gs != null and gs.credits >= power_cost
 
+## True once every Module is online, which is all the Core's Gate is waiting for. A
+## planet's Gate only ever waits on credits.
+func modules_ready(gs: GameState) -> bool:
+	return gs != null and gs.titan_influence() >= MODULE_COUNT
+
+## Whether this Gate can be reached through the network once it is powered. The Core's
+## Gate is the endgame, never somewhere to travel to.
+func offers_transit() -> bool:
+	return not is_core
+
 ## Pay the cost and bring this planet's Module online. Returns false if it is already
 ## online or the credits aren't there; nothing is charged in that case.
 func power(gs: GameState) -> bool:
+	# The Core is not a Module, and what happens when it comes online is a later
+	# endgame issue: its Gate charges nothing and brings nothing online yet.
+	if is_core:
+		return false
 	var key := save_key()
 	if gs == null or key == "" or gs.is_gate_powered(key) or not can_afford(gs):
 		return false
