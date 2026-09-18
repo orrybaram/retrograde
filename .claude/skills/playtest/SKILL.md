@@ -41,7 +41,8 @@ successful live exploration into one. A scenario stops at the first failing non-
 | `hold <key\|action> <sec>` / `down` / `up` / `release_all` | sustained input |
 | `face <group> [tol]` | steer with turn keys toward nearest node in group (`planets`, `space_ports`, `space_stations`, `resource_nodes`) |
 | `wait <sec>` / `frames <n>` / `timescale <n>` | advance time (wait is game time) |
-| `stage_harvest [dist] [trophy]` | park the flying ship `dist`px (default 40; harvest circle radius 60) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_depleted`/`harvest_stopped` events |
+| `seek <Kind> [hops]` | warp around deep space until a node of that kind (`Scrap`, `Container`, `Derelict`) is streaming nearby, and park there; fails if none turns up. Deep space is sparse, so scenarios can't assume a given spot holds one |
+| `stage_harvest [dist] [trophy\|plain] [kind:<Kind>]` | park the flying ship `dist`px (default 40; harvest circle radius 60) behind the nearest scrap, velocity matched; sets `pt.staged` and logs `harvest_started`/`resource_depleted`/`harvest_stopped` events. `plain` forces an ordinary 3-hit node, `trophy` forces a 5-hit one, `kind:Container` picks only that sort (`Scrap`, `Container`, `Derelict`) |
 | `land <planet> [descent] [sec]` | autopilot: taps `thrust` to fall onto the planet at ≤ `descent` px/s (default 15) until `PlanetLandedState`; start nose-up over a seam with `pt.hover_over_ore` |
 | `burst <name> <n> <sec>` | n screenshots `sec` apart → `<name>_00.png…` (for judging motion/feel) |
 | `wait_until <expr> [timeout]` | poll expression |
@@ -51,7 +52,7 @@ successful live exploration into one. A scenario stops at the first failing non-
 
 Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv` (InventoryManager), `bus`
 (EventBus), `pt` (driver: `pt.state_name()`, `pt.visible_ui()`, `pt.screen_text()`, `pt.nearest(group)`,
-`pt.node(group)`, `pt.item_count()` (gems in hold), `pt.gem_count()` (loose gems), `pt.spawn_gem(id, offset, [rel_vel])`, `pt.last_drops`, `pt.staged`), and `self` = driver so `get_tree()` works.
+`pt.node(group)`, `pt.count_kind(kind)`, `pt.nearest_kind(kind)`, `pt.remember(key, value)` / `pt.recall(key)`, `pt.save_now()`, `pt.item_count()` (gems in hold), `pt.gem_count()` (loose gems), `pt.spawn_gem(id, offset, [rel_vel])`, `pt.last_drops`, `pt.staged`), and `self` = driver so `get_tree()` works.
 `main.current_game_state`: 0 MENU, 1 PLAYING, 2 GAME_OVER.
 
 ## Game flow cheatsheet
@@ -76,7 +77,7 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/wreck.play` blows the ship up with a stocked hold: 70% of it stays at the wreck through respawn, the loose-gem lifetime and a save reload, then gets collected (`pt.wreck_gem_count()`, `pt.warp_to_wreck()`).
 
-`playtests/abandon.play` runs dry: the robot radios a tow offer inside a tractor beam and "abandon ship" outside it. The abandoned ship (`DerelictShip`, group `derelicts`) keeps the hold, survives respawn and reload, and five PERFECT salvage hits recover all of it (`pt.derelict_count()`, `pt.warp_to(pos)`).
+`playtests/abandon.play` runs dry: the robot radios a tow offer inside a tractor beam and "abandon ship" outside it. The abandoned ship (`DerelictShip`, group `derelicts`) keeps the hold, survives respawn and reload, and five PERFECT salvage hits recover all of it (`pt.derelict_count()` and `pt.abandoned_ship()` — both ignore deep-space wrecks, which share the `derelicts` group — and `pt.warp_to(pos)`).
 
 `playtests/void.play` flies past the last orbit into the Void: the robot's warning, the stars draining, the dashboard rotting and dropping out, turning back in time, then staying too long and being consumed (`ConsumedState`, no wreck and no derelict) and relaunching. State is under `state.void` (`inside`, `depth`, `dread`, `shroud`, `exposure`); the autoload is `get_node("/root/VoidZone")`.
 

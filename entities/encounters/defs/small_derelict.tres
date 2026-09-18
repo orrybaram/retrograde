@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WreckDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://entities/encounters/WreckDef.gd" id="1"]
+[ext_resource type="PackedScene" path="res://entities/encounters/hulls/SmallFreighter.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"small_derelict"
+contact_label = "DERELICT"
+weight = 0.12
+budget = 0
+min_radius = 0.0
+max_radius = 0.0
+hull = ExtResource("2")
+min_loot = 2
+max_loot = 6
+loot_tiers = Array[String](["shard", "shard", "gem", "crystal"])
+max_spin = 0.25
+harvest_radius = 24.0

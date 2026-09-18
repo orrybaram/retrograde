@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="DebrisClusterDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/encounters/DebrisClusterDef.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"debris_cluster"
+contact_label = "DEBRIS"
+weight = 1.0
+min_radius = 0.0
+max_radius = 0.0
+min_nodes = 4
+max_nodes = 10
+spread = 900.0
+debris_ratio = 0.4

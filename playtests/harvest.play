@@ -23,7 +23,7 @@ hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 
 # --- A: three PERFECT hits break a normal node (with burst frames) ---
-stage_harvest 40
+stage_harvest 40 plain
 assert pt.staged.hits_left == 3 "normal scrap takes 3 hits"
 screenshot harvest_a_before
 down action

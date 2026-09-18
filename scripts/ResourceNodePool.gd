@@ -17,6 +17,7 @@ const RESOURCE_SCENES: Dictionary = {
 	"Debris3": preload("res://entities/resources/Debris3.tscn"),
 	"Debris4": preload("res://entities/resources/Debris4.tscn"),
 	"Debris5": preload("res://entities/resources/Debris5.tscn"),
+	"Container": preload("res://entities/resources/Container.tscn"),
 }
 
 @export var initial_pool_size: int = 0  # Per variant - start empty, grow on demand for faster startup

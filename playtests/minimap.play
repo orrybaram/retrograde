@@ -37,8 +37,8 @@ wait_until not pt.node("radio_panel").is_typing() 5
 press action
 frames 2
 assert pt.derelict_count() == 1 "empty ship still left behind"
-assert pt.node("derelicts").hull_only "empty hull salvages like scrap"
-assert pt.node("derelicts").minimap_target is DerelictMinimapTarget "derelict registered on the minimap"
+assert pt.abandoned_ship().hull_only "empty hull salvages like scrap"
+assert pt.abandoned_ship().minimap_target is DerelictMinimapTarget "derelict registered on the minimap"
 wait 0.5
 screenshot minimap_3_abandoned
 wait_until main.current_game_state == 2 10
@@ -55,7 +55,7 @@ wait_until pt.state_name() == "LandedState" 5
 eval pt.warp_to(ship.global_position + Vector2(-9000, -5000))
 eval ship.state_machine.change_state("FlyingState")
 wait 0.5
-assert pt.node("derelicts").minimap_target.pins_to_edge() "far derelict stays on the rim"
+assert pt.abandoned_ship().minimap_target.pins_to_edge() "far derelict stays on the rim"
 screenshot minimap_4_derelict_far
 
 # Nav target: blue diamond at a near waypoint, held on the rim for a far one
