@@ -78,6 +78,8 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/abandon.play` runs dry: the robot radios a tow offer inside a tractor beam and "abandon ship" outside it. The abandoned ship (`DerelictShip`, group `derelicts`) keeps the hold, survives respawn and reload, and five PERFECT salvage hits recover all of it (`pt.derelict_count()`, `pt.warp_to(pos)`).
 
+`playtests/void.play` flies past the last orbit into the Void: the robot's warning, the stars draining, the dashboard rotting and dropping out, turning back in time, then staying too long and being consumed (`ConsumedState`, no wreck and no derelict) and relaunching. State is under `state.void` (`inside`, `depth`, `dread`, `shroud`, `exposure`); the autoload is `get_node("/root/VoidZone")`.
+
 `playtests/minimap.play` screenshots the minimap markers (ship arrow, station silhouette + beacon, shaded planets, scrap chunks, derelict pinned to the rim).
 
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Pilot. You're past the last orbit. There's nothing out here to be past."
+expression = &"worried"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Thirty seconds. That's everything anyone has ever come back with. Turn around."
+expression = &"surprise"
+glitch = true
+
+; Not `once`: this is the only warning for something that kills in thirty seconds,
+; so it goes out on every crossing rather than being spent the first time. URGENT
+; so it cuts off whatever tip happens to be on air. VoidZone's re-entry margin is
+; what stops a ship skimming the boundary from retriggering it.
+[resource]
+script = ExtResource("1_conv")
+id = &"void_edge"
+priority = 3
+once = false
+pause_game = false
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2")])

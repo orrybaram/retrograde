@@ -35,6 +35,8 @@ func _ready() -> void:
 	tracking.blockers = [dashboard, radio]
 	add_child(tracking)
 	add_child(radio)
+	# Added last so it processes after _update_labels and rots the finished readouts
+	add_child(VoidGlitch.new())
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
 	if gs:

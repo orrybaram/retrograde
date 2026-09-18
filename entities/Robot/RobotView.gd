@@ -68,7 +68,8 @@ func _process(delta: float) -> void:
 		_next_blink = _rng.randf_range(2.0, 5.0)
 	_blink_left = maxf(_blink_left - delta, 0.0)
 	_glitch_left = maxf(_glitch_left - delta, 0.0)
-	var rate := glitch_rate if expression != &"glitch" else 3.0
+	# The broken faces tear themselves up whatever the caller asked for.
+	var rate := 3.0 if expression == &"glitch" or expression == &"lost" else glitch_rate
 	if rate > 0.0 and _rng.randf() < rate * delta:
 		glitch_burst(_rng.randf_range(0.06, 0.2))
 	queue_redraw()
@@ -327,13 +328,13 @@ func _button(r: Rect2, px: float, cap: Color) -> void:
 	draw_rect(r, cap)
 
 func _power_color() -> Color:
-	return Colors.DANGER if expression == &"dead" else Colors.SUCCESS
+	return Colors.DANGER if expression == &"dead" or expression == &"lost" else Colors.SUCCESS
 
 func _face_color() -> Color:
 	match expression:
 		&"titan":
 			return Colors.TITAN
-		&"dead":
+		&"dead", &"lost":
 			return Colors.DANGER
 	return Colors.PRIMARY
 
@@ -342,7 +343,7 @@ func _current_rows() -> PackedStringArray:
 	var animated := not RobotFaces.is_text_face(expression)
 	if animated and talking:
 		rows = RobotFaces.talk(rows, int(_time * TALK_FPS))
-	if animated and _blink_left > 0.0 and expression != &"dead":
+	if animated and _blink_left > 0.0 and expression != &"dead" and expression != &"lost":
 		rows = RobotFaces.blink(rows)
 	if _glitch_left > 0.0:
 		rows = RobotFaces.corrupt(rows, _rng, 0.25)

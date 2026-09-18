@@ -543,6 +543,13 @@ func snapshot() -> Dictionary:
 		"inventory": InventoryManager.get_all_items(),
 		"hold_value": InventoryManager.get_total_value(),
 		"loose_gems": Gem.active.size(),
+		"void": {
+			"inside": VoidZone.is_inside(),
+			"depth": snappedf(VoidZone.depth, 0.001),
+			"dread": snappedf(VoidZone.dread, 0.001),
+			"shroud": snappedf(VoidZone.shroud, 0.001),
+			"exposure": snappedf(VoidZone.exposure, 0.1),
+		},
 	}
 	if ship:
 		s["ship"] = {

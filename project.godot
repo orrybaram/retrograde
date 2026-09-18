@@ -29,6 +29,7 @@ ResourceNodePool="*res://scripts/ResourceNodePool.gd"
 Playtest="*res://scripts/Playtest.gd"
 NavSystem="*res://scripts/NavSystem.gd"
 RobotRadio="*res://scripts/RobotRadio.gd"
+VoidZone="*res://scripts/VoidZone.gd"
 
 [display]
 

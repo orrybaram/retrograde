@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://br1pdbv2ka45p" path="res://entities/Ship/states/DestroyedState.gd" id="5"]
 [ext_resource type="Script" uid="uid://c52gah6pxgdju" path="res://entities/Ship/states/HarvestingState.gd" id="6"]
 [ext_resource type="Script" uid="uid://cl0sr554oon" path="res://entities/Ship/states/StrandedState.gd" id="7"]
+[ext_resource type="Script" path="res://entities/Ship/states/ConsumedState.gd" id="8_void"]
 [ext_resource type="PackedScene" uid="uid://wcorfxm65hls" path="res://entities/Ship/HarvestCone.tscn" id="9_vnnms"]
 
 [sub_resource type="Gradient" id="Gradient_1"]
@@ -160,3 +161,6 @@ script = ExtResource("7")
 
 [node name="DestroyedState" type="Node" parent="StateMachine" unique_id=754737936]
 script = ExtResource("5")
+
+[node name="ConsumedState" type="Node" parent="StateMachine"]
+script = ExtResource("8_void")

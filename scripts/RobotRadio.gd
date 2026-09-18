@@ -27,6 +27,7 @@ const MSG_OUT_OF_FUEL_BEAM := preload("res://entities/Robot/radio/messages/out_o
 const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_destroyed.tres")
 const MSG_SHIP_ABANDONED := preload("res://entities/Robot/radio/messages/ship_abandoned.tres")
 const MSG_TRACTOR_RESCUE := preload("res://entities/Robot/radio/messages/tractor_rescue.tres")
+const MSG_VOID_CONSUMED := preload("res://entities/Robot/radio/messages/void_consumed.tres")
 
 var queue := RadioQueue.new()
 ## Save file for show-once flags; empty uses the game save (Playtest.save_path()).
