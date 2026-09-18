@@ -20,9 +20,14 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.4
 wait_until pt.state_name() == "FlyingState" 3
 
-# Veld's Gate is the one the ship can reach; Crom's Module is brought online from here
+# Veld's Gate is the one the ship can reach; Crom's Module is brought online from here.
+# Powering a Gate for real means docking at it, which means flying inside Identifiable.RANGE
+# first, so a transit destination is always already identified. Shortcutting the flight here
+# would leave Crom unidentified and fire the guide's identify call on arrival instead.
 eval gs.set("credits", 1000)
 eval gs.mark_gate_powered(pt.gate("Crom").save_key())
+eval gs.mark_gate_identified(pt.gate("Crom").save_key())
+eval gs.mark_gate_identified(pt.gate("Veld").save_key())
 assert gs.titan_influence() == 1 "Crom's Module is online"
 
 # Dock in Veld's cradle and pay for its Gate

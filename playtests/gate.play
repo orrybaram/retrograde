@@ -17,7 +17,7 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.4
 wait_until pt.state_name() == "FlyingState" 3
 
-assert get_tree().get_nodes_in_group("gates").size() == 5 "one dormant Gate per planet"
+assert get_tree().get_nodes_in_group("gates").size() == 6 "one Gate per planet, plus the Core's at the Sun Station"
 assert pt.gate("Veld").minimap_target != null "the Gate is on the minimap"
 assert gs.titan_influence() == 0 "every Module starts offline"
 assert not pt.gate("Veld").is_powered() "Veld's Gate starts dormant"

@@ -1,0 +1,161 @@
+# The whole Gate feature, captioned, for recording a video. Not an assertion suite —
+# gate.play, gate_identify.play, transit.play and chart.play are the checks.
+#   godot --path . --write-movie .playtest/video/gates.avi --fixed-fps 30 \
+#     -- --playtest=res://playtests/gates_showcase.play --playtest-out="$PWD/.playtest/video" --playtest-fps=30
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+wait_until pt.state_name() == "LandedState" 20
+eval gs.set("credits", 5000)
+
+# --- 1. The chart starts blank -------------------------------------------------
+eval pt.caption("THE SOLAR SYSTEM IS THE TITAN  //  shut down at the end of the war, one Module per planet")
+wait 2.6
+eval pt.caption("The star chart starts blank: home, its station, and the void")
+press m
+wait 3.2
+eval pt.caption("")
+press m
+wait 0.8
+
+# --- 2. Leave home -------------------------------------------------------------
+eval pt.caption("Nothing points you at a Gate. You have to go and find one.")
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+wait 0.6
+press down
+wait 0.4
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+wait 2.0
+
+# --- 3. Unidentified: ? ? ? ----------------------------------------------------
+eval pt.caption("In scanner range it is only a contact  //  the minimap reads ? ? ?")
+eval pt.park_at_gate("Veld", 2600.0)
+wait 3.6
+
+eval pt.caption("Fly to it and the guide finally names it")
+eval pt.park_at_gate("Veld", 520.0)
+wait_until get_tree().root.get_node("RobotRadio").queue.current != null 6
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 0.8
+press space
+wait_until not pt.node("radio_panel").is_typing() 6
+wait 0.8
+press space
+wait_until not pt.node("radio_panel").is_typing() 6
+wait 0.8
+press space
+wait 1.0
+
+# --- 4. Dock and power ---------------------------------------------------------
+eval pt.caption("Veld's Gate: dark hull, one slow amber blinker, a cradle across the mouth")
+eval pt.park_at_gate("Veld", 220.0)
+eval ship.set("linear_velocity", ship.linear_velocity + Vector2(0, 45))
+wait 3.0
+
+eval pt.caption("Dock like a port: slow, lined up, [SPACE]")
+wait 2.2
+eval pt.park_at_gate("Veld", 30.0)
+frames 2
+press action
+wait_until pt.state_name() == "GateDockedState" 3
+wait 1.4
+
+eval pt.caption("The Gate's own terminal  //  600 CR to bring Veld's Module online")
+wait 3.0
+press enter
+wait_until gs.titan_influence() == 1 4
+eval pt.caption("")
+wait_until not pt.node("gate_terminal").is_booting() 10
+wait 1.2
+
+eval pt.caption("Module online  //  1 of 5  //  a Module never goes back off")
+wait 3.0
+
+# --- 5. The chart is handed over -----------------------------------------------
+eval pt.caption("And the Titan hands over its map, one region at a time")
+press esc
+wait_until pt.visible_ui().is_empty() 2
+press m
+wait 3.6
+eval pt.caption("Veld, its orbit, its moons, home's orbit around it  //  all named, all live")
+wait 3.0
+eval pt.caption("")
+press m
+wait 0.8
+
+# --- 6. A second Module, and the link ------------------------------------------
+eval pt.caption("Bring a second Module online and the two Gates link")
+eval pt.gate("Crom").identify()
+eval pt.gate("Crom").power(gs)
+wait_until gs.titan_influence() == 2 4
+wait 1.2
+press m
+wait 3.4
+eval pt.caption("The purple line is the network waking up  //  it grows with every Module")
+wait 3.0
+eval pt.caption("")
+press m
+wait 0.8
+
+# --- 7. Transit ----------------------------------------------------------------
+eval pt.caption("What a link is good for: transit, and a tank the Titan fills for nothing")
+press action
+wait_until pt.visible_ui().has("GateTerminal") 3
+wait 2.4
+eval ship.set("fuel", 20.0)
+press down
+wait 1.2
+eval pt.caption("REFUEL reads FREE. Stations charge. The machine does not.")
+wait 2.6
+press up
+wait 0.6
+eval pt.caption("TRANSIT  //  every other powered Gate, one hop, no fuel")
+press enter
+wait_until pt.visible_ui().has("GateTerminal") 2
+wait 2.6
+eval pt.caption("")
+press enter
+wait 0.6
+wait_until ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 80 15
+wait 1.0
+eval pt.caption("Out of the dark, already in Crom's cradle  //  no fuel, no hull, no credits")
+wait 3.4
+
+# --- 8. Titan Influence ---------------------------------------------------------
+eval pt.caption("Two Modules in, the dashboard never quite reads clean again")
+# Sonder 2000 + Roke 3200 + TERRA-0 5000 still to pay for
+eval gs.set("credits", 20000)
+wait 3.0
+
+eval pt.caption("Every Module you switch on shows  //  the HUD dims and blinks a little more")
+eval pt.gate("Sonder").identify()
+eval pt.gate("Sonder").power(gs)
+eval pt.gate("Roke").identify()
+eval pt.gate("Roke").power(gs)
+wait 3.4
+eval pt.gate("TERRA-0").identify()
+eval pt.gate("TERRA-0").power(gs)
+wait_until gs.titan_influence() == 5 4
+eval pt.caption("Five of five  //  the whole map is yours, and the Titan is most of the way awake")
+wait 2.0
+press m
+wait 4.0
+eval pt.caption("")
+press m
+wait 0.8
+
+# --- 9. The Core ----------------------------------------------------------------
+eval pt.caption("One Gate is left, and it is not a planet's")
+wait 2.4
+eval pt.caption("The Core sits in the sun, at the Sun Station  //  the last and hardest place to reach")
+wait 3.4
+eval pt.caption("")
+wait 1.0
