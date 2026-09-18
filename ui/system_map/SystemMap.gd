@@ -33,6 +33,12 @@ const READOUT_INSET := 18.0
 const DASH_PERIOD_PX := 20.0
 const STAR_COUNT := 160
 const STARFIELD_SEED := 20260917
+## Hazard hatching: spacing between the diagonals, and how far the chart reaches
+## past the void's edge so the band is always visible at full zoom-out.
+const HATCH_SPACING_PX := 13.0
+const VOID_CHART_MARGIN := 1.02
+## Where the single "THE VOID" label sits, from the deep line (0) out to the chart rim (1).
+const VOID_LABEL_DEPTH := 0.5
 
 @export_group("Colors")
 @export var background_color: Color = Colors.UI_BACKGROUND
@@ -45,6 +51,7 @@ const STARFIELD_SEED := 20260917
 @export var ship_color: Color = Colors.PRIMARY
 @export var space_station_color: Color = Colors.HULL_LIGHT
 @export var nav_color: Color = Colors.NAV
+@export var void_color: Color = Colors.DANGER
 
 @export_group("Display")
 @export var screen_margin_ratio: Vector2 = Vector2(0.065, 0.085)  ## Frame inset as a fraction of the screen
@@ -263,7 +270,7 @@ func _clamp_pan_offset(offset: Vector2) -> Vector2:
 
 	# The sun may be pushed to the rim of the chart but no further, so anything
 	# inside the system (the ship included) can be brought to the middle.
-	var limit := Vector2.ONE * (_system_radius() * scale_factor) + _chart.size * 0.4
+	var limit := Vector2.ONE * (_chart_radius() * scale_factor) + _chart.size * 0.4
 	return Vector2(
 		clampf(offset.x, -limit.x, limit.x),
 		clampf(offset.y, -limit.y, limit.y)
@@ -275,6 +282,11 @@ func _system_radius() -> float:
 		if planet and is_instance_valid(planet) and (not planet.parent_planet or planet.parent_planet == sun):
 			max_distance = max(max_distance, planet.orbital_distance)
 	return max_distance
+
+## What the chart has to hold: the outermost orbit, or far enough out that the
+## void's hazard band reads as a ring around the system rather than a corner.
+func _chart_radius() -> float:
+	return maxf(_system_radius() + 1000.0, VoidZone.DEEP_RADIUS * VOID_CHART_MARGIN)
 
 func _zoom_in() -> void:
 	zoom_level = clamp(zoom_level * zoom_speed, min_zoom_level, max_zoom_level)
@@ -306,8 +318,8 @@ func _calculate_scale() -> void:
 		scale_factor = base_scale_factor * zoom_level
 		return
 
-	# Fit the outermost orbit (plus a margin) inside the padded chart at zoom 1
-	var span = _system_radius() + 1000.0
+	# Fit the outermost orbit and the edge of the void inside the padded chart at zoom 1
+	var span = _chart_radius()
 	var available_size = min(_chart.size.x, _chart.size.y) - padding * 2.0
 	base_scale_factor = available_size / (span * 2.0)
 	scale_factor = base_scale_factor * zoom_level
@@ -329,6 +341,7 @@ func draw_chart(c: Control) -> void:
 	if not sun or not is_instance_valid(sun):
 		return
 
+	_draw_void(c, rect)
 	_draw_range_rings(c, rect)
 	_draw_orbits(c, rect)
 	_draw_child_orbits(c, rect)
@@ -359,6 +372,113 @@ func _draw_scanlines(c: Control) -> void:
 		points.append(Vector2(c.size.x, y))
 		y += 3.0
 	c.draw_multiline(points, Color(Colors.SPACE_BG, 0.12), 1.0)
+
+## Everything past the last orbit, struck through with hazard hatching: one set of
+## diagonals from the edge out, a second set crossing them past DEEP_RADIUS where
+## there is nothing left to see by. The boundary itself pulses once the ship is in it.
+func _draw_void(c: Control, rect: Rect2) -> void:
+	var center := _map_pos(_sun_pos())
+	var edge := VoidZone.EDGE_RADIUS * scale_factor
+	var deep := VoidZone.DEEP_RADIUS * scale_factor
+	var alarm := VoidZone.shroud
+	# Two passes at the same angle, the second offset half a step, so the hatching
+	# simply doubles in density past DEEP_RADIUS instead of changing character.
+	_draw_hatching(c, rect, center, edge, 0.0, Color(void_color, 0.11 + 0.07 * alarm))
+	_draw_hatching(c, rect, center, deep, HATCH_SPACING_PX / 2.0, Color(void_color, 0.09 + 0.07 * alarm))
+
+	# The boundary: a hairline normally, breathing red while the ship is past it.
+	var boundary := Color(void_color, lerpf(0.3, 0.75, alarm * (0.6 + 0.4 * sin(_time * 4.0))))
+	_draw_void_arc(c, rect, center, edge, boundary)
+	_draw_void_arc(c, rect, center, deep, Color(void_color, boundary.a * 0.4))
+
+	_draw_void_label(c, rect, center, maxf(edge, deep))
+
+## One set of parallel diagonals across the chart, clipped to the outside of a
+## circle. Each line contributes at most two segments, so the whole band costs a
+## single multiline however far out the chart is panned. `phase` shifts the set
+## sideways, which is how the deep band doubles its own density.
+func _draw_hatching(c: Control, rect: Rect2, center: Vector2, radius: float, phase: float, color: Color) -> void:
+	if color.a <= 0.002:
+		return
+	var direction := Vector2.from_angle(PI / 4.0)
+	var normal := direction.orthogonal()
+	# Walk the diagonals across the chart's diagonal span, measured from its middle.
+	var span := rect.size.length()
+	var half := span / 2.0
+	var origin := rect.get_center()
+	var points := PackedVector2Array()
+
+	var offset := -half + phase
+	while offset <= half:
+		var line_start := origin + normal * offset - direction * half
+		_append_outside_circle(points, line_start, direction, span, center, radius)
+		offset += HATCH_SPACING_PX
+	if not points.is_empty():
+		c.draw_multiline(points, color, 1.0)
+
+## An arc of the void's boundary, drawn only where it crosses the chart.
+func _draw_void_arc(c: Control, rect: Rect2, center: Vector2, radius: float, color: Color) -> void:
+	var arc := _visible_arc(center, radius, rect)
+	if arc.y <= 0.0:
+		return
+	c.draw_arc(center, radius, arc.x, arc.x + arc.y, clampi(int(radius * arc.y / 5.0), 12, 256), color, 1.0, true)
+
+## Appends the parts of the segment start -> start + direction * length that fall
+## outside the circle, as point pairs.
+static func _append_outside_circle(points: PackedVector2Array, start: Vector2, direction: Vector2, length: float, center: Vector2, radius: float) -> void:
+	var to_center := start - center
+	# |start + t*direction - center|^2 = radius^2, with direction normalized.
+	var b := to_center.dot(direction)
+	var discriminant := b * b - (to_center.length_squared() - radius * radius)
+	if discriminant <= 0.0:
+		# The line misses the circle entirely, so it's wholly in or wholly out.
+		if to_center.length() > radius:
+			points.append(start)
+			points.append(start + direction * length)
+		return
+
+	var root := sqrt(discriminant)
+	var t_in := clampf(-b - root, 0.0, length)
+	var t_out := clampf(-b + root, 0.0, length)
+	if t_in > 0.5:
+		points.append(start)
+		points.append(start + direction * t_in)
+	if t_out < length - 0.5:
+		points.append(start + direction * t_out)
+		points.append(start + direction * length)
+
+## One "THE VOID", set out in the dark rather than on the boundary — the label
+## belongs to the emptiness, not to the line around the system. Sides first,
+## since a 16:9 chart has the most room there; whichever way fits wins.
+func _draw_void_label(c: Control, rect: Rect2, center: Vector2, inner: float) -> void:
+	var text := TerminalWindow.spaced_title("THE VOID")
+	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE).x
+	var inset := rect.grow(-14.0)
+
+	for direction: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		# Sit it partway from the deep line out to the rim, so it reads as being
+		# well inside the void rather than labelling the edge of it.
+		var rim := _rim_distance(center, direction, rect)
+		if rim <= inner:
+			continue
+		var at := center + direction * lerpf(inner, rim, VOID_LABEL_DEPTH) - Vector2(width / 2.0, 0.0)
+		if not inset.has_point(at) or not inset.has_point(at + Vector2(width, 0.0)):
+			continue
+		# Blank the hatching behind the text so it stays readable
+		c.draw_rect(Rect2(at - Vector2(3.0, SMALL_SIZE), Vector2(width + 6.0, SMALL_SIZE + 5.0)), Color(Colors.UI_BACKGROUND_SOLID, 0.85))
+		c.draw_string(_font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_SIZE, Color(void_color, 0.55))
+		return
+
+## How far the chart reaches from `center` along a cardinal `direction` before
+## leaving `rect`. Zero once the center has been panned off that side.
+static func _rim_distance(center: Vector2, direction: Vector2, rect: Rect2) -> float:
+	if direction.x > 0.0:
+		return maxf(rect.end.x - center.x, 0.0)
+	if direction.x < 0.0:
+		return maxf(center.x - rect.position.x, 0.0)
+	if direction.y > 0.0:
+		return maxf(rect.end.y - center.y, 0.0)
+	return maxf(center.y - rect.position.y, 0.0)
 
 func _draw_range_rings(c: Control, rect: Rect2) -> void:
 	# Distance rings from the sun at round intervals, labelled on the way out
@@ -672,6 +792,13 @@ func _draw_readout(c: Control, alpha: float) -> void:
 		c.draw_string(_font, Vector2(READOUT_INSET, y), row[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, key_color)
 		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), row[1], HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, value_color)
 		y += _font.get_height(TEXT_SIZE) + 3.0
+
+	# The chart is the one instrument the void leaves half-working, so the clock
+	# lives here rather than on the dashboard that's busy falling apart.
+	if VoidZone.is_inside():
+		var left := VoidZone.time_left()
+		c.draw_string(_font, Vector2(READOUT_INSET, y), "VOID", HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, 0.6 * alpha))
+		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), "%.1f s" % left, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, alpha))
 
 func _draw_scale_bar(c: Control, alpha: float) -> void:
 	var step := _nice_step(120.0 / scale_factor)

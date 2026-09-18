@@ -14,10 +14,10 @@ const AMPLITUDE := 0.35
 ## Pitch multiplier per face; anything missing is 1.0.
 const MOOD_PITCH := {
 	&"happy": 1.2, &"hello": 1.2, &"wink": 1.15, &"surprise": 1.35,
-	&"worried": 0.8, &"sleep": 0.7, &"dead": 0.6, &"titan": 0.65,
+	&"worried": 0.8, &"sleep": 0.7, &"dead": 0.6, &"titan": 0.65, &"lost": 0.55,
 }
 ## Faces whose line-start chirp falls instead of rises (a sigh).
-const SAD_MOODS := [&"worried", &"sleep", &"dead"]
+const SAD_MOODS := [&"worried", &"sleep", &"dead", &"lost"]
 
 var _blip: AudioStreamWAV
 var _chirp_up: AudioStreamWAV

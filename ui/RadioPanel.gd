@@ -22,6 +22,8 @@ const FADE_TIME := 0.15
 ## in flight would dismiss the tip unread. Only the opening line is gated (later ones need
 ## a release edge anyway), only when the key was actually down, and TAB/ENTER never are.
 const OPENING_GRACE_SEC := 0.3
+## How often a garbled line re-scrambles itself once it has finished typing.
+const GARBLE_PERIOD := 0.1
 ## Menus that sit in the same CanvasLayer as the HUD but never block the radio.
 ## Transient overlays (gem pickup popups) opt out with the "hud_overlay" group.
 const NON_BLOCKING := [&"HUD", &"IndicatorManager"]
@@ -45,6 +47,7 @@ var _fade: Tween
 var _opened_at := 0.0
 var _gated := false  # the action key was down when this transmission opened
 var _action_released := false  # ...and has since been let go
+var _garble_left := 0.0  # until the next re-scramble of a garbled line
 
 func _ready() -> void:
 	name = "RadioPanel"
@@ -193,6 +196,7 @@ func _show_line(line: RadioLine, conv: RadioConversation) -> void:
 	_hold_left = 0.0
 	_hold_total = 0.0
 	_typed = 0
+	_garble_left = GARBLE_PERIOD
 	if opening:
 		_opened_at = Time.get_ticks_msec() / 1000.0
 		_gated = Input.is_action_pressed("action")
@@ -284,13 +288,27 @@ func _process(delta: float) -> void:
 		return
 	if _typewriter.is_typing():
 		_beep_new_chars()
-	elif _hold_left > 0.0:
+	else:
+		_churn_garble(delta)
+	if not _typewriter.is_typing() and _hold_left > 0.0:
 		_hold_left -= delta
 		_timer_bar.size.x = (PANEL_SIZE.x - 4.0) * maxf(_hold_left, 0.0) / _hold_total
 		if _hold_left <= 0.0:
 			RobotRadio.advance()
 	if _hold_left <= 0.0:
 		_timer_bar.size.x = 0.0
+
+## A garbled line keeps re-scrambling once it has typed out, so the noise reads as
+## a signal still failing rather than a fixed string of junk. Only ever runs after
+## the typewriter is done, so it never fights the reveal.
+func _churn_garble(delta: float) -> void:
+	if not _line.garbled:
+		return
+	_garble_left -= delta
+	if _garble_left > 0.0:
+		return
+	_garble_left = GARBLE_PERIOD
+	_message.text = _line.display_text(_conv.vars)
 
 func _beep_new_chars() -> void:
 	var shown := _message.visible_characters

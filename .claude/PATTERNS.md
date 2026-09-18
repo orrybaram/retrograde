@@ -36,13 +36,27 @@ Full-screen menus with UNIT-7 (inventory, store) are built in code from shared p
 
 `Typewriter` lays text out after shaping (`VC_CHARS_AFTER_SHAPING`) so wrapped words don't jump lines while typing.
 
+## The Void (hazard past the last orbit)
+
+```
+VoidZone (autoload: depth / dread / shroud, the 30s clock)
+  -> StarField (star_fade uniform)     the sky drains
+  -> VoidShroud (CanvasLayer 40)       the dark closes in, static, tears
+  -> VoidGlitch (child of HUD)         readouts rot, panel jitters and cuts out
+  -> SystemMap._draw_void              diagonal hazard hatching + boundary arcs
+  -> Main._on_void_consumed            ConsumedState, then the game-over radio
+```
+
+`depth` is distance past `EDGE_RADIUS`; `dread` is the survival clock; `shroud = max(depth, dread)` is what every visual reads. `EDGE_RADIUS` must stay clear of the home station's apoapsis (~295000) — `VoidZoneTest` guards that.
+
 ## Robot Radio (guide robot help messages)
 
 ```
 EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + show-once flags) -> RadioPanel (HUD)
 ```
 
-- Data: `RadioConversation` (id, priority, once, lines) of `RadioLine` (speaker, text, expression, glitch).
+- Data: `RadioConversation` (id, priority, once, lines) of `RadioLine` (speaker, text, expression, glitch, garbled).
+- `garbled` renders the line as line noise of the same shape (and keeps re-scrambling after it types), while `text` still holds what was meant. `expression` picks the face color in `RobotView._face_color()`: `titan` purple, `dead`/`lost` red, everything else mustard.
   Bundled messages live in `entities/Robot/radio/messages/*.tres`. `{key:<action>}` in text becomes the bound key.
 - Higher priority interrupts (the interrupted one replays after); otherwise queued by priority, FIFO.
 - `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.

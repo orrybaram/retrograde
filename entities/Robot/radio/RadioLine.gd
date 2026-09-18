@@ -16,6 +16,10 @@ const READ_SECONDS_PER_CHAR := 0.06
 @export var expression: StringName = &"neutral"
 ## Scramble the robot's face and beeps while this line plays.
 @export var glitch: bool = false
+## Nothing of this line survives the trip: `display_text` comes back as line
+## noise of the same shape, so it types and wraps like speech but says nothing.
+## `text` still holds what the robot meant, for tests and for reading the source.
+@export var garbled: bool = false
 ## Non-empty makes this a confirm line: it shows `> <confirm>` and waits for the
 ## player to accept (RobotRadio.confirm). It can't be skipped or time out.
 @export var confirm: String = ""
@@ -35,7 +39,17 @@ func speaker_name() -> String:
 	return speaker if speaker != "" else RobotRadio.SPEAKER_NAME
 
 func display_text(vars: Dictionary = {}) -> String:
-	return _fill(text, vars)
+	var filled := _fill(text, vars)
+	return scramble(filled) if garbled else filled
+
+## Line noise shaped like the original: word lengths and punctuation spacing
+## survive so it still reads as someone talking, and `read_time` still holds.
+static func scramble(source: String) -> String:
+	var out := ""
+	for i in source.length():
+		var c := source[i]
+		out += c if c == " " or c == "\n" else RobotFaces.GLITCH_CHARS[randi() % RobotFaces.GLITCH_CHARS.length()]
+	return out
 
 func confirm_text(vars: Dictionary = {}) -> String:
 	return _fill(confirm, vars)

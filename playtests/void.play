@@ -1,0 +1,84 @@
+# The Void: the dark past the last orbit. Crossing the edge brings the robot's
+# warning and starts a clock; the stars thin, the dashboard rots and drops out,
+# and thirty seconds in there is nothing left. Turning back gets it all returned.
+# Run: tools/play.sh playtests/void.play   (frames land in .playtest/void_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+wait_until pt.state_name() == "LandedState" 5
+
+# The home dock rides Rook around Veld and swings out a long way. It still has to
+# sit clear of the void, or a normal run home ends in the dark.
+assert ship.global_position.length() < get_node("/root/VoidZone").EDGE_RADIUS "home dock is inside the system"
+assert not get_node("/root/VoidZone").is_inside() "docked ship is not in the void"
+
+# The chart marks the void before anyone flies into it
+press m
+wait 0.6
+assert pt.visible_ui().has("SystemMap") "map open"
+screenshot void_1_chart
+press m
+wait 0.4
+
+# Out past the edge. warp_to lands at rest, so the run is about the clock, not drift.
+hold thrust 1.2
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.warp_to(Vector2(345000, 0))
+wait 0.5
+assert get_node("/root/VoidZone").is_inside() "past the edge"
+assert get_node("/root/VoidZone").depth > 0.0 "depth reads past the edge"
+# On air and on screen, not merely queued — a queued warning can be cleared away
+# unseen, which is how this went missing the first time.
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_edge" 3
+assert pt.node("radio_panel").visible "the warning is actually on screen"
+assert pt.node("radio_panel").message_text().contains("past the last orbit") "and it reads"
+
+# The sky drains and the instruments start lying
+wait 6
+assert get_node("/root/VoidZone").dread > 0.15 "the clock is running"
+screenshot void_2_fading
+wait 8
+assert get_node("/root/VoidZone").shroud > 0.5 "half swallowed"
+screenshot void_3_dark
+
+# Turn back before it closes: exposure winds off and everything comes home
+eval pt.warp_to(Vector2(200000, 0))
+wait_until not get_node("/root/VoidZone").is_inside() 3
+wait_until get_node("/root/VoidZone").dread == 0.0 20
+assert get_node("/root/VoidZone").shroud == 0.0 "sky is back"
+wait 2
+screenshot void_4_recovered
+
+# Now stay. Thirty seconds at the fringe is the most anyone gets, and it's less
+# the deeper you are, so this has to land inside that.
+eval pt.warp_to(Vector2(345000, 0))
+wait_until main.current_game_state == 2 40
+assert pt.state_name() == "ConsumedState" "taken, not exploded"
+assert pt.wreck_gem_count() == 0 "nothing is left behind out there"
+assert pt.derelict_count() == 0 "no hull to salvage either"
+wait 3
+screenshot void_5_consumed
+
+# The robot talks the pilot back into a new hull
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_consumed" 5
+press space
+frames 2
+press space
+frames 2
+press space
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 5
+wait_until not pt.node("radio_panel").is_typing() 5
+assert get_tree().root.get_node("RobotRadio").current_line().garbled "nothing gets through from out there"
+assert get_tree().root.get_node("RobotRadio").current_line().expression == "lost" "red lost face"
+assert not pt.node("radio_panel").message_text().contains("Stay inside the orbits") "the words never arrive"
+assert pt.node("radio_panel").message_text().length() > 20 "but the shape of speech does"
+press space
+wait_until main.current_game_state == 1 30
+wait_until pt.state_name() == "LandedState" 10
+assert get_node("/root/VoidZone").shroud == 0.0 "respawn clears the dark"
+wait 1
+screenshot void_6_relaunched

@@ -157,7 +157,7 @@ func _process(_dt: float) -> void:
 	var now := Time.get_ticks_usec()
 	var real_dt := (now - _last_frame_usec) / 1_000_000.0 if _last_frame_usec > 0 else 0.0
 	_last_frame_usec = now
-	if real_dt < 0.1 and not is_destroyed():
+	if real_dt < 0.1 and not is_gone():
 		var catch_up := HarvestJuice.hitstop_catch_up(linear_velocity, real_dt)
 		if catch_up != Vector2.ZERO:
 			global_position += catch_up
@@ -174,7 +174,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 
 
 func take_damage(amount: float) -> void:
-	if is_destroyed():
+	if is_gone():
 		return
 
 	# Trigger camera shake on damage
@@ -195,6 +195,11 @@ func explode() -> void:
 ## Helper method to check if ship is destroyed
 func is_destroyed() -> bool:
 	return state_machine and state_machine.current_state is DestroyedState
+
+## Destroyed or taken by the Void: either way the hull is gone and nothing —
+## damage, hitstop catch-up, harvesting — should still be acting on it.
+func is_gone() -> bool:
+	return state_machine and (state_machine.current_state is DestroyedState or state_machine.current_state is ConsumedState)
 
 ## Helper method to check if ship is locked to planet
 func is_locked_to_planet() -> bool:
