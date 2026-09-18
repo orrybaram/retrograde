@@ -42,16 +42,19 @@ wait 3.6
 
 eval pt.caption("Fly to it and the guide finally names it")
 eval pt.park_at_gate("Veld", 520.0)
+# gate_identified does not pause the game, so SPACE is not its key: a non-pausing tip
+# is advanced with TAB (radio_next) and auto-dismisses on RadioLine.read_time() anyway.
 wait_until get_tree().root.get_node("RobotRadio").queue.current != null 6
 wait_until not pt.node("radio_panel").is_typing() 8
-wait 0.8
-press space
-wait_until not pt.node("radio_panel").is_typing() 6
-wait 0.8
-press space
-wait_until not pt.node("radio_panel").is_typing() 6
-wait 0.8
-press space
+wait 1.2
+press radio_next
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.2
+press radio_next
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.2
+press radio_next
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 20
 wait 1.0
 
 # --- 4. Dock and power ---------------------------------------------------------
@@ -128,6 +131,21 @@ wait_until ship.global_position.distance_to(pt.gate("Crom").get_dock_position())
 wait 1.0
 eval pt.caption("Out of the dark, already in Crom's cradle  //  no fuel, no hull, no credits")
 wait 3.4
+
+# The guide calls about the first transit, and that call pauses the game: let it play
+# and see it out, or everything after this renders behind a paused radio panel.
+wait_until get_tree().root.get_node("RobotRadio").queue.current != null 8
+wait_until not pt.node("radio_panel").is_typing() 10
+wait 1.0
+press space
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.0
+press space
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.0
+press space
+wait_until not get_tree().paused 6
+wait 1.0
 
 # --- 8. Titan Influence ---------------------------------------------------------
 eval pt.caption("Two Modules in, the dashboard never quite reads clean again")
