@@ -48,6 +48,8 @@ wait 1.2
 
 eval pt.caption("Module online  //  1 of 5  //  it never goes back off")
 wait 3.0
+# TRANSIT and REFUEL sit above DEPART once the Module is online
+press down 2
 press enter
 wait_until pt.visible_ui().is_empty() 2
 

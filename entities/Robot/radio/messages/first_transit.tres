@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "And there you are. Two Modules online, one link between them — that's transit."
+expression = &"happy"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Every Gate you power joins the link. Sit in the cradle and the tank fills on the house."
+expression = &"neutral"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "It moved you the way it used to move f-f-fleets. It remembers the shape of that."
+expression = &"glitch"
+glitch = true
+
+[resource]
+script = ExtResource("1_conv")
+id = &"first_transit"
+priority = 1
+once = true
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])

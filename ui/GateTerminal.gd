@@ -6,12 +6,17 @@ class_name GateTerminal
 ## for the credits to bring this planet's Module online.
 ##
 ## UP/DOWN select, ENTER confirms, ESC leaves. Powering runs a short boot log the
-## launch key skips, and then the hub comes back showing the Module online. Transit
-## and refuelling rows belong to later slices.
+## launch key skips, and then the hub comes back showing the Module online. Once it is,
+## the hub carries the two things a link is good for: transit to another powered Gate,
+## and a tank the Titan fills for nothing while the ship sits in the cradle.
 ## Built in code; the scene tree holds only the root.
 
 signal terminal_closed
 signal gate_powered(gate: Gate)
+## A destination was chosen off the transit list; GateDockedState flies it.
+signal transit_requested(destination: Gate)
+## The free fill was asked for; GateDockedState runs the clock on it.
+signal refuel_requested
 
 const WINDOW_SIZE := Vector2(560, 300)
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
@@ -25,13 +30,19 @@ const BOOT_CHARS_PER_SEC := 27.0
 const BOOT_LINE_GAP := 0.32
 const BOOT_HOLD := 0.5
 
+## The hub, or the list of Gates this one is linked to.
+enum View {HUB, TRANSIT}
+
 var gate: Gate = null
 var gs: GameState = null
 
+var _view := View.HUB
 var _menu_items: Array[Dictionary] = []
 var _selected_index := 0
 var _booting := false
 var _skip_boot := false
+## Right-hand labels of the drawn rows, so the fill can count up without rebuilding them.
+var _right_labels: Array[Label] = []
 
 var _frame: TerminalWindow
 var _status: Label
@@ -102,12 +113,14 @@ func _make_row(item: Dictionary, selected: bool) -> Control:
 	row.add_child(TerminalWindow.spacer())
 
 	var right: String = item.get("right", "")
+	var right_label: Label = null
 	if right != "":
-		var right_label := TerminalWindow.label(right, TEXT_SIZE, item.get("right_color", text_color))
+		right_label = TerminalWindow.label(right, TEXT_SIZE, item.get("right_color", text_color))
 		right_label.custom_minimum_size.x = RIGHT_WIDTH
 		right_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		right_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(right_label)
+	_right_labels.append(right_label)
 	return panel
 
 # --- Open / close ------------------------------------------------------------
@@ -118,6 +131,7 @@ func open(target: Gate) -> void:
 		gs = get_tree().get_first_node_in_group("game_state") as GameState
 	_booting = false
 	_skip_boot = false
+	_view = View.HUB
 	_clear(_log)
 	_log.visible = false
 	_show_hub(true)
@@ -136,6 +150,7 @@ func close() -> void:
 		return
 	visible = false
 	_booting = false
+	_view = View.HUB
 	gate = null
 	_clear(_log)
 	terminal_closed.emit()
@@ -153,12 +168,13 @@ func _refresh_hub() -> void:
 	_menu_items.clear()
 	if powered:
 		_menu_items.append({
-			"enabled": false,
-			"action": Callable(),
-			"label": "GATE POWERED",
-			"right": "ONLINE",
-			"right_color": Colors.TITAN,
+			"enabled": true,
+			"action": _open_transit,
+			"label": "TRANSIT",
+			"right": "%d LINKED" % _linked_count(),
+			"right_color": Colors.TITAN if _linked_count() > 0 else Colors.PRIMARY_DIM,
 		})
+		_menu_items.append(_refuel_item())
 	else:
 		var affordable := gate != null and gs != null and gate.can_afford(gs)
 		_menu_items.append({
@@ -169,9 +185,95 @@ func _refresh_hub() -> void:
 			"right_color": Colors.PRIMARY if affordable else Colors.DANGER,
 		})
 	_menu_items.append({"enabled": true, "action": close, "label": "DEPART", "right": "UNDOCK"})
-	# Nothing left to do at a Gate that is already online but leave it
-	_selected_index = _menu_items.size() - 1 if powered else clampi(_selected_index, 0, _menu_items.size() - 1)
+	_selected_index = clampi(_selected_index, 0, _menu_items.size() - 1)
 	_refresh_rows()
+
+## Nothing is charged for the fill, so the row only ever reads FREE or FULL. The
+## percentage takes its place while the tank is filling (see set_refuel_readout).
+func _refuel_item() -> Dictionary:
+	var ship := _ship()
+	var full := ship == null or ship.fuel >= ship.max_fuel
+	return {
+		"enabled": not full,
+		"action": _on_refuel_pressed,
+		"label": "REFUEL",
+		"right": "FULL" if full else "FREE",
+		"right_color": Colors.PRIMARY_DIM if full else Colors.PRIMARY,
+	}
+
+func _ship() -> Ship:
+	return get_tree().get_first_node_in_group("ship") as Ship
+
+func _linked_count() -> int:
+	return GateTransit.destinations(gate, get_tree()).size() if gate else 0
+
+# --- Transit -----------------------------------------------------------------
+
+## The Gates this one is linked to, sun outwards. A Gate with its Module online but
+## nothing else online to reach says so rather than showing an empty list.
+func _refresh_transit() -> void:
+	_status.text = TerminalWindow.spaced("TRANSIT")
+	_status.add_theme_color_override("font_color", Colors.TITAN)
+	_credits.text = "LINKED GATES"
+	_frame.set_hint("UP/DN SELECT   ENTER TRANSIT   ESC BACK")
+
+	_menu_items.clear()
+	for destination in GateTransit.destinations(gate, get_tree()):
+		_menu_items.append({
+			"enabled": true,
+			"action": _on_destination_pressed.bind(destination),
+			"label": GateTransit.label_for(destination),
+			"right": "",
+		})
+	if _menu_items.is_empty():
+		_menu_items.append({
+			"enabled": false,
+			"action": Callable(),
+			"label": "NO LINKED GATES",
+			"right": "",
+		})
+	_selected_index = 0
+	_refresh_rows()
+
+func _open_transit() -> void:
+	_view = View.TRANSIT
+	_refresh_transit()
+
+func _back_to_hub() -> void:
+	_view = View.HUB
+	_selected_index = 0
+	_refresh_hub()
+
+func _on_destination_pressed(destination: Gate) -> void:
+	if not GateTransit.can_transit(gate, destination):
+		return
+	transit_requested.emit(destination)
+
+# --- Refuelling --------------------------------------------------------------
+
+func _on_refuel_pressed() -> void:
+	refuel_requested.emit()
+
+## Redraws whichever list is up; used when the tank tops off and the row goes FULL.
+func refresh() -> void:
+	if not visible:
+		return
+	if _view == View.TRANSIT:
+		_refresh_transit()
+	else:
+		_refresh_hub()
+
+## Counts the tank up in the REFUEL row's right column while it fills, without
+## rebuilding the rows sixty times a second.
+func set_refuel_readout(text: String) -> void:
+	if _view != View.HUB:
+		return
+	for i in _menu_items.size():
+		if _menu_items[i].get("label", "") != "REFUEL":
+			continue
+		if i < _right_labels.size() and _right_labels[i]:
+			_right_labels[i].text = text
+		return
 
 ## The boot log speaks for itself: the hub's readouts step aside while it runs rather
 ## than sit above it saying the Module is still offline.
@@ -182,6 +284,7 @@ func _show_hub(shown: bool) -> void:
 
 func _refresh_rows() -> void:
 	_clear(_rows)
+	_right_labels.clear()
 	for i in _menu_items.size():
 		_rows.add_child(_make_row(_menu_items[i], i == _selected_index))
 
@@ -211,7 +314,10 @@ func _input(event: InputEvent) -> void:
 			_activate_selection()
 			get_viewport().set_input_as_handled()
 		KEY_ESCAPE:
-			close()
+			if _view == View.TRANSIT:
+				_back_to_hub()
+			else:
+				close()
 			get_viewport().set_input_as_handled()
 
 ## Rows the player can't take stay selectable, so the cost of a Gate they can't
@@ -241,6 +347,7 @@ func _on_power_pressed() -> void:
 	if visible and gate == powered_gate:
 		_log.visible = false
 		_show_hub(true)
+		_view = View.HUB
 		_selected_index = 0
 		_refresh_hub()
 

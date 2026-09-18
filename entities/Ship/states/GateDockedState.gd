@@ -3,13 +3,17 @@ class_name GateDockedState
 
 ## The ship clamped into a Gate's docking cradle. (LandedState is a port; this is a Gate.)
 ##
-## A Gate is not a port: there is no quartermaster, nothing to sell and no fuel line.
-## All that is out here is the Gate's own terminal, which opens on arrival and asks for
-## the credits to bring the planet's Module online. The launch key releases the ship the
+## A Gate is not a port: there is no quartermaster and nothing to sell. All that is out
+## here is the Gate's own terminal, which opens on arrival and asks for the credits to
+## bring the planet's Module online. Once it is online the Gate gives two things back:
+## transit to any other powered Gate, and a tank the Titan fills for nothing. Neither
+## costs credits, so the stations keep the money. The launch key releases the ship the
 ## same way a port does.
 
 const CAMERA_ZOOM := Vector2(2.0, 2.0)
 const DOCK_ANIM_TIME := 0.5
+## A Gate fills the tank at the same pace a port does; it just doesn't bill for it.
+const REFUEL_TIME := LandedState.REFUEL_TIME
 
 var locked_dockable: Node2D = null
 
@@ -18,6 +22,9 @@ var _dock_start_time := 0.0
 var _start_position := Vector2.ZERO
 var _start_rotation := 0.0
 var _terminal: GateTerminal = null
+var _refuelling := false
+## The screen is already going dark; nothing else about this dock matters any more.
+var _transiting := false
 
 func enter() -> void:
 	super.enter()
@@ -58,6 +65,8 @@ func _take_meta(key: String, fallback: Variant) -> Variant:
 func exit() -> void:
 	super.exit()
 	_close_terminal()
+	_refuelling = false
+	_transiting = false
 	locked_dockable = null
 	_offset_from_dock = Vector2.ZERO
 	_dock_start_time = 0.0
@@ -65,8 +74,8 @@ func exit() -> void:
 	if ship and ship.camera:
 		ship.camera.zoom_camera_out()
 
-func physics_process(_delta: float) -> void:
-	if not is_ship_valid():
+func physics_process(delta: float) -> void:
+	if not is_ship_valid() or _transiting:
 		return
 
 	if not is_instance_valid(locked_dockable):
@@ -80,6 +89,9 @@ func physics_process(_delta: float) -> void:
 
 	ship.want_thrust = Input.is_action_pressed("thrust")
 	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
+
+	if _refuelling:
+		_refuel(delta)
 
 	# The terminal owns the keyboard while it is up: the launch key is its skip key too
 	if is_terminal_open():
@@ -139,6 +151,10 @@ func _open_terminal() -> void:
 		_terminal.terminal_closed.connect(_on_terminal_closed)
 	if not _terminal.gate_powered.is_connected(_on_gate_powered):
 		_terminal.gate_powered.connect(_on_gate_powered)
+	if not _terminal.transit_requested.is_connected(_on_transit_requested):
+		_terminal.transit_requested.connect(_on_transit_requested)
+	if not _terminal.refuel_requested.is_connected(_on_refuel_requested):
+		_terminal.refuel_requested.connect(_on_refuel_requested)
 	EventBus.action_message_changed.emit("")
 	_terminal.open(gate)
 
@@ -150,6 +166,10 @@ func _close_terminal() -> void:
 		_terminal.terminal_closed.disconnect(_on_terminal_closed)
 	if _terminal.gate_powered.is_connected(_on_gate_powered):
 		_terminal.gate_powered.disconnect(_on_gate_powered)
+	if _terminal.transit_requested.is_connected(_on_transit_requested):
+		_terminal.transit_requested.disconnect(_on_transit_requested)
+	if _terminal.refuel_requested.is_connected(_on_refuel_requested):
+		_terminal.refuel_requested.disconnect(_on_refuel_requested)
 	_terminal.close()
 	_terminal = null
 
@@ -170,6 +190,38 @@ func _on_gate_powered(_gate: Gate) -> void:
 		if glitch:
 			glitch.hit(0.45)
 	_autosave()
+
+# --- Transit and refuelling --------------------------------------------------
+
+## The link between two online Modules, taken. Nothing aboard pays for it, so there is
+## nothing to check and nothing to spend: the terminal comes down, the screen goes dark
+## and the ship is set down in the other Gate's cradle.
+func _on_transit_requested(destination: Gate) -> void:
+	if _transiting or not is_ship_valid() or not is_instance_valid(destination):
+		return
+	_transiting = true
+	_refuelling = false
+	_close_terminal()
+	await GateTransit.run(ship, destination)
+
+## The Titan's own fuel, free while the ship is in the cradle. Same pace as a port,
+## and the row counts up so the terminal shows it happening.
+func _on_refuel_requested() -> void:
+	if not is_ship_valid() or ship.fuel >= ship.max_fuel:
+		return
+	_refuelling = true
+
+func _refuel(delta: float) -> void:
+	ship.fuel = minf(ship.fuel + ship.max_fuel / REFUEL_TIME * delta, ship.max_fuel)
+	ship.fuel_changed.emit()
+	var done: bool = ship.fuel >= ship.max_fuel
+	if done:
+		_refuelling = false
+	if is_instance_valid(_terminal):
+		if done:
+			_terminal.refresh()
+		elif ship.max_fuel > 0.0:
+			_terminal.set_refuel_readout("%d%%" % roundi(ship.fuel / ship.max_fuel * 100.0))
 
 func _show_prompt() -> void:
 	EventBus.action_message_changed.emit("%s   %s" % [

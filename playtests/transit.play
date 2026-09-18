@@ -1,0 +1,91 @@
+# Transit between powered Gates, and the free fill while docked at one. Power Veld's
+# Gate, bring Crom's Module online too, then take the link from one cradle to the other
+# and check the trip cost nothing.
+# Run: tools/play.sh playtests/transit.play   (frames land in .playtest/transit_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+# A tank run down far enough to be worth filling would trip the low-fuel call too
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+
+# Veld's Gate is the one the ship can reach; Crom's Module is brought online from here
+eval gs.set("credits", 1000)
+eval gs.mark_gate_powered(pt.gate("Crom").save_key())
+assert gs.titan_influence() == 1 "Crom's Module is online"
+
+# Dock in Veld's cradle and pay for its Gate
+wait 2.2
+eval pt.park_at_gate("Veld", 30.0)
+eval ship.set("fuel", 10.0)
+frames 2
+press action
+wait_until pt.state_name() == "GateDockedState" 3
+wait_until pt.visible_ui().has("GateTerminal") 2
+press enter
+wait_until gs.titan_influence() == 2 3
+wait_until not pt.node("gate_terminal").is_booting() 8
+assert gs.credits == 400 "Veld's Gate took its 600 CR"
+
+# The free fill: the tank comes up to full and nothing is charged for it
+press down
+assert pt.node("gate_terminal")._menu_items[1]["right"] == "FREE" "the Gate charges nothing for fuel"
+press enter
+wait 0.6
+screenshot transit_0_refuelling
+wait_until ship.fuel >= ship.max_fuel 8
+assert gs.credits == 400 "the Titan's fuel costs nothing"
+assert ship.hull_strength == ship.max_hull "a Gate has no hull shop"
+screenshot transit_1_full
+
+# The transit list: every other powered Gate, this one left out
+press up
+press enter
+frames 2
+assert pt.node("gate_terminal")._menu_items.size() == 1 "one linked Gate to go to"
+assert pt.screen_text()["GateTerminal"].has("CROM") "Crom's Gate is the destination"
+screenshot transit_2_destinations
+
+# Take it: black-out, then the ship is in Crom's cradle having spent nothing
+eval pt.remember("fuel", ship.fuel)
+eval pt.remember("hull", ship.hull_strength)
+eval pt.remember("hold", inv.get_total_value())
+press enter
+wait 0.5
+screenshot transit_3_black
+wait_until ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 60 12
+assert pt.state_name() == "GateDockedState" "the ship comes out of the dark already docked"
+assert ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 60 "in Crom's cradle"
+assert ship.fuel == pt.recall("fuel") "transit burns no fuel"
+assert ship.hull_strength == pt.recall("hull") "transit costs no hull"
+assert inv.get_total_value() == pt.recall("hold") "transit takes nothing out of the hold"
+assert gs.credits == 400 "transit costs no credits"
+assert gs.titan_influence() == 2 "both Modules are still online"
+
+# The guide has something to say the first time, and only the first time
+wait_until get_tree().root.get_node("RobotRadio").queue.current != null 10
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_transit" "the guide calls about the transit"
+wait_until not pt.node("radio_panel").is_typing() 10
+screenshot transit_4_arrived
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait 0.3
+assert not get_tree().root.get_node("RobotRadio").is_active() "the call finishes"
+wait_until not get_tree().paused 5
+assert get_tree().root.get_node("RobotRadio").has_seen("first_transit") "it never plays again this save"
+assert pt.state_name() == "GateDockedState" "the call leaves the ship where it landed"
+state
