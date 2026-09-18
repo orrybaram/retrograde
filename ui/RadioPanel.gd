@@ -48,12 +48,16 @@ var _opened_at := 0.0
 var _gated := false  # the action key was down when this transmission opened
 var _action_released := false  # ...and has since been let go
 var _garble_left := 0.0  # until the next re-scramble of a garbled line
+var _gs: GameState = null
+## The panel's own generator. Never RNG.rng — that one rolls gameplay.
+var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	name = "RadioPanel"
 	add_to_group("radio_panel")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rng.randomize()
 	_build()
 	visible = false
 	_typewriter.typing_finished.connect(_on_typing_finished)
@@ -193,6 +197,7 @@ func _show_line(line: RadioLine, conv: RadioConversation) -> void:
 	robot.glitch_rate = 2.5 if line.glitch else 0.0
 	if line.glitch or opening:
 		robot.glitch_burst(0.35)  # tuning-in static
+	_maybe_titan_flash(line)
 	_hold_left = 0.0
 	_hold_total = 0.0
 	_typed = 0
@@ -210,6 +215,20 @@ func _show_line(line: RadioLine, conv: RadioConversation) -> void:
 	if opening:
 		visible = not _is_blocked()
 		_fade_to(1.0)
+
+## Once enough Modules are online, roughly every second line the guide opens with, the
+## Titan's color is on its face for a moment before the guide's own comes back. Only
+## the guide — anyone else on the channel is speaking for themselves.
+func _maybe_titan_flash(line: RadioLine) -> void:
+	if line.speaker_name() != RobotRadio.SPEAKER_NAME:
+		return
+	if TitanInfluence.flashes_titan_face(_titan_influence(), _rng):
+		robot.titan_flash()
+
+func _titan_influence() -> int:
+	if not is_instance_valid(_gs):
+		_gs = get_tree().get_first_node_in_group("game_state") as GameState
+	return _gs.titan_influence() if _gs else 0
 
 func _on_typing_finished() -> void:
 	robot.talking = false

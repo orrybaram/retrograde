@@ -120,3 +120,22 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   nothing more, so a Gate has to be flown to (docs/adr/0002).
 - Save: `[gates] powered`, written on power-up (a full autosave, which also banks the credits
   it cost) and on the normal save path. `Save.save_powered_gates` writes only that section.
+
+## Titan Influence (what it leaks into)
+
+```
+GameState.titan_influence() (0-5)
+  -> TitanInfluence (all the tuning, pure + static)
+    -> HudGlitch.baseline()      the dashboard never reads clean again
+    -> RadioPanel._maybe_titan_flash -> RobotView.titan_flash()  the guide's face, for a moment
+```
+
+- Every knob lives in `scripts/TitanInfluence.gd`; nothing here touches gameplay.
+- The baseline is capped under `HudGlitch.ROT_THRESHOLD`, so the Titan dims and blinks the
+  readouts but never rots the characters — five Modules in, the HUD is still flyable.
+- The Titan never moves the dashboard. Wander, rot and dropouts belong to the Void and to
+  hull hits, which pass; the baseline doesn't, and a HUD that never stopped shaking couldn't
+  be lived with. Each Module shows through `TitanInfluence.blink_gap()`, not through the
+  Void's `_advance_cuts` curve, which barely moves down at baseline severities.
+- From `FACE_MIN_INFLUENCE` (3) Modules on, roughly every second guide line flashes
+  `Colors.TITAN` in `RobotView._face_color()`. Other speakers are left alone.
