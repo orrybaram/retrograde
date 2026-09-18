@@ -627,20 +627,31 @@ func planet(planet_name: String) -> Planet:
 	return null
 
 ## Park the ship `dist` px from a planet's centre at `angle_deg` (0 = +x), riding along
-## with the planet, nose pointing away from it.
-func park_near_planet(planet_name: String, dist: float, angle_deg := 180.0) -> void:
+## with the planet, nose pointing away from it. With `orbit`, the ship also gets the
+## circular-orbit velocity for that distance, so it holds station instead of falling -
+## needed by anything that has to sit in the gravity well for a while (a planet scan).
+func park_near_planet(planet_name: String, dist: float, angle_deg := 180.0, orbit := false) -> void:
 	var p := planet(planet_name)
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if not p or not ship:
 		return
 	var dir := Vector2.from_angle(deg_to_rad(angle_deg))
 	var pos := p.global_position + dir * dist
+	var velocity := p.linear_velocity
+	if orbit:
+		velocity += dir.orthogonal() * orbital_speed(p, ship, dist)
 	var rid := ship.get_rid()
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(dir.angle(), pos))
-	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, p.linear_velocity)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, velocity)
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
 	ship.global_position = pos
 	ship.rotation = dir.angle()
+
+## Speed of a circular orbit `dist` px out: PlanetGravityField pulls with
+## mass * G / dist^2, so v = sqrt(pull * dist / ship mass).
+static func orbital_speed(p: Planet, ship: Ship, dist: float) -> float:
+	var pull := p.mass * p.gravitational_constant / maxf(dist * dist, 1.0)
+	return sqrt(pull * dist / ship.mass)
 
 ## Hover `height` px above a planet's first ore seam (from its surface), nose tilted
 ## `tilt_deg` off straight up, falling toward it at `descent` px/s relative to the planet.

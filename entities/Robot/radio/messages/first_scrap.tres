@@ -19,15 +19,10 @@ text = "Old wreckage like that is perfectly s-s-safe to cut. Perfectly. Safe."
 expression = &"glitch"
 glitch = true
 
-[sub_resource type="Resource" id="line_4"]
-script = ExtResource("2_line")
-text = "Fly near the gems that break off and your magnet reels them in!"
-expression = &"happy"
-
 [resource]
 script = ExtResource("1_conv")
 id = &"first_scrap"
 priority = 1
 once = true
 pause_game = true
-lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4")])
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])

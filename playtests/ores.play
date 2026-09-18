@@ -23,10 +23,10 @@ assert pt.ore("Rook").rich "moon seams are rich"
 assert not pt.ore("Rook").visible "seam buried before the scan"
 assert not pt.ore("Rook").minimap_target.is_minimap_visible() "not on the minimap before the scan"
 assert pt.planet("Sonder").get_ore_deposits().is_empty() "gas giants have no ground to land on"
-eval pt.park_near_planet("Rook", 1900, 8)
+eval pt.park_near_planet("Rook", 1900, 8, true)
 wait 0.5
 screenshot ores_1_buried
-wait_until gs.is_planet_scanned("Veld/Rook") 6
+wait_until gs.is_planet_scanned("Veld/Rook") 24
 wait 0.3
 screenshot ores_2_surfaced
 assert pt.ore("Rook").visible "the scan surfaces the seam"

@@ -72,10 +72,6 @@ assert get_tree().paused "tutorial still holds the pause after resume"
 wait_until pt.node("radio_panel").visible 2
 wait_until not pt.node("radio_panel").is_typing() 10
 press space
-wait 0.2
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 3 "on the last tutorial line"
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
 wait 0.3
 assert not get_tree().root.get_node("RobotRadio").is_active() "tutorial finished"
 assert not get_tree().paused "closing the tutorial unpauses"

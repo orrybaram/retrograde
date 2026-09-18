@@ -30,7 +30,7 @@ screenshot scanner_1_minimap_unknown
 # --- Redock and buy it ---
 eval pt.redock()
 wait_until pt.visible_ui().has("SpacePortDialogue") 5
-eval gs.set("credits", 100)
+eval gs.set("credits", 6000)
 press enter
 wait_until pt.visible_ui().has("StoreUI") 2
 press enter
@@ -40,7 +40,7 @@ assert str(pt.screen_text()).contains("PLANETARY SCANNER") "scanner is for sale"
 screenshot scanner_2_store
 press enter
 wait_until gs.has_planet_scanner 3
-assert gs.credits == 60 "scanner costs 40 CR"
+assert gs.credits == 1000 "scanner costs 5000 CR"
 assert gs.get_upgrade_level("planet_scanner") == 1 "upgrade path planet_scanner tier 1"
 press esc
 press esc
@@ -63,7 +63,7 @@ wait_until not get_tree().paused 3
 
 # --- Leaving inner orbit before it completes resets the meter ---
 eval pt.park_near_planet("Rook", 2000)
-wait 1.5
+wait 5
 assert pt.scanner().target() == pt.planet("Rook") "scanning Rook"
 assert pt.scanner().progress() > 0.2 "meter fills"
 assert pt.node("scan_panel").body_text().contains("? ? ?") "unknown target while scanning"
@@ -74,10 +74,10 @@ assert pt.scanner().target() == null and pt.scanner().progress() == 0.0 "leaving
 assert not gs.is_planet_scanned("Veld/Rook") "not scanned yet"
 
 # --- Holding for the full scan completes it ---
-eval pt.park_near_planet("Rook", 2000, 200)
+eval pt.park_near_planet("Rook", 2000, 200, true)
 wait 1.5
 burst scanner_4_sweep 8 0.12
-wait_until gs.is_planet_scanned("Veld/Rook") 4
+wait_until gs.is_planet_scanned("Veld/Rook") 24
 assert pt.planet("Rook").is_scanned() "Rook is scanned"
 wait_until not pt.node("scan_panel").is_typing() 5
 assert pt.node("scan_panel").body_text().contains("ROOK") "readout names the planet"

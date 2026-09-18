@@ -5,7 +5,7 @@ class_name PlanetScan
 ## resets when it drops out (or another planet takes over). Pure logic: PlanetScanner
 ## feeds it the planet whose inner orbit holds the ship each physics tick.
 
-const SCAN_TIME := 4.0
+const SCAN_TIME := 20.0
 
 var target: Planet = null
 var progress := 0.0

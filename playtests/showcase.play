@@ -9,7 +9,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 eval get_tree().root.get_node("RobotRadio").mark_seen("scanner_bought")
 wait_until pt.state_name() == "LandedState" 20
-eval gs.set("credits", 100)
+eval gs.set("credits", 6000)
 eval pt.caption("PLANETARY SCANNER  //  buy it at the home station")
 wait 1.5
 press action
@@ -50,8 +50,8 @@ wait 1.6
 eval pt.park_near_planet("Rook", 5200, 20)
 wait 1.4
 eval pt.caption("Stay in the field: the sweep fills the meter")
-eval pt.park_near_planet("Rook", 2000, 20)
-wait_until gs.is_planet_scanned("Veld/Rook") 6
+eval pt.park_near_planet("Rook", 2000, 20, true)
+wait_until gs.is_planet_scanned("Veld/Rook") 24
 eval pt.caption("Scan complete  //  survey readout + ore seams surfaced")
 wait 3.5
 
