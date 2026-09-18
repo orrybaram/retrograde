@@ -24,6 +24,7 @@ class_name Minimap
 const SHIP_SIZE := 7.0
 const NAV_SIZE := 9.0
 const EDGE_INSET := 11.0 # how far inside the rim pinned markers sit
+const NAV_MARGIN := 4.0 # clearance the nav diamond keeps around the marker it rings
 
 ## Whether to rotate the minimap with the ship's heading
 @export var rotate_with_ship: bool = false
@@ -77,7 +78,7 @@ func _draw() -> void:
 	visible_targets.sort_custom(func(a, b): return a.get_minimap_priority() < b.get_minimap_priority())
 	
 	# Nav diamond goes underneath, so it frames markers instead of covering them
-	_draw_nav_target(center, ship_rotation)
+	_draw_nav_target(center, ship_rotation, visible_targets)
 
 	for target in visible_targets:
 		_draw_target(center, target, ship_rotation)
@@ -144,17 +145,33 @@ func _to_minimap(center: Vector2, world_pos: Vector2, ship_rotation: float, pin:
 	return center + minimap_pos
 
 ## The nav target (waypoint, or home): a blue diamond outline, held on the rim when far.
-func _draw_nav_target(center: Vector2, ship_rotation: float) -> void:
+## It is drawn under the markers, so it takes the size of whatever it sits on —
+## otherwise tracking a planet close up buries the diamond inside its disc.
+func _draw_nav_target(center: Vector2, ship_rotation: float, visible_targets: Array[MinimapTarget]) -> void:
 	var target := NavSystem.get_target()
 	if not target:
 		return
-	var pos: Vector2 = _to_minimap(center, target.get_position(), ship_rotation, true)
+	# Held on the rim, the diamond stands alone — there is no marker out there to
+	# ring, so it goes back to its own size rather than a planet's.
+	var in_range = _to_minimap(center, target.get_position(), ship_rotation, false)
+	var pos: Vector2 = in_range if in_range != null else _to_minimap(center, target.get_position(), ship_rotation, true)
+	var marker_size := _nav_marker_size(target, visible_targets) if in_range != null else NAV_SIZE
 	var points := PackedVector2Array([
-		pos + Vector2(0, -NAV_SIZE), pos + Vector2(NAV_SIZE, 0),
-		pos + Vector2(0, NAV_SIZE), pos + Vector2(-NAV_SIZE, 0), pos + Vector2(0, -NAV_SIZE),
+		pos + Vector2(0, -marker_size), pos + Vector2(marker_size, 0),
+		pos + Vector2(0, marker_size), pos + Vector2(-marker_size, 0), pos + Vector2(0, -marker_size),
 	])
 	draw_polyline(points, nav_color, 1.5)
 	draw_circle(pos, 1.2, nav_color)
+
+## Big enough to ring the marker the nav target shares its spot with.
+func _nav_marker_size(target: TrackingTarget, visible_targets: Array[MinimapTarget]) -> float:
+	var node := (target as NodeTrackingTarget).node if target is NodeTrackingTarget else null
+	if node == null:
+		return NAV_SIZE
+	for t in visible_targets:
+		if t.get_minimap_node() == node:
+			return maxf(NAV_SIZE, t.get_minimap_size() + NAV_MARGIN)
+	return NAV_SIZE
 
 ## Present time in seconds, for blinking/pulsing markers.
 static func now() -> float:
