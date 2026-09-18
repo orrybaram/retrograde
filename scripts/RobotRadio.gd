@@ -21,6 +21,8 @@ const SPEAKER_NAME := "UNIT-7"
 const MSG_WAKE := preload("res://entities/Robot/radio/messages/first_wake.tres")
 const MSG_BOOST_HINT := preload("res://entities/Robot/radio/messages/boost_hint.tres")
 const MSG_LOW_FUEL := preload("res://entities/Robot/radio/messages/first_low_fuel.tres")
+const MSG_LOW_HULL := preload("res://entities/Robot/radio/messages/first_low_hull.tres")
+const MSG_HULL_CRITICAL := preload("res://entities/Robot/radio/messages/hull_critical.tres")
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
 const MSG_SCANNER := preload("res://entities/Robot/radio/messages/scanner_bought.tres")
@@ -52,6 +54,9 @@ func _ready() -> void:
 	EventBus.radio_message_requested.connect(request)
 	EventBus.harvest_available_changed.connect(_on_harvest_available_changed)
 	EventBus.ship_respawned.connect(_bind_ship)
+	# Hull comes off the bus, not off _bind_ship: it has to be heard on whichever ship
+	# is flying, including one that respawned before the binding caught up.
+	EventBus.ship_hull_changed.connect(check_hull)
 
 ## Queues a conversation. Show-once conversations already seen are dropped.
 ## Tips go on air the moment they're triggered, even mid-flight: RadioPanel keeps a
@@ -231,6 +236,22 @@ func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
 func check_fuel(fuel: float, max_fuel: float) -> void:
 	if max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:
 		request(MSG_LOW_FUEL)
+
+## Two steps, both show-once: the first venting gets the full briefing with the game
+## held, and dropping into the red gets a single line that does NOT pause — being
+## frozen mid-fight one hit from death would be a worse warning than no warning.
+func check_hull(hull: float, max_hull: float) -> void:
+	# A hull at zero is a destroyed ship, and MSG_SHIP_DESTROYED has that conversation.
+	if max_hull <= 0.0 or hull <= 0.0:
+		return
+	match LowHullEffect.level_for(hull, max_hull):
+		LowHullEffect.Level.CRITICAL:
+			request(MSG_LOW_HULL)
+			request(MSG_HULL_CRITICAL)
+		LowHullEffect.Level.LOW:
+			request(MSG_LOW_HULL)
+		_:
+			pass
 
 func check_cargo(weight: float, max_weight: float) -> void:
 	if max_weight > 0.0 and weight >= max_weight:

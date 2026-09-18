@@ -407,6 +407,43 @@ func test_cargo_full_fires_when_hold_fills() -> void:
 	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_CARGO_FULL)
 
 
+func test_low_hull_fires_below_threshold() -> void:
+	var radio := _radio()
+	radio.check_hull(100.0, 100.0)
+	assert_bool(radio.is_active()).is_false()
+	radio.check_hull(100.0 * LowHullEffect.LOW_RATIO, 100.0)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_LOW_HULL)
+
+
+func test_dropping_straight_into_the_red_leads_with_the_alarm() -> void:
+	# A single hard hit can skip the LOW band entirely. Both calls fire, and because
+	# the alarm outranks the briefing it interrupts it: the player hears "one more hit"
+	# while it still matters, and gets the what-to-do-about-it afterwards.
+	var radio := _radio()
+	radio.check_hull(5.0, 100.0)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_HULL_CRITICAL)
+	assert_int(radio.queue.pending_count()).is_equal(1)
+	radio.advance()
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_LOW_HULL)
+
+
+func test_both_hull_calls_are_show_once() -> void:
+	# Hull sits low for long stretches and ship_hull_changed fires on every scratch;
+	# without the flags the player would be radioed continuously.
+	var radio := _radio()
+	radio.check_hull(10.0, 100.0)
+	radio.silence()
+	radio.check_hull(10.0, 100.0)
+	assert_bool(radio.is_active()).is_false()
+
+
+func test_a_destroyed_hull_is_not_a_low_hull_warning() -> void:
+	# Zero hull is the explosion's business, not the alarm's.
+	var radio := _radio()
+	radio.check_hull(0.0, 100.0)
+	assert_bool(radio.is_active()).is_false()
+
+
 func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
 	var radio := _radio()
 	radio._on_harvest_available_changed(false)
@@ -418,13 +455,16 @@ func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
 # --- Data ------------------------------------------------------------------------
 
 const TIPS := [RADIO_SCRIPT.MSG_WAKE, RADIO_SCRIPT.MSG_BOOST_HINT, RADIO_SCRIPT.MSG_LOW_FUEL,
-	RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP, RADIO_SCRIPT.MSG_SCANNER]
+	RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP, RADIO_SCRIPT.MSG_SCANNER,
+	RADIO_SCRIPT.MSG_LOW_HULL]
+## Not tutorials: one-line alarms that fire mid-flight and deliberately do not pause.
+const ALARMS := [RADIO_SCRIPT.MSG_HULL_CRITICAL]
 const CONFIRM_CALLS := [RADIO_SCRIPT.MSG_OUT_OF_FUEL, RADIO_SCRIPT.MSG_SHIP_DESTROYED,
 	RADIO_SCRIPT.MSG_SHIP_ABANDONED, RADIO_SCRIPT.MSG_TRACTOR_RESCUE, RADIO_SCRIPT.MSG_OUT_OF_FUEL_BEAM]
 
 
 func test_bundled_messages_are_valid() -> void:
-	for conv: RadioConversation in TIPS + CONFIRM_CALLS:
+	for conv: RadioConversation in TIPS + CONFIRM_CALLS + ALARMS:
 		assert_str(String(conv.id)).is_not_empty()
 		assert_bool(conv.lines.is_empty()).is_false()
 		var vars := {"penalty": 20, "salvage": "Salvage it."}
@@ -436,6 +476,13 @@ func test_bundled_messages_are_valid() -> void:
 	for conv: RadioConversation in TIPS:
 		assert_bool(conv.once).is_true()
 		assert_bool(conv.pause_game).override_failure_message("tutorial %s must pause" % conv.id).is_true()
+		for line in conv.lines:
+			assert_bool(line.is_confirm()).is_false()
+	for conv: RadioConversation in ALARMS:
+		# Show-once like the tips, but they must never take the controls away: these
+		# fire exactly when the player needs to be flying.
+		assert_bool(conv.once).is_true()
+		assert_bool(conv.pause_game).override_failure_message("alarm %s must not pause" % conv.id).is_false()
 		for line in conv.lines:
 			assert_bool(line.is_confirm()).is_false()
 
@@ -455,6 +502,7 @@ func test_tutorials_and_game_over_pause_but_beacon_offer_does_not() -> void:
 	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SCANNER.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_LOW_HULL.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_CARGO_FULL.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SHIP_DESTROYED.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SHIP_ABANDONED.pause_game).is_true()
@@ -462,10 +510,18 @@ func test_tutorials_and_game_over_pause_but_beacon_offer_does_not() -> void:
 	# Stranded pilots may still be drifting into the tractor beam
 	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL.pause_game).is_false()
 	assert_bool(RADIO_SCRIPT.MSG_OUT_OF_FUEL_BEAM.pause_game).is_false()
+	# Freezing the game one hit from death would be a worse warning than none.
+	assert_bool(RADIO_SCRIPT.MSG_HULL_CRITICAL.pause_game).is_false()
 
 
 func test_low_fuel_outranks_tips() -> void:
 	assert_int(RADIO_SCRIPT.MSG_LOW_FUEL.priority).is_greater(RADIO_SCRIPT.MSG_SCRAP.priority)
+
+
+func test_a_critical_hull_outranks_every_other_warning() -> void:
+	# It is the only one of these where the next few seconds decide the run.
+	assert_int(RADIO_SCRIPT.MSG_HULL_CRITICAL.priority).is_greater(RADIO_SCRIPT.MSG_LOW_HULL.priority)
+	assert_int(RADIO_SCRIPT.MSG_HULL_CRITICAL.priority).is_greater(RADIO_SCRIPT.MSG_LOW_FUEL.priority)
 
 
 func test_vars_fill_text_and_confirm_label() -> void:

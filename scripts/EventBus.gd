@@ -53,6 +53,13 @@ signal dig_ended(ore: OreDeposit, reason: String, layers: int)
 signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
 
+signal ship_damaged(amount: float, hull_ratio: float)
+## The hull actually lost HP — a hit the damage cooldown swallowed doesn't reach here.
+## `amount` is the HP taken, `hull_ratio` what's left of the hull (0-1) after it.
+
+signal ship_hull_changed(current: float, max_hull: float)
+## The hull reading moved, for any reason: a hit, a repair, an upgrade, a respawn.
+
 var _harvestable_nodes: Dictionary = {}  # Track ScrapNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ScrapNodes and their callables
 

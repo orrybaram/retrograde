@@ -45,8 +45,12 @@ var hull_strength: float:
 	set(value):
 		if health_component:
 			health_component.current_hp = clamp(value, 0.0, health_component.max_hp)
+			# A repair, a save being restored or an upgrade all land here rather than
+			# in take_damage, so this is where the readouts have to be told.
+			health_component.hp_changed.emit(health_component.current_hp, health_component.max_hp)
 var fuel: float = 200.0
 var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
+var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
 
 # Landing lock system
 var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
@@ -65,6 +69,8 @@ var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (p
 @export var camera_shake_speed: float = 25.0  # How fast the shake oscillates
 @export var damage_shake_intensity: float = 2.0  # How much the camera shakes when taking damage
 @export var damage_shake_duration: float = 0.3  # How long damage shake lasts (seconds)
+## Damage that counts as a full-strength hit; anything more shakes and glitches no harder.
+const DAMAGE_REFERENCE := 20.0
 @export var explosion_shake_intensity: float = 5.0  # How much the camera shakes on explosion
 @export var explosion_shake_duration: float = 1.0  # How long explosion shake lasts (seconds)
 @export var harvest_shake_intensity: float = 1.5  # How much the camera shakes on harvest success
@@ -109,12 +115,21 @@ func _ready() -> void:
 	health_component.damage_cooldown = 0.1
 	add_child(health_component)
 	health_component.died.connect(explode)
+	# Hull news goes out on the bus so the dashboard, the overlay and the robot can
+	# each react without any of them reaching into the ship for it.
+	health_component.damaged.connect(_on_damaged)
+	health_component.hp_changed.connect(func(current: float, max_hp: float) -> void:
+		EventBus.ship_hull_changed.emit(current, max_hp))
 
 	# Initialize fuel
 	fuel = max_fuel
 	low_fuel_effect = LowFuelEffect.new()
 	low_fuel_effect.name = "LowFuelEffect"
 	add_child(low_fuel_effect)
+
+	low_hull_effect = LowHullEffect.new()
+	low_hull_effect.name = "LowHullEffect"
+	add_child(low_hull_effect)
 
 	var magnet := GemMagnet.new()
 	magnet.name = "GemMagnet"
@@ -182,12 +197,19 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 func take_damage(amount: float) -> void:
 	if is_gone():
 		return
-
-	# Trigger camera shake on damage
-	damage_shake_time = damage_shake_duration
-	damage_shake_current_intensity = damage_shake_intensity
-
 	health_component.take_damage(amount)
+
+## The hit that actually landed — hits the damage cooldown swallowed never reach here,
+## so the kick and the glitch fire once per wound instead of once per graze.
+func _on_damaged(amount: float) -> void:
+	var ratio := health_component.get_hp_ratio()
+	# A scratch rattles the frame; a real hit throws it. Held back from the explosion
+	# band so FlyingState never mistakes a bad landing for the ship coming apart.
+	var severity := clampf(amount / DAMAGE_REFERENCE, 0.35, 1.0)
+	if damage_shake_current_intensity < damage_shake_intensity * severity or damage_shake_time <= 0.0:
+		damage_shake_time = damage_shake_duration
+		damage_shake_current_intensity = damage_shake_intensity * severity
+	EventBus.ship_damaged.emit(amount, ratio)
 
 func explode() -> void:
 	# Trigger intense camera shake on explosion

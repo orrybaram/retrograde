@@ -1,0 +1,76 @@
+# Low-hull warning signals and the damage glitch: the venting ship, the blinking bar,
+# the banner, the screen alarm, and the readouts scrambling on a hit (but not while
+# merely low). Run: tools/play.sh playtests/hull.play  (frames in .playtest/hull_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The tutorials pause the game; this scenario isn't about them.
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+
+# --- A healthy hull says nothing ------------------------------------------------
+assert ship.hull_strength == ship.max_hull "starts at full hull"
+assert pt.node("hull_warning") != null "the banner exists"
+assert not pt.node("hull_warning").visible "no banner at full hull"
+assert not pt.node("hull_alarm").visible "no screen alarm at full hull"
+screenshot hull_0_healthy
+
+# --- Breached: venting, blinking bar, banner ------------------------------------
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_hull")
+eval ship.set("hull_strength", 30.0)
+wait 1.2
+assert ship.low_hull_effect._level == 1 "LOW at 30%"
+assert not ship.low_hull_effect._puffs.is_empty() "the hull is venting smoke"
+assert pt.node("hull_warning").visible "HULL BREACH banner is up"
+assert pt.node("hull_warning")._label.text.contains("B R E A C H") "banner reads BREACH"
+assert pt.node("hull_alarm").visible "the screen rim is alarming"
+burst hull_1_breach 6 0.12
+
+# --- Critical: faster, louder, and the strobe on the hull ------------------------
+eval get_tree().root.get_node("RobotRadio").mark_seen("hull_critical")
+eval ship.set("hull_strength", 10.0)
+wait 1.2
+assert ship.low_hull_effect._level == 2 "CRITICAL at 10%"
+assert pt.node("hull_warning")._label.text.contains("C R I T I C A L") "banner reads CRITICAL"
+assert pt.node("hull_alarm")._alarm > 0.4 "the alarm is at full strength"
+burst hull_2_critical 8 0.12
+
+# --- Being low must NOT scramble the readouts -----------------------------------
+# The player has to be able to read the hull bar precisely when it matters most.
+assert pt.node("hud").get_node("HudGlitch").severity() == 0.0 "a low hull alone never glitches the HUD"
+
+# --- Taking a hit scrambles them ------------------------------------------------
+eval ship.set("hull_strength", 90.0)
+wait 0.5
+assert pt.node("hull_warning").visible == false "banner clears when repaired"
+eval ship.take_damage(20.0)
+frames 2
+assert pt.node("hud").get_node("HudGlitch").severity() > 0.0 "the hit glitches the HUD"
+assert pt.node("hull_alarm")._hit > 0.0 "the hit tears the screen"
+assert ship.damage_shake_time > 0.0 "the hit kicks the camera"
+burst hull_3_hit 6 0.05
+
+# --- And it shakes it off --------------------------------------------------------
+wait 1.5
+assert pt.node("hud").get_node("HudGlitch").severity() == 0.0 "the glitch clears on its own"
+assert pt.node("hull_alarm")._hit == 0.0 "the tear clears on its own"
+screenshot hull_4_recovered
+
+# --- A hit the damage cooldown swallows is not a second hit ----------------------
+eval ship.set("hull_strength", 90.0)
+eval ship.take_damage(5.0)
+frames 1
+eval ship.take_damage(5.0)
+frames 1
+assert ship.hull_strength == 85.0 "the cooldown swallowed the second hit"
+quit

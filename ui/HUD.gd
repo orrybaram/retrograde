@@ -6,6 +6,7 @@ extends Control
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
 @onready var fuel_progress_bar: ProgressBarWidget = $"DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar"
 @onready var hull_segment_bar: HullSegmentBar = $"DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar"
+@onready var hull_label: Label = $"DashboardAnchor/HBox/RightColumn/HullRow/HullLabel"
 @onready var current_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CurrentCargoLabel"
 @onready var max_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/MaxCargoLabel"
 @onready var credits_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CreditsLabel"
@@ -35,8 +36,11 @@ func _ready() -> void:
 	tracking.blockers = [dashboard, radio]
 	add_child(tracking)
 	add_child(radio)
+	add_child(HullWarning.new())
 	# Added last so it processes after _update_labels and rots the finished readouts
-	add_child(VoidGlitch.new())
+	var glitch := HudGlitch.new()
+	glitch.name = "HudGlitch"
+	add_child(glitch)
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
 	if gs:
@@ -166,6 +170,11 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 		var max_hull = ship.max_hull if "max_hull" in ship else 100.0
 		if hull_segment_bar:
 			hull_segment_bar.set_value(hull, max_hull)
+		# The row's own label goes red with it, so the warning starts at the readout.
+		if hull_label:
+			var hull_level := LowHullEffect.level_for(hull, max_hull)
+			hull_label.add_theme_color_override("font_color",
+					Colors.PRIMARY if hull_level == LowHullEffect.Level.OK else Colors.DANGER)
 	else:
 		velocity_label.text = "0.0 m/s"
 		if fuel_progress_bar:

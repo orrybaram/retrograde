@@ -168,7 +168,9 @@ func _update_display(_a: Variant = null, _b: Variant = null) -> void:
 
 func _update_systems() -> void:
 	var hull_ratio := ship.hull_strength / ship.max_hull if ship.max_hull > 0 else 0.0
-	_hull_gauge.set_fill(hull_ratio, _hull_color(hull_ratio), int(ceil(ship.max_hull / 10.0)))
+	var hull_level := LowHullEffect.level_for(ship.hull_strength, ship.max_hull)
+	_hull_gauge.set_fill(hull_ratio, _hull_color(hull_ratio), int(ceil(ship.max_hull / 10.0)),
+			hull_level != LowHullEffect.Level.OK)
 	_hull_value.text = "%d / %d" % [ceili(ship.hull_strength), int(ship.max_hull)]
 
 	var fuel_ratio := ship.fuel / ship.max_fuel if ship.max_fuel > 0 else 0.0
@@ -264,11 +266,15 @@ func _assessment() -> Array:
 		return [&"sleep", "OFFLINE", Colors.PRIMARY_DIM, "..."]
 	var fuel_level := LowFuelEffect.level_for(ship.fuel, ship.max_fuel)
 	var weight := inventory_manager.get_total_weight() if inventory_manager else 0.0
-	var hull_ratio := ship.hull_strength / ship.max_hull if ship.max_hull > 0 else 1.0
+	var hull_level := LowHullEffect.level_for(ship.hull_strength, ship.max_hull)
+	# A failing hull outranks a dry tank: running out of fuel strands you, running out
+	# of hull ends the run.
+	if hull_level == LowHullEffect.Level.CRITICAL:
+		return [&"worried", "HULL CRITICAL", Colors.DANGER, "One more hit and we're scrap. Get us to a port."]
 	if fuel_level == LowFuelEffect.Level.CRITICAL:
 		return [&"worried", "ALERT", Colors.DANGER, "Tank's nearly dry, pilot. Head for a port now."]
-	if hull_ratio < 0.3:
-		return [&"worried", "ALERT", Colors.DANGER, "Hull's in bad shape. One more hit and we're scrap."]
+	if hull_level == LowHullEffect.Level.LOW:
+		return [&"worried", "HULL DAMAGE", Colors.DANGER, "Hull's in bad shape. She's venting back there."]
 	if weight >= ship.max_cargo_weight:
 		return [&"happy", "HOLD FULL", Colors.SUCCESS, "Hold's packed! Dock and cash in."]
 	if fuel_level == LowFuelEffect.Level.LOW:

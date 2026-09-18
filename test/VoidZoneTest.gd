@@ -109,7 +109,7 @@ func test_corruption_keeps_the_length_and_the_spacing() -> void:
 	var rng := _rng(7)
 	var text := "150 / 50 CR"
 	for i in 50:
-		var rotted := VoidGlitch.corrupt(text, 0.6, rng)
+		var rotted := HudGlitch.corrupt(text, 0.6, rng)
 		assert_int(rotted.length()).is_equal(text.length())
 		for c in text.length():
 			if text[c] == " ":
@@ -201,7 +201,7 @@ func test_the_lost_face_is_a_real_face() -> void:
 
 func test_nothing_rots_at_zero_and_everything_rots_at_one() -> void:
 	var rng := _rng(11)
-	assert_str(VoidGlitch.corrupt("12.5 m/s", 0.0, rng)).is_equal("12.5 m/s")
-	var gone := VoidGlitch.corrupt("12.5", 1.0, rng)
+	assert_str(HudGlitch.corrupt("12.5 m/s", 0.0, rng)).is_equal("12.5 m/s")
+	var gone := HudGlitch.corrupt("12.5", 1.0, rng)
 	for c in gone.length():
 		assert_bool(RobotFaces.GLITCH_CHARS.contains(gone[c])).is_true()

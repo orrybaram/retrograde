@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Pilot — that is your hull venting. I can see the sparks from in here."
+expression = &"worried"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Dock at a port and pay for the patch job. Credits are cheaper than vacuum."
+expression = &"neutral"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "Fly gently. The next r-r-rock is the one that finishes it."
+expression = &"glitch"
+glitch = true
+
+[resource]
+script = ExtResource("1_conv")
+id = &"first_low_hull"
+priority = 2
+once = true
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])
