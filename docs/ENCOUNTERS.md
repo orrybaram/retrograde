@@ -238,7 +238,8 @@ is still unbuilt, and so is the upgrade axis behind it (range, and the unreliabl
 ### Phase 5 — Anomalies and Titan events
 
 Same table, but gated on progression state instead of weight. `docs/IDEAS.md` has the
-content; the escalation tiers map onto radius bands plus a containment-damage counter.
+content; the escalation tiers map onto radius bands plus Titan Influence (0-5, the count of
+Modules online - `docs/DESIGN.md` §2.4).
 
 ## 5. Risks
 

@@ -64,7 +64,3 @@ _Avoid_: system map, star map
 > **Domain expert:** "No. The minimap showed it while you were there. The **Chart** only knows what the Titan has handed over. Power Crom's **Gate** and the whole region appears."
 > **Dev:** "Does a **Gate** work on its own?"
 > **Domain expert:** "It powers its **Module** on its own. Transit needs a second powered **Gate** to go to."
-
-## Flagged ambiguities
-
-- `docs/DESIGN.md` still describes containment, dismantling quests and a caged Titan. Superseded: the Titan is powered down, not contained; the player restores, never destroys. DESIGN.md needs a rewrite pass.
