@@ -389,7 +389,7 @@ func test_most_cells_hold_nothing() -> void:
 
 func test_the_shipped_void_is_mostly_void() -> void:
 	var table: EncounterTable = load("res://entities/encounters/tables/deep_space.tres")
-	assert_float(table.chance_per_cell).is_less(0.5)
+	assert_float(table.chance_per_cell).is_less(0.2)
 
 
 func test_an_empty_cell_never_shifts_what_a_full_one_would_hold() -> void:

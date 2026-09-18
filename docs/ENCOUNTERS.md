@@ -125,8 +125,8 @@ reports contacts needs it.
 ### 3.5 How sparse the void is
 
 `EncounterTable.chance_per_cell` is the dial. Most cells hold nothing; a cell that fires
-gets `min_per_cell`–`max_per_cell` encounters. Shipped values: **0.3 and one**, so about
-three cells in ten hold a single encounter.
+gets `min_per_cell`–`max_per_cell` encounters. Shipped values: **0.075 and one**, so about
+three cells in forty hold a single encounter.
 
 `roll_count()` always draws exactly one number whatever the outcome, so a cell coming up
 empty cannot slide the sequence and change what its neighbours hold.

@@ -9,6 +9,6 @@
 [resource]
 script = ExtResource("1")
 entries = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
-chance_per_cell = 0.3
+chance_per_cell = 0.075
 min_per_cell = 1
 max_per_cell = 1
