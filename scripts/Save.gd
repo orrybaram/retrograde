@@ -8,6 +8,10 @@ class_name Save
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
+const ENCOUNTER_SECTION := "encounters"
+const ENCOUNTER_CONSUMED_KEY := "consumed"
+const ENCOUNTER_ELAPSED_KEY := "elapsed"
+const ENCOUNTER_CLAIMED_KEY := "claimed"
 const SCAN_SECTION := "scan"
 const SCAN_PLANETS_KEY := "planets"
 const ORE_SECTION := "ore"
@@ -66,6 +70,16 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray(gs.scanned_planets.keys()))
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 
+	# Deep space doesn't refill, so remember which slots have already been stripped —
+	# and how far its rings have turned, which is the rest of where an encounter is.
+	if ship and ship.is_inside_tree():
+		var field := EncounterField.get_instance(ship.get_tree())
+		if field:
+			var encounters := field.snapshot()
+			cfg.set_value(ENCOUNTER_SECTION, ENCOUNTER_CONSUMED_KEY, encounters["consumed"])
+			cfg.set_value(ENCOUNTER_SECTION, ENCOUNTER_CLAIMED_KEY, encounters["claimed"])
+			cfg.set_value(ENCOUNTER_SECTION, ENCOUNTER_ELAPSED_KEY, encounters["elapsed"])
+
 	cfg.save(Playtest.save_path())
 
 ## Writes only the radio show-once flags into an existing save, keeping the rest.
@@ -85,6 +99,17 @@ static func load_radio_seen(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(RADIO_SECTION, RADIO_SEEN_KEY, PackedStringArray()))
 
+## The saved deep-space field: harvested slots, and how far its rings had turned.
+## Feed straight to EncounterField.restore(). See docs/ENCOUNTERS.md.
+static func load_encounters(path: String = "") -> Dictionary:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return {}
+	return {
+		"consumed": PackedStringArray(cfg.get_value(ENCOUNTER_SECTION, ENCOUNTER_CONSUMED_KEY, PackedStringArray())),
+		"claimed": PackedStringArray(cfg.get_value(ENCOUNTER_SECTION, ENCOUNTER_CLAIMED_KEY, PackedStringArray())),
+		"elapsed": float(cfg.get_value(ENCOUNTER_SECTION, ENCOUNTER_ELAPSED_KEY, 0.0)),
+	}
 ## Writes only the scanned-planet keys into an existing save, keeping the rest, so a
 ## scan finished mid-flight is kept without saving the ship's position or hold.
 ## With no save yet this does nothing; the next full save() writes them.

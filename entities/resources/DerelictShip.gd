@@ -30,6 +30,9 @@ var spin := 0.0
 var hull_source: Node2D = null  # polygons to copy for the visual (the player's hull)
 var hull_only := false          # abandoned empty: salvages like plain scrap
 var _armed := false             # harvestable once the player has respawned
+## Belongs to the encounter field, which rebuilds it from the seed. Saving it too would
+## leave a copy behind on every load.
+var transient := false
 
 ## Leave `ship` adrift with its hold aboard (a bare hull if the hold is empty).
 static func abandon(ship: Ship) -> DerelictShip:
@@ -65,7 +68,7 @@ static func clear_all(tree: SceneTree) -> void:
 static func snapshot_all(tree: SceneTree) -> Array:
 	var rows := []
 	for d in tree.get_nodes_in_group("derelicts"):
-		if d is DerelictShip and not d._is_depleted:
+		if d is DerelictShip and not d._is_depleted and not d.transient:
 			rows.append({
 				"x": d.global_position.x, "y": d.global_position.y,
 				"vx": d.drift.x, "vy": d.drift.y,
@@ -141,8 +144,11 @@ func drops_for_hit(grade: HarvestTiming.Grade, final: bool) -> Array[String]:
 		drops.append_array(super.drops_for_hit(grade, true))  # the hull's own scrap
 	return drops
 
+## Its own momentum plus whatever it is riding. An abandoned ship has no orbit, so this
+## is just its drift; a wreck the encounter field put on a ring also moves with the ring,
+## and anything matching its velocity to salvage it needs to know that.
 func get_orbital_velocity() -> Vector2:
-	return drift
+	return drift + super.get_orbital_velocity()
 
 func _physics_process(delta: float) -> void:
 	var slow := drift.limit_length(RESIDUAL_DRIFT)

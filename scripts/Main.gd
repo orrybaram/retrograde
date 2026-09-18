@@ -19,6 +19,7 @@ enum MainGameState {
 @onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 @onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
 @onready var hud: Control = $"CanvasLayer/HUD"
+@onready var encounter_field: EncounterField = $EncounterField
 
 ## Relaunch fee per game-over reason (a tractor-beam rescue is free).
 const RELAUNCH_PENALTY := {"Ship Destroyed": 20, "Ship Abandoned": 10, "Consumed": 30}
@@ -218,6 +219,8 @@ func start_game() -> void:
 	if gs:
 		gs.reset_all_state()
 	RobotRadio.reset()
+	if encounter_field:
+		encounter_field.reset()
 
 	# Reset ship to initial state
 	if ship:
@@ -289,6 +292,9 @@ func load_game() -> void:
 		DerelictShip.clear_all(get_tree())
 		Save.restore_wreck_gems(ship.get_parent())
 		Save.restore_derelicts(ship.get_parent(), ship.ship_polygon)
+
+	if encounter_field:
+		encounter_field.restore(Save.load_encounters())
 
 	# Restore planet orbital angles
 	Save.restore_planet_angles(get_tree())

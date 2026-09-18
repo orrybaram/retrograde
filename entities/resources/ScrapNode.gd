@@ -110,7 +110,8 @@ func _load_shape() -> void:
 			child.free()
 			break
 
-	var packed: PackedScene = _SHAPE_SCENES[RNG.rng.randi() % _SHAPE_SCENES.size()]
+	var scenes := _shape_scenes()
+	var packed: PackedScene = scenes[RNG.rng.randi() % scenes.size()]
 	_shape_instance = packed.instantiate() as Node2D
 	if not _shape_instance:
 		return
@@ -120,6 +121,16 @@ func _load_shape() -> void:
 	if cshape and cshape.shape is CircleShape2D:
 		(cshape.shape as CircleShape2D).radius = _shape_instance.get("collision_radius")
 
+
+## Whether a trophy breathes to draw the eye. Off for anything whose shape is the point:
+## a rare lump of scrap wants noticing, a sealed container wants to look sealed.
+func _pulses_when_trophy() -> bool:
+	return true
+
+## The shapes this node can be built from, one picked at random. Subclasses override it
+## to look like something in particular rather than like generic wreckage.
+func _shape_scenes() -> Array:
+	return _SHAPE_SCENES
 
 func _register_with_minimap() -> void:
 	if skip_minimap_registration:
@@ -351,7 +362,7 @@ func _activate_trophy() -> void:
 	health_component.reset()
 
 	# Subtle scale pulse to catch the eye
-	var visual = _find_visual_node()
+	var visual = _find_visual_node() if _pulses_when_trophy() else null
 	if visual:
 		_trophy_pulse_tween = create_tween().set_loops()
 		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale * 1.15, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)

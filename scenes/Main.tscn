@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=22 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -18,6 +18,8 @@
 [ext_resource type="PackedScene" uid="uid://c2o4vbaw813u0" path="res://ui/LoadingScreen.tscn" id="21"]
 [ext_resource type="PackedScene" path="res://ui/PauseMenu.tscn" id="22"]
 [ext_resource type="Script" path="res://scenes/SpaceDust.gd" id="23_dust"]
+[ext_resource type="Script" path="res://entities/encounters/EncounterField.gd" id="24_enc"]
+[ext_resource type="Resource" path="res://entities/encounters/tables/deep_space.tres" id="25_enct"]
 [ext_resource type="Script" path="res://scenes/VoidShroud.gd" id="24_void"]
 
 [node name="Main" type="Node2D" unique_id=1692069879]
@@ -46,6 +48,10 @@ fuel_consumption_rate = 2.0
 
 [node name="SpaceDust" type="Node2D" parent="."]
 script = ExtResource("23_dust")
+
+[node name="EncounterField" type="Node2D" parent="."]
+script = ExtResource("24_enc")
+table = ExtResource("25_enct")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=649798074]
 
