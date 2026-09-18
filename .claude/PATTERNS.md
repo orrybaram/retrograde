@@ -120,3 +120,10 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   nothing more, so a Gate has to be flown to (docs/adr/0002).
 - Save: `[gates] powered`, written on power-up (a full autosave, which also banks the credits
   it cost) and on the normal save path. `Save.save_powered_gates` writes only that section.
+- Unidentified (CONTEXT.md): a Gate reads `? ? ?` on the minimap until the ship comes within
+  `Identifiable.RANGE` of it, at which point `Gate.identify()` records it in
+  `GameState.identified_gates` (saved as `[gates] identified`) and the label flips to `GATE`.
+  The guide's line (`gate_identified.tres`) is `once`, so only the first Gate the player ever
+  reaches is spoken for; the rest flip silently. Flying to it is the only trigger — nothing
+  points at a Gate beforehand. `scripts/Identifiable.gd` holds the range and the label drawing
+  so later finds read the same way.

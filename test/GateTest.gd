@@ -1,20 +1,31 @@
 extends GdUnitTestSuite
 
+
 ## Tests for the dormant Gate: what powering one costs and what it brings online, the
-## docked state the ship sits in while it does it, and the powered Modules surviving a save.
+## Guide naming a Gate the player flies up to, the docked state the ship sits in while
+## it does it, and both of those surviving a save.
 
 const SAVE_FILE := "user://gate_test_save.cfg"
+const RADIO_SCRIPT := preload("res://scripts/RobotRadio.gd")
+const MSG_IDENTIFIED := "res://entities/Robot/radio/messages/gate_identified.tres"
 
 var _gs: GameState
+var _radio_persisted := true
 
 
 func before_test() -> void:
 	_gs = auto_free(GameState.new()) as GameState
 	_gs.set_process(false)
 	add_child(_gs)
+	# Naming a Gate radios the player, and the real radio would write its show-once
+	# flags to the player's own save. Hold it off for the length of the test.
+	_radio_persisted = RobotRadio.persist
+	RobotRadio.persist = false
 
 
 func after_test() -> void:
+	RobotRadio.silence()
+	RobotRadio.persist = _radio_persisted
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_FILE))
 
 
@@ -33,8 +44,16 @@ func _gate(planet: Planet, cost := 600) -> Gate:
 	var gate := auto_free(load("res://entities/structures/Gate.tscn").instantiate()) as Gate
 	gate.power_cost = cost
 	gate.enable_orbiting = false
+	gate.persist = false  # keep identification out of the player's save
 	planet.add_child(gate)
 	return gate
+
+
+## A radio of its own, so a test can watch what the guide would do with a request.
+func _radio() -> Node:
+	var radio: Node = auto_free(RADIO_SCRIPT.new())
+	radio.persist = false
+	return radio
 
 
 func _ship() -> Ship:
@@ -115,6 +134,80 @@ func test_new_game_powers_every_module_back_down() -> void:
 	assert_bool(gate.is_powered()).is_false()
 
 
+# --- Being named -------------------------------------------------------------
+
+## A Gate nobody has flown to is a shape on the minimap and nothing else.
+func test_a_gate_reads_as_unidentified_until_it_is_reached() -> void:
+	var gate := _gate(_planet("Crom"))
+	var marker := GateMinimapTarget.new(gate)
+	assert_bool(gate.is_identified()).is_false()
+	assert_str(marker.label()).is_equal(Identifiable.UNKNOWN_LABEL)
+
+
+func test_flying_close_enough_gets_the_gate_named() -> void:
+	var gate := _gate(_planet("Veld"))
+	var at := gate.global_position
+	# Just out of reach: nothing is named and the label holds
+	assert_bool(gate.identify_if_near(at + Vector2(Identifiable.RANGE + 1.0, 0.0))).is_false()
+	assert_bool(gate.is_identified()).is_false()
+	assert_str(GateMinimapTarget.new(gate).label()).is_equal(Identifiable.UNKNOWN_LABEL)
+	# Inside it, the Gate is named for good
+	assert_bool(gate.identify_if_near(at + Vector2(Identifiable.RANGE - 1.0, 0.0))).is_true()
+	assert_bool(gate.is_identified()).is_true()
+	assert_str(GateMinimapTarget.new(gate).label()).is_equal(Gate.LABEL)
+
+
+## Reaching it is the only trigger — the guide never points at a Gate beforehand
+## (docs/adr/0002), and it only ever has to be named once.
+func test_reaching_a_gate_asks_the_guide_to_name_it_once() -> void:
+	var gate := _gate(_planet("Veld"))
+	var requested: Array[RadioConversation] = []
+	var heard := func(conv: RadioConversation) -> void: requested.append(conv)
+	EventBus.radio_message_requested.connect(heard)
+	gate.identify_if_near(gate.global_position + Vector2(Identifiable.RANGE + 50.0, 0.0))
+	assert_array(requested).is_empty()
+	gate.identify_if_near(gate.global_position)
+	gate.identify_if_near(gate.global_position)
+	EventBus.radio_message_requested.disconnect(heard)
+	assert_int(requested.size()).is_equal(1)
+	assert_str(str(requested[0].id)).is_equal("gate_identified")
+
+
+## The first Gate the player reaches gets the line; every later one flips silently,
+## because the conversation is show-once for the whole save.
+func test_only_the_first_gate_named_gets_the_guides_line() -> void:
+	var conv := load(MSG_IDENTIFIED) as RadioConversation
+	assert_bool(conv.once).is_true()
+	assert_bool(conv.pause_game).is_false()  # the player is mid-flight when it lands
+	var radio := _radio()
+	assert_int(radio.request(conv)).is_equal(RadioQueue.Result.STARTED)
+	assert_int(radio.request(conv)).is_equal(RadioQueue.Result.REJECTED)
+
+
+## Powering is a separate thing: a named Gate is still dormant until it is paid for.
+func test_naming_a_gate_leaves_its_module_offline() -> void:
+	var gate := _gate(_planet("Sonder"))
+	assert_bool(gate.identify()).is_true()
+	assert_bool(gate.is_powered()).is_false()
+	assert_int(_gs.titan_influence()).is_equal(0)
+
+
+## The flag is kept against the planet in GameState, not on the node, so a Gate rebuilt
+## on respawn comes back already named.
+func test_a_gate_rebuilt_after_a_respawn_is_still_named() -> void:
+	var planet := _planet("Roke")
+	_gate(planet).identify()
+	assert_bool(_gate(planet).is_identified()).is_true()
+
+
+func test_new_game_makes_every_gate_unknown_again() -> void:
+	var gate := _gate(_planet("Veld"))
+	gate.identify()
+	_gs.reset_all_state()
+	assert_dict(_gs.identified_gates).is_empty()
+	assert_bool(gate.is_identified()).is_false()
+
+
 # --- Docked state ------------------------------------------------------------
 
 func test_a_gate_docks_into_its_own_state_and_a_port_does_not() -> void:
@@ -170,6 +263,15 @@ func test_docking_without_a_gate_falls_straight_back_to_flying() -> void:
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
 
 
+## Flying in names a Gate long before the cradle, but a ship that spawns docked at one
+## never made the approach — so docking names it too, before the terminal takes over.
+func test_docking_at_a_gate_names_it_first() -> void:
+	var gate := _gate(_planet("Veld"))
+	assert_bool(gate.is_identified()).is_false()
+	_dock_at(_ship(), gate)
+	assert_bool(gate.is_identified()).is_true()
+
+
 func test_a_ship_docked_at_a_gate_is_saved_against_that_gate() -> void:
 	var planet := _planet("Veld")
 	var gate := _gate(planet)
@@ -203,3 +305,23 @@ func test_a_save_from_before_gates_reads_as_nothing_powered() -> void:
 	cfg.set_value("stats", "credits", 7)
 	cfg.save(SAVE_FILE)
 	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
+
+
+func test_identified_gates_round_trip_through_the_save() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("stats", "credits", 42)
+	cfg.save(SAVE_FILE)
+	Save.save_identified_gates(PackedStringArray(["Sun/Veld", "Sun/Crom"]), SAVE_FILE)
+	assert_array(Array(Save.load_identified_gates(SAVE_FILE))).contains_exactly(
+		["Sun/Veld", "Sun/Crom"])
+	cfg.load(SAVE_FILE)
+	assert_int(cfg.get_value("stats", "credits")).is_equal(42)
+	# Naming a Gate is not powering it: the two lists are kept apart
+	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
+
+
+func test_a_save_from_before_gates_were_named_reads_as_nothing_named() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("stats", "credits", 7)
+	cfg.save(SAVE_FILE)
+	assert_int(Save.load_identified_gates(SAVE_FILE).size()).is_equal(0)

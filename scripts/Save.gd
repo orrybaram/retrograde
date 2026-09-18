@@ -4,7 +4,7 @@ class_name Save
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, scanned planets, dug-out ore seams
-## (seconds until they refill), powered Gates, and which radio tips were seen.
+## (seconds until they refill), powered and identified Gates, and which radio tips were seen.
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
@@ -18,6 +18,7 @@ const ORE_SECTION := "ore"
 const ORE_REGROW_KEY := "regrow"
 const GATE_SECTION := "gates"
 const GATE_POWERED_KEY := "powered"
+const GATE_IDENTIFIED_KEY := "identified"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -72,6 +73,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray(gs.scanned_planets.keys()))
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
+	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray(gs.identified_gates.keys()))
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -169,6 +171,25 @@ static func load_powered_gates(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray()))
 
+## Writes only the identified Gates into an existing save, like save_powered_gates: the
+## Guide names a Gate in open flight, with no dock to hang a full save off.
+## With no save yet this does nothing; the next full save() writes them.
+static func save_identified_gates(keys: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, keys)
+	cfg.save(file)
+
+## The planet keys whose Gates the Guide has already named. Anything missing still
+## reads as `? ? ?`, which is what a save from before this did.
+static func load_identified_gates(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray()))
+
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
 static func _get_planet_key(planet: Planet) -> String:
@@ -204,6 +225,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.powered_gates.clear()
 	for gate_key in load_powered_gates():
 		gs.mark_gate_powered(gate_key)
+	gs.identified_gates.clear()
+	for gate_key in load_identified_gates():
+		gs.mark_gate_identified(gate_key)
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}
