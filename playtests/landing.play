@@ -1,0 +1,91 @@
+# Touchdown and liftoff on plain ground over Rook's ore seam. Hard landings bounce and hurt,
+# sideways contact doesn't land, a throttled descent touches down; the landed ship
+# rides the orbit without burning fuel, and thrust releases it to fly off under its own
+# engines - no fee, just the thruster fuel the climb takes.
+# Run: tools/play.sh playtests/landing.play   (frames land in .playtest/landing_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval get_node("/root/NavSystem").track(null)
+
+# --- A buried (unscanned) seam can't be landed on ---
+eval pt.hover_over_ore("Rook", 4)
+wait 2
+assert pt.state_name() == "FlyingState" "no landing before the scan"
+
+# Scan Rook (scanner granted: this scenario is about landing)
+eval gs.set("has_planet_scanner", true)
+eval pt.park_near_planet("Rook", 2000, 30)
+wait_until gs.is_planet_scanned("Veld/Rook") 6
+assert pt.snapshot().tracking.label == "ORE" "tracking the seam"
+
+# --- Too fast: hull damage and a bounce ---
+eval ship.set("hull_strength", ship.max_hull)
+eval pt.hover_over_ore("Rook", 30, 0, 90)
+wait_until pt.altitude("Rook") > 40 and ship.hull_strength < ship.max_hull 3
+assert pt.state_name() == "FlyingState" "hard landing doesn't land"
+assert ship.hull_strength < ship.max_hull "hard landing damages the hull"
+burst landing_1_bounce 4 0.1
+
+# --- Nose sideways: settles on the ground but doesn't land ---
+eval pt.hover_over_ore("Rook", 3, 90)
+wait 1.5
+assert pt.state_name() == "FlyingState" "sideways contact isn't a touchdown"
+
+# --- Throttled descent touches down ---
+eval pt.park_near_planet("Rook", 2000, 30)
+frames 5
+eval pt.hover_over_ore("Rook", 150)
+frames 2
+assert pt.state_name() == "FlyingState" "starts in flight above the seam"
+land Rook 15 15
+assert pt.state_name() == "PlanetLandedState" "touched down"
+assert get_node("/root/NavSystem").is_tracking_home() "arriving drops the seam target"
+assert str(pt.snapshot().action_message).contains("DRILL") "landed prompt offers the drill"
+wait 0.6
+screenshot landing_2_landed
+eval pt.set_meta("landed_fuel", ship.fuel)
+eval pt.set_meta("landed_pos", ship.global_position)
+eval pt.set_meta("landed_offset", ship.global_position - pt.planet("Rook").global_position)
+wait 3
+assert ship.fuel == pt.get_meta("landed_fuel") "no fuel burns while landed"
+assert ship.global_position.distance_to(pt.get_meta("landed_pos")) > 20 "rides the orbit"
+assert (ship.global_position - pt.planet("Rook").global_position).distance_to(pt.get_meta("landed_offset")) < 1 "locked to the planet"
+assert pt.altitude("Rook") < 16 "sits on the surface"
+assert ship.camera.zoom.x > 1.4 "landed zoom"
+screenshot landing_3_riding
+
+# --- Liftoff is free; the ship flies itself off under thrust ---
+eval inv.add_item("crystal", 20)
+down thrust
+wait_until pt.state_name() == "FlyingState" 2
+assert abs(ship.linear_velocity.length() - pt.planet("Rook").linear_velocity.length()) < 25 "released at rest, not launched"
+burst landing_4_liftoff 4 0.15
+wait_until pt.altitude("Rook") > 60 4
+up thrust
+assert pt.state_name() == "FlyingState" "climbing away under thrust without landing again"
+assert pt.get_meta("landed_fuel") - ship.fuel < 30 "only the climb costs fuel, no launch fee"
+
+# --- Too little fuel to climb out: the tank runs dry on the way up and strands the ship.
+# Breaking ground is free, so this is the honest failure now: not "you can't afford to
+# leave" but "you spent your last fuel trying to". 5 fuel still gets off Rook; 2 doesn't.
+eval pt.hover_over_ore("Rook", 60)
+land Rook 15 15
+wait 0.5
+eval ship.set("fuel", 2.0)
+down thrust
+wait_until pt.state_name() == "StrandedState" 5
+up thrust
+assert ship.fuel == 0 "tank burned dry climbing"
+state

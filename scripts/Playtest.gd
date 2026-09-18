@@ -30,6 +30,10 @@ extends Node
 ##                                 nose on it, velocity matched — ready to hold `action`.
 ##                                 `trophy` forces the node to be a trophy. Sets pt.staged
 ##                                 (its HarvestTiming is pt.staged.timing once a harvest starts).
+##   land <planet> [descent] [sec] throttle real `thrust` presses to fall onto the planet at
+##                                 about <descent> px/s (default 15) until PlanetLandedState.
+##                                 Start nose-up above a pad (pt.hover_over_site).
+##   reload                        reload the game from the save and wait for it to finish
 ##   timescale <n>                 set Engine.time_scale
 ##   log <text>                    echo text into the transcript
 ##   quit                          end the session
@@ -37,7 +41,10 @@ extends Node
 ## Expressions are Godot `Expression`s with these names bound:
 ##   ship, main, gs (GameState), inv (InventoryManager), bus (EventBus),
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
-##       pt.screen_text(), pt.nearest(group), pt.node(group))
+##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
+##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
+##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.drill(),
+##       pt.caption(text) (on-screen caption for recorded videos))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
 
@@ -56,6 +63,7 @@ var staged: ScrapNode = null  # last node picked by stage_harvest, for expressio
 var last_drops: Array[String] = []  # gem ids from the most recent harvest hit: pt.last_drops
 
 var _held: Dictionary = {}  # keycode -> true
+var _caption: Label = null
 var _action_message := ""
 var _server: TCPServer
 var _log_file: FileAccess
@@ -81,6 +89,14 @@ func _ready() -> void:
 		_emit({"event": "harvest_hit", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "final": final}))
 	EventBus.gem_collected.connect(func(id: String, _pos): _emit({"event": "gem_collected", "gem": id}))
 	EventBus.hold_cashed_in.connect(func(cr: int): _emit({"event": "hold_cashed_in", "credits": cr}))
+	EventBus.drill_struck.connect(func(_s, grade: HarvestTiming.Grade, gems: Array[String], layer: int, final: bool):
+		last_drops = gems
+		_emit({"event": "drill_struck", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "layer": layer, "final": final}))
+	EventBus.dig_ended.connect(func(_s, reason: String, layers: int): _emit({"event": "dig_ended", "reason": reason, "layers": layers}))
+
+	var pace_fps := float(_arg_value("--playtest-fps", "0"))
+	if pace_fps > 0.0:
+		_frame_usec = int(1_000_000.0 / pace_fps)
 
 	# Watchdog: a stuck scenario must never hang the caller.
 	var timeout := float(_arg_value("--playtest-timeout", "0" if target == "serve" else "300"))
@@ -93,6 +109,20 @@ func _ready() -> void:
 		_serve.call_deferred(int(_arg_value("--playtest-port", str(DEFAULT_PORT))))
 	else:
 		_run_file.call_deferred(target)
+
+## Frame pacing for recordings: Movie Maker renders as fast as it can, but orbits run on
+## the wall clock, so a recording would drift from how the game actually plays. With
+## --playtest-fps=<n> each frame is held back to real time.
+var _pace_usec := 0
+var _frame_usec := 0
+
+func _process(_delta: float) -> void:
+	if _frame_usec <= 0:
+		return
+	var elapsed := Time.get_ticks_usec() - _pace_usec
+	if _pace_usec > 0 and elapsed < _frame_usec:
+		OS.delay_usec(_frame_usec - elapsed)
+	_pace_usec = Time.get_ticks_usec()
 
 func save_path() -> String:
 	return _save_file if active else "user://save.cfg"
@@ -264,6 +294,10 @@ func execute(line: String) -> Dictionary:
 			reply["paths"] = paths
 		"stage_harvest":
 			await _stage_harvest(float(args[0]) if args.size() > 0 and args[0].is_valid_float() else 40.0, args.has("trophy"), reply)
+		"land":
+			await _land(args[0], float(args[1]) if args.size() > 1 else 15.0, float(args[2]) if args.size() > 2 else 15.0, reply)
+		"reload":
+			await _reload(reply)
 		"timescale":
 			Engine.time_scale = float(args[0])
 		"log":
@@ -354,6 +388,36 @@ func _face(group: String, tolerance: float, reply: Dictionary) -> void:
 		reply["ok"] = false
 		reply["error"] = "face timed out at bearing %s" % reply.get("bearing_deg")
 	await _frames(1)
+
+## Autopilot for a vertical descent: hold `thrust` whenever the ship falls faster than
+## `descent` px/s relative to the planet, release it otherwise.
+func _land(planet_name: String, descent: float, timeout: float, reply: Dictionary) -> void:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if not p or not ship:
+		reply["ok"] = false
+		reply["error"] = "land: no planet '%s' or no ship" % planet_name
+		return
+	var deadline := Time.get_ticks_msec() + int(timeout * 1000.0)
+	var thrusting := false
+	var fastest := 0.0
+	while Time.get_ticks_msec() < deadline and state_name() == "FlyingState":
+		var up := p.global_position.direction_to(ship.global_position)
+		var falling := -(ship.linear_velocity - p.linear_velocity).dot(up)
+		fastest = maxf(fastest, falling)
+		var want := falling > descent
+		if want != thrusting:
+			_key("thrust", want, reply)
+			thrusting = want
+		await get_tree().physics_frame
+	if thrusting:
+		_key("thrust", false, reply)
+	await _frames(2)
+	reply["state"] = state_name()
+	reply["max_descent"] = snappedf(fastest, 0.1)
+	if state_name() != "PlanetLandedState":
+		reply["ok"] = false
+		reply["error"] = "land: ended in %s" % state_name()
 
 ## Skip the flight: park the ship just behind the nearest live scrap node, nose on it,
 ## velocity matched, so the next `hold action` starts a harvest.
@@ -547,6 +611,121 @@ func warp_to(pos: Vector2) -> void:
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(ship.rotation, pos))
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
 	ship.global_position = pos
+
+## A planet (or moon) by node name, e.g. pt.planet("Rook").
+func planet(planet_name: String) -> Planet:
+	for n in get_tree().get_nodes_in_group("planets"):
+		if n.name == planet_name:
+			return n
+	return null
+
+## Park the ship `dist` px from a planet's centre at `angle_deg` (0 = +x), riding along
+## with the planet, nose pointing away from it.
+func park_near_planet(planet_name: String, dist: float, angle_deg := 180.0) -> void:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if not p or not ship:
+		return
+	var dir := Vector2.from_angle(deg_to_rad(angle_deg))
+	var pos := p.global_position + dir * dist
+	var rid := ship.get_rid()
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(dir.angle(), pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, p.linear_velocity)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_position = pos
+	ship.rotation = dir.angle()
+
+## Hover `height` px above a planet's first ore seam (from its surface), nose tilted
+## `tilt_deg` off straight up, falling toward it at `descent` px/s relative to the planet.
+func hover_over_ore(planet_name: String, height: float, tilt_deg := 0.0, descent := 0.0) -> void:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var seam := p.get_ore_deposits()[0]
+	var up := seam.normal()
+	var pos := seam.global_position + up * (PlanetLandedState.LANDED_HEIGHT + height)
+	var rid := ship.get_rid()
+	var rot := up.angle() + deg_to_rad(tilt_deg)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rot, pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, p.linear_velocity - up * descent)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_position = pos
+	ship.rotation = rot
+
+## Reload from the save (as CONTINUE does) and wait for the load to finish, so the next
+## command sees the loaded world. Fails when there is no save to load.
+func _reload(reply: Dictionary) -> void:
+	if not Save.save_exists():
+		reply["ok"] = false
+		reply["error"] = "reload: no save file yet"
+		return
+	var main := get_tree().get_first_node_in_group("main")
+	await main.load_game()
+	await _frames(2)
+	reply["state"] = state_name()
+
+## True when a save file exists (scenarios that reload should check this first).
+func save_exists() -> bool:
+	return Save.save_exists()
+
+## The landed ship's drill (pt.drill().timing, .layer, .phase), or null.
+func drill() -> OreDrill:
+	var ship := get_tree().get_first_node_in_group("ship")
+	return ship.get_node_or_null("OreDrill") if ship else null
+
+## The first ore seam on a planet.
+func ore(planet_name: String) -> OreDeposit:
+	return planet(planet_name).get_ore_deposits()[0]
+
+## Height of the ship's centre above a planet's surface.
+func altitude(planet_name: String) -> float:
+	var p := planet(planet_name)
+	var ship := get_tree().get_first_node_in_group("ship") as Node2D
+	return ship.global_position.distance_to(p.global_position) - p.radius * p.collision_radius_ratio
+
+## Ship speed relative to a planet.
+func rel_speed(planet_name: String) -> float:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	return (ship.linear_velocity - planet(planet_name).linear_velocity).length()
+
+## Warp back to the home port and dock (as if the player had flown in).
+func redock() -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var port := node("space_ports") as Node2D
+	warp_to(port.get_dock_position())
+	ship.set_meta("pending_dockable", port)
+	ship.state_machine.change_state("LandedState")
+
+## The ship's PlanetScanner (pt.scanner().progress(), .target()).
+func scanner() -> PlanetScanner:
+	var ship := get_tree().get_first_node_in_group("ship")
+	return ship.get_node_or_null("PlanetScanner") if ship else null
+
+## Show `text` as a caption at the top of the screen (for recorded videos); "" hides it.
+func caption(text: String) -> void:
+	var label := _caption
+	if not is_instance_valid(label):
+		var layer := CanvasLayer.new()
+		layer.layer = 100
+		layer.name = "CaptionLayer"
+		add_child(layer)
+		label = Label.new()
+		label.name = "Caption"
+		# Top left: the scan panel owns the top right, the minimap the bottom left
+		label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		label.offset_left = 16
+		label.offset_top = 16
+		label.add_theme_font_size_override("font_size", 16)
+		label.add_theme_color_override("font_color", Colors.PRIMARY)
+		var box := StyleBoxFlat.new()
+		box.bg_color = Colors.UI_BACKGROUND
+		box.border_color = Colors.UI_BORDER
+		box.set_border_width_all(2)
+		box.set_content_margin_all(10)
+		label.add_theme_stylebox_override("normal", box)
+		layer.add_child(label)
+		_caption = label
+	label.text = text
+	label.visible = text != ""
 
 ## Abandoned ships in the world.
 func derelict_count() -> int:

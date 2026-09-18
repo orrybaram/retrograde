@@ -21,14 +21,21 @@ static var _hitstop_restore := -1.0
 
 static func play(ship: Ship, scrap: ScrapNode, grade: HarvestTiming.Grade, gem_id: String, final: bool) -> void:
 	var juice: Dictionary = TIER_JUICE.get(gem_id, TIER_JUICE["shard"])
+	var sparkles := scrap.get_node_or_null("SparkleParticles") as SparkleParticles
+	if sparkles:
+		var perfect := grade == HarvestTiming.Grade.PERFECT
+		var intensity: float = juice["burst"] * (1.4 if perfect else 1.0) * (FINAL_BURST_MULT if final else 1.0)
+		sparkles.pop(GemData.color_of(gem_id), intensity)
+	# Scrap keeps orbiting, so the ring drifts with it to stay centred.
+	play_at(ship, scrap.get_tree(), scrap.global_position, scrap.get_orbital_velocity(), grade, gem_id, final)
+
+## Shake, shockwave ring and hitstop for a hit at `pos` moving at `drift` (no sparkles).
+## Also used by the drill.
+static func play_at(ship: Ship, tree: SceneTree, pos: Vector2, drift: Vector2, grade: HarvestTiming.Grade, gem_id: String, final: bool) -> void:
+	var juice: Dictionary = TIER_JUICE.get(gem_id, TIER_JUICE["shard"])
 	var perfect := grade == HarvestTiming.Grade.PERFECT
 	var botched := grade == HarvestTiming.Grade.LATE or grade == HarvestTiming.Grade.OVERLOAD
 	var color := GemData.color_of(gem_id)
-
-	var sparkles := scrap.get_node_or_null("SparkleParticles") as SparkleParticles
-	if sparkles:
-		var intensity: float = juice["burst"] * (1.4 if perfect else 1.0) * (FINAL_BURST_MULT if final else 1.0)
-		sparkles.pop(color, intensity)
 
 	if ship and is_instance_valid(ship):
 		var mult: float = juice["shake"]
@@ -42,16 +49,14 @@ static func play(ship: Ship, scrap: ScrapNode, grade: HarvestTiming.Grade, gem_i
 		ship.damage_shake_current_intensity = ship.harvest_shake_intensity * mult
 
 		var world := ship.get_parent()
-		# Scrap keeps orbiting, so the ring drifts with it to stay centred.
-		var drift := scrap.get_orbital_velocity()
 		if botched:
-			ring(world, scrap.global_position, Colors.DANGER, 30.0, drift)
+			ring(world, pos, Colors.DANGER, 30.0, drift)
 		elif perfect or final:
-			ring(world, scrap.global_position, color, 90.0 if final else 70.0, drift)
+			ring(world, pos, color, 90.0 if final else 70.0, drift)
 
 	var stop: float = juice["hitstop"] + (PERFECT_HITSTOP_BONUS if perfect else 0.0) + (FINAL_HITSTOP_BONUS if final else 0.0)
 	if stop > 0.0:
-		hitstop(scrap.get_tree(), stop)
+		hitstop(tree, stop)
 
 static func is_hitstopped() -> bool:
 	return _hitstop_restore >= 0.0

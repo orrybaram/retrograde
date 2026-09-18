@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://5mh31e6n8u0d" path="res://entities/Ship/ShipCamera.gd" id="2_0tak2"]
 [ext_resource type="Script" uid="uid://dbehnwjpsmt4c" path="res://entities/Ship/states/FlyingState.gd" id="3"]
 [ext_resource type="Script" uid="uid://cfyoann2rnq0w" path="res://entities/Ship/states/LandedState.gd" id="4"]
+[ext_resource type="Script" path="res://entities/Ship/states/PlanetLandedState.gd" id="planet_landed"]
 [ext_resource type="Script" uid="uid://br1pdbv2ka45p" path="res://entities/Ship/states/DestroyedState.gd" id="5"]
 [ext_resource type="Script" uid="uid://c52gah6pxgdju" path="res://entities/Ship/states/HarvestingState.gd" id="6"]
 [ext_resource type="Script" uid="uid://cl0sr554oon" path="res://entities/Ship/states/StrandedState.gd" id="7"]
@@ -150,6 +151,9 @@ script = ExtResource("4")
 
 [node name="HarvestingState" type="Node" parent="StateMachine" unique_id=1148346028]
 script = ExtResource("6")
+
+[node name="PlanetLandedState" type="Node" parent="StateMachine" unique_id=580580058]
+script = ExtResource("planet_landed")
 
 [node name="StrandedState" type="Node" parent="StateMachine" unique_id=847347397]
 script = ExtResource("7")

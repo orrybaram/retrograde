@@ -28,6 +28,8 @@ func _ready() -> void:
 		fuel_progress_bar.bar_color = Colors.FUEL_FULL
 		fuel_progress_bar.background_color = Colors.PRIMARY_DIM
 	add_child(HarvestMeter.new())
+	add_child(DrillMeter.new())
+	add_child(ScanPanel.new())
 	var radio := RadioPanel.new()
 	var tracking := TrackingIndicator.new()
 	tracking.blockers = [dashboard, radio]
@@ -127,7 +129,7 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	max_cargo_label.add_theme_color_override("font_color", Colors.DANGER if cargo_full else Colors.PRIMARY_DIM)
 
 	if ship and is_instance_valid(ship):
-		if ship.is_locked_to_planet():
+		if ship.is_locked_to_planet() or ship.is_landed_on_planet():
 			velocity_label.text = "0.0 m/s"
 		else:
 			var speed = ship.linear_velocity.length()

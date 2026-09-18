@@ -3,9 +3,12 @@ class_name PlanetMinimapTarget
 
 ## MinimapTarget for Planet entities: a disc in the planet's color with its night side
 ## shaded away from the sun, like the planet itself. The sun gets a soft corona.
+## Planets the Planetary Scanner hasn't mapped yet are tagged "? ? ?".
 
 const MIN_SIZE := 2.5
 const NIGHT_SHADE := 0.55  # blend of the night side toward space
+const UNKNOWN_LABEL := "? ? ?"
+const LABEL_FONT_SIZE := 8
 
 var planet: Planet
 
@@ -52,6 +55,8 @@ func draw_marker(map: Minimap, pos: Vector2, size: float, view_rotation: float) 
 		map.draw_circle(pos, size, color)
 		return
 	map.draw_circle(pos, size, color)
+	if not planet.is_scanned():
+		_draw_unknown_label(map, pos, size)
 	if size < 3.0:
 		return
 	var sun := _find_sun()
@@ -63,6 +68,12 @@ func draw_marker(map: Minimap, pos: Vector2, size: float, view_rotation: float) 
 	for i in 13:
 		points.append(pos + Vector2.from_angle(away - PI / 2 + PI * i / 12.0) * size)
 	map.draw_colored_polygon(points, color.lerp(Colors.SPACE_BG, NIGHT_SHADE))
+
+func _draw_unknown_label(map: Minimap, pos: Vector2, size: float) -> void:
+	var font := map.get_theme_default_font()
+	var text_size := font.get_string_size(UNKNOWN_LABEL, HORIZONTAL_ALIGNMENT_CENTER, -1, LABEL_FONT_SIZE)
+	var at := pos + Vector2(-text_size.x / 2.0, size + text_size.y)
+	map.draw_string(font, at, UNKNOWN_LABEL, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, Colors.PRIMARY)
 
 static var _sun: Planet = null
 

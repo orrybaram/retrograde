@@ -38,6 +38,12 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 @onready var orbit_visual: OrbitVisual = $"OrbitVisual"
 @onready var gravity_field_visual: GravityFieldVisual = $GravityField/CollisionShape2D/GravityFieldVisual
 
+## Surface gravity readouts divide by this (px/s^2 per unit mass) to show G.
+const STANDARD_GRAVITY := 50.0
+## How many ore seams a planet grows, and how many a moon grows (moon seams are rich).
+const ORE_COUNT := Vector2i(6, 8)
+const MOON_ORE_COUNT := Vector2i(3, 4)
+
 var parent_planet: Planet = null
 var minimap_target: PlanetMinimapTarget = null
 var _orbital_motion = null # Composable orbital component (OrbitalMotion)
@@ -72,6 +78,62 @@ func _set_show_orbit_path(v: bool) -> void:
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
 
+## Pull at the surface in G (STANDARD_GRAVITY px/s^2 of gravity force per unit mass).
+func surface_gravity() -> float:
+	return _get_gravity_strength() / (radius * radius) / STANDARD_GRAVITY
+
+## How far the gravity field extends from the centre.
+func field_radius() -> float:
+	return radius * gravity_radius_multiplier
+
+## How close the ship has to be for the Planetary Scanner to work: inner orbit, the
+## first gravity ring clear of the surface.
+func scan_radius() -> float:
+	var rings: int = gravity_field_visual.ring_count if gravity_field_visual else 6
+	return GravityFieldVisual.inner_orbit_radius(radius, field_radius(), rings)
+
+## Stable key for saves: "Name", or "Parent/Name" for moons.
+func save_key() -> String:
+	return Save._get_planet_key(self)
+
+func is_moon() -> bool:
+	return parent_planet != null and parent_planet.planet_type != PlanetType.SUN
+
+## True once the Planetary Scanner has mapped this planet (the sun is never scanned).
+func is_scanned() -> bool:
+	if not is_inside_tree():
+		return false
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	return gs != null and gs.is_planet_scanned(save_key())
+
+## Ore seams under this planet's surface (revealed once it's scanned).
+func get_ore_deposits() -> Array[OreDeposit]:
+	var ores: Array[OreDeposit] = []
+	for child in get_children():
+		if child is OreDeposit:
+			ores.append(child)
+	return ores
+
+## Grow this planet's ore seams: MOON_ORE_COUNT rich ones on a moon, ORE_COUNT on a
+## planet, none on the sun or a gas giant (no ground to land on). Seeded from the
+## planet's save key, so a planet has the same seams in the same places every session.
+func _spawn_ore() -> void:
+	if planet_type == PlanetType.SUN or planet_type == PlanetType.GAS_GIANT:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(save_key())
+	var span := MOON_ORE_COUNT if is_moon() else ORE_COUNT
+	var count := rng.randi_range(span.x, span.y)
+	# Spread the seams apart so one landing is never in reach of two
+	var gap := 360.0 / count
+	for i in count:
+		var ore := OreDeposit.new()
+		ore.name = "Ore%d" % i
+		ore.ore_index = i
+		ore.rich = is_moon()
+		ore.angle_degrees = fmod(rng.randf_range(0.0, gap) + gap * i, 360.0)
+		add_child(ore)
+
 func _ready() -> void:
 	add_to_group("planets")
 	
@@ -97,6 +159,8 @@ func _ready() -> void:
 		if orbit_visual:
 			orbit_visual.show_orbit = show_orbit_path
 	
+	_spawn_ore()
+
 	# Register with minimap
 	_register_with_minimap.call_deferred()
 

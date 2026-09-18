@@ -40,6 +40,16 @@ signal gem_collected(item_id: String, world_position: Vector2)
 signal hold_cashed_in(credits: int)
 ## Emitted when docking at a port converts the hold into credits.
 
+signal planet_scanned(planet: Planet)
+## Emitted when the Planetary Scanner finishes mapping a planet (once per planet).
+
+signal drill_struck(ore: OreDeposit, grade: HarvestTiming.Grade, gem_ids: Array[String], layer: int, final: bool)
+## Emitted when a drill layer is graded (GOOD / PERFECT / LATE) and its gems break loose.
+## `layer` counts from 1; `final` is the bottom layer.
+
+signal dig_ended(ore: OreDeposit, reason: String, layers: int)
+## Emitted when a dig stops: "bottom", "bank", "overload" or "liftoff", after `layers` layers.
+
 signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
 
@@ -98,7 +108,11 @@ func harvest_prompt() -> String:
 
 ## "[SPACE] HARVEST": the bound action key, then what it does.
 func action_prompt(verb: String) -> String:
-	return "[%s] %s" % [InputUtils.get_action_key_name("action").to_upper(), verb]
+	return key_prompt("action", verb)
+
+## The same for any other action: "[UP] LIFT OFF".
+func key_prompt(action: String, verb: String) -> String:
+	return "[%s] %s" % [InputUtils.get_action_key_name(action).to_upper(), verb]
 
 func _cleanup_invalid_nodes() -> void:
 	for node in _harvestable_nodes.keys():

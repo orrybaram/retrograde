@@ -3,7 +3,8 @@ class_name Ship
 
 ## Player ship entity. Owns fuel, hull (via HealthComponent), cargo weight, and
 ## input intent flags. Behavior is delegated to states via StateMachine:
-## FlyingState → LandedState / HarvestingState / StrandedState / DestroyedState.
+## FlyingState → LandedState (docked) / PlanetLandedState (on a landing site) /
+## HarvestingState / StrandedState / DestroyedState.
 ## Signals: fuel_changed, fuel_depleted, cargo_changed.
 
 @export var thrust_power: float = 350.0
@@ -89,6 +90,7 @@ var original_boost_lifetime: float = 1.5
 
 func _ready() -> void:
 	add_to_group("ship")
+	z_index = 2  # over planets, stations and landing pads it sits on
 	contact_monitor = true
 	max_contacts_reported = 4
 	can_sleep = false  # keep body awake while testing input; turn back on later if you like
@@ -117,6 +119,10 @@ func _ready() -> void:
 	var magnet := GemMagnet.new()
 	magnet.name = "GemMagnet"
 	add_child(magnet)
+
+	var scanner := PlanetScanner.new()
+	scanner.name = "PlanetScanner"
+	add_child(scanner)
 
 	# Store initial mass as base_mass for cargo calculations
 	base_mass = mass
@@ -199,6 +205,10 @@ func is_destroyed() -> bool:
 ## Helper method to check if ship is locked to planet
 func is_locked_to_planet() -> bool:
 	return state_machine and state_machine.current_state is LandedState
+
+## True while sitting on a planet's landing site.
+func is_landed_on_planet() -> bool:
+	return state_machine and state_machine.current_state is PlanetLandedState
 
 ## Reset boost particles to original state (after explosion)
 func reset_boost_particles() -> void:
@@ -286,8 +296,7 @@ func reapply_all_upgrades(game_state: GameState) -> void:
 					UpgradeItem.EffectType.MULTIPLY_STAT:
 						_apply_multiply_stat_from_upgrade(upgrade)
 					UpgradeItem.EffectType.UNLOCK_FEATURE:
-						# Unlock features are handled in GameState, skip here
-						pass
+						upgrade._apply_unlock_feature(game_state)
 	
 	# Update hull and fuel to match new max values
 	health_component.max_hp = max_hull
