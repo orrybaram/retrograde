@@ -25,7 +25,6 @@ var inventory_manager: InventoryManager = null
 
 var _frame: TerminalWindow
 var _tabs: Array[LogTab] = []
-var _notches: Array[Label] = []
 var _active := 0
 var _ship: Ship = null
 
@@ -66,7 +65,7 @@ func close_log() -> void:
 	dialogue_closed.emit()
 
 
-## Spaced title of the tab currently up, e.g. "H O L D". For tests and playtests.
+## Title of the tab currently up, e.g. "HOLD". For tests and playtests.
 func active_tab_title() -> String:
 	return _tabs[_active].tab_title() if not _tabs.is_empty() else ""
 
@@ -84,10 +83,11 @@ func _build() -> void:
 		_tabs.append(tab)
 		_frame.body.add_child(tab)
 		titles.append(tab.tab_title())
-	_notches = _frame.add_tabs(titles)
+	_frame.add_tabs(titles)
 
 
-## Light `index`'s notch, hide the tab that was up, and hand the bottom border over.
+## Open `index`'s tab: light its notch, hide the tab that was up, and hand the bottom
+## border's hint over to the one now in front.
 func _show_tab(index: int) -> void:
 	if _tabs.is_empty():
 		return
@@ -97,9 +97,8 @@ func _show_tab(index: int) -> void:
 		_tabs[previous].visible = false
 		_tabs[previous].on_hidden()
 	for i in _tabs.size():
-		var lit := i == _active
-		_tabs[i].visible = lit
-		_notches[i].add_theme_color_override("font_color", Colors.PRIMARY if lit else Colors.PRIMARY_DIM)
+		_tabs[i].visible = i == _active
+	_frame.select_tab(_active)
 	var tab := _tabs[_active]
 	tab.refresh()
 	tab.on_shown()

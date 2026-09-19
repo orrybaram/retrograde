@@ -2,8 +2,9 @@ class_name RecordsTab
 extends LogTab
 
 ## The Log's second tab: one Record per Body the player has Visited and per Automaton
-## they have met, each section a list on the left and the selected Record opened out on
-## the right. One cursor runs through both sections, top to bottom.
+## they have met. Both sections list down the left; one detail column on the right
+## carries whichever Record the cursor is on, whichever section that is. One cursor runs
+## through both sections, top to bottom, and one rule divides the tab full height.
 ##
 ## The Log lists only what the player reached — no row for anywhere unvisited, and
 ## never `? ? ?` (docs/adr/0003). The Bodies section reads GameState.visited_planets
@@ -36,16 +37,17 @@ const DETAIL_WIDTH := 440.0
 var gs: GameState = null
 
 var _empty: VBoxContainer
+## The lists down the left, the rule, and the one detail column on the right.
+var _columns: HBoxContainer
+var _detail: VBoxContainer
 # --- Bodies ------------------------------------------------------------------
 var _bodies: VBoxContainer
 var _body_rows: VBoxContainer
-var _body_detail: VBoxContainer
 ## The Visited Bodies by Planet.save_key(), in the order the player reached them.
 var _visited: PackedStringArray = PackedStringArray()
 # --- Automatons --------------------------------------------------------------
 var _automatons: VBoxContainer
 var _automaton_rows: VBoxContainer
-var _automaton_detail: VBoxContainer
 ## The Automatons the player has met, in Automatons.ALL order.
 var _met: Array[NPCData] = []
 ## One cursor over every row in the tab, Bodies first and Automatons after, so UP /
@@ -62,7 +64,7 @@ func _init() -> void:
 
 
 func tab_title() -> String:
-	return TerminalWindow.spaced("RECORDS")
+	return "RECORDS"
 
 
 ## The cursor keys only exist once there is something to move through; a player who has
@@ -74,77 +76,68 @@ func hint() -> String:
 
 
 func _build() -> void:
-	add_child(TerminalWindow.header("R E C O R D S"))
+	# No "R E C O R D S" heading over the whole tab: the notch in the border already
+	# says which tab this is, and the headings in here name sections, as the Hold's do.
 	_empty = VBoxContainer.new()
 	_empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_empty.add_theme_constant_override("separation", 4)
 	for line in EMPTY_STATE:
 		_empty.add_child(TerminalWindow.label(line, TerminalWindow.TEXT_SIZE, Colors.PRIMARY_DIM))
 	add_child(_empty)
+
+	# Both sections share one detail column, so the rule between them runs the full
+	# height of the tab whichever section the cursor is in — there is no second, blank
+	# detail pane leaving an orphan stroke behind it.
+	_columns = HBoxContainer.new()
+	_columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_columns.add_theme_constant_override("separation", 20)
+
+	var lists := VBoxContainer.new()
+	lists.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lists.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lists.add_theme_constant_override("separation", 10)
 	_bodies = _build_bodies()
-	add_child(_bodies)
+	lists.add_child(_bodies)
 	_automatons = _build_automatons()
-	add_child(_automatons)
-	add_child(TerminalWindow.filler())
+	lists.add_child(_automatons)
+	_columns.add_child(lists)
 
+	_columns.add_child(TerminalWindow.rule(true))
+	_detail = VBoxContainer.new()
+	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_detail.custom_minimum_size.x = DETAIL_WIDTH
+	_detail.add_theme_constant_override("separation", 4)
+	_columns.add_child(_detail)
+	add_child(_columns)
 
-## The Bodies section: the Visited list on the left, the selected Record on the right.
+## The Visited Bodies. The filler hangs off the end of this section, so with both
+## sections up the Automatons settle against the bottom of the frame the way the Hold's
+## upgrades do; with the Automatons empty it has nothing to push and the list stays put.
 func _build_bodies() -> VBoxContainer:
 	var section := VBoxContainer.new()
 	section.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	section.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	section.add_theme_constant_override("separation", 8)
-	var gap := Control.new()
-	gap.custom_minimum_size.y = 6
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	section.add_child(gap)
 	section.add_child(TerminalWindow.header("B O D I E S"))
-
-	var columns := HBoxContainer.new()
-	columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	columns.add_theme_constant_override("separation", 20)
 	_body_rows = VBoxContainer.new()
 	_body_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_body_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body_rows.add_theme_constant_override("separation", 4)
-	columns.add_child(_body_rows)
-	columns.add_child(TerminalWindow.rule(true))
-	_body_detail = VBoxContainer.new()
-	_body_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_body_detail.custom_minimum_size.x = DETAIL_WIDTH
-	_body_detail.add_theme_constant_override("separation", 4)
-	columns.add_child(_body_detail)
-	section.add_child(columns)
+	section.add_child(_body_rows)
+	section.add_child(TerminalWindow.filler())
 	return section
 
-
-## The Automatons section: the ones met on the left, the selected Record on the right.
+## The Automatons the player has met.
 func _build_automatons() -> VBoxContainer:
 	var section := VBoxContainer.new()
 	section.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	section.add_theme_constant_override("separation", 8)
-	var gap := Control.new()
-	gap.custom_minimum_size.y = 6
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	section.add_child(gap)
 	section.add_child(TerminalWindow.header("A U T O M A T O N S"))
-
-	var columns := HBoxContainer.new()
-	columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	columns.add_theme_constant_override("separation", 20)
 	_automaton_rows = VBoxContainer.new()
 	_automaton_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_automaton_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_automaton_rows.add_theme_constant_override("separation", 4)
-	columns.add_child(_automaton_rows)
-	columns.add_child(TerminalWindow.rule(true))
-	_automaton_detail = VBoxContainer.new()
-	_automaton_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_automaton_detail.custom_minimum_size.x = DETAIL_WIDTH
-	_automaton_detail.add_theme_constant_override("separation", 4)
-	columns.add_child(_automaton_detail)
-	section.add_child(columns)
+	section.add_child(_automaton_rows)
 	return section
-
 
 # --- Content -----------------------------------------------------------------
 
@@ -160,12 +153,10 @@ func refresh() -> void:
 	_cursor = clampi(_cursor, 0, maxi(_row_count() - 1, 0))
 	# An empty list is correct output for a player who has stayed home and met nobody.
 	_empty.visible = _row_count() == 0
+	_columns.visible = _row_count() > 0
 	_bodies.visible = not _visited.is_empty()
 	_automatons.visible = not _met.is_empty()
-	_draw_rows()
-	_draw_detail()
-	_draw_automaton_rows()
-	_draw_automaton_detail()
+	_redraw()
 
 
 ## Every row the cursor moves through, across both sections.
@@ -198,16 +189,23 @@ func _draw_rows() -> void:
 		_body_rows.add_child(row)
 
 
-
-## The selected Record: the designation, what a moon orbits, and either the survey the
-## scanner wrote or the fact that nothing has surveyed this Body yet. A survey is the
-## same rows the ScanPanel types out as the scan lands — one survey format in the game,
-## and the sun reads through it honestly rather than being special-cased.
+## The one detail column, opened out on whichever Record the cursor is on. A Body's
+## Record is instrument output and an Automaton's is Notes, so the two do not share a
+## voice (CONTEXT.md) — but they do share this column, which is what keeps the rule
+## beside it running full height instead of stopping at an empty pane.
 func _draw_detail() -> void:
-	_clear(_body_detail)
-	if _visited.is_empty() or _automaton_index() >= 0:
-		return
-	var key := _visited[_cursor]
+	_clear(_detail)
+	var index := _automaton_index()
+	if index >= 0:
+		_draw_automaton_detail(index)
+	elif not _visited.is_empty():
+		_draw_body_detail(_visited[_cursor])
+
+## The selected Body's Record: the designation, what a moon orbits, and either the
+## survey the scanner wrote or the fact that nothing has surveyed this Body yet. A
+## survey is the same rows the ScanPanel types out as the scan lands — one survey format
+## in the game, and the sun reads through it honestly rather than being special-cased.
+func _draw_body_detail(key: String) -> void:
 	var body := Planet.find_by_key(get_tree(), key)
 	var lines: PackedStringArray
 	if body != null and body.is_scanned():
@@ -218,7 +216,7 @@ func _draw_detail() -> void:
 		lines.append(NO_SURVEY)
 	for line in lines:
 		var color := Colors.PRIMARY_DIM if line == NO_SURVEY else Colors.PRIMARY
-		_body_detail.add_child(TerminalWindow.label(line, TEXT_SIZE, color))
+		_detail.add_child(TerminalWindow.label(line, TEXT_SIZE, color))
 
 
 ## What the Body is called. A loaded Body knows its own name; a key held over from one
@@ -256,10 +254,13 @@ func handle_key(keycode: int) -> bool:
 func _move_cursor(direction: int) -> void:
 	var n := _row_count()
 	_cursor = (_cursor + direction + n) % n
+	_redraw()
+
+## Both lists and the one detail column, which always shows the Record under the cursor.
+func _redraw() -> void:
 	_draw_rows()
-	_draw_detail()
 	_draw_automaton_rows()
-	_draw_automaton_detail()
+	_draw_detail()
 
 
 # --- Automatons --------------------------------------------------------------
@@ -283,30 +284,27 @@ func _draw_automaton_rows() -> void:
 
 
 ## The selected Automaton's Record: who it is, where it is found, what it looks like,
-## and the Notes the player has written down so far. A Body's Record is instrument
-## output and an Automaton's is Notes, so the two do not share a voice (CONTEXT.md) —
-## this one is headed by the designation rather than laid out as a readout.
-func _draw_automaton_detail() -> void:
-	_clear(_automaton_detail)
-	var index := _automaton_index()
-	if index < 0 or index >= _met.size():
+## and the Notes the player has written down so far. It is headed by the designation
+## rather than laid out as a readout, so it never reads as instrument output.
+func _draw_automaton_detail(index: int) -> void:
+	if index >= _met.size():
 		return
 	var npc := _met[index]
-	_automaton_detail.add_child(TerminalWindow.label(npc.record_key(),
+	_detail.add_child(TerminalWindow.label(npc.record_key(),
 			TerminalWindow.HEADER_SIZE, Colors.PRIMARY))
-	_automaton_detail.add_child(TerminalWindow.label("STATION   %s" % npc.station,
+	_detail.add_child(TerminalWindow.label("STATION   %s" % npc.station,
 			TerminalWindow.SMALL_SIZE, Colors.PRIMARY_DIM))
 	if npc.ascii_art != "":
-		_automaton_detail.add_child(TerminalWindow.label(npc.ascii_art, TEXT_SIZE, Colors.PRIMARY))
+		_detail.add_child(TerminalWindow.label(npc.ascii_art, TEXT_SIZE, Colors.PRIMARY))
 	# Notes arrive one Module at a time, so a Record read early is a portrait and the
 	# one Note keyed to no Modules online. The rest are absent until their step, with
 	# nothing standing in for them (docs/adr/0003).
 	for note in npc.notes_at(gs.titan_influence() if gs else 0):
-		_automaton_detail.add_child(_note_gap())
+		_detail.add_child(_note_gap())
 		var line := TerminalWindow.label(note, TEXT_SIZE, Colors.TEXT)
 		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		line.custom_minimum_size.x = DETAIL_WIDTH
-		_automaton_detail.add_child(line)
+		_detail.add_child(line)
 
 ## The blank line that keeps one Note from running into the portrait or the Note above
 ## it — each Note is its own scrap of writing, not a paragraph of one.

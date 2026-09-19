@@ -12,7 +12,8 @@ extends VBoxContainer
 const SHELL_KEYS := "[TAB] SWITCH   [I] / [ESC]  CLOSE"
 
 
-## Spaced text for this tab's notch in the top-left border, e.g. "H O L D".
+## This tab's label in the top-left notch, e.g. "HOLD". A tab is a control, not a
+## header, so it reads as a plain word — the window adds the `>` when it is selected.
 func tab_title() -> String:
 	return ""
 

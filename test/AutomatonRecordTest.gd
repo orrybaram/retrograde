@@ -153,7 +153,7 @@ func test_the_automatons_section_stands_without_the_bodies() -> void:
 func test_the_record_shows_the_designation_station_and_portrait() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	var tab := _records_tab()
-	assert_array(_text_of(tab._automaton_detail)).contains(
+	assert_array(_text_of(tab._detail)).contains(
 			["UNIT-7", "STATION   SR-7", GUIDE.ascii_art])
 
 
@@ -161,7 +161,7 @@ func test_the_record_shows_the_designation_station_and_portrait() -> void:
 func test_the_record_says_nothing_the_guide_would_say() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	var tab := _records_tab()
-	for line in _text_of(tab._automaton_detail):
+	for line in _text_of(tab._detail):
 		assert_str(line).not_contains("Welcome")
 
 
@@ -170,7 +170,7 @@ func test_the_pane_lists_the_notes_the_player_has_reached() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	_power_modules(3)
 	var tab := _records_tab()
-	assert_array(_text_of(tab._automaton_detail)).contains(GUIDE.notes_at(3))
+	assert_array(_text_of(tab._detail)).contains(GUIDE.notes_at(3))
 
 
 ## A locked Note leaves no placeholder and no count — the pane shows what the player
@@ -178,7 +178,7 @@ func test_the_pane_lists_the_notes_the_player_has_reached() -> void:
 func test_a_locked_note_leaves_nothing_behind_in_the_pane() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	var tab := _records_tab()
-	var text := _text_of(tab._automaton_detail)
+	var text := _text_of(tab._detail)
 	assert_array(text).contains(GUIDE.notes_at(0))
 	for note in GUIDE.record_notes.slice(1):
 		assert_array(text).not_contains([note])
@@ -191,11 +191,11 @@ func test_a_locked_note_leaves_nothing_behind_in_the_pane() -> void:
 func test_raising_modules_online_reveals_further_notes() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	var tab := _records_tab()
-	var seen := _text_of(tab._automaton_detail).size()
+	var seen := _text_of(tab._detail).size()
 	for influence in range(1, Gate.MODULE_COUNT + 1):
 		_power_modules(influence)
 		tab.refresh()
-		var lines := _text_of(tab._automaton_detail)
+		var lines := _text_of(tab._detail)
 		assert_array(lines).contains(GUIDE.notes_at(influence))
 		assert_int(lines.size()).is_greater_equal(seen)
 		seen = lines.size()
@@ -230,13 +230,14 @@ func test_down_carries_the_cursor_from_a_body_into_the_automatons() -> void:
 	assert_int(tab._automaton_index()).is_equal(0)
 	assert_str(tab.selected_key()).is_equal("")
 	assert_array(_text_of(tab._automaton_rows)).contains([">"])
-	assert_array(_text_of(tab._automaton_detail)).contains(["UNIT-7"])
-	# Only one Record is open at a time, so the Body's closes behind it.
-	assert_int(tab._body_detail.get_child_count()).is_equal(0)
+	assert_array(_text_of(tab._detail)).contains(["UNIT-7"])
+	# Both sections share the one detail column, so opening the Automaton's Record
+	# closes the Body's behind it rather than leaving a second pane standing empty.
+	assert_str("\n".join(_text_of(tab._detail))).not_contains("VELD")
 
 	assert_bool(tab.handle_key(KEY_UP)).is_true()
 	assert_str(tab.selected_key()).is_equal("Sun/Veld")
-	assert_int(tab._automaton_detail.get_child_count()).is_equal(0)
+	assert_str("\n".join(_text_of(tab._detail))).not_contains("UNIT-7")
 
 
 ## With no Records at all the keys go back to the shell rather than being swallowed.

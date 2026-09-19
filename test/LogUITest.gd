@@ -37,34 +37,60 @@ func test_opens_on_the_hold() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	assert_bool(log_ui.visible).is_true()
-	assert_str(log_ui.active_tab_title()).is_equal("H O L D")
+	assert_str(log_ui.active_tab_title()).is_equal("HOLD")
 
 
 func test_tab_moves_to_records_and_back() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
-	assert_str(log_ui.active_tab_title()).is_equal("R E C O R D S")
+	assert_str(log_ui.active_tab_title()).is_equal("RECORDS")
 	_press_tab()
-	assert_str(log_ui.active_tab_title()).is_equal("H O L D")
+	assert_str(log_ui.active_tab_title()).is_equal("HOLD")
 
 
 func test_shift_tab_reverses() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab(true)
-	assert_str(log_ui.active_tab_title()).is_equal("R E C O R D S")
+	assert_str(log_ui.active_tab_title()).is_equal("RECORDS")
 
 
-## Only the tab that is up is lit; the rest of the notches stay dim.
+## Only the tab that is up is lit; the rest of the notches stay dim. Which one the
+## player is on has to be readable at a glance, so it is said three ways at once and
+## each of them is worth holding onto.
 func test_only_the_selected_notch_is_lit() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
-	assert_object(log_ui._notches[0].get_theme_color("font_color")).is_equal(Colors.PRIMARY)
-	assert_object(log_ui._notches[1].get_theme_color("font_color")).is_equal(Colors.PRIMARY_DIM)
+	_assert_notch_lit(log_ui, 0, true)
+	_assert_notch_lit(log_ui, 1, false)
 	_press_tab()
-	assert_object(log_ui._notches[0].get_theme_color("font_color")).is_equal(Colors.PRIMARY_DIM)
-	assert_object(log_ui._notches[1].get_theme_color("font_color")).is_equal(Colors.PRIMARY)
+	_assert_notch_lit(log_ui, 0, false)
+	_assert_notch_lit(log_ui, 1, true)
+
+
+## A selected tab is the brighter one, it wears the `>` of a selected control, and its
+## notch is open at the bottom into the window; an unselected one is dim, unprefixed and
+## closed off by a bottom edge, so the frame line reads as running straight through it.
+func _assert_notch_lit(log_ui: LogUI, index: int, lit: bool) -> void:
+	var notch: Label = log_ui._frame._tab_labels[index]
+	assert_object(notch.get_theme_color("font_color")).is_equal(
+			Colors.PRIMARY if lit else Colors.PRIMARY_DIM)
+	assert_str(notch.text).starts_with(
+			TerminalWindow.TAB_SELECTED_PREFIX if lit else TerminalWindow.TAB_UNSELECTED_PREFIX)
+	var box: StyleBoxFlat = notch.get_theme_stylebox("normal")
+	assert_int(box.border_width_bottom).is_equal(0 if lit else TerminalWindow.BORDER_WIDTH)
+
+
+## A tab is a control, not a header, so its notch reads as a word rather than as the
+## spaced letters the headings inside the tab use.
+func test_a_notch_reads_as_a_label_not_a_heading() -> void:
+	var log_ui := _log_in_tree()
+	log_ui.open_log()
+	assert_str(log_ui._frame._tab_labels[0].text).is_equal(
+			TerminalWindow.TAB_SELECTED_PREFIX + "HOLD")
+	assert_str(log_ui._frame._tab_labels[1].text).is_equal(
+			TerminalWindow.TAB_UNSELECTED_PREFIX + "RECORDS")
 
 
 ## Closing on Records and reopening puts the player back on the Hold.
@@ -75,7 +101,7 @@ func test_reopens_on_the_hold() -> void:
 	log_ui.close_log()
 	assert_bool(log_ui.visible).is_false()
 	log_ui.open_log()
-	assert_str(log_ui.active_tab_title()).is_equal("H O L D")
+	assert_str(log_ui.active_tab_title()).is_equal("HOLD")
 
 
 ## The bottom border is the active tab's hint(), not a constant on the frame.
