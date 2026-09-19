@@ -15,9 +15,12 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
  
 @export var planet_name: String = "Unnamed Planet" ## Name of zthe planet for identification
 @export var radius: float = 160.0
-@export var gravitational_constant: float = 4.0 # G constant for scaling
+## Converts mass to pull. It cancels out of surface_gravity() - _derived_mass()
+## divides by it - so changing it rescales the mass numbers without changing how any
+## Body reads or pulls. Density is the dial that moves gravity (docs/adr/0004).
+@export var gravitational_constant: float = 4.0
 @export var color: Color = Colors.PLANET_DEFAULT: set = _set_color
-@export var massMultiplier: float = 1.0
+@export var density_trim: float = 1.0 ## Deviation from this class's DENSITY; 1.0 unless the Body is genuinely unusual
 
 # Planet type properties
 @export var planet_type: PlanetType = PlanetType.ROCKY
@@ -40,6 +43,26 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 
 ## Surface gravity readouts divide by this (px/s^2 per unit mass) to show G.
 const STANDARD_GRAVITY := 50.0
+## How dense each class of Body is, against EARTH_LIKE. Surface pull works out as
+## density * radius (docs/adr/0004), so a wider Body always outweighs a narrower one of
+## the same stuff and the big worlds are the ones that pull hard. SUN is the exception
+## and says so: a star's radius is squeezed down to something the player can fly around,
+## so its mass has to carry the weight its size no longer can.
+const DENSITY := {
+	PlanetType.SUN: 2.6,
+	PlanetType.GAS_GIANT: 0.55,
+	PlanetType.ICE_GIANT: 0.5,
+	PlanetType.EARTH_LIKE: 1.0,
+	PlanetType.ROCKY: 0.85,
+	PlanetType.WATER: 0.75,
+	PlanetType.ICE: 0.55,
+	PlanetType.BARREN: 0.7,
+}
+## The Body the rest of the system is weighed against: an EARTH_LIKE world this wide
+## reads REFERENCE_GRAVITY at the surface. TERRA-0 is that world, and holding it fixed
+## is what keeps a landing on the homeworld feeling the way it always has.
+const REFERENCE_RADIUS := 4400.0
+const REFERENCE_GRAVITY := 1.9
 ## How many ore seams a planet grows, and how many a moon grows (moon seams are rich).
 const ORE_COUNT := Vector2i(6, 8)
 const MOON_ORE_COUNT := Vector2i(3, 4)
@@ -77,6 +100,20 @@ func _set_show_orbit_path(v: bool) -> void:
 
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
+
+## What this Body should read at the surface, in G: how dense it is times how wide it
+## is, against TERRA-0. This is the one rule every Body is sized by - the sun included,
+## which is why the sun's Record reads crushing and a pebble of a moon reads like
+## nothing (docs/adr/0004).
+func target_surface_gravity() -> float:
+	var density: float = DENSITY.get(planet_type, DENSITY[PlanetType.ROCKY])
+	return REFERENCE_GRAVITY * density * density_trim * (radius / REFERENCE_RADIUS)
+
+## The mass that makes surface_gravity() come out at target_surface_gravity(). Mass is
+## what the gravity field actually pulls with, so the readout and the pull are the same
+## number seen twice and cannot drift apart.
+func _derived_mass() -> float:
+	return target_surface_gravity() * STANDARD_GRAVITY * radius * radius / gravitational_constant
 
 ## Pull at the surface in G (STANDARD_GRAVITY px/s^2 of gravity force per unit mass).
 func surface_gravity() -> float:
@@ -158,7 +195,7 @@ func _spawn_ore() -> void:
 func _ready() -> void:
 	add_to_group("planets")
 	
-	mass = massMultiplier * 1000000
+	mass = _derived_mass()
 	
 	# Set initial color on visual
 	var visual = get_node_or_null("PlanetVisual") as PlanetVisual
