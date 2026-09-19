@@ -109,7 +109,7 @@ func _pulse() -> float:
 func _something_to_read() -> bool:
 	if RobotRadio.is_pausing():
 		return true
-	for group in ["system_map", "pause_menu", "inventory_ui", "store_ui"]:
+	for group in ["system_map", "pause_menu", "log_ui", "store_ui"]:
 		var panel := get_tree().get_first_node_in_group(group) as CanvasItem
 		if panel and panel.visible:
 			return true

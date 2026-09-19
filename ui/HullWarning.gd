@@ -66,7 +66,7 @@ func _process(_delta: float) -> void:
 	modulate.a = 0.0 if dark else 1.0
 
 func _blocked() -> bool:
-	for group in ["system_map", "pause_menu", "inventory_ui", "store_ui"]:
+	for group in ["system_map", "pause_menu", "log_ui", "store_ui"]:
 		var panel := get_tree().get_first_node_in_group(group) as CanvasItem
 		if panel and panel.visible:
 			return true

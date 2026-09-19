@@ -3,7 +3,7 @@ extends Control
 
 ## Full-screen overlay with a centered, bordered terminal window: dimmed backdrop,
 ## a spaced title notched into the top border and a key hint in the bottom border.
-## Put content in `body`. Shared by the inventory and store screens.
+## Put content in `body`. Shared by the Log and store screens.
 
 const HEADER_SIZE := 12
 const TEXT_SIZE := 10
@@ -56,6 +56,26 @@ func _init(size_px: Vector2, title: String, hint: String) -> void:
 	_window.add_child(body)
 
 
+## Tab notches broken into the top border's left corner, laid out left to right.
+## Returns the labels in notch order so the caller can light the selected one.
+func add_tabs(titles: Array[String]) -> Array[Label]:
+	var row := HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.offset_left = 20.0
+	row.offset_top = -7.0
+	# Wide enough that the border line shows between notches, so they read as tabs
+	# rather than one run-on title.
+	row.add_theme_constant_override("separation", 14)
+	var tabs: Array[Label] = []
+	for title in titles:
+		var tab := _notch(title, TEXT_SIZE, Colors.PRIMARY_DIM)
+		row.add_child(tab)
+		tabs.append(tab)
+	_window.add_child(row)
+	return tabs
+
+
 func set_title(text: String) -> void:
 	_title.text = text
 
@@ -82,13 +102,9 @@ func _place(slide: float) -> void:
 	_window.offset_bottom = window_size.y / 2.0 + slide
 
 
+## A notch anchored into the window's right border, top or bottom.
 func _tab(text: String, font_size: int, color: Color, bottom: bool) -> Label:
-	var tab := label(text, font_size, color)
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Colors.UI_BACKGROUND_SOLID
-	bg.content_margin_left = 8
-	bg.content_margin_right = 8
-	tab.add_theme_stylebox_override("normal", bg)
+	var tab := _notch(text, font_size, color)
 	tab.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT if bottom else Control.PRESET_TOP_RIGHT)
 	tab.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	tab.offset_right = -20.0
@@ -97,6 +113,17 @@ func _tab(text: String, font_size: int, color: Color, bottom: bool) -> Label:
 		tab.offset_bottom = 6.0
 	else:
 		tab.offset_top = -7.0
+	return tab
+
+
+## A label on solid background, so it breaks the border line it sits on.
+static func _notch(text: String, font_size: int, color: Color) -> Label:
+	var tab := label(text, font_size, color)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Colors.UI_BACKGROUND_SOLID
+	bg.content_margin_left = 8
+	bg.content_margin_right = 8
+	tab.add_theme_stylebox_override("normal", bg)
 	return tab
 
 

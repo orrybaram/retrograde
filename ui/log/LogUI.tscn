@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://ui/inventory/InventoryUI.gd" id="1"]
+[ext_resource type="Script" path="res://ui/log/LogUI.gd" id="1"]
 
-[node name="InventoryUI" type="Control"]
+[node name="LogUI" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

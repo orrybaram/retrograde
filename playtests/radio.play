@@ -86,7 +86,7 @@ wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fu
 assert not get_tree().paused "abandon offer doesn't pause (you may be drifting home)"
 assert pt.node("radio_panel").choice_text() == "" "no confirm row on the intro line"
 press i
-wait_until pt.visible_ui().has("InventoryUI") 2
+wait_until pt.visible_ui().has("LogUI") 2
 frames 2
 assert not pt.node("radio_panel").visible "radio hides behind menus"
 press i

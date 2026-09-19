@@ -32,9 +32,9 @@ func _input(event: InputEvent) -> void:
 		var dev_panel = get_tree().get_first_node_in_group("dev_panel") as DevPanel
 		if dev_panel and dev_panel.visible:
 			return
-		# If inventory or map is visible, let them handle ESC instead
-		var inventory = get_tree().get_first_node_in_group("inventory_ui") as InventoryUI
-		if inventory and inventory.visible:
+		# If the Log or the map is visible, let them handle ESC instead
+		var log_screen = get_tree().get_first_node_in_group("log_ui") as LogUI
+		if log_screen and log_screen.visible:
 			return
 		var system_map = get_tree().get_first_node_in_group("system_map") as SystemMap
 		if system_map and system_map.visible:
@@ -90,8 +90,8 @@ func _show_pause_menu() -> void:
 	var system_map = get_tree().get_first_node_in_group("system_map") as SystemMap
 	if system_map and system_map.visible:
 		return
-	var inventory = get_tree().get_first_node_in_group("inventory_ui") as InventoryUI
-	if inventory and inventory.visible:
+	var log_screen = get_tree().get_first_node_in_group("log_ui") as LogUI
+	if log_screen and log_screen.visible:
 		return
 	var dev_panel = get_tree().get_first_node_in_group("dev_panel") as DevPanel
 	if dev_panel and dev_panel.visible:

@@ -1,0 +1,56 @@
+# The Log: the Hold tab's systems, cargo and upgrades, then the Records tab.
+# Run: tools/play.sh playtests/log.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 1.0
+wait 0.5
+
+# Empty hold, no upgrades
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+wait 0.6
+screenshot log_hold_empty
+press i
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# Stocked hold + upgrades
+eval inv.add_item("shard", 12)
+eval inv.add_item("gem", 5)
+eval inv.add_item("crystal", 2)
+eval gs.set_upgrade_level("hull", 3)
+eval gs.set_upgrade_level("fuel_tank", 1)
+eval gs.set("credits", 1240)
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+wait 0.6
+screenshot log_hold_stocked
+assert pt.screen_text().has("LogUI") "Log text visible"
+assert pt.node("log_ui").active_tab_title() == "H O L D" "the Log opens on the Hold"
+assert str(pt.screen_text()["LogUI"]).contains("U P G R A D E S") "the Hold carries the upgrade tiers"
+assert not str(pt.screen_text()["LogUI"]).contains("UNIT-7") "the Log is read alone"
+
+# TAB to Records and back
+press tab
+frames 2
+assert pt.node("log_ui").active_tab_title() == "R E C O R D S" "TAB moves to Records"
+screenshot log_records
+assert str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "Records says it is empty"
+assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
+press tab
+frames 2
+assert pt.node("log_ui").active_tab_title() == "H O L D" "TAB comes back round to the Hold"
+
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+assert not get_tree().paused "ESC closes the Log without pausing"
