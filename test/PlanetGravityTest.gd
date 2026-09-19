@@ -26,8 +26,9 @@ func test_a_wider_body_of_the_same_stuff_always_pulls_harder() -> void:
 	var small := _planet(800.0, Planet.PlanetType.BARREN)
 	var large := _planet(3200.0, Planet.PlanetType.BARREN)
 	assert_float(large.surface_gravity()).is_greater(small.surface_gravity())
-	# Four times as wide, four times the pull: surface gravity is linear in radius
-	assert_float(large.surface_gravity()).is_equal_approx(small.surface_gravity() * 4.0, 0.01)
+	# Four times as wide, twice the pull: gravity goes with the root of radius, so the
+	# widest Body stays inside the weight the ship can arrest a descent against
+	assert_float(large.surface_gravity()).is_equal_approx(small.surface_gravity() * 2.0, 0.01)
 
 
 func test_a_denser_class_pulls_harder_at_the_same_width() -> void:
@@ -83,7 +84,7 @@ func test_the_home_system_holds_every_body_this_suite_expects() -> void:
 ## The Core sits in the sun and it is meant to be the last and hardest place to reach
 ## (CONTEXT.md, Sun Station). Before ADR 0004 the sun read 1.6 G and Rook, a moon, read
 ## 1.7 G.
-func test_the_sun_outweighs_every_other_body_by_an_order_of_magnitude() -> void:
+func test_the_sun_outweighs_every_other_body_several_times_over() -> void:
 	var bodies := _home_bodies()
 	var sun: Planet = null
 	var heaviest_planet := 0.0
@@ -93,7 +94,7 @@ func test_the_sun_outweighs_every_other_body_by_an_order_of_magnitude() -> void:
 		else:
 			heaviest_planet = maxf(heaviest_planet, (b["planet"] as Planet).surface_gravity())
 	assert_object(sun).is_not_null()
-	assert_float(sun.surface_gravity()).is_greater(heaviest_planet * 5.0)
+	assert_float(sun.surface_gravity()).is_greater(heaviest_planet * 3.0)
 
 
 func test_no_moon_outweighs_the_body_it_orbits() -> void:

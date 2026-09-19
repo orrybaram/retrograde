@@ -44,25 +44,33 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 ## Surface gravity readouts divide by this (px/s^2 per unit mass) to show G.
 const STANDARD_GRAVITY := 50.0
 ## How dense each class of Body is, against EARTH_LIKE. Surface pull works out as
-## density * radius (docs/adr/0004), so a wider Body always outweighs a narrower one of
-## the same stuff and the big worlds are the ones that pull hard. SUN is the exception
+## density * sqrt(radius) (docs/adr/0004), so a wider Body always outweighs a narrower one
+## of the same stuff and the big worlds are the ones that pull hard. The spread is narrow
+## on purpose: a Body's size already carries most of the difference, and a wide density
+## spread on top of it pushes the heavy end past landable. SUN is the exception
 ## and says so: a star's radius is squeezed down to something the player can fly around,
 ## so its mass has to carry the weight its size no longer can.
 const DENSITY := {
-	PlanetType.SUN: 2.6,
-	PlanetType.GAS_GIANT: 0.55,
-	PlanetType.ICE_GIANT: 0.5,
+	PlanetType.SUN: 2.7,
+	PlanetType.GAS_GIANT: 0.8,
+	PlanetType.ICE_GIANT: 0.82,
 	PlanetType.EARTH_LIKE: 1.0,
-	PlanetType.ROCKY: 0.85,
-	PlanetType.WATER: 0.75,
-	PlanetType.ICE: 0.55,
-	PlanetType.BARREN: 0.7,
+	PlanetType.ROCKY: 0.97,
+	PlanetType.WATER: 0.92,
+	PlanetType.ICE: 0.88,
+	PlanetType.BARREN: 0.95,
 }
 ## The Body the rest of the system is weighed against: an EARTH_LIKE world this wide
-## reads REFERENCE_GRAVITY at the surface. TERRA-0 is that world, and holding it fixed
-## is what keeps a landing on the homeworld feeling the way it always has.
+## reads REFERENCE_GRAVITY at the surface. TERRA-0 is that world, and it sits just under
+## the weight the ship can still arrest a descent against.
 const REFERENCE_RADIUS := 4400.0
-const REFERENCE_GRAVITY := 1.9
+const REFERENCE_GRAVITY := 5.2
+## Pull grows with the square root of radius, not with radius itself. The system spans
+## 448 px to 9000 px, and over a spread that wide a straight line cannot hold both ends:
+## anything heavy enough to be felt on a small Body puts the big ones past the pull the
+## ship can arrest a descent against, and they stop being landable at all. The root keeps
+## a wider Body heavier while pulling the two ends close enough to both be flyable.
+const RADIUS_EXPONENT := 0.5
 
 ## Dev-only scale on every Body's pull at once, for tuning gravity by feel from the dev
 ## panel's GRAVITY section. A real session never moves it off 1.0.
@@ -105,13 +113,14 @@ func _set_show_orbit_path(v: bool) -> void:
 func _get_gravity_strength() -> float:
 	return mass * gravitational_constant
 
-## What this Body should read at the surface, in G: how dense it is times how wide it
-## is, against TERRA-0. This is the one rule every Body is sized by - the sun included,
+## What this Body should read at the surface, in G: how dense it is, against how wide it
+## is, measured from TERRA-0. This is the one rule every Body is sized by - the sun included,
 ## which is why the sun's Record reads crushing and a pebble of a moon reads like
 ## nothing (docs/adr/0004).
 func target_surface_gravity() -> float:
 	var density: float = DENSITY.get(planet_type, DENSITY[PlanetType.ROCKY])
-	return REFERENCE_GRAVITY * density * density_trim * dev_gravity_scale * (radius / REFERENCE_RADIUS)
+	var size := pow(radius / REFERENCE_RADIUS, RADIUS_EXPONENT)
+	return REFERENCE_GRAVITY * density * density_trim * dev_gravity_scale * size
 
 ## The mass that makes surface_gravity() come out at target_surface_gravity(). Mass is
 ## what the gravity field actually pulls with, so the readout and the pull are the same
