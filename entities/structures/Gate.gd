@@ -263,8 +263,13 @@ func get_dock_transform() -> Transform2D:
 
 func _process(delta: float) -> void:
 	_clock += delta
-	if is_powered() and _glow < 1.0:
+	if is_powered():
 		_glow = minf(_glow + delta / POWER_UP_TIME, 1.0)
+	else:
+		# A Module never goes offline mid-run, but a new game clears every one of them
+		# under Gates that are already lit. The ring follows the state back down rather
+		# than carrying the last run's light into the new one.
+		_glow = 0.0
 	_watch_for_the_ship()
 	queue_redraw()
 

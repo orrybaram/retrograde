@@ -172,6 +172,19 @@ func test_new_game_powers_every_module_back_down() -> void:
 	assert_bool(gate.is_powered()).is_false()
 
 
+## And the ring goes with it. The light only ever ramps up, so a Gate lit in the last
+## run used to carry its glow straight into the new game and read as already powered.
+func test_a_new_game_puts_out_a_gate_that_was_lit() -> void:
+	var gate := _gate(_planet("Veld"), 600)
+	_gs.credits = 600
+	gate.power(_gs)
+	gate._process(Gate.POWER_UP_TIME)
+	assert_float(gate._glow).is_equal(1.0)
+	_gs.reset_all_state()
+	gate._process(0.016)
+	assert_float(gate._glow).is_equal(0.0)
+
+
 # --- Being named -------------------------------------------------------------
 
 ## A Gate nobody has flown to is a shape on the minimap and nothing else.
