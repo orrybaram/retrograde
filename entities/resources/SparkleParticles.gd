@@ -6,6 +6,9 @@ class_name SparkleParticles
 ## and HARVESTING (directed arc toward ship) states. Trophy nodes emit yellow arcs.
 
 const TROPHY_COLOR = Colors.YELLOW
+## How long the arc root sticks around after a harvest ends, so the fragments still in
+## flight finish their arc before it is reaped.
+const ARC_ROOT_LINGER := 1.2
 
 enum State { IDLE, HARVESTING }
 
@@ -61,12 +64,14 @@ func set_idle() -> void:
 	_harvest_target = null
 	_health_component = null
 	if _arc_root:
-		var root = _arc_root
+		# The arc root lingers long enough for the fragments still in flight. The wait is
+		# the root's own tween, so freeing the root kills the wait with it - a scene-tree
+		# timer would fire later still holding a freed node.
+		var root := _arc_root
 		_arc_root = null
-		get_tree().create_timer(1.2).timeout.connect(func():
-			if is_instance_valid(root):
-				root.queue_free()
-		)
+		var reap := root.create_tween()
+		reap.tween_interval(ARC_ROOT_LINGER)
+		reap.tween_callback(root.queue_free)
 	_apply_state()
 
 func pop(burst_color: Color = Colors.PRIMARY, intensity: float = 1.0) -> void:
@@ -93,10 +98,11 @@ func pop(burst_color: Color = Colors.PRIMARY, intensity: float = 1.0) -> void:
 	add_child(burst)
 	burst.emitting = true
 
-	get_tree().create_timer(burst.lifetime + 0.5).timeout.connect(func():
-		if is_instance_valid(burst):
-			burst.queue_free()
-	)
+	# Same rule as the arc fragments: the burst cleans itself up, so it can never be
+	# freed out from under a pending timer.
+	var reap := burst.create_tween()
+	reap.tween_interval(burst.lifetime + 0.5)
+	reap.tween_callback(burst.queue_free)
 
 func _spawn_arc_particle() -> void:
 	if not _arc_root or not _harvest_target or not is_instance_valid(_harvest_target):
@@ -120,22 +126,23 @@ func _spawn_arc_particle() -> void:
 	fragment.position = p0
 	_arc_root.add_child(fragment)
 
+	# The fragment owns its own tween, so freeing the fragment - or the whole arc root
+	# when the harvest ends, or the scene at teardown - kills the animation with it.
+	# A tween made here would outlive the fragment and keep calling back holding it.
 	var duration = randf_range(0.5, 1.0)
-	var tween = create_tween()
+	var tween = fragment.create_tween()
+	# _harvest_target is read off the node each frame rather than captured: the ship can
+	# be freed (or the harvest end) mid-arc, and a captured node would be a freed capture.
 	var update_fn = func(t: float):
-		if not is_instance_valid(fragment):
-			return
-		var p2 = to_local(ship.global_position) if is_instance_valid(ship) else p1
+		var target := _harvest_target
+		var p2 = to_local(target.global_position) if is_instance_valid(target) else p1
 		var pos = (1.0 - t) * (1.0 - t) * p0 + 2.0 * (1.0 - t) * t * p1 + t * t * p2
 		fragment.position = pos
 		var s = lerp(1.0, 0.1, t * t)
 		fragment.scale = Vector2(s, s)
 		fragment.modulate.a = 1.0 - (t * t * t)
 	tween.tween_method(update_fn, 0.0, 1.0, duration)
-	tween.tween_callback(func():
-		if is_instance_valid(fragment):
-			fragment.queue_free()
-	)
+	tween.tween_callback(fragment.queue_free)
 
 func _apply_state() -> void:
 	if _original_mat == null:
