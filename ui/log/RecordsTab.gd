@@ -23,16 +23,23 @@ const EMPTY_STATE := [
 	"AN AUTOMATON EARNS ONE WHEN YOU MEET IT.",
 ]
 
-## What a Record reads before the Planetary Scanner has surveyed the Body. Visiting
-## earns the Record; scanning fills it in — a scanned row carries the survey in one
-## line (PlanetScan.summary_line) instead.
-const NO_SURVEY := "NO SURVEY"
+## What a Record reads before the Planetary Scanner has surveyed the Body. The Body
+## itself is known — the player flew into its orbit and the row carries its name; it is
+## the survey that is missing. Scanning fills it in and the row carries the survey in
+## one line (PlanetScan.summary_line) instead.
+const NO_SURVEY := "UNSURVEYED"
 ## The keys this tab owns, laid before the shell's in the bottom border.
 const CURSOR_KEYS := "[UP/DOWN] SELECT"
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
+## Section headings inside the list column. Smaller than TerminalWindow.header(): these
+## label a list within a column rather than a panel of the screen.
+const HEADING_SIZE := TerminalWindow.SMALL_SIZE
 ## How wide the open Record is. A Note is written in lines, not reflowed prose, so
 ## the pane has to be wide enough to hold an authored line without breaking it.
 const DETAIL_WIDTH := 440.0
+## The list column takes one part of the tab's width, the open Record two.
+const LIST_RATIO := 1.0
+const DETAIL_RATIO := 2.0
 
 var gs: GameState = null
 
@@ -93,50 +100,53 @@ func _build() -> void:
 	_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_columns.add_theme_constant_override("separation", 20)
 
+	# The list is a third of the tab and the open Record two thirds: the list carries a
+	# name and a one-line summary, the Record carries a survey or a column of Notes.
 	var lists := VBoxContainer.new()
 	lists.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lists.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lists.add_theme_constant_override("separation", 10)
+	lists.size_flags_stretch_ratio = LIST_RATIO
+	lists.add_theme_constant_override("separation", 12)
 	_bodies = _build_bodies()
 	lists.add_child(_bodies)
 	_automatons = _build_automatons()
 	lists.add_child(_automatons)
+	lists.add_child(TerminalWindow.filler())
 	_columns.add_child(lists)
 
 	_columns.add_child(TerminalWindow.rule(true))
 	_detail = VBoxContainer.new()
 	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_detail.size_flags_stretch_ratio = DETAIL_RATIO
 	_detail.custom_minimum_size.x = DETAIL_WIDTH
 	_detail.add_theme_constant_override("separation", 4)
 	_columns.add_child(_detail)
 	add_child(_columns)
 
-## The Visited Bodies. The filler hangs off the end of this section, so with both
-## sections up the Automatons settle against the bottom of the frame the way the Hold's
-## upgrades do; with the Automatons empty it has nothing to push and the list stays put.
+## The Visited Bodies. Sections stack one straight after the other rather than sharing
+## the height between them, so a short list does not leave a gap before the next
+## heading; one filler under the last section takes up whatever is left.
 func _build_bodies() -> VBoxContainer:
-	var section := VBoxContainer.new()
-	section.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	section.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	section.add_theme_constant_override("separation", 8)
-	section.add_child(TerminalWindow.header("B O D I E S"))
-	_body_rows = VBoxContainer.new()
-	_body_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_body_rows.add_theme_constant_override("separation", 4)
-	section.add_child(_body_rows)
-	section.add_child(TerminalWindow.filler())
-	return section
+	return _section("B O D I E S", func(rows: VBoxContainer) -> void: _body_rows = rows)
 
 ## The Automatons the player has met.
 func _build_automatons() -> VBoxContainer:
+	return _section("A U T O M A T O N S", func(rows: VBoxContainer) -> void: _automaton_rows = rows)
+
+
+## One list section: a quiet heading over its rows. The heading is smaller than a Hold
+## header — it labels a list inside a column, not a panel — and it never grows to fill.
+func _section(title: String, take_rows: Callable) -> VBoxContainer:
 	var section := VBoxContainer.new()
 	section.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	section.add_theme_constant_override("separation", 8)
-	section.add_child(TerminalWindow.header("A U T O M A T O N S"))
-	_automaton_rows = VBoxContainer.new()
-	_automaton_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_automaton_rows.add_theme_constant_override("separation", 4)
-	section.add_child(_automaton_rows)
+	section.add_theme_constant_override("separation", 6)
+	section.add_child(TerminalWindow.label(title, HEADING_SIZE, Colors.PRIMARY_DIM))
+	var rows := VBoxContainer.new()
+	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rows.add_theme_constant_override("separation", 4)
+	section.add_child(rows)
+	take_rows.call(rows)
 	return section
 
 # --- Content -----------------------------------------------------------------
@@ -294,8 +304,6 @@ func _draw_automaton_detail(index: int) -> void:
 			TerminalWindow.HEADER_SIZE, Colors.PRIMARY))
 	_detail.add_child(TerminalWindow.label("STATION   %s" % npc.station,
 			TerminalWindow.SMALL_SIZE, Colors.PRIMARY_DIM))
-	if npc.ascii_art != "":
-		_detail.add_child(TerminalWindow.label(npc.ascii_art, TEXT_SIZE, Colors.PRIMARY))
 	# Notes arrive one Module at a time, so a Record read early is a portrait and the
 	# one Note keyed to no Modules online. The rest are absent until their step, with
 	# nothing standing in for them (docs/adr/0003).

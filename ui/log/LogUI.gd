@@ -16,7 +16,7 @@ signal dialogue_closed
 const WINDOW_SIZE := Vector2(880, 440)
 ## The tabs, in notch order. The first one is what the Log opens on.
 const TABS := [
-	preload("res://ui/log/HoldTab.gd"),
+	preload("res://ui/log/ShipTab.gd"),
 	preload("res://ui/log/RecordsTab.gd"),
 ]
 
@@ -65,7 +65,7 @@ func close_log() -> void:
 	dialogue_closed.emit()
 
 
-## Title of the tab currently up, e.g. "HOLD". For tests and playtests.
+## Title of the tab currently up, e.g. "SHIP". For tests and playtests.
 func active_tab_title() -> String:
 	return _tabs[_active].tab_title() if not _tabs.is_empty() else ""
 

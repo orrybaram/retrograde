@@ -14,11 +14,11 @@ const SLIDE_PX := 12.0
 const BORDER_WIDTH := 2
 
 # --- Tab strip ---------------------------------------------------------------
-## A tab is a control, not a header, so it carries the `>` of a selected row rather
-## than the spaced letters of a title (.claude/PATTERNS.md). The unselected prefix is
-## the same width, so the strip doesn't shuffle sideways as the player cycles it.
-const TAB_SELECTED_PREFIX := "> "
-const TAB_UNSELECTED_PREFIX := "  "
+## A tab is a control, not a header, so it carries a plain word rather than the spaced
+## letters of a title (.claude/PATTERNS.md). Selection is carried by the notch itself -
+## the lit one opens into the window - so the label needs no prefix marker.
+const TAB_SELECTED_PREFIX := ""
+const TAB_UNSELECTED_PREFIX := ""
 const TAB_HEIGHT := 18
 const TAB_INSET := 20.0
 const TAB_GAP := 6
@@ -91,14 +91,15 @@ func add_tabs(titles: Array[String]) -> void:
 	for title in titles:
 		var tab := label("", TEXT_SIZE, Colors.PRIMARY_DIM)
 		tab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		tab.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		tab.custom_minimum_size.y = TAB_HEIGHT
 		row.add_child(tab)
 		_tab_labels.append(tab)
 	_window.add_child(row)
 	select_tab(0)
 
-## Light `index`'s tab and close the rest: the selected one is the bright one, it wears
-## the `>` of a selected control, and its notch opens into the window.
+## Light `index`'s tab and close the rest: the selected one is the bright one and its
+## notch opens into the window.
 func select_tab(index: int) -> void:
 	for i in _tab_labels.size():
 		var lit := i == index

@@ -1,4 +1,4 @@
-class_name HoldTab
+class_name ShipTab
 extends LogTab
 
 ## The Log's opening tab: what the ship is carrying and what shape it is in.
@@ -41,7 +41,7 @@ func _init() -> void:
 
 
 func tab_title() -> String:
-	return "HOLD"
+	return "SHIP"
 
 
 # --- Layout ------------------------------------------------------------------

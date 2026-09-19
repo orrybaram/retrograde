@@ -36,7 +36,7 @@ wait_until pt.visible_ui().has("LogUI") 2
 wait 0.6
 screenshot log_hold_stocked
 assert pt.screen_text().has("LogUI") "Log text visible"
-assert pt.node("log_ui").active_tab_title() == "HOLD" "the Log opens on the Hold"
+assert pt.node("log_ui").active_tab_title() == "SHIP" "the Log opens on the Ship tab"
 assert str(pt.screen_text()["LogUI"]).contains("U P G R A D E S") "the Hold carries the upgrade tiers"
 assert not str(pt.screen_text()["LogUI"]).contains("UNIT-7") "the Log is read alone"
 
@@ -49,7 +49,7 @@ assert str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "Records s
 assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
 press tab
 frames 2
-assert pt.node("log_ui").active_tab_title() == "HOLD" "TAB comes back round to the Hold"
+assert pt.node("log_ui").active_tab_title() == "SHIP" "TAB comes back round to the Ship tab"
 
 press escape
 wait_until not pt.visible_ui().has("LogUI") 2

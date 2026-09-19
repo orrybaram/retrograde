@@ -1,5 +1,5 @@
 # Records: a Body earns its Record in the Log the moment the ship enters its inner
-# orbit, with no Planetary Scanner aboard. The row reads NO SURVEY until it is scanned.
+# orbit, with no Planetary Scanner aboard. The row reads UNSURVEYED until it is scanned.
 # Run: tools/play.sh playtests/records.play   (frames land in .playtest/records_*.png)
 
 press enter
@@ -53,7 +53,7 @@ frames 2
 wait 0.4
 assert str(pt.screen_text()["LogUI"]).contains("B O D I E S") "the Bodies section is up"
 assert str(pt.screen_text()["LogUI"]).contains("ROOK") "Rook holds a Record"
-assert str(pt.screen_text()["LogUI"]).contains("NO SURVEY") "unsurveyed, and it says so"
+assert str(pt.screen_text()["LogUI"]).contains("UNSURVEYED") "unsurveyed, and it says so"
 assert str(pt.screen_text()["LogUI"]).contains("ORBITS") "the detail names what the moon orbits"
 assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
 assert not str(pt.screen_text()["LogUI"]).contains("CROM") "nowhere unreached gets a row"
@@ -78,7 +78,7 @@ wait_until pt.visible_ui().has("LogUI") 2
 press tab
 frames 2
 wait 0.4
-assert str(pt.screen_text()["LogUI"]).contains("NO SURVEY") "still unsurveyed with the Log open"
+assert str(pt.screen_text()["LogUI"]).contains("UNSURVEYED") "still unsurveyed with the Log open"
 assert not str(pt.screen_text()["LogUI"]).contains("BARREN") "and no survey on Rook's row yet"
 eval gs.mark_planet_scanned("Veld/Rook")
 eval bus.planet_scanned.emit(pt.planet("Rook"))
@@ -86,7 +86,7 @@ frames 2
 wait 0.4
 assert str(pt.screen_text()["LogUI"]).contains("BARREN") "Rook's row filled in with no reopen"
 assert str(pt.screen_text()["LogUI"]).contains("GRAVITY") "and the detail carries the readout"
-assert str(pt.screen_text()["LogUI"]).contains("NO SURVEY") "unscanned Veld still reads NO SURVEY"
+assert str(pt.screen_text()["LogUI"]).contains("UNSURVEYED") "unscanned Veld still reads UNSURVEYED"
 assert str(pt.screen_text()["LogUI"]).contains("ORBITS") "a surveyed moon still names what it orbits"
 screenshot records_4_surveyed
 press escape

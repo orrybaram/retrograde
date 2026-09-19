@@ -191,7 +191,7 @@ func test_an_unsurveyed_body_reads_no_survey() -> void:
 	assert_str(detail).contains("VELD")
 
 
-## Scanning fills the Record in: the row drops NO SURVEY for the survey in one line,
+## Scanning fills the Record in: the row drops UNSURVEYED for the survey in one line,
 ## and the detail pane holds the full readout.
 func test_a_surveyed_body_carries_its_survey() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")

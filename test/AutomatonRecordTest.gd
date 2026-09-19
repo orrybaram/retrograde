@@ -150,11 +150,14 @@ func test_the_automatons_section_stands_without_the_bodies() -> void:
 	assert_bool(tab._automatons.visible).is_true()
 
 
-func test_the_record_shows_the_designation_station_and_portrait() -> void:
+## The Record is the player's written note on an Automaton, not a portrait of it: the
+## designation and where it was met, then the Notes. The robot's face belongs to the
+## store screen, where the player is actually standing in front of it.
+func test_the_record_shows_the_designation_and_station_without_a_portrait() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	var tab := _records_tab()
-	assert_array(_text_of(tab._detail)).contains(
-			["UNIT-7", "STATION   SR-7", GUIDE.ascii_art])
+	assert_array(_text_of(tab._detail)).contains(["UNIT-7", "STATION   SR-7"])
+	assert_array(_text_of(tab._detail)).not_contains([GUIDE.ascii_art])
 
 
 ## Nothing speaks from inside the Log: the Record is a note, not a greeting.

@@ -47,7 +47,7 @@ The full-screen star chart (`SystemMap`), which starts holding only Rook, its st
 _Avoid_: system map, star map
 
 **Log**:
-The player's own screen (`I`), kept by the ship, not by the Titan: what is in the hold and what the player has learned. Opens on the **Hold**; the **Records** tab holds one entry per thing the player has worked for. The **Chart** is the Titan's map, handed over; the **Log** is the player's, accrued. No **Automaton** speaks from inside the **Log** — it is the player's own instrument, read alone. UNIT-7 is met at SR-7 and heard on the radio in flight, never carried around in a menu.
+The player's own screen (`I`), kept by the ship, not by the Titan: what is in the hold and what the player has learned. Opens on the **Ship** tab — hull, fuel, hold and upgrades; the **Records** tab holds one entry per thing the player has worked for. The **Chart** is the Titan's map, handed over; the **Log** is the player's, accrued. No **Automaton** speaks from inside the **Log** — it is the player's own instrument, read alone. UNIT-7 is met at SR-7 and heard on the radio in flight, never carried around in a menu.
 _Avoid_: inventory, menu, codex, knowledge repository, database
 
 **Record**:
