@@ -191,16 +191,80 @@ func test_an_unsurveyed_body_reads_no_survey() -> void:
 	assert_str(detail).contains("VELD")
 
 
-## Scanning fills the Record in; the row stops reading NO SURVEY.
+## Scanning fills the Record in: the row drops NO SURVEY for the survey in one line,
+## and the detail pane holds the full readout.
 func test_a_surveyed_body_carries_its_survey() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
+	planet.habitability = 0.25
 	_gs.mark_planet_visited(planet.save_key())
 	_gs.mark_planet_scanned(planet.save_key())
 	var tab := _records_tab()
-	var text := "\n".join(_text(tab))
-	assert_str(text).contains(RecordsTab.SURVEYED)
-	assert_str(text).not_contains(RecordsTab.NO_SURVEY)
+	assert_str("\n".join(_text(tab))).not_contains(RecordsTab.NO_SURVEY)
+	# The row itself carries the class and the pull, not just the fact of a survey.
+	var row := "\n".join(_text(tab._body_rows))
+	assert_str(row).contains(PlanetScan.summary_line(planet))
+	assert_str(row).contains("ICE GIANT")
+	assert_str(row).contains(PlanetScan.gravity(planet))
 	assert_str("\n".join(_text(tab._body_detail))).contains("ICE GIANT")
+
+## There is one survey format in the game: the Record holds exactly the rows the
+## ScanPanel types out as the scan lands.
+func test_the_detail_pane_is_the_scan_panel_readout() -> void:
+	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
+	planet.habitability = 0.25
+	_gs.mark_planet_visited(planet.save_key())
+	_gs.mark_planet_scanned(planet.save_key())
+	var tab := _records_tab()
+	assert_array(Array(_text(tab._body_detail))) \
+			.contains_exactly(Array(PlanetScan.readout_lines(planet)))
+
+## The unscanned Record holds the rows a Record carries either way and says plainly
+## that nothing has surveyed the Body — never `? ? ?` (docs/adr/0003).
+func test_scanning_swaps_the_no_survey_line_for_the_readout() -> void:
+	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
+	_gs.mark_planet_visited(planet.save_key())
+	var tab := _records_tab()
+	assert_array(Array(_text(tab._body_detail))).contains_exactly(
+			Array(PlanetScan.identity_lines("CROM", "")) + ["", RecordsTab.NO_SURVEY])
+	_gs.mark_planet_scanned(planet.save_key())
+	tab.refresh()
+	var detail := Array(_text(tab._body_detail))
+	assert_array(detail).contains_exactly(Array(PlanetScan.readout_lines(planet)))
+	assert_str("\n".join(_text(tab._body_detail))).not_contains(RecordsTab.NO_SURVEY)
+
+## A moon keeps its ORBITS row once it is surveyed — the survey adds rows, it does not
+## replace the ones the Record already carried.
+func test_a_surveyed_moon_still_names_what_it_orbits() -> void:
+	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
+	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
+	_gs.mark_planet_visited(rook.save_key())
+	_gs.mark_planet_scanned(rook.save_key())
+	var tab := _records_tab()
+	var detail := "\n".join(_text(tab._body_detail))
+	assert_str(detail).contains("ORBITS")
+	assert_str(detail).contains("VELD")
+	assert_str(detail).contains("BARREN")
+
+## The sun reads honestly through the same instrument as everything else: its own class,
+## no habitability and no ore, with no row left empty and no special case (CONTEXT.md,
+## Body). It is not a moon, so it carries no ORBITS row.
+func test_the_suns_record_reads_honestly() -> void:
+	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")
+	_gs.mark_planet_visited(sun.save_key())
+	_gs.mark_planet_scanned(sun.save_key())
+	var tab := _records_tab()
+	var rows := _text(tab._body_detail)
+	assert_array(Array(rows)).contains_exactly(Array(PlanetScan.readout_lines(sun)))
+	var detail := "\n".join(rows)
+	assert_str(detail).contains("DESIGNATION  SUN")
+	assert_str(detail).contains("CLASS        SUN")
+	assert_str(detail).contains("HABITABLE    0%")
+	assert_str(detail).contains("GRAVITY      %s" % PlanetScan.gravity(sun))
+	assert_str(detail).contains("ORE          NONE FOUND")
+	assert_str(detail).not_contains("ORBITS")
+	# No row is a label with nothing after it.
+	for row in rows:
+		assert_str(row.substr(PlanetScan.LABEL_COLUMN).strip_edges()).is_not_empty()
 
 
 ## No row for a Body the player has not reached, and never `? ? ?`.

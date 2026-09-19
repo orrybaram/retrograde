@@ -6,6 +6,10 @@ class_name PlanetScan
 ## feeds it the planet whose inner orbit holds the ship each physics tick.
 
 const SCAN_TIME := 20.0
+## Width of the class column in a one-line summary, so a column of them lines up.
+const CLASS_COLUMN := 11
+## Width of the label column in a readout row, so the values line up in monospace.
+const LABEL_COLUMN := 13
 
 var target: Planet = null
 var progress := 0.0
@@ -63,19 +67,31 @@ static func identity_lines(designation: String, orbits: String) -> PackedStringA
 		lines.append(_row("ORBITS", orbits))
 	return lines
 
-## Survey readout rows for a scanned planet, label column padded for monospace.
+## Survey readout rows for a scanned planet, label column padded for monospace. This is
+## the one survey format in the game: the ScanPanel types it out as the scan lands and
+## the Body's Record in the Log holds the same rows afterwards.
 static func readout_lines(planet: Planet) -> PackedStringArray:
 	var lines := identity_lines(planet.planet_name.to_upper(),
 			planet.parent_planet.planet_name.to_upper() if planet.is_moon() else "")
 	lines.append(_row("CLASS", type_name(planet.planet_type)))
 	lines.append(_row("HABITABLE", "%d%%" % roundi(planet.habitability * 100.0)))
-	lines.append(_row("GRAVITY", "%.1f G" % planet.surface_gravity()))
+	lines.append(_row("GRAVITY", gravity(planet)))
 	var seams := planet.get_ore_deposits().size()
 	lines.append(_row("ORE", "%d SEAMS" % seams if seams > 0 else "NONE FOUND"))
 	return lines
 
+## The survey in one line, for a list with no room for the full readout: what the Body
+## is and how hard it pulls. Same instrument, fewer rows — the class column is padded
+## so a column of these lines up.
+static func summary_line(planet: Planet) -> String:
+	return type_name(planet.planet_type).rpad(CLASS_COLUMN) + gravity(planet)
+
 static func type_name(type: Planet.PlanetType) -> String:
 	return str(Planet.PlanetType.keys()[type]).replace("_", " ")
 
+## Surface pull in G. The sun reads through the same instrument as everything else.
+static func gravity(planet: Planet) -> String:
+	return "%.1f G" % planet.surface_gravity()
+
 static func _row(label: String, value: String) -> String:
-	return label.rpad(13) + value
+	return label.rpad(LABEL_COLUMN) + value
