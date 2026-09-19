@@ -15,7 +15,8 @@ signal transmission_ended
 ## The player accepted the confirm line of conversation `id`.
 signal confirmed(id: StringName)
 
-## Placeholder until the guide gets a name (docs/DESIGN.md 5.3).
+## The Guide's designation; the same one its Record is filed under in the Log
+## (Automatons.GUIDE, docs/DESIGN.md 5.3).
 const SPEAKER_NAME := "UNIT-7"
 
 const MSG_WAKE := preload("res://entities/Robot/radio/messages/first_wake.tres")
@@ -74,6 +75,7 @@ func _push(conv: RadioConversation) -> RadioQueue.Result:
 	if conv.once and result in [RadioQueue.Result.STARTED, RadioQueue.Result.INTERRUPTED, RadioQueue.Result.QUEUED]:
 		mark_seen(conv.id)
 	if result == RadioQueue.Result.STARTED or result == RadioQueue.Result.INTERRUPTED:
+		_mark_guide_met()
 		_sync_pause()
 		line_started.emit(queue.current_line(), queue.current)
 	return result
@@ -140,6 +142,21 @@ func _release_pause() -> void:
 func _unpause() -> void:
 	get_tree().paused = false
 	EventBus.game_unpaused.emit(Time.get_ticks_msec() / 1000.0 - _pause_started)
+
+## The radio is a link to UNIT-7 at SR-7, so a transmission going on air is the player
+## meeting the Guide: from the first one they hold its Record, and the Records tab is
+## never empty (CONTEXT.md, docs/adr/0003). Written straight into the save like a named
+## Gate is — the first transmission happens docked at SR-7, long before the next dock.
+func _mark_guide_met() -> void:
+	if not is_inside_tree():
+		return
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	var designation := Automatons.GUIDE.record_key()
+	if gs == null or gs.has_met_automaton(designation):
+		return
+	gs.mark_automaton_met(designation)
+	if persist:
+		Save.save_met_automatons(PackedStringArray(gs.met_automatons.keys()), save_path)
 
 # --- Show-once flags -----------------------------------------------------------
 

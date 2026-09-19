@@ -71,4 +71,27 @@ assert pt.visible_ui().is_empty() "no dock menu from the closing SPACE"
 assert get_tree().root.get_node("RobotRadio").has_seen("first_wake") "the wake-up call is show-once"
 screenshot 05_done
 
+# Meeting the Guide is what earns its Record, so the Records tab is never empty
+assert gs.has_met_automaton("UNIT-7") "the first transmission earns UNIT-7's Record"
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+assert pt.node("log_ui").active_tab_title() == "R E C O R D S" "TAB moves to Records"
+wait 0.4
+screenshot 06_records
+assert str(pt.screen_text()["LogUI"]).contains("A U T O M A T O N S") "Records holds an Automatons section"
+assert str(pt.screen_text()["LogUI"]).contains("UNIT-7") "UNIT-7 has a Record"
+assert str(pt.screen_text()["LogUI"]).contains("SR-7") "the Record says which station it is found at"
+assert not str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "a held Record replaces the empty state"
+assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# A Record is permanent: it comes back with the save
+eval pt.save_now()
+reload
+wait_until main.current_game_state == 1 15
+assert gs.has_met_automaton("UNIT-7") "the Record survives a save and a load"
+
 state

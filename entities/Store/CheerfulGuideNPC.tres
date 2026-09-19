@@ -5,6 +5,8 @@
 [resource]
 script = ExtResource("1")
 npc_name = "UNIT-7 - The Guide"
+designation = "UNIT-7"
+station = "SR-7"
 ascii_art = "    .===.
    |o   o|
    | _=_ |

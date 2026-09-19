@@ -2,7 +2,8 @@ extends Node
 class_name GameState
 
 ## Global singleton holding persistent player progression: credits, upgrade levels,
-## death count, Visited and scanned Bodies, and dug-out ore seams. Populated by Save.load() at game start; serialized by Save.save()
+## death count, Visited and scanned Bodies, dug-out ore seams and the Automatons the
+## player has met. Populated by Save.load() at game start; serialized by Save.save()
 ## on dock/game-over. Emits credits_changed and upgrade_level_changed signals.
 
 signal credits_changed
@@ -35,6 +36,10 @@ var powered_gates: Dictionary = {}
 ## `? ? ?` on the minimap until the player flies close enough to be told what it is
 ## (CONTEXT.md, Unidentified). Permanent.
 var identified_gates: Dictionary = {}
+
+## Automatons the player has met, keyed by NPCData.record_key() (e.g. "UNIT-7"). Meeting
+## one earns its Record in the Log, and the Log only ever gains Records. Permanent.
+var met_automatons: Dictionary = {}
 
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
@@ -78,6 +83,13 @@ func is_gate_powered(key: String) -> bool:
 
 func mark_gate_powered(key: String) -> void:
 	powered_gates[key] = true
+
+## True once the player has met this Automaton, so they hold its Record.
+func has_met_automaton(designation: String) -> bool:
+	return met_automatons.has(designation)
+
+func mark_automaton_met(designation: String) -> void:
+	met_automatons[designation] = true
 
 func is_gate_identified(key: String) -> bool:
 	return identified_gates.has(key)
@@ -125,6 +137,7 @@ func reset_all_state() -> void:
 	spent_ore.clear()
 	powered_gates.clear()
 	identified_gates.clear()
+	met_automatons.clear()
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()

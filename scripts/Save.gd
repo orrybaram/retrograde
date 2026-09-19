@@ -4,7 +4,8 @@ class_name Save
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, Visited and scanned Bodies, dug-out ore seams
-## (seconds until they refill), powered and identified Gates, and which radio tips were seen.
+## (seconds until they refill), powered and identified Gates, the Automatons the player
+## has met, and which radio tips were seen.
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
@@ -21,6 +22,8 @@ const ORE_REGROW_KEY := "regrow"
 const GATE_SECTION := "gates"
 const GATE_POWERED_KEY := "powered"
 const GATE_IDENTIFIED_KEY := "identified"
+const AUTOMATON_SECTION := "automatons"
+const AUTOMATON_MET_KEY := "met"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -77,6 +80,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
 	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray(gs.identified_gates.keys()))
+	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray(gs.met_automatons.keys()))
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -212,6 +216,25 @@ static func load_identified_gates(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray()))
 
+## Writes only the met Automatons into an existing save, like save_identified_gates: the
+## player meets the Guide on the first transmission, with no dock to hang a full save off.
+## With no save yet this does nothing; the next full save() writes them.
+static func save_met_automatons(designations: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, designations)
+	cfg.save(file)
+
+## The designations of the Automatons the player has met — one Record each in the Log.
+## A save from before this reads as nobody met, which is what it was.
+static func load_met_automatons(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray()))
+
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
 static func _get_planet_key(planet: Planet) -> String:
@@ -253,6 +276,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.identified_gates.clear()
 	for gate_key in load_identified_gates():
 		gs.mark_gate_identified(gate_key)
+	gs.met_automatons.clear()
+	for designation in load_met_automatons():
+		gs.mark_automaton_met(designation)
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}
