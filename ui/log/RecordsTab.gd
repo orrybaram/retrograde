@@ -29,7 +29,9 @@ const NO_SURVEY := "NO SURVEY"
 ## The keys this tab owns, laid before the shell's in the bottom border.
 const CURSOR_KEYS := "[UP/DOWN] SELECT"
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
-const DETAIL_WIDTH := 320.0
+## How wide the open Record is. A Note is written in lines, not reflowed prose, so
+## the pane has to be wide enough to hold an authored line without breaking it.
+const DETAIL_WIDTH := 440.0
 
 var gs: GameState = null
 
@@ -296,13 +298,23 @@ func _draw_automaton_detail() -> void:
 			TerminalWindow.SMALL_SIZE, Colors.PRIMARY_DIM))
 	if npc.ascii_art != "":
 		_automaton_detail.add_child(TerminalWindow.label(npc.ascii_art, TEXT_SIZE, Colors.PRIMARY))
-	# Notes arrive one Module at a time, so a Record met this early is a portrait and
-	# nothing else. Authoring the prose is its own slice.
+	# Notes arrive one Module at a time, so a Record read early is a portrait and the
+	# one Note keyed to no Modules online. The rest are absent until their step, with
+	# nothing standing in for them (docs/adr/0003).
 	for note in npc.notes_at(gs.titan_influence() if gs else 0):
+		_automaton_detail.add_child(_note_gap())
 		var line := TerminalWindow.label(note, TEXT_SIZE, Colors.TEXT)
 		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		line.custom_minimum_size.x = DETAIL_WIDTH
 		_automaton_detail.add_child(line)
+
+## The blank line that keeps one Note from running into the portrait or the Note above
+## it — each Note is its own scrap of writing, not a paragraph of one.
+func _note_gap() -> Control:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = 6
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return gap
 
 
 ## Rows are rebuilt on every cursor move, so they come out of the tree there and then
