@@ -41,7 +41,7 @@ wait_until pt.visible_ui().has("LogUI") 2
 press tab
 frames 2
 wait 0.4
-assert pt.node("log_ui").active_tab_title() == "R E C O R D S" "TAB moves to Records"
+assert pt.node("log_ui").active_tab_title() == "RECORDS" "TAB moves to Records"
 assert str(pt.screen_text()["LogUI"]).contains("UNIT-7") "the Guide holds a Record"
 assert str(pt.screen_text()["LogUI"]).contains("WALKED ME THROUGH THE") "and a Note with it"
 # A locked Note leaves no placeholder and no count behind it

@@ -41,7 +41,7 @@ func _init() -> void:
 
 
 func tab_title() -> String:
-	return TerminalWindow.spaced("HOLD")
+	return "HOLD"
 
 
 # --- Layout ------------------------------------------------------------------

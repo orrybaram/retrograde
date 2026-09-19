@@ -17,7 +17,7 @@ press i
 wait_until pt.visible_ui().has("LogUI") 2
 press tab
 frames 2
-assert pt.node("log_ui").active_tab_title() == "R E C O R D S" "TAB moves to Records"
+assert pt.node("log_ui").active_tab_title() == "RECORDS" "TAB moves to Records"
 assert str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "staying home logs nothing"
 assert not str(pt.screen_text()["LogUI"]).contains("B O D I E S") "no heading over an empty list"
 screenshot records_1_empty

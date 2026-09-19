@@ -184,7 +184,7 @@ func test_an_unsurveyed_body_reads_no_survey() -> void:
 	assert_str(text).contains("ROOK")
 	assert_str(text).contains(RecordsTab.NO_SURVEY)
 	# The detail pane names the Body and what it orbits.
-	var detail := "\n".join(_text(tab._body_detail))
+	var detail := "\n".join(_text(tab._detail))
 	assert_str(detail).contains("DESIGNATION")
 	assert_str(detail).contains("ROOK")
 	assert_str(detail).contains("ORBITS")
@@ -205,7 +205,7 @@ func test_a_surveyed_body_carries_its_survey() -> void:
 	assert_str(row).contains(PlanetScan.summary_line(planet))
 	assert_str(row).contains("ICE GIANT")
 	assert_str(row).contains(PlanetScan.gravity(planet))
-	assert_str("\n".join(_text(tab._body_detail))).contains("ICE GIANT")
+	assert_str("\n".join(_text(tab._detail))).contains("ICE GIANT")
 
 ## There is one survey format in the game: the Record holds exactly the rows the
 ## ScanPanel types out as the scan lands.
@@ -215,7 +215,7 @@ func test_the_detail_pane_is_the_scan_panel_readout() -> void:
 	_gs.mark_planet_visited(planet.save_key())
 	_gs.mark_planet_scanned(planet.save_key())
 	var tab := _records_tab()
-	assert_array(Array(_text(tab._body_detail))) \
+	assert_array(Array(_text(tab._detail))) \
 			.contains_exactly(Array(PlanetScan.readout_lines(planet)))
 
 ## The unscanned Record holds the rows a Record carries either way and says plainly
@@ -224,13 +224,13 @@ func test_scanning_swaps_the_no_survey_line_for_the_readout() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
 	_gs.mark_planet_visited(planet.save_key())
 	var tab := _records_tab()
-	assert_array(Array(_text(tab._body_detail))).contains_exactly(
+	assert_array(Array(_text(tab._detail))).contains_exactly(
 			Array(PlanetScan.identity_lines("CROM", "")) + ["", RecordsTab.NO_SURVEY])
 	_gs.mark_planet_scanned(planet.save_key())
 	tab.refresh()
-	var detail := Array(_text(tab._body_detail))
+	var detail := Array(_text(tab._detail))
 	assert_array(detail).contains_exactly(Array(PlanetScan.readout_lines(planet)))
-	assert_str("\n".join(_text(tab._body_detail))).not_contains(RecordsTab.NO_SURVEY)
+	assert_str("\n".join(_text(tab._detail))).not_contains(RecordsTab.NO_SURVEY)
 
 ## A moon keeps its ORBITS row once it is surveyed — the survey adds rows, it does not
 ## replace the ones the Record already carried.
@@ -240,7 +240,7 @@ func test_a_surveyed_moon_still_names_what_it_orbits() -> void:
 	_gs.mark_planet_visited(rook.save_key())
 	_gs.mark_planet_scanned(rook.save_key())
 	var tab := _records_tab()
-	var detail := "\n".join(_text(tab._body_detail))
+	var detail := "\n".join(_text(tab._detail))
 	assert_str(detail).contains("ORBITS")
 	assert_str(detail).contains("VELD")
 	assert_str(detail).contains("BARREN")
@@ -253,7 +253,7 @@ func test_the_suns_record_reads_honestly() -> void:
 	_gs.mark_planet_visited(sun.save_key())
 	_gs.mark_planet_scanned(sun.save_key())
 	var tab := _records_tab()
-	var rows := _text(tab._body_detail)
+	var rows := _text(tab._detail)
 	assert_array(Array(rows)).contains_exactly(Array(PlanetScan.readout_lines(sun)))
 	var detail := "\n".join(rows)
 	assert_str(detail).contains("DESIGNATION  SUN")
@@ -288,13 +288,13 @@ func test_up_and_down_move_the_cursor_and_the_detail_follows() -> void:
 	_gs.mark_planet_visited(sonder.save_key())
 	var tab := _records_tab()
 	assert_int(tab._cursor).is_equal(0)
-	assert_str("\n".join(_text(tab._body_detail))).contains("CROM")
+	assert_str("\n".join(_text(tab._detail))).contains("CROM")
 	assert_bool(tab.handle_key(KEY_DOWN)).is_true()
 	assert_int(tab._cursor).is_equal(1)
-	assert_str("\n".join(_text(tab._body_detail))).contains("SONDER")
+	assert_str("\n".join(_text(tab._detail))).contains("SONDER")
 	assert_bool(tab.handle_key(KEY_UP)).is_true()
 	assert_int(tab._cursor).is_equal(0)
-	assert_str("\n".join(_text(tab._body_detail))).contains("CROM")
+	assert_str("\n".join(_text(tab._detail))).contains("CROM")
 	# and the cursor wraps rather than sticking at the ends
 	tab.handle_key(KEY_UP)
 	assert_int(tab._cursor).is_equal(1)

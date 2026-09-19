@@ -77,7 +77,7 @@ press i
 wait_until pt.visible_ui().has("LogUI") 2
 press tab
 frames 2
-assert pt.node("log_ui").active_tab_title() == "R E C O R D S" "TAB moves to Records"
+assert pt.node("log_ui").active_tab_title() == "RECORDS" "TAB moves to Records"
 wait 0.4
 screenshot 06_records
 assert str(pt.screen_text()["LogUI"]).contains("A U T O M A T O N S") "Records holds an Automatons section"

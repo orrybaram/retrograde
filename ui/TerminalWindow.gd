@@ -10,6 +10,19 @@ const TEXT_SIZE := 10
 const SMALL_SIZE := 8
 const FADE_TIME := 0.15
 const SLIDE_PX := 12.0
+## The frame's line weight. The tab strip is built around it, so it is shared.
+const BORDER_WIDTH := 2
+
+# --- Tab strip ---------------------------------------------------------------
+## A tab is a control, not a header, so it carries the `>` of a selected row rather
+## than the spaced letters of a title (.claude/PATTERNS.md). The unselected prefix is
+## the same width, so the strip doesn't shuffle sideways as the player cycles it.
+const TAB_SELECTED_PREFIX := "> "
+const TAB_UNSELECTED_PREFIX := "  "
+const TAB_HEIGHT := 18
+const TAB_INSET := 20.0
+const TAB_GAP := 6
+const TAB_PADDING := 10
 
 var body: MarginContainer
 var window_size: Vector2
@@ -18,6 +31,8 @@ var _window: Control
 var _title: Label
 var _hint: Label
 var _fade: Tween
+var _tab_labels: Array[Label] = []
+var _tab_titles: Array[String] = []
 
 
 func _init(size_px: Vector2, title: String, hint: String) -> void:
@@ -40,7 +55,7 @@ func _init(size_px: Vector2, title: String, hint: String) -> void:
 	var frame := Panel.new()
 	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_theme_stylebox_override("panel", box(Color(Colors.SPACE_BG, 0.96), Colors.UI_BORDER, 2))
+	frame.add_theme_stylebox_override("panel", box(Color(Colors.SPACE_BG, 0.96), Colors.UI_BORDER, BORDER_WIDTH))
 	_window.add_child(frame)
 
 	_title = _tab(title, TEXT_SIZE, Colors.PRIMARY, false)
@@ -56,25 +71,55 @@ func _init(size_px: Vector2, title: String, hint: String) -> void:
 	_window.add_child(body)
 
 
-## Tab notches broken into the top border's left corner, laid out left to right.
-## Returns the labels in notch order so the caller can light the selected one.
-func add_tabs(titles: Array[String]) -> Array[Label]:
+## Tab notches broken into the top border's left corner, laid out left to right. Each
+## one sits astride the frame line: an unselected tab closes itself off with a bottom
+## edge, so the line reads as running straight through it, while the selected tab leaves
+## that edge open into the window. Call `select_tab()` to light one — the notch styling
+## belongs to the window, not to the caller.
+func add_tabs(titles: Array[String]) -> void:
+	_tab_titles = titles.duplicate()
 	var row := HBoxContainer.new()
 	row.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.offset_left = 20.0
-	row.offset_top = -7.0
-	# Wide enough that the border line shows between notches, so they read as tabs
-	# rather than one run-on title.
-	row.add_theme_constant_override("separation", 14)
-	var tabs: Array[Label] = []
+	row.offset_left = TAB_INSET
+	row.offset_right = window_size.x
+	# A tab's bottom edge lands on the inner edge of the frame's border, so a closed
+	# tab's own bottom border falls exactly over the line it is sitting on.
+	row.offset_top = -(TAB_HEIGHT - BORDER_WIDTH)
+	row.offset_bottom = BORDER_WIDTH
+	row.add_theme_constant_override("separation", TAB_GAP)
 	for title in titles:
-		var tab := _notch(title, TEXT_SIZE, Colors.PRIMARY_DIM)
+		var tab := label("", TEXT_SIZE, Colors.PRIMARY_DIM)
+		tab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		tab.custom_minimum_size.y = TAB_HEIGHT
 		row.add_child(tab)
-		tabs.append(tab)
+		_tab_labels.append(tab)
 	_window.add_child(row)
-	return tabs
+	select_tab(0)
 
+## Light `index`'s tab and close the rest: the selected one is the bright one, it wears
+## the `>` of a selected control, and its notch opens into the window.
+func select_tab(index: int) -> void:
+	for i in _tab_labels.size():
+		var lit := i == index
+		var tab := _tab_labels[i]
+		tab.text = (TAB_SELECTED_PREFIX if lit else TAB_UNSELECTED_PREFIX) + _tab_titles[i]
+		tab.add_theme_color_override("font_color", Colors.PRIMARY if lit else Colors.PRIMARY_DIM)
+		tab.add_theme_stylebox_override("normal", _tab_box(lit))
+
+## The notch a tab sits in. Both break the frame line with a solid fill; the lit one
+## leaves its bottom open into the window, the unlit one closes itself off.
+static func _tab_box(lit: bool) -> StyleBoxFlat:
+	var b := StyleBoxFlat.new()
+	b.bg_color = Colors.UI_BACKGROUND_SOLID
+	b.border_color = Colors.UI_BORDER
+	b.border_width_left = BORDER_WIDTH
+	b.border_width_top = BORDER_WIDTH
+	b.border_width_right = BORDER_WIDTH
+	b.border_width_bottom = 0 if lit else BORDER_WIDTH
+	b.content_margin_left = TAB_PADDING
+	b.content_margin_right = TAB_PADDING
+	return b
 
 func set_title(text: String) -> void:
 	_title.text = text
