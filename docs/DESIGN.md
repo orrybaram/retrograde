@@ -45,7 +45,7 @@ Each planet hosts one **Module**: one subsystem of the Titan, offline since the 
 #### Planet 1: Veld / Designation: SR-7
 **Tier:** Outer Rim (starting zone)
 **Type:** Ice world - frozen, barren, dimly lit
-**Station:** In orbit around Veld's moon **Rook**, in functional condition - the player's home base. This is where NPC #1 (The Cheerful Guide) resides. The most "alive" station in the system.
+**Station:** **SR-7**, in orbit around Veld's moon **Rook**, in functional condition - the player's home base. This is where NPC #1 (UNIT-7, the Guide) is stationed. The most "alive" station in the system.
 **Gating:** None (starting zone)
 
 **Environment:**
@@ -198,7 +198,7 @@ The Core's Gate **refuses power until all five Modules are online.** It says so,
 
 | # | Name | Designation | Type | Module | NPC | Theme | Gating |
 |---|------|-------------|------|--------|-----|-------|--------|
-| 1 | Veld | SR-7 | Ice | Relay | The Cheerful Guide | Survival | None |
+| 1 | Veld | SR-7 | Ice | Relay | UNIT-7, the Guide | Survival | None |
 | 2 | Crom | KI-3 | Industrial | Fabrication | The Trader | Commerce & Construction | Fuel + Hull |
 | 3 | Sonder | NT-12 | Research (gas giant) | Sensory | (Visiting) | Knowledge & Discovery | Radiation shielding |
 | 4 | Roke | MV-1 | Military | Command | The Broken One | War & Consequence | Heat shields + Hull |
@@ -1613,9 +1613,9 @@ Lore is delivered through **every available channel**, layered so that engaged p
 
 ---
 
-#### NPC #1: [NAME TBD] - "The Cheerful Guide"
+#### NPC #1: UNIT-7 - "The Cheerful Guide"
 
-**Location:** Home station over Rook (Outer Rim - first NPC the player meets)
+**Location:** SR-7, the home station in orbit around Rook, Veld's moon (Outer Rim - first NPC the player meets). UNIT-7 is stationed there and never travels; the ship's comms panel is a link back to SR-7, not a unit aboard.
 **Role:** Quest-giver, tutorial companion, emotional anchor
 **Personality:** Upbeat, encouraging, relentlessly positive. Always has a task for you. Celebrates your wins, brushes off your losses. Makes the home station feel like *home*. The kind of presence that makes a bleak universe feel survivable.
 
@@ -1677,7 +1677,7 @@ Lore is delivered through **every available channel**, layered so that engaged p
 - Occasionally contradictory instructions - "go here" immediately followed by "don't go there"
 - May try to say something that isn't the Titan talking, only to have their own text overwrite it mid-display
 
-> **TODO**: Name all three automatons. Names should feel functional/industrial (serial numbers? callsigns? names they chose for themselves?).
+> **TODO**: Name automatons #2 and #3. #1 is **UNIT-7**; the other two should sit alongside it - functional/industrial (serial numbers? callsigns? names they chose for themselves?).
 > **TODO**: Write sample dialogue for each across early/mid/late game.
 > **TODO**: Design the specific "awareness moments" - what triggers them, how long they last, what the player can do during them.
 > **TODO**: Define how each NPC's dialogue shifts at each step of Titan Influence. The Guide should get warmer. The Broken One should get quieter.

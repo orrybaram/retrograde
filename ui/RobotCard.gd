@@ -1,8 +1,10 @@
 class_name RobotCard
 extends VBoxContainer
 
-## Left-hand crew card: UNIT-7's portrait, name, a status tag, a typed-out line of
-## dialogue and the credits balance. Shared by the inventory and store screens.
+## Left-hand card for UNIT-7, the Automaton stationed at SR-7: its portrait, name, a
+## status tag, a typed-out line of dialogue and the credits balance. It belongs to the
+## store screen, where the player is docked at SR-7 and talking to it in person -
+## UNIT-7 is not crew and is never carried around in a menu.
 
 const WIDTH := 244.0
 const ROBOT_FONT_SIZE := 16

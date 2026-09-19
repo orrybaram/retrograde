@@ -2,8 +2,9 @@ extends Node
 class_name PlanetScanner
 
 ## The Planetary Scanner upgrade at work. While the ship holds inside an unscanned
-## planet's gravity field, a PlanetScan meter fills and a ScanSweep turns around the
-## planet; leaving the field resets it. A finished scan is recorded in GameState,
+## planet's inner orbit (Planet.scan_radius(), a much tighter reach than the gravity
+## field), a PlanetScan meter fills and a ScanSweep turns around the planet; drifting
+## back out of inner orbit resets it. A finished scan is recorded in GameState,
 ## written to the save and announced with EventBus.planet_scanned (which surfaces its
 ## ore seams); the nav tracker then points at the nearest seam.
 ## Inert until GameState.has_planet_scanner. Added to the Ship at runtime.
