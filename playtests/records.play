@@ -1,0 +1,97 @@
+# Records: a Body earns its Record in the Log the moment the ship enters its inner
+# orbit, with no Planetary Scanner aboard. The row reads NO SURVEY until it is scanned.
+# Run: tools/play.sh playtests/records.play   (frames land in .playtest/records_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+assert not gs.has_planet_scanner "new game has no scanner"
+assert gs.visited_planets.is_empty() "a new game has reached nowhere"
+
+# --- Nothing reached yet: the Records tab is empty, and honest about it ---
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+assert pt.node("log_ui").active_tab_title() == "R E C O R D S" "TAB moves to Records"
+assert str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "staying home logs nothing"
+assert not str(pt.screen_text()["LogUI"]).contains("B O D I E S") "no heading over an empty list"
+screenshot records_1_empty
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- Flying into Rook's inner orbit earns it a Record, scanner or no scanner ---
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.park_near_planet("Rook", 4000)
+frames 3
+assert not gs.is_planet_visited("Veld/Rook") "the gravity field is not close enough"
+eval pt.park_near_planet("Rook", 2000, 200, true)
+frames 3
+assert gs.is_planet_visited("Veld/Rook") "inner orbit earns Rook its Record"
+assert not gs.has_planet_scanner "and it did so with no scanner aboard"
+assert not gs.is_planet_scanned("Veld/Rook") "the Record carries no survey yet"
+
+# --- Veld too, so the cursor has somewhere to go ---
+eval pt.park_near_planet("Veld", 3000, 0, true)
+frames 3
+assert gs.is_planet_visited("Sun/Veld") "Veld earns its own Record"
+
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("B O D I E S") "the Bodies section is up"
+assert str(pt.screen_text()["LogUI"]).contains("ROOK") "Rook holds a Record"
+assert str(pt.screen_text()["LogUI"]).contains("NO SURVEY") "unsurveyed, and it says so"
+assert str(pt.screen_text()["LogUI"]).contains("ORBITS") "the detail names what the moon orbits"
+assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
+assert not str(pt.screen_text()["LogUI"]).contains("CROM") "nowhere unreached gets a row"
+screenshot records_2_rook
+
+# --- UP / DOWN move the one cursor and the detail pane follows ---
+assert pt.node("log_ui")._tabs[1].selected_key() == "Veld/Rook" "the cursor starts on the first Record"
+press down
+frames 2
+assert pt.node("log_ui")._tabs[1].selected_key() == "Sun/Veld" "DOWN moves the cursor to Veld"
+assert str(pt.screen_text()["LogUI"]).contains("VELD") "and the detail pane follows it"
+screenshot records_3_veld
+press up
+frames 2
+assert pt.node("log_ui")._tabs[1].selected_key() == "Veld/Rook" "UP moves it back"
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- Scanning fills the Record in; the row stops reading NO SURVEY ---
+eval gs.mark_planet_scanned("Veld/Rook")
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("SURVEYED") "the survey landed in the Record"
+assert str(pt.screen_text()["LogUI"]).contains("GRAVITY") "and the detail carries the readout"
+screenshot records_4_surveyed
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- Visited survives a reload ---
+eval pt.redock()
+wait_until pt.visible_ui().has("SpacePortDialogue") 5
+press escape
+wait_until ship.fuel == ship.max_fuel 15
+eval gs.visited_planets.clear()
+reload
+assert gs.is_planet_visited("Veld/Rook") "Rook's Record restored from the save"
+assert gs.is_planet_visited("Sun/Veld") "Veld's Record restored from the save"
+state

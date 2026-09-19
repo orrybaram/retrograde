@@ -99,12 +99,33 @@ func save_key() -> String:
 func is_moon() -> bool:
 	return parent_planet != null and parent_planet.planet_type != PlanetType.SUN
 
-## True once the Planetary Scanner has mapped this planet (the sun is never scanned).
+## True once the Planetary Scanner has mapped this Body.
 func is_scanned() -> bool:
-	if not is_inside_tree():
-		return false
-	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	var gs := _game_state()
 	return gs != null and gs.is_planet_scanned(save_key())
+
+## True once the ship has entered this Body's inner orbit, which earns it a Record in
+## the Log whether or not it has been surveyed (docs/adr/0003).
+func is_visited() -> bool:
+	var gs := _game_state()
+	return gs != null and gs.is_planet_visited(save_key())
+
+func _game_state() -> GameState:
+	if not is_inside_tree():
+		return null
+	return get_tree().get_first_node_in_group("game_state") as GameState
+
+## The Body in `tree` carrying this save key, or null when it isn't loaded. For the Log,
+## which holds keys rather than nodes: it looks up a Body it already has a Record for
+## and never lists the group, which would spoil the shape of the system (docs/adr/0003).
+static func find_by_key(tree: SceneTree, key: String) -> Planet:
+	if key == "":
+		return null
+	for node in tree.get_nodes_in_group("planets"):
+		var planet := node as Planet
+		if planet and planet.save_key() == key:
+			return planet
+	return null
 
 ## Ore seams under this planet's surface (revealed once it's scanned).
 func get_ore_deposits() -> Array[OreDeposit]:

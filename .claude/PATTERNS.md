@@ -33,7 +33,7 @@ Full-screen terminal menus (the Log, the store) are built in code from shared pa
 - `TerminalWindow` (`ui/TerminalWindow.gd`): dimmed backdrop, centered bordered window, title/hint notches, `add_tabs()` for a row of tab notches in the top-left border, `animate_in()`, plus static builders (`label`, `header`, `rule`, `spacer`, `filler`, `box`).
 - `RobotCard` (`ui/RobotCard.gd`): left column with the robot portrait, status tag, `say(text, expression)` typed dialogue and credits. The store uses it; the Log does not. No Automaton speaks from inside the Log -- it is the player's own instrument, read alone.
 - `SegmentGauge` (`ui/SegmentGauge.gd`): segmented bar / tier pips.
-- `LogUI` + `LogTab` (`ui/log/`): the Log's tabbed shell. Adding a tab is one `LogTab` subclass plus one entry in `LogUI.TABS`. The shell owns the notches, `TAB` / `Shift+TAB` cycling and the bottom-border hint; a tab owns its title, hint, contents and keys. UP / DOWN route into the active tab; LEFT / RIGHT are unclaimed.
+- `LogUI` + `LogTab` (`ui/log/`): the Log's tabbed shell. Adding a tab is one `LogTab` subclass plus one entry in `LogUI.TABS`. The shell owns the notches, `TAB` / `Shift+TAB` cycling and the bottom-border hint; a tab owns its title, hint, contents and keys. UP / DOWN route into the active tab (Records moves its cursor with them); LEFT / RIGHT are unclaimed.
 
 `Typewriter` lays text out after shaping (`VC_CHARS_AFTER_SHAPING`) so wrapped words don't jump lines while typing.
 

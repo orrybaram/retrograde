@@ -28,16 +28,17 @@ func update(planet: Planet, delta: float) -> bool:
 func reset() -> void:
 	update(null, 0.0)
 
-## The unscanned planet whose inner orbit `pos` sits deepest in (relative to that
-## planet's scan range, so a moon wins inside its parent's field). The scanner only
-## reaches inner orbit - flying past the edge of the gravity field is not enough.
-## The sun is never scanned.
-static func pick(pos: Vector2, planets: Array) -> Planet:
+## The Body whose inner orbit `pos` sits deepest in (relative to that Body's scan
+## range, so a moon wins inside its parent's field), or null when none holds it.
+## Inner orbit is the whole of the reach: flying past the edge of the gravity field is
+## not enough. This is one rule, shared - the Planetary Scanner reaches exactly this
+## far, and entering it is what marks a Body Visited (docs/adr/0003).
+static func deepest(pos: Vector2, planets: Array) -> Planet:
 	var best: Planet = null
 	var best_depth := INF
 	for node in planets:
 		var planet := node as Planet
-		if not planet or planet.planet_type == Planet.PlanetType.SUN or planet.is_scanned():
+		if not planet:
 			continue
 		var depth := pos.distance_to(planet.global_position) / planet.scan_radius()
 		if depth <= 1.0 and depth < best_depth:
@@ -45,12 +46,27 @@ static func pick(pos: Vector2, planets: Array) -> Planet:
 			best_depth = depth
 	return best
 
+## The unsurveyed Body in reach, for the scanner to work on. The sun is a Body like any
+## other and is surveyed by the same rule; its survey honestly reports no ore and no
+## habitability (CONTEXT.md, Body).
+static func pick(pos: Vector2, planets: Array) -> Planet:
+	var unscanned := planets.filter(func(node: Variant) -> bool:
+		var planet := node as Planet
+		return planet != null and not planet.is_scanned())
+	return deepest(pos, unscanned)
+
+## The rows every Record carries whether or not it holds a survey: what the Body is
+## called, and for a moon what it orbits. `orbits` is "" for anything but a moon.
+static func identity_lines(designation: String, orbits: String) -> PackedStringArray:
+	var lines := PackedStringArray([_row("DESIGNATION", designation)])
+	if orbits != "":
+		lines.append(_row("ORBITS", orbits))
+	return lines
+
 ## Survey readout rows for a scanned planet, label column padded for monospace.
 static func readout_lines(planet: Planet) -> PackedStringArray:
-	var lines := PackedStringArray()
-	lines.append(_row("DESIGNATION", planet.planet_name.to_upper()))
-	if planet.is_moon():
-		lines.append(_row("ORBITS", planet.parent_planet.planet_name.to_upper()))
+	var lines := identity_lines(planet.planet_name.to_upper(),
+			planet.parent_planet.planet_name.to_upper() if planet.is_moon() else "")
 	lines.append(_row("CLASS", type_name(planet.planet_type)))
 	lines.append(_row("HABITABLE", "%d%%" % roundi(planet.habitability * 100.0)))
 	lines.append(_row("GRAVITY", "%.1f G" % planet.surface_gravity()))

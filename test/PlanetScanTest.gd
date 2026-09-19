@@ -81,16 +81,38 @@ func test_inner_orbit_is_the_first_gravity_ring_clear_of_the_surface() -> void:
 	assert_array(below).is_not_empty()
 
 
-func test_pick_prefers_the_deeper_field_and_skips_sun_and_scanned() -> void:
-	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN)
+func test_pick_prefers_the_deeper_field_and_skips_scanned() -> void:
 	var big := _planet(Vector2(1000, 0), 400.0)
 	var moon := _planet(Vector2(1300, 0), 50.0)
 	var ship_pos := Vector2(1310, 0)
-	assert_object(PlanetScan.pick(ship_pos, [sun, big, moon])).is_same(moon)
+	assert_object(PlanetScan.pick(ship_pos, [big, moon])).is_same(moon)
 	_gs.mark_planet_scanned(moon.save_key())
-	assert_object(PlanetScan.pick(ship_pos, [sun, big, moon])).is_same(big)
+	assert_object(PlanetScan.pick(ship_pos, [big, moon])).is_same(big)
 	_gs.mark_planet_scanned(big.save_key())
-	assert_object(PlanetScan.pick(ship_pos, [sun, big, moon])).is_null()
+	assert_object(PlanetScan.pick(ship_pos, [big, moon])).is_null()
+
+
+## The sun is a Body like any other: it is surveyed by the same rule, and its survey
+## honestly reports no ore (CONTEXT.md, Body; docs/adr/0003).
+func test_the_sun_is_surveyed_like_any_other_body() -> void:
+	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN)
+	sun.planet_name = "Sun"
+	var inner := sun.scan_radius()
+	assert_object(PlanetScan.pick(Vector2(inner - 1.0, 0), [sun])).is_same(sun)
+	assert_object(PlanetScan.pick(Vector2(inner + 1.0, 0), [sun])).is_null()
+	_gs.mark_planet_scanned(sun.save_key())
+	assert_object(PlanetScan.pick(Vector2(inner - 1.0, 0), [sun])).is_null()
+	assert_str("\n".join(PlanetScan.readout_lines(sun))).contains("NONE FOUND")
+
+
+## pick() is deepest() plus the unscanned filter; deepest() itself keeps no such book.
+func test_deepest_ignores_whether_a_body_is_scanned() -> void:
+	var planet := _planet(Vector2.ZERO, 100.0)
+	var pos := Vector2(planet.scan_radius() - 1.0, 0)
+	assert_object(PlanetScan.deepest(pos, [planet])).is_same(planet)
+	_gs.mark_planet_scanned(planet.save_key())
+	assert_object(PlanetScan.deepest(pos, [planet])).is_same(planet)
+	assert_object(PlanetScan.pick(pos, [planet])).is_null()
 
 
 func test_readout_lists_the_survey_data() -> void:

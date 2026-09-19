@@ -143,6 +143,12 @@ func _ready() -> void:
 	scanner.name = "PlanetScanner"
 	add_child(scanner)
 
+	# Visiting a Body is not the scanner's job — it works from the first minute,
+	# before the array is ever bought (docs/adr/0003).
+	var planet_log := PlanetLog.new()
+	planet_log.name = "PlanetLog"
+	add_child(planet_log)
+
 	# Store initial mass as base_mass for cargo calculations
 	base_mass = mass
 	
