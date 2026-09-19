@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-npc_name = "[NAME TBD] - The Guide"
+npc_name = "UNIT-7 - The Guide"
 ascii_art = "    .===.
    |o   o|
    | _=_ |
