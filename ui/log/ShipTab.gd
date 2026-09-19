@@ -9,6 +9,9 @@ const SMALL_SIZE := TerminalWindow.SMALL_SIZE
 const STAT_LABEL_WIDTH := 64.0
 const STAT_VALUE_WIDTH := 96.0
 const MAX_TIER := 3
+## Clear air between the tab's sections, so S Y S T E M S, C A R G O and U P G R A D E S
+## read as three blocks rather than one long column.
+const SECTION_GAP := 18
 ## Known upgrade tracks in display order. Paths bought but not listed here still show.
 const UPGRADE_TRACKS := [
 	["hull", "HULL PLATING"],
@@ -63,9 +66,7 @@ func _build() -> void:
 	_flight_stats = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
 	add_child(_flight_stats)
 
-	var gap := Control.new()
-	gap.custom_minimum_size.y = 6
-	add_child(gap)
+	add_child(_section_gap())
 	add_child(TerminalWindow.header("C A R G O"))
 	_cargo_rows = VBoxContainer.new()
 	_cargo_rows.add_theme_constant_override("separation", 6)
@@ -78,11 +79,22 @@ func _build() -> void:
 	total.add_child(_hold_total)
 	add_child(total)
 
+	# The filler pushes Upgrades to the bottom of the frame when there is room; the gap
+	# keeps the sections apart when there is not and the filler collapses to nothing.
 	add_child(TerminalWindow.filler())
+	add_child(_section_gap())
 	add_child(TerminalWindow.header("U P G R A D E S"))
 	_upgrade_rows = VBoxContainer.new()
 	_upgrade_rows.add_theme_constant_override("separation", 6)
 	add_child(_upgrade_rows)
+
+
+## Clear air before the next section heading.
+func _section_gap() -> Control:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = SECTION_GAP
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return gap
 
 
 ## [gauge, value label, row]
