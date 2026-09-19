@@ -23,9 +23,9 @@ const EMPTY_STATE := [
 ]
 
 ## What a Record reads before the Planetary Scanner has surveyed the Body. Visiting
-## earns the Record; scanning fills it in.
+## earns the Record; scanning fills it in — a scanned row carries the survey in one
+## line (PlanetScan.summary_line) instead.
 const NO_SURVEY := "NO SURVEY"
-const SURVEYED := "SURVEYED"
 ## The keys this tab owns, laid before the shell's in the bottom border.
 const CURSOR_KEYS := "[UP/DOWN] SELECT"
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
@@ -190,14 +190,17 @@ func _draw_rows() -> void:
 				Colors.PRIMARY if selected else Colors.TEXT))
 		row.add_child(TerminalWindow.spacer())
 		var surveyed := body != null and body.is_scanned()
-		row.add_child(TerminalWindow.label(SURVEYED if surveyed else NO_SURVEY, TEXT_SIZE,
+		row.add_child(TerminalWindow.label(
+				PlanetScan.summary_line(body) if surveyed else NO_SURVEY, TEXT_SIZE,
 				Colors.PRIMARY if surveyed else Colors.PRIMARY_DIM))
 		_body_rows.add_child(row)
 
 
 
 ## The selected Record: the designation, what a moon orbits, and either the survey the
-## scanner wrote or the fact that nothing has surveyed this Body yet.
+## scanner wrote or the fact that nothing has surveyed this Body yet. A survey is the
+## same rows the ScanPanel types out as the scan lands — one survey format in the game,
+## and the sun reads through it honestly rather than being special-cased.
 func _draw_detail() -> void:
 	_clear(_body_detail)
 	if _visited.is_empty() or _automaton_index() >= 0:

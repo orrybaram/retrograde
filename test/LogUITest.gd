@@ -104,6 +104,38 @@ func test_left_and_right_stay_unclaimed() -> void:
 		assert_bool(tab.handle_key(KEY_RIGHT)).is_false()
 
 
+## A scan landing while the Log is up fills that Body's Record where the player can see
+## it — no closing and reopening.
+func test_a_scan_fills_the_record_while_the_log_is_open() -> void:
+	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	planet.radius = 400.0
+	planet.planet_type = Planet.PlanetType.ICE_GIANT
+	planet.name = "Sonder"
+	planet.planet_name = "Sonder"
+	add_child(planet)
+	_gs.mark_planet_visited(planet.save_key())
+	var log_ui := _log_in_tree()
+	log_ui.open_log()
+	_press_tab()
+	var records := log_ui._tabs[1] as RecordsTab
+	assert_str(_text(records)).contains(RecordsTab.NO_SURVEY)
+
+	_gs.mark_planet_scanned(planet.save_key())
+	EventBus.planet_scanned.emit(planet)
+	assert_str(_text(records)).not_contains(RecordsTab.NO_SURVEY)
+	assert_str(_text(records)).contains(PlanetScan.summary_line(planet))
+
+
+## Every Label's text under `node`, joined in tree order.
+func _text(node: Node) -> String:
+	var out := PackedStringArray()
+	if node is Label:
+		out.append((node as Label).text)
+	for child in node.get_children():
+		out.append(_text(child))
+	return "\n".join(out)
+
+
 func _count(node: Node, class_string: String) -> int:
 	var found := 0
 	if node.get_script() != null and node.get_script().get_global_name() == class_string:

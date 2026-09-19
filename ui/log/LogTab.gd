@@ -23,7 +23,7 @@ func hint() -> String:
 
 
 ## Redraw from current game state. Called on open, on switch, and whenever the
-## ship, the hold or the bank changes while the Log is open.
+## ship, the hold, the bank or a Body's survey changes while the Log is open.
 func refresh() -> void:
 	pass
 

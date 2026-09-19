@@ -72,16 +72,43 @@ assert pt.node("log_ui")._tabs[1].selected_key() == "Veld/Rook" "UP moves it bac
 press escape
 wait_until not pt.visible_ui().has("LogUI") 2
 
-# --- Scanning fills the Record in; the row stops reading NO SURVEY ---
-eval gs.mark_planet_scanned("Veld/Rook")
+# --- A scan landing while the Log is open fills the Record where the player can see it ---
 press i
 wait_until pt.visible_ui().has("LogUI") 2
 press tab
 frames 2
 wait 0.4
-assert str(pt.screen_text()["LogUI"]).contains("SURVEYED") "the survey landed in the Record"
+assert str(pt.screen_text()["LogUI"]).contains("NO SURVEY") "still unsurveyed with the Log open"
+assert not str(pt.screen_text()["LogUI"]).contains("BARREN") "and no survey on Rook's row yet"
+eval gs.mark_planet_scanned("Veld/Rook")
+eval bus.planet_scanned.emit(pt.planet("Rook"))
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("BARREN") "Rook's row filled in with no reopen"
 assert str(pt.screen_text()["LogUI"]).contains("GRAVITY") "and the detail carries the readout"
+assert str(pt.screen_text()["LogUI"]).contains("NO SURVEY") "unscanned Veld still reads NO SURVEY"
+assert str(pt.screen_text()["LogUI"]).contains("ORBITS") "a surveyed moon still names what it orbits"
 screenshot records_4_surveyed
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- The sun reads honestly through the same instrument: no ore, no habitability ---
+eval pt.park_near_planet("Sun", 12000, 0, true)
+frames 3
+assert gs.is_planet_visited("Sun") "the sun is a Body like any other"
+eval gs.mark_planet_scanned("Sun")
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+press down 2
+frames 2
+wait 0.4
+assert pt.node("log_ui")._tabs[1].selected_key() == "Sun" "the cursor reaches the sun's Record"
+assert str(pt.screen_text()["LogUI"]).contains("CLASS") "the sun carries a class"
+assert str(pt.screen_text()["LogUI"]).contains("NONE FOUND") "and honestly reports no ore"
+assert str(pt.screen_text()["LogUI"]).contains("0%") "and no habitability"
+screenshot records_5_sun
 press escape
 wait_until not pt.visible_ui().has("LogUI") 2
 
