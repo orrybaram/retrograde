@@ -1,13 +1,9 @@
-extends Control
-class_name InventoryUI
+class_name HoldTab
+extends LogTab
 
-## Inventory screen: UNIT-7 on the left with a status readout, ship gauges, the hold
-## and upgrade tiers on the right. Opens/closes with "I" (ESC also closes; see Main).
-## Built in code from TerminalWindow + RobotCard; the .tscn is just the root.
+## The Log's opening tab: what the ship is carrying and what shape it is in.
+## Ship gauges, the hold manifest and the upgrade tiers, across the full body width.
 
-signal dialogue_closed
-
-const WINDOW_SIZE := Vector2(880, 440)
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
 const SMALL_SIZE := TerminalWindow.SMALL_SIZE
 const STAT_LABEL_WIDTH := 64.0
@@ -24,8 +20,6 @@ var ship: Ship = null
 var gs: GameState = null
 var inventory_manager: InventoryManager = null
 
-var _frame: TerminalWindow
-var _card: RobotCard
 var _hull_gauge: SegmentGauge
 var _hull_value: Label
 var _fuel_gauge: SegmentGauge
@@ -38,103 +32,57 @@ var _hold_total: Label
 var _upgrade_rows: VBoxContainer
 
 
-func _ready() -> void:
-	visible = false
-	add_to_group("inventory_ui")
+func _init() -> void:
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_theme_constant_override("separation", 10)
 	_build()
-	ship = get_tree().get_first_node_in_group("ship") as Ship
-	gs = get_tree().get_first_node_in_group("game_state") as GameState
-	inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
-
-	# Live updates while open
-	if gs:
-		gs.credits_changed.connect(_update_display)
-		gs.upgrade_level_changed.connect(_update_display)
-	if ship and ship.has_signal("fuel_changed"):
-		ship.fuel_changed.connect(_update_display)
-	if inventory_manager:
-		inventory_manager.inventory_changed.connect(_update_display)
 
 
-func open_inventory() -> void:
-	# The ship respawns on death, so re-resolve it each time.
-	var current := get_tree().get_first_node_in_group("ship") as Ship
-	if current and current != ship:
-		ship = current
-		if ship.has_signal("fuel_changed") and not ship.fuel_changed.is_connected(_update_display):
-			ship.fuel_changed.connect(_update_display)
-	visible = true
-	_update_display()
-	_greet()
-	_frame.animate_in()
-	_card.robot.glitch_burst(0.3)
-
-
-func close_inventory() -> void:
-	visible = false
-	_card.hush()
-	dialogue_closed.emit()
+func tab_title() -> String:
+	return TerminalWindow.spaced("HOLD")
 
 
 # --- Layout ------------------------------------------------------------------
 
 func _build() -> void:
-	_frame = TerminalWindow.new(WINDOW_SIZE, "/ I N V E N T O R Y /", "[I] / [ESC]  CLOSE")
-	add_child(_frame)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 24)
-	_frame.body.add_child(row)
-	_card = RobotCard.new("C R E W", "SALVAGE ASSIST UNIT")
-	row.add_child(_card)
-	row.add_child(TerminalWindow.rule(true))
-	row.add_child(_build_readout())
-
-
-## Right column: gauges, the hold, upgrades.
-func _build_readout() -> Control:
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 10)
-
-	col.add_child(TerminalWindow.header("S Y S T E M S"))
+	add_child(TerminalWindow.header("S Y S T E M S"))
 	var hull := _gauge_row("HULL")
 	_hull_gauge = hull[0]
 	_hull_value = hull[1]
-	col.add_child(hull[2])
+	add_child(hull[2])
 	var fuel := _gauge_row("FUEL")
 	_fuel_gauge = fuel[0]
 	_fuel_value = fuel[1]
-	col.add_child(fuel[2])
+	add_child(fuel[2])
 	var hold := _gauge_row("HOLD")
 	_hold_gauge = hold[0]
 	_hold_value = hold[1]
-	col.add_child(hold[2])
+	add_child(hold[2])
 	_flight_stats = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
-	col.add_child(_flight_stats)
+	add_child(_flight_stats)
 
 	var gap := Control.new()
 	gap.custom_minimum_size.y = 6
-	col.add_child(gap)
-	col.add_child(TerminalWindow.header("C A R G O"))
+	add_child(gap)
+	add_child(TerminalWindow.header("C A R G O"))
 	_cargo_rows = VBoxContainer.new()
 	_cargo_rows.add_theme_constant_override("separation", 6)
-	col.add_child(_cargo_rows)
-	col.add_child(TerminalWindow.rule())
+	add_child(_cargo_rows)
+	add_child(TerminalWindow.rule())
 	var total := HBoxContainer.new()
 	total.add_child(TerminalWindow.label("HOLD VALUE", TEXT_SIZE, Colors.PRIMARY_DIM))
 	total.add_child(TerminalWindow.spacer())
 	_hold_total = TerminalWindow.label("", TEXT_SIZE, Colors.PRIMARY)
 	total.add_child(_hold_total)
-	col.add_child(total)
+	add_child(total)
 
-	col.add_child(TerminalWindow.filler())
-	col.add_child(TerminalWindow.header("U P G R A D E S"))
+	add_child(TerminalWindow.filler())
+	add_child(TerminalWindow.header("U P G R A D E S"))
 	_upgrade_rows = VBoxContainer.new()
 	_upgrade_rows.add_theme_constant_override("separation", 6)
-	col.add_child(_upgrade_rows)
-	return col
+	add_child(_upgrade_rows)
 
 
 ## [gauge, value label, row]
@@ -156,14 +104,16 @@ func _gauge_row(title: String) -> Array:
 
 # --- Content -----------------------------------------------------------------
 
-func _update_display(_a: Variant = null, _b: Variant = null) -> void:
-	# Signal args vary; ignore them.
-	if not visible or not is_instance_valid(ship) or not gs:
+func refresh() -> void:
+	# The ship respawns on death, so re-resolve it every time.
+	ship = get_tree().get_first_node_in_group("ship") as Ship
+	gs = get_tree().get_first_node_in_group("game_state") as GameState
+	inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
+	if not is_instance_valid(ship) or not gs:
 		return
 	_update_systems()
 	_update_cargo()
 	_update_upgrades()
-	_card.set_credits(gs.credits)
 
 
 func _update_systems() -> void:
@@ -251,37 +201,6 @@ func _clear(box: Container) -> void:
 	for child in box.get_children():
 		box.remove_child(child)
 		child.queue_free()
-
-
-## The robot sizes up the ship and says one thing about it.
-func _greet() -> void:
-	var line := _assessment()
-	_card.set_status(line[1], line[2])
-	_card.say(line[3], line[0])
-
-
-## [expression, status, status color, quip]
-func _assessment() -> Array:
-	if not is_instance_valid(ship):
-		return [&"sleep", "OFFLINE", Colors.PRIMARY_DIM, "..."]
-	var fuel_level := LowFuelEffect.level_for(ship.fuel, ship.max_fuel)
-	var weight := inventory_manager.get_total_weight() if inventory_manager else 0.0
-	var hull_level := LowHullEffect.level_for(ship.hull_strength, ship.max_hull)
-	# A failing hull outranks a dry tank: running out of fuel strands you, running out
-	# of hull ends the run.
-	if hull_level == LowHullEffect.Level.CRITICAL:
-		return [&"worried", "HULL CRITICAL", Colors.DANGER, "One more hit and we're scrap. Get us to a port."]
-	if fuel_level == LowFuelEffect.Level.CRITICAL:
-		return [&"worried", "ALERT", Colors.DANGER, "Tank's nearly dry, pilot. Head for a port now."]
-	if hull_level == LowHullEffect.Level.LOW:
-		return [&"worried", "HULL DAMAGE", Colors.DANGER, "Hull's in bad shape. She's venting back there."]
-	if weight >= ship.max_cargo_weight:
-		return [&"happy", "HOLD FULL", Colors.SUCCESS, "Hold's packed! Dock and cash in."]
-	if fuel_level == LowFuelEffect.Level.LOW:
-		return [&"worried", "LOW FUEL", Colors.FUEL_HALF, "Fuel's getting low. Keep a port in range."]
-	if weight <= 0.0:
-		return [&"neutral", "NOMINAL", Colors.SUCCESS, "Hold's empty. Plenty of scrap out there."]
-	return [&"happy", "NOMINAL", Colors.SUCCESS, "Haul's coming along nicely, pilot."]
 
 
 func _gem_color(tier: GemData.Tier) -> Color:

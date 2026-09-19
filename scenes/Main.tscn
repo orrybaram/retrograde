@@ -11,7 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://d5613qx52u80" path="res://ui/indicators/IndicatorManager.tscn" id="13"]
 [ext_resource type="PackedScene" uid="uid://ck61aimutf7gk" path="res://ui/SpacePortDialogue.tscn" id="14"]
 [ext_resource type="PackedScene" uid="uid://bwsj15cppch3l" path="res://ui/store/StoreUI.tscn" id="15"]
-[ext_resource type="PackedScene" path="res://ui/inventory/InventoryUI.tscn" id="16"]
+[ext_resource type="PackedScene" path="res://ui/log/LogUI.tscn" id="16"]
 [ext_resource type="PackedScene" uid="uid://cwp82l3asrkgc" path="res://scenes/HomeSystem.tscn" id="18"]
 [ext_resource type="PackedScene" uid="uid://c7g87paxkwjsm" path="res://ui/system_map/SystemMap.tscn" id="19"]
 [ext_resource type="Script" uid="uid://b4chiaxpicref" path="res://scripts/ShipSpawner.gd" id="20"]
@@ -72,7 +72,7 @@ mouse_filter = 0
 
 [node name="StoreUI" parent="CanvasLayer" unique_id=1196473327 instance=ExtResource("15")]
 
-[node name="InventoryUI" parent="CanvasLayer" unique_id=215892337 instance=ExtResource("16")]
+[node name="LogUI" parent="CanvasLayer" unique_id=215892337 instance=ExtResource("16")]
 
 [node name="SystemMap" parent="CanvasLayer" unique_id=1107096874 instance=ExtResource("19")]
 

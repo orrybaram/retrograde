@@ -14,7 +14,7 @@ enum MainGameState {
 @onready var ship := $Ship
 @onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
 @onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
-@onready var inventory_ui: InventoryUI = $"CanvasLayer/InventoryUI"
+@onready var log_ui: LogUI = $"CanvasLayer/LogUI"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 @onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
@@ -100,17 +100,17 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
-		# Handle inventory toggle with "i" key
+		# Handle Log toggle with "i" key
 		if event.keycode == KEY_I:
-			_toggle_inventory()
+			_toggle_log()
 		# Handle system map toggle with "m" key
 		elif event.keycode == KEY_M:
 			_toggle_system_map()
-		# Handle ESC to close inventory or map
+		# Handle ESC to close the Log or the map
 		elif event.keycode == KEY_ESCAPE:
 			print("Escape key pressed")
-			if inventory_ui and inventory_ui.visible:
-				inventory_ui.close_inventory()
+			if log_ui and log_ui.visible:
+				log_ui.close_log()
 				get_viewport().set_input_as_handled()
 			elif system_map and system_map.visible:
 				system_map.close_map()
@@ -122,13 +122,13 @@ func _input(event: InputEvent) -> void:
 func _on_radio_line_started(_line: RadioLine, conversation: RadioConversation) -> void:
 	if conversation == null or not conversation.pause_game:
 		return
-	if inventory_ui and inventory_ui.visible:
-		inventory_ui.close_inventory()
+	if log_ui and log_ui.visible:
+		log_ui.close_log()
 	if system_map and system_map.visible:
 		system_map.close_map()
 
-func _toggle_inventory() -> void:
-	if not inventory_ui:
+func _toggle_log() -> void:
+	if not log_ui:
 		return
 
 	# Don't toggle if other menus are open
@@ -139,10 +139,10 @@ func _toggle_inventory() -> void:
 	if pause_menu and pause_menu.visible:
 		return
 
-	if inventory_ui.visible:
-		inventory_ui.close_inventory()
+	if log_ui.visible:
+		log_ui.close_log()
 	else:
-		inventory_ui.open_inventory()
+		log_ui.open_log()
 
 func _toggle_system_map() -> void:
 	if not system_map:
@@ -151,7 +151,7 @@ func _toggle_system_map() -> void:
 	# Don't toggle if other menus are open
 	if start_menu and start_menu.visible:
 		return
-	if inventory_ui and inventory_ui.visible:
+	if log_ui and log_ui.visible:
 		return
 	if pause_menu and pause_menu.visible:
 		return

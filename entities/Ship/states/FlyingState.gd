@@ -441,9 +441,9 @@ func _is_ui_blocking_input() -> bool:
 	if pause_menu and pause_menu.visible:
 		return true
 
-	# Check InventoryUI
-	var inventory_ui = tree.get_first_node_in_group("inventory_ui") as InventoryUI
-	if inventory_ui and inventory_ui.visible:
+	# Check the Log
+	var log_ui = tree.get_first_node_in_group("log_ui") as LogUI
+	if log_ui and log_ui.visible:
 		return true
 
 	return false
