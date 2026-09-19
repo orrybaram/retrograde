@@ -34,6 +34,12 @@ const GAUGE_STEP := 0.1
 const CREDIT_STEP := 1000
 ## ENTER on the credits row.
 const CREDIT_JUMP := 25000
+## LEFT/RIGHT on a gravity row multiplies or divides by this. Gravity runs from a tenth of
+## a G to ten G, so it steps by ratio - a fixed nudge would be lost at one end and wild at
+## the other.
+const GRAVITY_STEP := 1.25
+## How far a gravity row can be pushed either way, so a slip can always be walked back.
+const GRAVITY_LIMIT := Vector2(0.01, 100.0)
 ## Upgrade tracks in display order: path, label, top tier.
 const UPGRADE_TRACKS := [
 	["hull", "HULL PLATING", 3],
@@ -264,6 +270,7 @@ func _activate(direction: int) -> void:
 func _build_sections() -> void:
 	_sections = [
 		{"name": "SHIP", "build": _ship_rows},
+		{"name": "GRAVITY", "build": _gravity_rows},
 		{"name": "UPGRADES", "build": _upgrade_rows},
 		{"name": "PROGRESS", "build": _progress_rows},
 		{"name": "WARP", "build": _warp_rows},
@@ -572,6 +579,80 @@ func _scannable_planets() -> Array[Planet]:
 		if planet and planet.planet_type != Planet.PlanetType.SUN:
 			planets.append(planet)
 	return planets
+
+
+# --- GRAVITY -----------------------------------------------------------------
+
+## Tune gravity by feel: the whole system at once, or one Body at a time. Every row moves
+## `Planet.dev_gravity_scale` or a Body's `density_trim` and then recomputes its mass, so
+## the Record and the pull the ship flies against stay the same number (docs/adr/0004).
+## Nothing here is saved - it is for finding a number to put in the scene, not for keeping.
+func _gravity_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var bodies := _bodies_by_size()
+	if bodies.is_empty():
+		return rows
+
+	rows.append(_value_row(
+		"ALL BODIES",
+		"Arrows scale every Body's pull by %.2fx a step; ENTER puts it back to 1.00." % GRAVITY_STEP,
+		func() -> String: return "x%.2f" % Planet.dev_gravity_scale,
+		func(direction: int) -> void:
+			Planet.dev_gravity_scale = 1.0 if direction == 0 \
+				else _gravity_step(Planet.dev_gravity_scale, direction)
+			for body in _bodies_by_size():
+				body.refresh_mass()
+	))
+
+	for node in bodies:
+		var planet := node
+		rows.append(_value_row(
+			planet.planet_name.to_upper(),
+			"%s, %d px across. Arrows move this Body alone; ENTER puts it back to its class weight. Trim x%.2f." % [
+				PlanetScan.type_name(planet.planet_type), roundi(planet.radius), planet.density_trim],
+			func() -> String: return "%s  %d%%" % [PlanetScan.gravity(planet), roundi(_surface_pull_percent(planet))],
+			func(direction: int) -> void:
+				planet.density_trim = 1.0 if direction == 0 \
+					else _gravity_step(planet.density_trim, direction)
+				planet.refresh_mass()
+		))
+
+	rows.append(_action_row(
+		"RESET ALL",
+		"Puts the scale and every Body back to the weight the scene ships with.",
+		func() -> void:
+			Planet.dev_gravity_scale = 1.0
+			for body in _bodies_by_size():
+				body.density_trim = 1.0
+				body.refresh_mass()
+	))
+	return rows
+
+
+func _gravity_step(value: float, direction: int) -> float:
+	var moved := value * (GRAVITY_STEP if direction > 0 else 1.0 / GRAVITY_STEP)
+	return clampf(moved, GRAVITY_LIMIT.x, GRAVITY_LIMIT.y)
+
+
+## Every Body, widest first, so the list reads down the way the gravity rule does.
+func _bodies_by_size() -> Array[Planet]:
+	var bodies: Array[Planet] = []
+	for node in get_tree().get_nodes_in_group("planets"):
+		var planet := node as Planet
+		if planet:
+			bodies.append(planet)
+	bodies.sort_custom(func(a: Planet, b: Planet) -> bool: return a.radius > b.radius)
+	return bodies
+
+
+## Pull at the surface as a percentage of the ship's base thrust. G says what the Record
+## reads; this says whether the Body will actually feel heavy to fly against.
+func _surface_pull_percent(planet: Planet) -> float:
+	var ship := _ship()
+	if ship == null or ship.thrust_power <= 0.0:
+		return 0.0
+	var pull: float = planet._get_gravity_strength() / (planet.radius * planet.radius)
+	return 100.0 * pull / ship.thrust_power
 
 
 # --- WARP --------------------------------------------------------------------

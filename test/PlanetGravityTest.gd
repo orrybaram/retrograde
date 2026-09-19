@@ -109,3 +109,36 @@ func test_no_moon_outweighs_the_body_it_orbits() -> void:
 		assert_float(moon.surface_gravity()).override_failure_message(
 			"%s outweighs %s" % [by_path[path]["name"], by_path[parent_path]["name"]]
 		).is_less(parent.surface_gravity())
+
+
+# --- Live tuning -------------------------------------------------------------
+
+## The dev panel moves a trim and calls refresh_mass(); the Record and the pull have to
+## move together, or tuning by feel would be tuning against a stale readout.
+func test_refresh_mass_takes_a_new_trim_without_a_reload() -> void:
+	var planet := _planet(2000.0, Planet.PlanetType.BARREN)
+	var before := planet.surface_gravity()
+	planet.density_trim = 2.0
+	planet.refresh_mass()
+	assert_float(planet.surface_gravity()).is_equal_approx(before * 2.0, 0.01)
+	assert_float(planet.surface_gravity()).is_equal_approx(planet.target_surface_gravity(), 0.001)
+
+
+func test_the_dev_scale_moves_every_body_together() -> void:
+	var small := _planet(800.0, Planet.PlanetType.BARREN)
+	var large := _planet(4000.0, Planet.PlanetType.EARTH_LIKE)
+	var small_before := small.surface_gravity()
+	var large_before := large.surface_gravity()
+	Planet.dev_gravity_scale = 3.0
+	small.refresh_mass()
+	large.refresh_mass()
+	assert_float(small.surface_gravity()).is_equal_approx(small_before * 3.0, 0.01)
+	assert_float(large.surface_gravity()).is_equal_approx(large_before * 3.0, 0.01)
+	# A dev knob that leaked into the next test would quietly rewrite the whole system
+	Planet.dev_gravity_scale = 1.0
+	small.refresh_mass()
+	assert_float(small.surface_gravity()).is_equal_approx(small_before, 0.01)
+
+
+func test_the_dev_scale_is_off_by_default() -> void:
+	assert_float(Planet.dev_gravity_scale).is_equal(1.0)

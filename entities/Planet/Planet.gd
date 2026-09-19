@@ -63,6 +63,10 @@ const DENSITY := {
 ## is what keeps a landing on the homeworld feeling the way it always has.
 const REFERENCE_RADIUS := 4400.0
 const REFERENCE_GRAVITY := 1.9
+
+## Dev-only scale on every Body's pull at once, for tuning gravity by feel from the dev
+## panel's GRAVITY section. A real session never moves it off 1.0.
+static var dev_gravity_scale := 1.0
 ## How many ore seams a planet grows, and how many a moon grows (moon seams are rich).
 const ORE_COUNT := Vector2i(6, 8)
 const MOON_ORE_COUNT := Vector2i(3, 4)
@@ -107,13 +111,18 @@ func _get_gravity_strength() -> float:
 ## nothing (docs/adr/0004).
 func target_surface_gravity() -> float:
 	var density: float = DENSITY.get(planet_type, DENSITY[PlanetType.ROCKY])
-	return REFERENCE_GRAVITY * density * density_trim * (radius / REFERENCE_RADIUS)
+	return REFERENCE_GRAVITY * density * density_trim * dev_gravity_scale * (radius / REFERENCE_RADIUS)
 
 ## The mass that makes surface_gravity() come out at target_surface_gravity(). Mass is
 ## what the gravity field actually pulls with, so the readout and the pull are the same
 ## number seen twice and cannot drift apart.
 func _derived_mass() -> float:
 	return target_surface_gravity() * STANDARD_GRAVITY * radius * radius / gravitational_constant
+
+## Take the weight the rule works out now. _ready() does this once; the dev panel calls it
+## again after moving a trim, so the Record and the pull both change on the same frame.
+func refresh_mass() -> void:
+	mass = _derived_mass()
 
 ## Pull at the surface in G (STANDARD_GRAVITY px/s^2 of gravity force per unit mass).
 func surface_gravity() -> float:
@@ -195,7 +204,7 @@ func _spawn_ore() -> void:
 func _ready() -> void:
 	add_to_group("planets")
 	
-	mass = _derived_mass()
+	refresh_mass()
 	
 	# Set initial color on visual
 	var visual = get_node_or_null("PlanetVisual") as PlanetVisual
