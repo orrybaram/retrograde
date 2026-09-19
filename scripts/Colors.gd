@@ -85,6 +85,8 @@ const EXPLOSION = ORANGE
 const DEBRIS = HULL_MID
 
 # --- Ore seams (rock buried in the crust, broken apart to find gems) ---
+## These are the neutral tones of rock; a seam mixes them with the color of the crust it
+## sits in (see OreDeposit.crust_tone) so it reads as part of its own planet.
 const ORE_ROCK = HULL_DARK        # the body of a buried chunk
 const ORE_ROCK_EDGE = HULL_MID    # its rim
 const ORE_ROCK_FACET = HULL_LIGHT # cleave lines across a chunk
@@ -119,3 +121,10 @@ static func hex(c: Color) -> String:
 ## Wraps text in a BBCode color tag.
 static func bb(text: String, c: Color) -> String:
 	return "[color=#%s]%s[/color]" % [c.to_html(false), text]
+
+## Mixes `base` toward `tint` by `amount` (0 = untouched, 1 = the tint), keeping
+## `base`'s alpha - for shading a palette color with the color of what surrounds it.
+static func mix(base: Color, tint: Color, amount: float) -> Color:
+	var c := base.lerp(tint, clampf(amount, 0.0, 1.0))
+	c.a = base.a
+	return c

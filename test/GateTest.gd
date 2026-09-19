@@ -49,6 +49,44 @@ func _gate(planet: Planet, cost := 600) -> Gate:
 	return gate
 
 
+## A moon on a live orbit around `planet`, the way Rook rides Veld.
+func _moon(planet: Planet, distance := 20000.0, speed := 20.0) -> Planet:
+	var moon := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	moon.name = "Rook"
+	moon.radius = 200.0
+	moon.orbital_distance = distance
+	moon.orbital_speed = speed
+	moon.initial_angle = PI
+	moon.eccentricity = 0.04
+	planet.add_child(moon)
+	for grown in moon.get_ore_deposits():
+		grown.free()
+	return moon
+
+
+## A Gate on a live orbit, holding station on a sibling if it is given one.
+func _orbiting_gate(planet: Planet, follows := NodePath(), distance := 10800.0) -> Gate:
+	var gate := auto_free(load("res://entities/structures/Gate.tscn").instantiate()) as Gate
+	gate.persist = false
+	gate.orbital_distance = distance
+	gate.orbital_speed = 3.0
+	gate.initial_angle_degrees = 40.0
+	gate.geosync_with = follows
+	planet.add_child(gate)
+	return gate
+
+
+## Run both orbits forward as if `seconds` had passed, without waiting them out.
+func _run_orbits_for(seconds: float, moon: Planet, gate: Gate) -> void:
+	moon._orbital_motion.orbital_start_time -= seconds
+	moon._orbital_motion.update_orbit()
+	gate._orbital_motion.update_orbit()
+
+
+func _bearing_from(planet: Planet, body: Node2D) -> Vector2:
+	return (body.global_position - planet.global_position).normalized()
+
+
 ## A radio of its own, so a test can watch what the guide would do with a request.
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
@@ -139,22 +177,18 @@ func test_new_game_powers_every_module_back_down() -> void:
 ## A Gate nobody has flown to is a shape on the minimap and nothing else.
 func test_a_gate_reads_as_unidentified_until_it_is_reached() -> void:
 	var gate := _gate(_planet("Crom"))
-	var marker := GateMinimapTarget.new(gate)
 	assert_bool(gate.is_identified()).is_false()
-	assert_str(marker.label()).is_equal(Identifiable.UNKNOWN_LABEL)
 
 
 func test_flying_close_enough_gets_the_gate_named() -> void:
 	var gate := _gate(_planet("Veld"))
 	var at := gate.global_position
-	# Just out of reach: nothing is named and the label holds
+	# Just out of reach: nothing is named
 	assert_bool(gate.identify_if_near(at + Vector2(Identifiable.RANGE + 1.0, 0.0))).is_false()
 	assert_bool(gate.is_identified()).is_false()
-	assert_str(GateMinimapTarget.new(gate).label()).is_equal(Identifiable.UNKNOWN_LABEL)
 	# Inside it, the Gate is named for good
 	assert_bool(gate.identify_if_near(at + Vector2(Identifiable.RANGE - 1.0, 0.0))).is_true()
 	assert_bool(gate.is_identified()).is_true()
-	assert_str(GateMinimapTarget.new(gate).label()).is_equal(Gate.LABEL)
 
 
 ## Reaching it is the only trigger — the guide never points at a Gate beforehand
@@ -325,3 +359,44 @@ func test_a_save_from_before_gates_were_named_reads_as_nothing_named() -> void:
 	cfg.set_value("stats", "credits", 7)
 	cfg.save(SAVE_FILE)
 	assert_int(Save.load_identified_gates(SAVE_FILE).size()).is_equal(0)
+
+
+# --- Geosync station-keeping -------------------------------------------------
+
+
+func test_a_geosync_gate_sits_on_the_line_between_the_planet_and_its_moon() -> void:
+	var planet := _planet()
+	var moon := _moon(planet)
+	var gate := _orbiting_gate(planet, NodePath("../Rook"))
+	await get_tree().process_frame  # the Gate takes the moon's orbit a frame late
+
+	for seconds in [0.0, 11.0, 137.0, 4000.0]:
+		_run_orbits_for(seconds, moon, gate)
+		assert_float(_bearing_from(planet, gate).dot(_bearing_from(planet, moon))) \
+			.is_equal_approx(1.0, 0.0001)
+		# And still inside the moon it follows, so it is between the two of them
+		assert_float(gate.global_position.distance_to(planet.global_position)) \
+			.is_less(moon.global_position.distance_to(planet.global_position))
+
+
+func test_a_geosync_gate_keeps_up_with_the_moon_it_follows() -> void:
+	var planet := _planet()
+	var moon := _moon(planet)
+	var gate := _orbiting_gate(planet, NodePath("../Rook"))
+	await get_tree().process_frame
+
+	# The pair has to sweep at one rate, not at the Gate's own slower one
+	assert_float(gate._orbital_motion.angular_rate()) \
+		.is_equal_approx(moon._orbital_motion.get_speed_radians_per_second(), 0.000001)
+
+
+func test_a_gate_with_nothing_to_follow_runs_on_its_own_orbit() -> void:
+	var planet := _planet()
+	var moon := _moon(planet)
+	var gate := _orbiting_gate(planet)
+	await get_tree().process_frame
+
+	_run_orbits_for(137.0, moon, gate)
+	assert_bool(gate._orbital_motion.is_phase_locked()).is_false()
+	assert_float(_bearing_from(planet, gate).dot(_bearing_from(planet, moon))) \
+		.is_less(0.999)

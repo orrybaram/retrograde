@@ -28,6 +28,7 @@ Godot 4.6 CLI is `godot` (symlink to `/Applications/Godot.app/Contents/MacOS/God
 - `tools/play.sh playtests/launch.play` — play the real game from a scenario (key input, asserts, screenshots in `.playtest/`). `tools/play.sh serve` + `tools/playctl <cmd>` to drive it live. See `.claude/skills/playtest/SKILL.md`.
 - `godot --headless --path . --import` — reimport after adding files / `class_name`s
 - New tests: `test/<Name>Test.gd`, `extends GdUnitTestSuite`, `func test_*()`. Use `auto_free()` for nodes.
+- `F1` (or `` ` ``) in a running debug build opens the dev panel (`ui/DevPanel.gd`): set fuel, hull, hold, credits, upgrades, Modules online, scans, and warp to any Gate or orbit.
 - `res://` paths are case-sensitive on export — the folder is `entities/`, never `Entities/`.
 
 ## Scene Inspection

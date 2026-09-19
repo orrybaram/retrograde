@@ -28,19 +28,17 @@ const PERFECT_BREAK_BONUS := 2
 const TROPHY_BREAK_BONUS := 3
 const WRECK_SHARE := 0.7  # of the hold left floating where the ship blew up
 
-## Drilling an ore seam: gem odds per depth (layer index, +1 on rich seams). Scrap is
-## the trickle you live on; a seam is the payday, so these skew hard to the top tiers
-## and drop more per layer than a scrap hit does.
-const DRILL_DEPTH_WEIGHTS := [
-	{Tier.SHARD: 35, Tier.GEM: 55, Tier.CRYSTAL: 10},
-	{Tier.SHARD: 15, Tier.GEM: 55, Tier.CRYSTAL: 28, Tier.ARTIFACT: 2},
-	{Tier.GEM: 45, Tier.CRYSTAL: 50, Tier.ARTIFACT: 5},
-	{Tier.GEM: 25, Tier.CRYSTAL: 65, Tier.ARTIFACT: 10},
-	{Tier.GEM: 10, Tier.CRYSTAL: 70, Tier.ARTIFACT: 20},
-]
-const DRILL_MIN := 4
-const DRILL_MAX := 6
-const PERFECT_DRILL_BONUS := 2
+## An ore seam is harvested exactly like scrap, but scrap is the trickle you live on and
+## a seam is the payday: its rolls skew to the top tiers and every hit breaks off more.
+## Rich seams (moons) roll better still, and take RICH_HITS to work through.
+const ORE_ROLL_WEIGHTS := {Tier.SHARD: 25, Tier.GEM: 50, Tier.CRYSTAL: 23, Tier.ARTIFACT: 2}
+const RICH_ROLL_WEIGHTS := {Tier.GEM: 45, Tier.CRYSTAL: 45, Tier.ARTIFACT: 10}
+const ORE_CHIP_MIN := 2
+const ORE_CHIP_MAX := 4
+const ORE_BREAK_MIN := 6
+const ORE_BREAK_MAX := 9
+const ORE_PERFECT_CHIP_BONUS := 1
+const ORE_PERFECT_BREAK_BONUS := 2
 
 ## Item ids for one hit. Botched timing (LATE / OVERLOAD) still breaks off gems, but only shards.
 static func drops_for_hit(grade: HarvestTiming.Grade, final: bool, trophy: bool, rng: RandomNumberGenerator) -> Array[String]:
@@ -72,24 +70,31 @@ static func roll(grade: HarvestTiming.Grade, trophy: bool, rng: RandomNumberGene
 			return item_id(_weighted(TROPHY_ROLL_WEIGHTS if trophy else ROLL_WEIGHTS, rng))
 	return item_id(Tier.SHARD)
 
-## Item ids dug out of one drill layer at `depth` (see DRILL_DEPTH_WEIGHTS). PERFECT adds
-## PERFECT_DRILL_BONUS gems and bumps the best one a tier; LATE only cracks off shards.
-static func drill_drops(depth: int, grade: HarvestTiming.Grade, rng: RandomNumberGenerator) -> Array[String]:
+## Item ids broken off an ore seam by one hit. `final` is the hit that empties the seam
+## and throws the big burst. PERFECT adds a gem and bumps the best one a tier; botched
+## timing (LATE / OVERLOAD) only cracks off shards.
+static func ore_drops(grade: HarvestTiming.Grade, final: bool, rich: bool, rng: RandomNumberGenerator) -> Array[String]:
 	var perfect := grade == HarvestTiming.Grade.PERFECT
-	var count := rng.randi_range(DRILL_MIN, DRILL_MAX) + (PERFECT_DRILL_BONUS if perfect else 0)
+	var count: int
+	if final:
+		count = rng.randi_range(ORE_BREAK_MIN, ORE_BREAK_MAX) + (ORE_PERFECT_BREAK_BONUS if perfect else 0)
+	else:
+		count = rng.randi_range(ORE_CHIP_MIN, ORE_CHIP_MAX) + (ORE_PERFECT_CHIP_BONUS if perfect else 0)
 	var drops: Array[String] = []
 	for i in count:
-		if grade == HarvestTiming.Grade.LATE:
-			drops.append(item_id(Tier.SHARD))
-		else:
-			drops.append(item_id(drill_roll(depth, rng)))
+		drops.append(ore_roll(grade, rich, rng))
 	return bump_best(drops) if perfect else drops
 
-## One gem tier from a drill layer at `depth`.
-static func drill_roll(depth: int, rng: RandomNumberGenerator) -> Tier:
-	return _weighted(DRILL_DEPTH_WEIGHTS[clampi(depth, 0, DRILL_DEPTH_WEIGHTS.size() - 1)], rng)
+## One gem from an ore seam. PERFECT on a rich seam takes the best of two rolls.
+static func ore_roll(grade: HarvestTiming.Grade, rich: bool, rng: RandomNumberGenerator) -> String:
+	if grade == HarvestTiming.Grade.LATE or grade == HarvestTiming.Grade.OVERLOAD:
+		return item_id(Tier.SHARD)
+	var weights := RICH_ROLL_WEIGHTS if rich else ORE_ROLL_WEIGHTS
+	if grade == HarvestTiming.Grade.PERFECT and rich:
+		return item_id(maxi(_weighted(weights, rng), _weighted(weights, rng)))
+	return item_id(_weighted(weights, rng))
 
-## Lifts the best gem in `ids` one tier (a PERFECT layer's bonus).
+## Lifts the best gem in `ids` one tier (a PERFECT hit's bonus on a seam).
 static func bump_best(ids: Array[String]) -> Array[String]:
 	if ids.is_empty():
 		return ids

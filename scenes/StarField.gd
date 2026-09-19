@@ -1,8 +1,17 @@
 extends CanvasLayer
 class_name StarField
 
-## Parallax sensitivity - how much ship movement affects star offset
-@export var parallax_scale: float = 0.00005
+## Parallax sensitivity - how much ship movement affects star offset. Deliberately
+## slow: the stars are meant to be far away, so even at full burn the near layer
+## only creeps, and the back of the field is slower still (see the shader).
+@export var parallax_scale: float = 0.000035
+
+## Speed past which more speed barely moves the sky. Drift straight off velocity made
+## a boost tear the stars past the window; the stars are light-years out, so beyond a
+## cruise the field has to stop caring how fast the ship is going. Drift eases toward
+## this value and never reaches it, so high speed reads as distance, not as a backdrop
+## being dragged.
+@export var parallax_knee: float = 350.0
 
 ## How fast the sky dies going in, and comes back coming out. The void takes the
 ## stars faster than it gives them back.
@@ -61,11 +70,23 @@ func _process(delta: float) -> void:
 		return
 
 	# Accumulate offset based on ship velocity over time
-	# This creates continuous scrolling while moving
-	_accumulated_offset += _ship.linear_velocity * delta * parallax_scale * -1.0
+	# This creates continuous scrolling while moving, with the knee holding the far
+	# sky nearly still once the ship is really moving.
+	_accumulated_offset += _drift_velocity() * delta * parallax_scale * -1.0
 	
 	_material.set_shader_parameter("speed_x", -_accumulated_offset.x)
 	_material.set_shader_parameter("speed_y", -_accumulated_offset.y)
+
+
+## The ship's velocity as the sky feels it: eased so that everything past a cruise
+## crowds toward parallax_knee instead of scrolling faster and faster.
+func _drift_velocity() -> Vector2:
+	var velocity := _ship.linear_velocity
+	var speed := velocity.length()
+	if speed <= 0.0:
+		return Vector2.ZERO
+	var eased := speed / (1.0 + speed / parallax_knee)
+	return velocity / speed * eased
 
 
 ## The void puts the stars out. Eased rather than snapped so crossing the edge

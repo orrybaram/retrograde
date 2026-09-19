@@ -177,17 +177,19 @@ func _terminal(gate: Gate) -> GateTerminal:
 	return terminal
 
 
-func test_the_terminal_counts_the_modules_the_core_is_still_waiting_on() -> void:
+func test_the_terminal_refuses_the_core_without_counting_the_modules() -> void:
 	var terminal := _terminal(_core_gate())
 	var row: Dictionary = terminal._menu_items[0]
 	assert_bool(row["enabled"]).is_false()
 	assert_str(row["label"]).is_equal("POWER INSUFFICIENT")
-	assert_str(row["right"]).is_equal("0/5 MODULES ONLINE")
+	assert_str(row["right"]).is_equal("MODULES OFFLINE")
 
+	# Two of the five online reads exactly the same: the terminal never tallies them.
 	_gs.mark_gate_powered("Veld")
 	_gs.mark_gate_powered("Crom")
 	terminal._refresh_hub()
-	assert_str(terminal._menu_items[0]["right"]).is_equal("2/5 MODULES ONLINE")
+	assert_bool(terminal._menu_items[0]["enabled"]).is_false()
+	assert_str(terminal._menu_items[0]["right"]).is_equal("MODULES OFFLINE")
 	# The rows the first draw put up are queued for release; let them go
 	await await_idle_frame()
 

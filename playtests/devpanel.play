@@ -1,0 +1,128 @@
+# Dev panel: open it mid-flight and check each section actually moves game state.
+# Run: tools/play.sh playtests/devpanel.play   (add --headless to skip screenshots)
+#
+# Every row here is driven with ENTER (jump to the top) or LEFT (bottom out) rather
+# than by flipping a toggle twice: the window's focus bounce can replay a key press,
+# and an absolute row lands in the same place either way.
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# Tutorial transmissions pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 5
+
+# --- Opens and pauses --------------------------------------------------------
+press f1
+wait_until pt.node("dev_panel").visible 2
+assert get_tree().paused "the dev panel pauses the game"
+assert pt.visible_ui().has("DevPanel") "the panel is on screen"
+screenshot 01_ship
+
+# --- SHIP: hull, hold, credits, the no-damage flag ---------------------------
+press down
+press left
+assert ship.hull_strength < ship.max_hull "LEFT on HULL takes plating off"
+press enter
+assert ship.hull_strength == ship.max_hull "ENTER on HULL repairs to full"
+
+press down
+press right
+assert inv.get_total_weight() > 0 "RIGHT on HOLD packs it with gems"
+press left
+assert inv.get_total_weight() == 0 "LEFT on HOLD dumps it"
+
+press down
+press enter
+assert gs.credits >= 25000 "ENTER on CREDITS banks the jump"
+
+press down
+press right
+assert ship.dev_invulnerable "RIGHT switches NO DAMAGE on"
+eval ship.take_damage(500)
+assert not ship.is_destroyed() "an invulnerable hull shrugs off a killing hit"
+press left
+assert not ship.dev_invulnerable "LEFT switches it back off"
+
+# --- UPGRADES ----------------------------------------------------------------
+press tab
+wait 0.1
+screenshot 02_upgrades
+press enter
+assert gs.get_upgrade_level("hull") == 3 "ENTER fits the top hull tier"
+assert ship.max_hull > 100 "the hull upgrade is refitted onto the ship"
+press left
+assert gs.get_upgrade_level("hull") < 3 "LEFT steps the tier back"
+
+press down
+press down
+press down
+press right
+assert gs.has_planet_scanner "the scanner track sets its unlock flag"
+press left
+assert not gs.has_planet_scanner "stepping the track back clears it again"
+
+# --- PROGRESS ----------------------------------------------------------------
+press tab
+wait 0.1
+screenshot 03_progress
+press enter
+assert gs.titan_influence() == 5 "ENTER brings every Module online"
+press left
+assert gs.titan_influence() < 5 "LEFT takes one back off"
+
+press down
+press enter
+assert gs.identified_gates.size() == 6 "ENTER names every Gate, Core included"
+press left
+assert gs.identified_gates.size() == 0 "LEFT puts them all back to unnamed"
+
+press down
+press enter
+assert gs.scanned_planets.size() == 10 "ENTER maps every planet but the sun"
+press left
+assert gs.scanned_planets.size() == 0 "LEFT wipes the survey"
+
+# --- WARP: closes the panel and moves the ship -------------------------------
+press tab
+wait 0.1
+screenshot 04_warp
+press down
+press enter
+wait_until not pt.node("dev_panel").visible 2
+assert not get_tree().paused "a warp hands the game back unpaused"
+wait 0.2
+assert pt.state_name() == "FlyingState" "still flying after the warp"
+# Tolerant on purpose: the cradle is a ring-radius off the Gate's origin, which is
+# what `nearest` measures to, and the Gate is still under way in its orbit.
+assert pt.nearest("gates").distance < 1000 "the warp parked the ship on a Gate"
+screenshot 05_at_a_gate
+
+# --- Closes cleanly ----------------------------------------------------------
+# A beat after the screenshot: the window's focus bounce eats a key press landing
+# in the same frame.
+wait 0.3
+press f1
+wait_until pt.node("dev_panel").visible 2
+press escape
+wait_until not pt.node("dev_panel").visible 2
+assert not get_tree().paused "ESC hands the game back"
+assert pt.visible_ui().is_empty() "nothing left on screen"
+
+# ESC now belongs to the pause menu again
+press escape
+wait_until get_tree().paused and pt.node("pause_menu").visible 2
+press escape
+wait_until not get_tree().paused 2
+
+state

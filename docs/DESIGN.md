@@ -1494,7 +1494,7 @@ The ship starts as a clean (if ugly) junker and gradually becomes a **patchwork 
 
 ### 4.10 Planetary Scanner & Landing
 
-Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner**, reveals planet data and the **ore seams** just under the surface, where the player sets down and drills for gems.
+Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner**, reveals planet data and the **ore seams** just under the surface, where the player sets down and harvests them for gems.
 
 #### The Upgrade
 - `UpgradeItem` **Planetary Scanner** - path `planet_scanner`, tier 1, cheap, sold at the home station. Distinct from Scanner PULSE (#45, minimap resource pings).
@@ -1519,16 +1519,16 @@ Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner*
 - Once landed, the ship locks to the planet and follows its orbit. Thrust and fuel drain stop.
 - Thrust to lift off. Nothing is thrown and nothing is charged: the ship is released where it stands, at rest relative to the planet, and climbs out on its own engines for as long as the player holds thrust. Heavy gravity or a full hold makes the climb longer, so it burns more thruster fuel on its own - and running the tank dry on the way up strands the ship where it sits. Let go early and it simply settles back down, undamaged.
 
-#### Drilling
-- Landing next to a seam offers the drill prompt; ACTION starts a `D R I L L` sequence reusing the `HarvestTiming` bar, 3-4 depth layers in a row.
-- Each successful layer adds gems; deeper layers roll higher `GemData` tiers. PERFECT adds two gems and bumps the best one a tier. The bit stays in the hole and sinks deeper with every layer.
-- OVERLOAD ends the dig: keep what was dug, take small hull damage from drill kickback.
-- A seam is the payday: one dig is worth several scrap nodes, and a rich moon seam several times that again. Scrap is the trickle between digs.
-- The player can stop between layers and bank what they have (push-your-luck).
+#### Harvesting a seam
+- A seam is worked with the *same* mechanic as a scrap node: landing next to one offers the HARVEST prompt, and ACTION runs the ordinary `HarvestTiming` hold-and-release sweep. There is no separate drill.
+- `OreDeposit.HITS` hits break a plain seam open, `RICH_HITS` a rich moon seam (which also gets the narrow trophy zone). Each hit knocks gems loose; the last one breaks the seam and throws the big burst.
+- PERFECT adds a gem and bumps the best one a tier. LATE or OVERLOAD still counts as a hit but only cracks off shards - the seam does not hand out free retries.
+- A seam is the payday: emptying one is worth several scrap nodes, and a rich moon seam several times that again. Scrap is the trickle between seams.
+- Lifting off mid-seam keeps everything already knocked loose and leaves the rest of the rock standing for the next landing (push-your-luck, without a separate bank key).
 
 #### Depletion
-- Drilling eats the seam from the top down: the drill reports its progress to `OreDeposit.set_dug()` and the chunks crumble away one by one, shallowest first.
-- After a dig the seam is spent: the last rock breaks up and the seam leaves the view, the minimap and the tracker; the drill refuses it.
+- Harvesting eats the seam from the top down: the hits landed drive `OreDeposit.set_dug()` and the chunks crumble away one by one, shallowest first.
+- After the last hit the seam is spent: the remaining rock breaks up and the seam leaves the view, the minimap and the tracker; the key does nothing there.
 - It refills after ~5 min of game time (richer seams take longer). No countdown is ever shown - the seam just comes back.
 - Seam state persists in `Save.gd` alongside planet orbital angles.
 
@@ -1537,10 +1537,10 @@ Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner*
 2. Passive scan + readout + persisted scanned state
 3. Ore seam nodes, visuals, minimap/tracking markers
 4. `PlanetLandedState`: touchdown + liftoff
-5. Drill minigame + gem payout
+5. Seam harvest + gem payout
 6. Depletion / refill + save
 
-> **TODO**: Deeper scans and deeper digs - seams further below the surface, reached by a later scanner/drill tier.
+> **TODO**: Deeper scans and deeper seams - seams further below the surface, reached by a later scanner tier.
 > **TODO**: Per-planet-type seam variants (ice → shards + fuel, rocky → bigger gems) - v2.
 > **TODO**: Tune scan time, touchdown speed threshold, liftoff fuel cost, refill time.
 
@@ -1761,7 +1761,7 @@ What exists in the codebase today:
 - [x] HUD with fuel, hull, cargo bars
 - [x] Minimap with radar-style display
 - [x] Star chart (`SystemMap`)
-- [x] Planetary scanner, landing and ore drilling
+- [x] Planetary scanner, landing and ore harvesting
 - [x] Deep-space encounter field (`docs/ENCOUNTERS.md`)
 - [x] Loading screen with boot sequence
 - [x] Start menu

@@ -54,7 +54,7 @@ eval get_node("/root/NavSystem").track(pt.ore("Rook").tracking_target())
 land Rook 15 15
 assert pt.state_name() == "PlanetLandedState" "touched down"
 assert get_node("/root/NavSystem").is_tracking_home() "arriving drops the seam target"
-assert str(pt.snapshot().action_message).contains("DRILL") "landed prompt offers the drill"
+assert str(pt.snapshot().action_message).contains("HARVEST") "landed prompt offers the harvest"
 wait 0.6
 screenshot landing_2_landed
 eval pt.set_meta("landed_fuel", ship.fuel)

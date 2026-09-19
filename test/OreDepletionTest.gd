@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
 
-## Tests for ore depletion: drilling crumbles the rock away, a dig spends the seam, a
-## spent seam refuses the drill and leaves the view and the map, seams refill on play
-## time, and their timers survive a save.
+## Tests for ore depletion: harvesting crumbles the rock away, the last hit spends the
+## seam, a spent seam leaves the view and the map, seams refill on play time, and their
+## timers survive a save.
 
 const SAVE_FILE := "user://ore_test_save.cfg"
 
@@ -34,18 +34,11 @@ func _ore(rich := false) -> OreDeposit:
 	return ore
 
 
-func _drill(ore: OreDeposit) -> OreDrill:
-	var drill := auto_free(OreDrill.new()) as OreDrill
-	drill.ore = ore
-	add_child(drill)
-	return drill
-
-
-func _dig_one_layer(drill: OreDrill) -> void:
-	for step in 2:
-		drill.tick(0.0, true)
-		drill.timing.progress = drill.timing.zone_start if step == 1 else 0.0
-		drill.tick(0.0, false)
+## Hold the key, then let go inside the zone: one landed hit.
+func _one_hit(ore: OreDeposit) -> void:
+	ore.tick_harvest(0.0, true)
+	ore.timing.progress = ore.timing.zone_start
+	ore.tick_harvest(0.0, false)
 
 
 func test_spending_breaks_the_seam_up_and_starts_its_timer() -> void:
@@ -81,18 +74,17 @@ func test_breaking_a_chunk_throws_rock() -> void:
 	assert_int(ore.debris_count()).is_equal(0)
 
 
-func test_drilling_crumbles_the_rock_away_as_it_goes() -> void:
+func test_harvesting_crumbles_the_rock_away_as_it_goes() -> void:
 	var ore := _ore()
-	var drill := _drill(ore)
-	_dig_one_layer(drill)
-	assert_float(drill.dug_share()).is_equal_approx(1.0 / float(drill.layer_count()), 0.001)
-	ore.set_dug(drill.dug_share())
+	var share := 1.0 / float(ore.max_hits())
+	_one_hit(ore)
+	assert_float(ore.harvest_share()).is_equal_approx(share, 0.001)
 	ore._process(OreDeposit.CRUMBLE_TIME)
-	assert_float(ore.remaining()).is_equal_approx(1.0 - 1.0 / float(drill.layer_count()), 0.001)
+	assert_float(ore.remaining()).is_equal_approx(1.0 - share, 0.001)
 	assert_bool(ore.visible).is_true()
 	# A seam only ever erodes: an early release that loses progress doesn't put rock back
 	ore.set_dug(0.0)
-	assert_float(ore.remaining()).is_equal_approx(1.0 - 1.0 / float(drill.layer_count()), 0.001)
+	assert_float(ore.remaining()).is_equal_approx(1.0 - share, 0.001)
 
 
 func test_a_seam_spent_before_it_surfaces_is_never_shown() -> void:
@@ -111,42 +103,32 @@ func test_rich_seams_take_longer_to_refill() -> void:
 	assert_float(OreDeposit.RICH_REGROW_TIME).is_greater(OreDeposit.REGROW_TIME)
 
 
-func test_every_finished_dig_spends_the_seam() -> void:
-	for how in ["bank", "overload", "liftoff"]:
-		var ore := _ore()
-		var drill := _drill(ore)
-		_dig_one_layer(drill)
-		match how:
-			"bank":
-				drill.bank()
-			"overload":
-				drill.tick(0.0, true)
-				drill.tick(drill.timing.duration, true)
-			"liftoff":
-				drill.abort()
-		assert_str(drill.end_reason).is_equal(how)
-		assert_bool(ore.is_spent()).is_true()
-
-
-func test_a_dig_that_never_broke_ground_leaves_the_seam_full() -> void:
+func test_only_the_last_hit_spends_the_seam() -> void:
 	var ore := _ore()
-	var drill := _drill(ore)
-	drill.tick(0.0, true)
-	drill.tick(0.0, false)
-	drill.abort()
-	drill.bank()
+	for i in ore.max_hits() - 1:
+		_one_hit(ore)
+		# Leaving now keeps the haul and leaves the rest of the rock standing
+		ore.abort_harvest()
+		assert_bool(ore.is_spent()).is_false()
+	_one_hit(ore)
+	assert_bool(ore.is_spent()).is_true()
+
+
+func test_a_sweep_that_never_landed_leaves_the_seam_full() -> void:
+	var ore := _ore()
+	ore.tick_harvest(0.0, true)
+	ore.tick_harvest(0.0, false)
+	ore.abort_harvest()
 	assert_bool(ore.is_spent()).is_false()
+	assert_int(ore.hits_left).is_equal(ore.max_hits())
 
 
-func test_spent_seams_refuse_the_drill() -> void:
+func test_spent_seams_refuse_the_key() -> void:
 	var ore := _ore()
 	ore.spend()
-	var drill := _drill(ore)
-	assert_int(drill.phase).is_equal(OreDrill.Phase.DONE)
-	assert_str(drill.end_reason).is_equal("spent")
-	drill.tick(1.0, true)
-	assert_int(drill.layer).is_equal(0)
-	assert_object(drill.timing).is_null()
+	ore.tick_harvest(1.0, true)
+	assert_bool(ore.is_harvesting()).is_false()
+	assert_object(ore.timing).is_null()
 
 
 func test_seams_refill_after_their_time() -> void:
@@ -158,7 +140,11 @@ func test_seams_refill_after_their_time() -> void:
 	_gs.tick_ore_regrowth(1.0)
 	assert_bool(ore.is_spent()).is_false()
 	assert_dict(_gs.spent_ore).is_empty()
-	assert_int(_drill(ore).phase).is_equal(OreDrill.Phase.READY)
+	# Refilled rock is a full set of hits again
+	ore._process(0.1)
+	assert_int(ore.hits_left).is_equal(ore.max_hits())
+	ore.tick_harvest(0.0, true)
+	assert_bool(ore.is_harvesting()).is_true()
 
 
 func test_refilling_shows_fresh_rock_surfacing_again() -> void:

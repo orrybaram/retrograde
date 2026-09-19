@@ -1,4 +1,4 @@
-# A Gate reads as ? ? ? until the player flies up to it and the guide says what it is.
+# A Gate goes unnamed until the player flies up to it and the guide says what it is.
 # Run: tools/play.sh playtests/gate_identify.play   (frames land in .playtest/identify_*.png)
 
 press enter
@@ -18,31 +18,28 @@ wait_until pt.state_name() == "FlyingState" 3
 
 assert gs.identified_gates.is_empty() "a new game knows none of the Gates"
 
-# In scanner range but nowhere near it: a ring on the minimap with no name to it
+# In scanner range but nowhere near it: a ring on the minimap and nothing else
 eval pt.park_at_gate("Veld", 3000.0)
 frames 2
 assert not pt.gate("Veld").is_identified() "3000px out is too far to make it out"
-assert pt.gate("Veld").minimap_target.label() == "? ? ?" "the minimap calls it ? ? ?"
 assert not get_tree().root.get_node("RobotRadio").is_active() "the guide says nothing from out here"
 screenshot identify_0_unknown
 
-# Fly in. Inside a thousand pixels the guide names it, and the label flips
+# Fly in. Inside a thousand pixels the guide names it
 eval pt.park_at_gate("Veld", 900.0)
 frames 2
 assert pt.gate("Veld").is_identified() "reaching a Gate is what names it"
-assert pt.gate("Veld").minimap_target.label() == "GATE" "the minimap label reads GATE"
 assert get_tree().root.get_node("RobotRadio").is_active() "the guide comes on the radio"
 assert get_tree().root.get_node("RobotRadio").queue.current.id == "gate_identified" "and it is the naming call"
 assert not get_tree().paused "the call doesn't stop the ship mid-flight"
 wait 0.6
 screenshot identify_1_named
 
-# Every later Gate flips without a word: the call is show-once for the save
+# Every later Gate is named without a word: the call is show-once for the save
 eval get_tree().root.get_node("RobotRadio").silence()
 eval pt.park_at_gate("Crom", 900.0)
 frames 2
 assert pt.gate("Crom").is_identified() "Crom's Gate is named by being reached too"
-assert pt.gate("Crom").minimap_target.label() == "GATE" "and its label flips as well"
 assert not get_tree().root.get_node("RobotRadio").is_active() "but the guide has said its piece"
 
 # Named Gates survive a reload, with no dock in between to hang a full save off

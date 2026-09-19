@@ -29,10 +29,18 @@ signal game_unpaused(pause_duration: float)
 
 signal harvest_began(scrap: ScrapNode)
 ## Emitted when the player starts (or resumes) holding the beam on a scrap node.
+## Scrap only: an ore seam is worked from the ground and has no in-range phase, so it
+## never announces a beginning - its first hit is the first the bus hears of it.
+## (Keep the ScrapNode type. EventBus is the second autoload and its
+## `radio_message_requested` pulls RadioConversation -> RadioLine -> RobotRadio, which
+## is autoload #8 and preloads the .tres conversations that RadioConversation itself
+## scripts. Naming a gameplay class first resolves that graph before the cycle is
+## reached; with every signal here typed as plain Node, the radio fails to load at boot.)
 
-signal harvest_hit(scrap: ScrapNode, grade: HarvestTiming.Grade, gem_ids: Array[String], final: bool)
-## Emitted when a timed release lands a hit and gems break off. `final` is the hit that
-## destroys the scrap. EARLY releases are not hits and are not reported here.
+signal harvest_hit(node: Node, grade: HarvestTiming.Grade, gem_ids: Array[String], final: bool)
+## Emitted when a timed release lands a hit and gems break off, on a ScrapNode or an
+## OreDeposit alike. `final` is the hit that breaks the node open. EARLY releases are
+## not hits and are not reported here.
 
 signal gem_collected(item_id: String, world_position: Vector2)
 ## Emitted when the ship picks up a loose gem (after it is added to the hold).
@@ -42,13 +50,6 @@ signal hold_cashed_in(credits: int)
 
 signal planet_scanned(planet: Planet)
 ## Emitted when the Planetary Scanner finishes mapping a planet (once per planet).
-
-signal drill_struck(ore: OreDeposit, grade: HarvestTiming.Grade, gem_ids: Array[String], layer: int, final: bool)
-## Emitted when a drill layer is graded (GOOD / PERFECT / LATE) and its gems break loose.
-## `layer` counts from 1; `final` is the bottom layer.
-
-signal dig_ended(ore: OreDeposit, reason: String, layers: int)
-## Emitted when a dig stops: "bottom", "bank", "overload" or "liftoff", after `layers` layers.
 
 signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.

@@ -39,6 +39,10 @@ const WAKE_FADE_TIME := 1.8
 
 var current_game_state: MainGameState = MainGameState.MENU
 var last_game_over_reason: String = ""
+## The station whose tractor beam caught the ship. A rescue puts the next clone back
+## on that station, not on whatever the ship last docked with (which may be a Gate
+## on the far side of the system).
+var _rescue_station: Node2D = null
 ## Waking up runs on a real playthrough, but not under the playtest driver: it would
 ## darken every scenario's opening frames and push back its first key press.
 ## playtests/intro.play sets this to cover the sequence itself.
@@ -89,6 +93,10 @@ func _process(_delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if current_game_state != MainGameState.PLAYING:
+		return
+	# The dev panel owns every key while it is up, including I / M / ESC.
+	var dev_panel := get_tree().get_first_node_in_group("dev_panel") as DevPanel
+	if dev_panel and dev_panel.visible:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -162,6 +170,10 @@ func _on_load_game() -> void:
 func is_game_over() -> bool:
 	return current_game_state == MainGameState.GAME_OVER
 
+## Flying, with no game-over call up: the only time the dev panel will open.
+func is_playing() -> bool:
+	return current_game_state == MainGameState.PLAYING
+
 func _on_radio_confirmed(id: StringName) -> void:
 	if not is_game_over():
 		return
@@ -177,6 +189,20 @@ func _on_fuel_depleted() -> void:
 			ship.state_machine.change_state("StrandedState")
 
 func is_within_tractor_beam() -> bool:
+	return tractor_beam_station() != null
+
+## A station's own port: the dock a tractor beam rescue drops the next clone on.
+## The station itself isn't dockable, so the beam has to hand off to one of its ports.
+func _station_port(station: Node2D) -> Node2D:
+	for child in station.get_children():
+		if child is SpacePort:
+			return child as Node2D
+	return null
+
+## The station currently holding the ship in its tractor beam, or null.
+func tractor_beam_station() -> Node2D:
+	if not ship or not is_instance_valid(ship):
+		return null
 	var stations = get_tree().get_nodes_in_group("space_stations")
 	for station in stations:
 		var tractor_beam = station.get_node_or_null("TractorBeamArea/TractorBeamCollision")
@@ -184,14 +210,16 @@ func is_within_tractor_beam() -> bool:
 			var radius = tractor_beam.shape.radius
 			var distance = ship.global_position.distance_to(station.global_position)
 			if distance <= radius:
-				return true
-	return false
+				return station as Node2D
+	return null
 
 func _on_abandon_ship_requested() -> void:
 	if current_game_state == MainGameState.PLAYING and not game_over_pending:
 		game_over_pending = true
 		# If within tractor beam range, rescue instead of death
-		if ship and is_within_tractor_beam():
+		var rescuer := tractor_beam_station()
+		if rescuer:
+			_rescue_station = rescuer
 			_show_game_over_delayed("Tractor Beam")
 			return
 		# The ship stays adrift with its hold aboard, to be salvaged later
@@ -487,15 +515,21 @@ func reset_game() -> void:
 	if gs and not is_tractor_beam_rescue:
 		gs.clear_cargo()
 	
-	# Spawn ship at saved dock, or default if not found
+	# A rescue lands on the station that did the rescuing; everything else comes back
+	# at the saved dock, or the default if that one is gone.
 	if ship_spawner:
-		var dock = await ship_spawner.find_saved_dock()
+		var dock: Node2D = null
+		if is_tractor_beam_rescue and _rescue_station and is_instance_valid(_rescue_station):
+			dock = _station_port(_rescue_station)
+		if not dock:
+			dock = await ship_spawner.find_saved_dock()
 		if not dock:
 			dock = await ship_spawner.find_default_dock()
 		if dock:
 			await ship_spawner.spawn_at_dock(dock)
 		else:
 			push_warning("No dock found for respawn")
+	_rescue_station = null
 
 	# Order matters: the boot terminal holds for a few seconds, and going dark before
 	# that would hide it behind the fade sheet. Blacking out straight after it hides

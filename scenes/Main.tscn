@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=24 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -24,6 +24,7 @@
 [ext_resource type="Script" path="res://scenes/HullAlarm.gd" id="25_hull"]
 [ext_resource type="Script" path="res://ui/GateTerminal.gd" id="26_gate"]
 [ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="27_term"]
+[ext_resource type="Script" path="res://ui/DevPanel.gd" id="28_dev"]
 
 [node name="Main" type="Node2D" unique_id=1692069879]
 script = ExtResource("1")
@@ -89,6 +90,17 @@ script = ExtResource("26_gate")
 [node name="PauseMenu" parent="CanvasLayer" unique_id=125140598 instance=ExtResource("22")]
 
 [node name="LoadingScreen" parent="CanvasLayer" unique_id=63229698 instance=ExtResource("21")]
+
+[node name="DevPanel" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("27_term")
+script = ExtResource("28_dev")
 
 [node name="VoidShroud" type="CanvasLayer" parent="."]
 layer = 40

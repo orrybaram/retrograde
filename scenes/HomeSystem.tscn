@@ -166,11 +166,12 @@ orbital_speed = 20.0
 initial_angle_degrees = 180.0
 
 [node name="Gate" parent="Sun/Veld" unique_id=200000011 instance=ExtResource("3_gate")]
-position = Vector2(8273.3, 6942.1)
+position = Vector2(-10800, 0)
 power_cost = 600
 orbital_distance = 10800.0
-orbital_speed = 3.0
-initial_angle_degrees = 40.0
+orbital_speed = 20.0
+initial_angle_degrees = 180.0
+geosync_with = NodePath("../Rook")
 
 [node name="Gate" parent="Sun/Crom" unique_id=200000012 instance=ExtResource("3_gate")]
 position = Vector2(-11031, 9256.1)

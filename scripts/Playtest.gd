@@ -48,7 +48,7 @@ extends Node
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
 ##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
 ##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
-##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.drill(),
+##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.seam(),
 ##       pt.caption(text) (on-screen caption for recorded videos))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
@@ -95,10 +95,6 @@ func _ready() -> void:
 		_emit({"event": "harvest_hit", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "final": final}))
 	EventBus.gem_collected.connect(func(id: String, _pos): _emit({"event": "gem_collected", "gem": id}))
 	EventBus.hold_cashed_in.connect(func(cr: int): _emit({"event": "hold_cashed_in", "credits": cr}))
-	EventBus.drill_struck.connect(func(_s, grade: HarvestTiming.Grade, gems: Array[String], layer: int, final: bool):
-		last_drops = gems
-		_emit({"event": "drill_struck", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "layer": layer, "final": final}))
-	EventBus.dig_ended.connect(func(_s, reason: String, layers: int): _emit({"event": "dig_ended", "reason": reason, "layers": layers}))
 
 	var pace_fps := float(_arg_value("--playtest-fps", "0"))
 	if pace_fps > 0.0:
@@ -817,10 +813,13 @@ func _reload(reply: Dictionary) -> void:
 func save_exists() -> bool:
 	return Save.save_exists()
 
-## The landed ship's drill (pt.drill().timing, .layer, .phase), or null.
-func drill() -> OreDrill:
-	var ship := get_tree().get_first_node_in_group("ship")
-	return ship.get_node_or_null("OreDrill") if ship else null
+## The seam the landed ship is parked on (pt.seam().timing, .hits_left), or null.
+func seam() -> OreDeposit:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if not ship or not ship.state_machine:
+		return null
+	var landed := ship.state_machine.current_state as PlanetLandedState
+	return landed.ore if landed else null
 
 ## The first ore seam on a planet.
 func ore(planet_name: String) -> OreDeposit:

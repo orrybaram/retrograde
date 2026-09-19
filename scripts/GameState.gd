@@ -82,7 +82,7 @@ func titan_influence() -> int:
 func spend_ore(ore_id: String, regrow_seconds: float) -> void:
 	spent_ore[ore_id] = regrow_seconds
 
-## Seconds until a spent ore seam refills (0 when it can be drilled).
+## Seconds until a spent ore seam refills (0 when it can be harvested).
 func ore_regrow_left(ore_id: String) -> float:
 	return spent_ore.get(ore_id, 0.0)
 

@@ -49,6 +49,10 @@ var hull_strength: float:
 			# in take_damage, so this is where the readouts have to be told.
 			health_component.hp_changed.emit(health_component.current_hp, health_component.max_hp)
 var fuel: float = 200.0
+## Dev-panel overrides (ui/DevPanel.gd), off in normal play. Nothing but that panel
+## writes them, and it only exists in a debug build.
+var dev_invulnerable := false
+var dev_infinite_fuel := false
 var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
 
@@ -195,7 +199,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 
 
 func take_damage(amount: float) -> void:
-	if is_gone():
+	if is_gone() or dev_invulnerable:
 		return
 	health_component.take_damage(amount)
 
@@ -260,6 +264,9 @@ func reset_boost_particles() -> void:
 
 ## Consume fuel and return true if fuel was consumed
 func consume_fuel(amount: float) -> bool:
+	# The dev panel's infinite tank: the engine still fires, the gauge never moves.
+	if dev_infinite_fuel:
+		return true
 	# Only consume fuel if we have fuel available
 	if fuel <= 0.0:
 		return false

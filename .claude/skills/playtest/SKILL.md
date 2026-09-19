@@ -109,9 +109,9 @@ still taking a waypoint on it, a purple link between two powered Gates, and both
 
 `playtests/landing.play` lands on Rook's ground next to its seam (`PlanetLandedState`, not `LandedState`, which is docking): buried seams refuse, a fast drop bounces and hurts, sideways doesn't land, `land Rook` touches down, the landed ship rides the orbit with no fuel burn, thrust releases it to climb away on its own engines (no fee, no impulse), and too little fuel to make the climb runs the tank dry into `StrandedState` (`.playtest/landing_*.png`). Helpers: `pt.ore(planet)`, `pt.hover_over_ore(planet, height, [tilt_deg], [descent])`, `pt.altitude(planet)`, `pt.rel_speed(planet)`. Teleporting straight off the ground can re-use its contact for a frame: park away and wait a few frames first.
 
-`playtests/drill.play` lands by Rook's rich seam and drills: four PERFECT layers to bedrock with the gems reaching the hold, banking (`press reverse_thrust`) after one layer, and an OVERLOAD kickback (`.playtest/drill_*.png`). Drive layers like harvest hits: `down action`, `wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start()`, `up action`. `pt.drill()` has `.layer`, `.layer_count()`, `.phase` (0 READY, 1 DIGGING, 2 DONE), `.end_reason`, `.dug`; the transcript logs `drill_struck` and `dig_ended`.
+`playtests/seam.play` lands by Rook's rich seam and harvests it: five PERFECT hits to break it open with the gems reaching the hold, lifting off mid-seam to keep the haul, and an OVERLOAD that only cracks shards (`.playtest/seam_*.png`). A seam hit is driven exactly like a scrap hit: `down action`, `wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start()`, `up action`. `pt.seam()` is the seam the landed ship is parked on, with `.timing`, `.hits_left`, `.max_hits()`, `.is_harvesting()`; the transcript logs `harvest_hit` for seams and scrap alike.
 
-`playtests/regrow.play` spends Rook's seam with a banked dig (dim hexes, `SEAM SPENT` prompt, drill refuses), checks the refill timer survives a redock + reload, then fast-forwards it (`eval gs.tick_ore_regrowth(sec)`) and digs again (`.playtest/regrow_*.png`). `pt.ore("Rook").is_spent()`, `.regrow_left()`.
+`playtests/regrow.play` empties Rook's seam (dim hexes, `SEAM SPENT` prompt, the key does nothing), checks the refill timer survives a redock + reload, then fast-forwards it (`eval gs.tick_ore_regrowth(sec)`) and works it again (`.playtest/regrow_*.png`). `pt.ore("Rook").is_spent()`, `.regrow_left()`.
 
 ## Recording a video
 ```bash
@@ -119,7 +119,7 @@ godot --path . --write-movie .playtest/video/showcase.avi --fixed-fps 30 \
   -- --playtest=res://playtests/showcase.play --playtest-out="$PWD/.playtest/video" --playtest-fps=30
 ffmpeg -i .playtest/video/showcase.avi -c:v libx264 -crf 22 -pix_fmt yuv420p out.mp4
 ```
-`playtests/showcase.play` is a captioned tour of the scanner / ore / landing / drill loop (no asserts).
+`playtests/showcase.play` is a captioned tour of the scanner / ore / landing / harvest loop (no asserts).
 `--playtest-fps=<n>` holds each frame back to real time: Movie Maker renders faster than real time,
 but orbits run on the wall clock, so without it the physics and the planets drift apart (landings fail).
 `eval pt.caption("...")` puts a caption in the top-left corner; `pt.caption("")` clears it.

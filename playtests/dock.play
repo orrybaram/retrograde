@@ -25,6 +25,9 @@ eval inv.add_item("crystal", 4)
 eval inv.add_item("artifact", 2)
 eval ship.set("fuel", 0.0)
 assert gs.credits == 0 "no credits yet"
+# The hold emptying and the credits rolling up both change how many digits the cargo row
+# carries; the meters must not stretch with it
+eval pt.remember("fuel_bar_w", pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar").size.x)
 eval ship.set_meta("pending_dockable", pt.node("space_ports"))
 eval ship.state_machine.change_state("LandedState")
 wait 0.9
@@ -39,8 +42,10 @@ wait_until inv.get_total_value() == 0 and gs.credits == 60 + 96 + 100 + 200 3
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 wait 0.5
 screenshot dock_3_banked
+assert pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar").size.x == pt.recall("fuel_bar_w") "fuel meter keeps its width through the cash-in"
 assert ship.fuel < ship.max_fuel "still refueling at ~3.5s"
 wait_until ship.fuel >= ship.max_fuel 3
 assert ship.fuel == ship.max_fuel "tank full"
+assert pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar").size.x == pt.recall("fuel_bar_w") "fuel meter keeps its width once the tank is full"
 screenshot dock_4_full
 state

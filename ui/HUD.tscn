@@ -72,9 +72,8 @@ theme_override_font_sizes/font_size = 10
 text = "E"
 
 [node name="FuelProgressBar" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=113507462 instance=ExtResource("2")]
-custom_minimum_size = Vector2(140, 14)
+custom_minimum_size = Vector2(186, 14)
 layout_mode = 2
-size_flags_horizontal = 3
 theme = ExtResource("3_jd13s")
 background_color = Color(0.42, 0.353, 0.204, 1)
 show_label = false
@@ -100,7 +99,6 @@ text = "HP"
 [node name="HullSegmentBar" type="Control" parent="DashboardAnchor/HBox/RightColumn/HullRow" unique_id=216387399]
 custom_minimum_size = Vector2(120, 14)
 layout_mode = 2
-size_flags_horizontal = 3
 script = ExtResource("5_hull")
 
 [node name="CargoRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=1185582045]

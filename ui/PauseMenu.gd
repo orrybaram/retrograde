@@ -28,6 +28,10 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	# Handle escape to toggle pause
 	if event.is_action_pressed("ui_cancel"):
+		# The dev panel closes on its own ESC; don't pause behind it.
+		var dev_panel = get_tree().get_first_node_in_group("dev_panel") as DevPanel
+		if dev_panel and dev_panel.visible:
+			return
 		# If inventory or map is visible, let them handle ESC instead
 		var inventory = get_tree().get_first_node_in_group("inventory_ui") as InventoryUI
 		if inventory and inventory.visible:
@@ -88,6 +92,9 @@ func _show_pause_menu() -> void:
 		return
 	var inventory = get_tree().get_first_node_in_group("inventory_ui") as InventoryUI
 	if inventory and inventory.visible:
+		return
+	var dev_panel = get_tree().get_first_node_in_group("dev_panel") as DevPanel
+	if dev_panel and dev_panel.visible:
 		return
 
 	visible = true

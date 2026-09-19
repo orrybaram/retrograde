@@ -1,6 +1,6 @@
 # Planetary Scanner & Landing showcase, captioned, for recording a video:
 #   godot --path . --write-movie .playtest/showcase.avi --fixed-fps 30 -- --playtest=res://playtests/showcase.play
-# (see also tools/play.sh). Not an assertion suite; see scanner/sites/landing/drill/regrow.play.
+# (see also tools/play.sh). Not an assertion suite; see scanner/sites/landing/seam/regrow.play.
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
@@ -40,7 +40,7 @@ wait 0.4
 press enter
 wait_until pt.visible_ui().is_empty() 2
 
-eval pt.caption("Unscanned planets read  ? ? ?  on the minimap")
+eval pt.caption("Unscanned planets are bare discs on the minimap")
 hold thrust 0.6
 wait 2.5
 
@@ -73,32 +73,36 @@ wait 1.2
 eval pt.caption("Landed: riding the orbit, no fuel burn")
 wait 2.5
 
-eval pt.caption("Hold SPACE to drill  //  release in the zone  //  deeper layers, better gems")
+eval pt.caption("Hold SPACE to harvest  //  release in the zone  //  a seam pays far better than scrap")
 wait 1.0
 down action
-wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start() 3
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
 up action
 wait 1.4
 down action
-wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start + 0.01 3
+wait_until pt.seam().timing.progress >= pt.seam().timing.zone_start + 0.01 3
 up action
 wait 1.4
 down action
-wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start() 3
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
 up action
 wait 1.4
 down action
-wait_until pt.drill().timing.progress >= pt.drill().timing.perfect_start() 3
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
+up action
+wait 1.4
+down action
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
 up action
 wait 1.0
-eval pt.caption("Bedrock  //  the seam is spent: its hexes dim")
+eval pt.caption("Broken open  //  the seam is spent: its hexes dim")
 wait 3.5
 
 eval pt.caption("Liftoff burns fuel: planet gravity x cargo weight")
 hold thrust 0.15
 wait 2.5
 
-eval pt.caption("A spent seam refuses the drill until it refills")
+eval pt.caption("A spent seam ignores the key until it refills")
 eval pt.park_near_planet("Rook", 2000, 30)
 frames 5
 eval pt.hover_over_ore("Rook", 70)
@@ -107,15 +111,15 @@ wait 1.0
 hold action 1.2
 wait 2.0
 
-eval pt.caption("Push your luck: hold too long and the drill kicks back")
+eval pt.caption("Push your luck: hold too long and the hit overloads into shards")
 eval gs.tick_ore_regrowth(1000)
 wait 1.5
 down action
-wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start + 0.01 3
+wait_until pt.seam().timing.progress >= pt.seam().timing.zone_start + 0.01 3
 up action
 wait 1.2
 down action
-wait_until pt.drill().phase == 2 4
+wait_until pt.seam().hits_left <= pt.seam().max_hits() - 2 4
 up action
 wait 3
 

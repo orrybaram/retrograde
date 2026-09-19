@@ -4,20 +4,21 @@ class_name PlanetLandedState
 ## The ship sitting on a planet's surface, over an ore seam. (LandedState is docking.)
 ## Entered from FlyingState on a gentle touchdown (see Touchdown). The ship settles on
 ## the ground and then locks to the planet, riding its orbit; engines are off, so no fuel
-## burns. `action` drills the seam (OreDrill), reverse thrust banks between layers.
-## Thrust lifts off. Nothing is thrown and nothing is charged: the ship is released where
-## it stands, at rest relative to the planet, and climbs out of the gravity well on its
-## own engines for as long as the player holds thrust. A heavy planet or a full hold makes
-## that climb longer, so it burns more thruster fuel - and running dry on the way up
-## strands the ship where it sits.
-## Owns the landed camera zoom, the drill and the landed action prompt.
+## burns. `action` harvests the seam with the same hold-and-release sweep that works a
+## scrap node: the seam owns the timing and its hits (OreDeposit.tick_harvest), this state
+## feeds it the key and throws the gems each hit knocks loose into the hold's magnet.
+## Thrust lifts off, keeping whatever has already come loose. Nothing is thrown and
+## nothing is charged: the ship is released where it stands, at rest relative to the
+## planet, and climbs out of the gravity well on its own engines for as long as the player
+## holds thrust. A heavy planet or a full hold makes that climb longer, so it burns more
+## thruster fuel - and running dry on the way up strands the ship where it sits.
+## Owns the landed camera zoom, the harvest beam and the landed action prompt.
 
 const CAMERA_ZOOM := Vector2(1.5, 1.5)
 const LANDED_HEIGHT := 13.0  # ship centre above the surface (tail length)
 const SETTLE_TIME := 0.35
 
 var ore: OreDeposit = null
-var drill: OreDrill = null
 
 var _offset := Vector2.ZERO  # locked position relative to the planet centre
 var _start_offset := Vector2.ZERO
@@ -55,17 +56,19 @@ func enter() -> void:
 	# Arrived: the tracker goes back to home base
 	if NavSystem.get_target() == ore.tracking_target():
 		NavSystem.track_home()
-	drill = OreDrill.attach(ship, ore)
+	ore.harvest_hit.connect(_on_harvest_hit)
+	_pulse().emitting = false
 	_prompt = ""
 	_update_prompt()
 
 func exit() -> void:
 	super.exit()
-	if is_instance_valid(drill):
-		drill.abort()
-		_free_drill()
-	drill = null
+	if is_instance_valid(ore):
+		ore.abort_harvest()
+		if ore.harvest_hit.is_connected(_on_harvest_hit):
+			ore.harvest_hit.disconnect(_on_harvest_hit)
 	ore = null
+	_pulse().emitting = false
 	_launching = false
 	_prompt = ""
 	EventBus.action_message_changed.emit("")
@@ -90,29 +93,19 @@ func physics_process(delta: float) -> void:
 	if Input.is_action_pressed("thrust"):
 		lift_off()
 		return
-	if drill.phase == OreDrill.Phase.DONE and not ore.is_spent():
-		# Regrown while we sat here: a fresh dig
-		_free_drill()
-		drill = OreDrill.attach(ship, ore)
-	var was_done := drill.phase == OreDrill.Phase.DONE
-	if Input.is_action_just_pressed("reverse_thrust"):
-		drill.bank()
-	# A dig starts on a fresh press, not a key still held from flying
-	var holding := Input.is_action_pressed("action")
-	if drill.phase == OreDrill.Phase.READY:
-		holding = Input.is_action_just_pressed("action")
-	drill.tick(delta, holding)
-	if drill.phase == OreDrill.Phase.DONE and not was_done:
-		_save_spent_ore()
+	# A sweep starts on a fresh press, not a key still held from flying or from the hit
+	# that just landed; once it is running, holding keeps it going.
+	var holding := Input.is_action_pressed("action") if ore.is_harvesting() \
+		else Input.is_action_just_pressed("action")
+	ore.tick_harvest(delta, holding)
+	_pulse().emitting = ore.is_harvesting()
 	_update_prompt()
 
 ## Release the ship. Nothing is charged for it: the climb is the player's to fly, on
 ## ordinary thruster fuel, and running the tank dry on the way up strands them.
 func lift_off() -> void:
-	var was_done := drill.phase == OreDrill.Phase.DONE
-	drill.abort()
-	if drill.phase == OreDrill.Phase.DONE and not was_done:
-		_save_spent_ore()
+	ore.abort_harvest()
+	_pulse().emitting = false
 	_launching = true
 	ship.thruster_particles.emitting = true
 
@@ -137,10 +130,28 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = planet.linear_velocity
 	state.angular_velocity = 0.0
 
-## Detach now so a new OreDrill can take the name this frame.
-func _free_drill() -> void:
-	ship.remove_child(drill)
-	drill.queue_free()
+## One hit landed: the gems burst out of the seam into the hold's magnet, the payoff
+## effects play, and the last hit spends the seam for good.
+func _on_harvest_hit(grade: HarvestTiming.Grade, drops: Array[String], final: bool) -> void:
+	if not is_ship_valid() or not ship.is_inside_tree():
+		return
+	var at := ore.global_position
+	# Always the gentle chip burst: the ship is parked right on top of the seam, and a
+	# wide scatter would throw half the haul out of the magnet's reach.
+	Gem.burst(ship.get_parent(), at, ore.velocity(), drops, false, RNG.rng)
+	HarvestJuice.play_at(ship, ship.get_tree(), at, ore.velocity(), grade, GemData.best_of(drops), final)
+	EventBus.harvest_hit.emit(ore, grade, drops, final)
+	if final:
+		_save_spent_ore()
+
+## The rings that pulse off the ship while the beam is on, shared with scrap harvesting.
+func _pulse() -> HarvestPulse:
+	var pulse := ship.get_node_or_null("HarvestPulse") as HarvestPulse
+	if not pulse:
+		pulse = HarvestPulse.new()
+		pulse.name = "HarvestPulse"
+		ship.add_child(pulse)
+	return pulse
 
 ## Keep the spent seam across a quit without saving the landed ship itself.
 func _save_spent_ore() -> void:
@@ -155,23 +166,13 @@ func _update_prompt() -> void:
 		EventBus.action_message_changed.emit(prompt)
 
 ## What the prompt under the ship offers next. (Thrust always lifts off; the prompt
-## stays about the seam.)
+## stays about the seam.) The meter takes over while the sweep is running.
 func prompt_text() -> String:
-	match drill.phase:
-		OreDrill.Phase.READY:
-			return EventBus.action_prompt("DRILL")
-		OreDrill.Phase.DIGGING:
-			if drill.is_holding():
-				return ""
-			if drill.can_bank():
-				return "%s   %s" % [
-					EventBus.action_prompt("DRILL %d/%d" % [drill.layer + 1, drill.layer_count()]),
-					EventBus.key_prompt("reverse_thrust", "BANK"),
-				]
-			return EventBus.action_prompt("DRILL")
-	if drill.end_reason == "spent":
+	if ore.is_spent():
 		return "SEAM SPENT"
-	return "SEAM DRILLED OUT"
+	if ore.is_harvesting():
+		return ""
+	return EventBus.action_prompt("HARVEST")
 
 func _flying() -> FlyingState:
 	return ship.state_machine.states.get("FlyingState") as FlyingState

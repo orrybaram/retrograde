@@ -32,6 +32,12 @@ var orbital_body: Node2D = null  ## The body we orbit around
 var orbital_angle: float = 0.0
 var orbital_start_time: float = 0.0
 var initialized: bool = false  ## Public for spawner access
+## Phase lock. With this set, the orbit takes its angle from another orbit around the
+## same body instead of running on its own clock, so the two always read out along one
+## line from that body. The radius stays this orbit's own: a locked orbit rides inside
+## or outside the one it follows, never beside it.
+var angle_source: OrbitalMotion = null
+
 
 ## Get the parent node we're controlling
 func get_orbital_parent() -> Node2D:
@@ -40,6 +46,22 @@ func get_orbital_parent() -> Node2D:
 ## Convert orbital speed from 0-100 scale to radians per second
 func get_speed_radians_per_second() -> float:
 	return (orbital_speed / 100.0) * speed_scale
+
+func is_phase_locked() -> bool:
+	return angle_source != null and is_instance_valid(angle_source)
+
+## The angle right now. Time-based either way, so it never drifts and never depends on
+## which orbit happened to update first this frame.
+func angle_now() -> float:
+	if is_phase_locked():
+		return angle_source.angle_now()
+	var elapsed = Time.get_ticks_msec() / 1000.0 - orbital_start_time
+	return fmod(initial_angle + get_speed_radians_per_second() * elapsed, TAU)
+
+## Radians per second actually being swept, which a locked orbit borrows as well: the
+## pair has to turn together or the line between them bends.
+func angular_rate() -> float:
+	return angle_source.angular_rate() if is_phase_locked() else get_speed_radians_per_second()
 
 ## Initialize orbital motion. Call this after setting orbital parameters.
 ## @param body The body to orbit around. If null, uses previously set orbital_body.
@@ -94,9 +116,8 @@ func update_orbit() -> void:
 		return
 	
 	# Calculate time-based orbital angle (deterministic)
-	var speed_rad_per_sec = get_speed_radians_per_second()
-	var elapsed = Time.get_ticks_msec() / 1000.0 - orbital_start_time
-	orbital_angle = fmod(initial_angle + speed_rad_per_sec * elapsed, TAU)
+	var speed_rad_per_sec = angular_rate()
+	orbital_angle = angle_now()
 	
 	# Calculate orbital offset
 	var orbital_offset = calculate_orbital_offset()
@@ -138,7 +159,7 @@ func calculate_orbital_offset() -> Vector2:
 ## Calculate the orbital velocity vector based on current angle
 func calculate_orbital_velocity(speed_rad_per_sec: float = -1.0) -> Vector2:
 	if speed_rad_per_sec < 0:
-		speed_rad_per_sec = get_speed_radians_per_second()
+		speed_rad_per_sec = angular_rate()
 	
 	var velocity_magnitude: float
 	
@@ -175,9 +196,7 @@ func get_orbital_center_global() -> Vector2:
 func get_predicted_global_position() -> Vector2:
 	if not initialized or not orbital_body or not is_instance_valid(orbital_body):
 		return Vector2.ZERO
-	var speed_rad = get_speed_radians_per_second()
-	var elapsed = Time.get_ticks_msec() / 1000.0 - orbital_start_time
-	var angle = fmod(initial_angle + speed_rad * elapsed, TAU)
+	var angle = angle_now()
 	var offset: Vector2
 	if eccentricity == 0.0:
 		offset = Vector2(cos(angle), sin(angle)) * orbital_distance

@@ -164,14 +164,18 @@ func test_an_empty_tank_still_releases_the_ship_it_just_cannot_climb() -> void:
 	assert_float((ship.linear_velocity - planet.linear_velocity).length()).is_less(1.0)
 
 
-func test_a_seam_refilling_under_a_landed_ship_gets_a_fresh_drill() -> void:
+func test_a_seam_refilling_under_a_landed_ship_can_be_worked_again() -> void:
 	var planet := _planet(400.0)
 	var ore := _ore(planet, 0.0)
 	ore.spend()
 	var ship := _landed_ship(planet, ore)
 	var state := ship.state_machine.current_state as PlanetLandedState
-	assert_str(state.drill.end_reason).is_equal("spent")
+	assert_object(state.ore).is_same(ore)
+	assert_str(state.prompt_text()).is_equal("SEAM SPENT")
+	ore.tick_harvest(1.0, true)
+	assert_bool(ore.is_harvesting()).is_false()
 	_gs.tick_ore_regrowth(OreDeposit.RICH_REGROW_TIME)
 	await await_millis(100)
-	assert_int(state.drill.phase).is_equal(OreDrill.Phase.READY)
-	assert_object(ship.get_node_or_null("OreDrill")).is_same(state.drill)
+	assert_bool(ore.is_spent()).is_false()
+	assert_int(ore.hits_left).is_equal(ore.max_hits())
+	assert_str(state.prompt_text()).is_equal(EventBus.action_prompt("HARVEST"))

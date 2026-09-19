@@ -30,7 +30,7 @@ static func play(ship: Ship, scrap: ScrapNode, grade: HarvestTiming.Grade, gem_i
 	play_at(ship, scrap.get_tree(), scrap.global_position, scrap.get_orbital_velocity(), grade, gem_id, final)
 
 ## Shake, shockwave ring and hitstop for a hit at `pos` moving at `drift` (no sparkles).
-## Also used by the drill.
+## Also used by a seam worked from the ground, which has no sparkles of its own.
 static func play_at(ship: Ship, tree: SceneTree, pos: Vector2, drift: Vector2, grade: HarvestTiming.Grade, gem_id: String, final: bool) -> void:
 	var juice: Dictionary = TIER_JUICE.get(gem_id, TIER_JUICE["shard"])
 	var perfect := grade == HarvestTiming.Grade.PERFECT

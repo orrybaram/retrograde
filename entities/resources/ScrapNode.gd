@@ -150,6 +150,15 @@ func _process(delta: float) -> void:
 func is_harvesting() -> bool:
 	return _state_machine != null and _state_machine.current_state is ScrapHarvestingState
 
+## The sweep the meter draws, or null before the first press. (An ore seam answers the
+## same three, so HarvestMeter follows either one.)
+func harvest_timing() -> HarvestTiming:
+	return timing
+
+## True once there is nothing left to take and the meter should stop following it.
+func harvest_spent() -> bool:
+	return _is_depleted or amount <= 0
+
 func _update_visual() -> void:
 	if _is_depleted:
 		return

@@ -180,3 +180,34 @@ func test_a_planet_grows_the_same_seams_every_session() -> void:
 		child.free()
 	first._spawn_ore()
 	assert_array(first.get_ore_deposits().map(func(o: OreDeposit): return o.angle_degrees)).is_equal(angles)
+
+
+func test_rock_takes_on_the_color_of_the_crust_it_sits_in() -> void:
+	var warm := OreDeposit.crust_tone(Colors.ORE_ROCK, Color(0.45, 0.30, 0.25), OreDeposit.CRUST_SHADE)
+	# A warm crust pulls the neutral rock warm, without lifting it out of the dark
+	assert_float(warm.r).is_greater(Colors.ORE_ROCK.r)
+	assert_float(warm.r).is_greater(warm.b)
+	assert_float(warm.v).is_less(Color(0.45, 0.30, 0.25).v)
+	# A cold crust pulls it the other way
+	var cold := OreDeposit.crust_tone(Colors.ORE_ROCK, Color(0.25, 0.30, 0.45), OreDeposit.CRUST_SHADE)
+	assert_float(cold.b).is_greater(cold.r)
+	# The rim reads lighter than the body, and the fracture lines lighter again
+	var crust := Color(0.45, 0.30, 0.25)
+	var edge := OreDeposit.crust_tone(Colors.ORE_ROCK_EDGE, crust, OreDeposit.CRUST_RIM_SHADE)
+	var facet := OreDeposit.crust_tone(Colors.ORE_ROCK_FACET, crust, -OreDeposit.CRUST_FACET_TINT)
+	assert_float(edge.v).is_greater(warm.v)
+	assert_float(facet.v).is_greater(edge.v)
+
+
+func test_a_seam_re_mixes_its_rock_when_the_planet_changes_color() -> void:
+	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	planet.color = Color(0.45, 0.30, 0.25)
+	add_child(planet)
+	var ore := OreDeposit.new()
+	planet.add_child(ore)
+	ore._match_crust()
+	var warm := ore._rock
+	planet.color = Color(0.25, 0.30, 0.45)
+	ore._match_crust()
+	assert_bool(ore._rock.is_equal_approx(warm)).is_false()
+	assert_float(ore._rock.b).is_greater(ore._rock.r)

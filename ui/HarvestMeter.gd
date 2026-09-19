@@ -4,6 +4,10 @@ class_name HarvestMeter
 ## Terminal-style extraction meter drawn just under the ship while harvesting.
 ## Shows the HarvestTiming sweep: sweet zone, PERFECT slice, and the moving marker,
 ## then flashes the grade when a hit lands. Added to the HUD at runtime.
+##
+## It follows whatever is being worked - a scrap node in the cone, or an ore seam under
+## a landed ship. Both answer `harvest_timing()`, `is_harvesting()` and `harvest_spent()`,
+## which is all the meter needs, so `_source` is left untyped.
 
 const BAR_SIZE := Vector2(150, 10)
 const OFFSET_Y := 46.0
@@ -17,7 +21,7 @@ const GRADE_TEXT := {
 	HarvestTiming.Grade.OVERLOAD: "O V E R L O A D",
 }
 
-var _scrap: ScrapNode = null
+var _source = null  # the ScrapNode or OreDeposit being worked
 var _ship: Node2D = null
 var _alpha := 0.0
 var _result_text := ""
@@ -32,28 +36,42 @@ func _ready() -> void:
 	EventBus.harvest_hit.connect(_on_harvest_hit)
 
 func _on_harvest_began(scrap: ScrapNode) -> void:
-	_scrap = scrap
+	_source = scrap
 	_result_text = ""
 	_result_time = 0.0
 
-func _on_harvest_hit(scrap: ScrapNode, grade: HarvestTiming.Grade, gem_ids: Array[String], final: bool) -> void:
-	if scrap != _scrap:
-		return
+func _on_harvest_hit(node: Node, grade: HarvestTiming.Grade, gem_ids: Array[String], final: bool) -> void:
 	_result_text = GRADE_TEXT.get(grade, "")
 	if final:
 		_result_text += "   B R E A K"
 	var botched := grade == HarvestTiming.Grade.LATE or grade == HarvestTiming.Grade.OVERLOAD
 	_result_color = Colors.DANGER if botched else GemData.color_of(GemData.best_of(gem_ids))
 	_result_time = RESULT_HOLD
-	_scrap = null
+	_source = null
+
+## A seam never announces a beginning (it has no in-range phase), so the meter picks it
+## up the moment the ship under it starts sweeping.
+func _find_source() -> void:
+	if _source != null and is_instance_valid(_source):
+		return
+	for node in get_tree().get_nodes_in_group("ore_deposits"):
+		var seam := node as OreDeposit
+		if seam and seam.is_harvesting():
+			_source = seam
+			return
 
 func _active() -> bool:
-	return _scrap != null and is_instance_valid(_scrap) and _scrap.timing != null \
-		and not _scrap._is_depleted and (_scrap.is_harvesting() or _scrap.timing.progress > 0.0)
+	if _source == null or not is_instance_valid(_source):
+		return false
+	var timing: HarvestTiming = _source.harvest_timing()
+	return timing != null and not _source.harvest_spent() \
+		and (_source.is_harvesting() or timing.progress > 0.0)
 
 func _process(delta: float) -> void:
 	if _result_time > 0.0:
 		_result_time -= delta
+	if _source == null:
+		_find_source()
 	var target := 1.0 if _active() or _result_time > 0.0 else 0.0
 	var prev := _alpha
 	_alpha = move_toward(_alpha, target, delta * (10.0 if target > _alpha else 4.0))
@@ -77,14 +95,13 @@ func _draw() -> void:
 	draw_rect(rect, _c(Colors.UI_BACKGROUND, a))
 	if _active():
 		draw_string(font, _anchor + Vector2(0, -4), "E X T R A C T", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, _c(Colors.PRIMARY, a))
-		draw_sweep(self, rect, _scrap.timing, a)
+		draw_sweep(self, rect, _source.harvest_timing(), a)
 	elif _result_text != "":
 		draw_result(self, rect, font, _result_text, _result_color, a * clampf(_result_time / 0.3, 0.0, 1.0))
 
 	draw_rect(rect, _c(Colors.UI_BORDER, a), false, 1.0)
 
 ## The timing bar inside `rect`: progress, sweet zone, PERFECT slice and the marker.
-## Shared with DrillMeter.
 static func draw_sweep(canvas: CanvasItem, rect: Rect2, t: HarvestTiming, a: float) -> void:
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 90.0) if t.in_zone() else 0.0
 	canvas.draw_rect(Rect2(rect.position, Vector2(rect.size.x * t.progress, rect.size.y)), _c(Colors.PRIMARY_SUBTLE, a))

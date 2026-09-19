@@ -1,0 +1,96 @@
+# Working an ore seam: land over Rook's (rich, 5 hits), hold/release `action` per hit,
+# gems fly into the hold; lifting off mid-seam keeps the haul; overload botches a hit.
+# Run: tools/play.sh playtests/seam.play   (frames land in .playtest/seam_*.png)
+# The transcript logs harvest_hit {grade, gems, final}.
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+eval gs.set("has_planet_scanner", true)
+eval pt.park_near_planet("Rook", 2000, 30, true)
+wait_until gs.is_planet_scanned("Veld/Rook") 24
+eval pt.hover_over_ore("Rook", 60)
+land Rook 15 15
+wait 0.5
+assert str(pt.snapshot().action_message).contains("HARVEST") "landed prompt offers the harvest"
+
+# --- A: five PERFECT hits break the seam open; the gems reach the hold ---
+assert pt.seam().max_hits() == 5 "rich seam takes 5 hits"
+down action
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
+screenshot seam_a_sweep
+up action
+wait_until pt.seam().hits_left == 4 2
+assert pt.last_drops.size() >= 3 "a perfect hit knocks 3+ gems loose"
+burst seam_a_hit 5 0.1
+assert str(pt.snapshot().action_message).contains("HARVEST") "still offering the next hit"
+down action
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
+up action
+wait_until pt.seam().hits_left == 3 2
+down action
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
+up action
+wait_until pt.seam().hits_left == 2 2
+down action
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
+up action
+wait_until pt.seam().hits_left == 1 2
+down action
+wait_until pt.seam().timing.progress >= pt.seam().timing.perfect_start() 3
+up action
+wait_until pt.ore("Rook").is_spent() 2
+assert pt.seam().hits_left == 0 "the last hit broke the seam open"
+burst seam_a_break 6 0.1
+wait_until pt.item_count() >= 1 8
+assert pt.state_name() == "PlanetLandedState" "still landed after the seam is emptied"
+assert str(pt.snapshot().action_message).contains("SEAM SPENT") "emptied seam prompt"
+screenshot seam_a_done
+wait_until pt.popup_counts() == inv.get_all_items() 3
+
+# --- B: lifting off mid-seam keeps the haul and leaves the rest standing ---
+hold thrust 0.1
+wait_until pt.state_name() == "FlyingState" 2
+eval pt.park_near_planet("Rook", 2000, 30)
+# The last seam was emptied; skip its refill time (see regrow.play)
+eval gs.tick_ore_regrowth(1000)
+frames 5
+eval pt.hover_over_ore("Rook", 60)
+land Rook 15 15
+# Section A filled the hold; empty it so the gems this hit knocks loose have room
+eval inv.clear_inventory()
+eval pt.set_meta("held", pt.item_count())
+down action
+wait_until pt.seam().timing.progress >= pt.seam().timing.zone_start 3
+up action
+wait_until pt.seam().hits_left == 4 2
+wait_until pt.item_count() > pt.get_meta("held") 8
+hold thrust 0.1
+wait_until pt.state_name() == "FlyingState" 2
+assert not pt.ore("Rook").is_spent() "the rest of the seam is still standing"
+assert pt.ore("Rook").hits_left == 4 "and remembers the hit already taken"
+assert pt.item_count() > pt.get_meta("held") "the gems knocked loose came along"
+
+# --- C: holding too long overloads into a botched hit ---
+eval pt.park_near_planet("Rook", 2000, 30)
+frames 5
+eval pt.hover_over_ore("Rook", 60)
+land Rook 15 15
+eval ship.set("hull_strength", ship.max_hull)
+down action
+wait_until pt.seam().hits_left == 3 4
+up action
+assert pt.last_drops.count("shard") == pt.last_drops.size() "an overload only cracks shards"
+assert ship.hull_strength == ship.max_hull "the beam doesn't hurt the ship"
+burst seam_c_overload 4 0.1
+state

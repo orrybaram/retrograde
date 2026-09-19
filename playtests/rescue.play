@@ -1,0 +1,62 @@
+# A tractor beam tow brings the next clone back to the station that did the towing,
+# even when the last thing the ship docked with was a Gate on another planet.
+# Run: tools/play.sh playtests/rescue.play   (frames land in .playtest/rescue_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+wait_until pt.state_name() == "LandedState" 5
+eval pt.remember("home", get_tree().get_nodes_in_group("space_stations")[0])
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+
+# --- Dock with Veld's Gate, so that's the dock the save remembers ---
+eval pt.park_at_gate("Veld", 30.0)
+frames 2
+wait 2.2
+eval pt.park_at_gate("Veld", 30.0)
+frames 2
+press action
+wait_until pt.state_name() == "GateDockedState" 3
+wait_until pt.visible_ui().has("GateTerminal") 2
+assert ship.state_machine.current_state.locked_dockable == pt.gate("Veld") "clamped in Veld's cradle"
+eval pt.save_now()
+screenshot rescue_0_gate
+
+# --- Leave (DEPART, the second row on a dormant Gate) and drift into the station's beam ---
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.6
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.warp_to(pt.recall("home").global_position + Vector2(0, -600))
+frames 5
+assert main.is_within_tractor_beam() "parked inside the station's tractor beam"
+eval ship.consume_fuel(ship.fuel + 1.0)
+wait_until pt.state_name() == "StrandedState" 3
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel_beam" 3
+wait_until not pt.node("radio_panel").is_typing() 5
+screenshot rescue_1_offer
+press action
+wait_until main.current_game_state == 2 10
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "tractor_rescue" 5
+wait_until not pt.node("radio_panel").is_typing() 5
+screenshot rescue_2_rescued
+
+# --- The tow ends at the station, not back at the Gate ---
+press enter
+wait_until main.current_game_state == 1 30
+wait_until pt.state_name() == "LandedState" 10
+assert pt.state_name() == "LandedState" "the tow ends on a port, not in a Gate cradle"
+assert ship.state_machine.current_state.locked_dockable.get_parent() == pt.recall("home") "towed home to the station that caught the ship"
+assert ship.global_position.distance_to(pt.recall("home").global_position) < 600 "respawned at the station, not out at Veld"
+screenshot rescue_3_home

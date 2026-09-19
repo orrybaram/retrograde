@@ -222,7 +222,7 @@ func _process(delta: float) -> void:
 
 ## One step of the boost clock, taken apart from the ship so it can be driven directly.
 ## The hint is held back until the player is actually flying, so it doesn't cut across
-## a dock or a dig.
+## a dock or a seam.
 func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
 	if not _watching_boost:
 		return

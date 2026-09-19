@@ -2,7 +2,7 @@ extends MinimapTarget
 class_name OreMinimapTarget
 
 ## MinimapTarget for a revealed OreDeposit: a small chunk of rock on its planet's rim.
-## It shrinks as the seam is drilled out and leaves the map entirely once the seam is
+## It shrinks as the seam is worked down and leaves the map entirely once the seam is
 ## spent, coming back when the seam refills. Mustard, like every other instrument mark.
 
 const SIZE := 3.4

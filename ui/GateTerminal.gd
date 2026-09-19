@@ -10,7 +10,7 @@ class_name GateTerminal
 ## the hub carries the two things a link is good for: transit to another powered Gate,
 ## and a tank the Titan fills for nothing while the ship sits in the cradle.
 ##
-## The Core's Gate at the Sun Station reads the same terminal, but its row counts
+## The Core's Gate at the Sun Station reads the same terminal, but its row asks for
 ## Modules instead of credits and does nothing yet: see `_core_row()`.
 ##
 ## Built in code; the scene tree holds only the root.
@@ -27,7 +27,6 @@ const TEXT_SIZE := TerminalWindow.TEXT_SIZE
 const SMALL_SIZE := TerminalWindow.SMALL_SIZE
 const ROW_HEIGHT := 26.0
 const RIGHT_WIDTH := 130.0
-const MODULE_COUNT := Gate.MODULE_COUNT
 
 ## Boot log pacing: characters a second, the beat between lines, and the hold at the end.
 const BOOT_CHARS_PER_SEC := 27.0
@@ -50,7 +49,7 @@ var _right_labels: Array[Label] = []
 
 var _frame: TerminalWindow
 var _status: Label
-var _credits: Label
+var _subhead: Label
 var _rows: VBoxContainer
 var _log: VBoxContainer
 
@@ -74,8 +73,10 @@ func _build_ui() -> void:
 
 	_status = TerminalWindow.header("")
 	col.add_child(_status)
-	_credits = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
-	col.add_child(_credits)
+	## Only the transit list heads itself; the hub's rows carry their own right column.
+	_subhead = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
+	_subhead.visible = false
+	col.add_child(_subhead)
 	col.add_child(TerminalWindow.rule())
 
 	_rows = VBoxContainer.new()
@@ -166,8 +167,8 @@ func _refresh_hub() -> void:
 	var powered := gate != null and gate.is_powered()
 	_status.text = TerminalWindow.spaced(_status_line(core, powered))
 	_status.add_theme_color_override("font_color", Colors.TITAN if powered else Colors.PRIMARY)
-	_credits.text = "MODULES ONLINE  %d / %d          CREDITS  %d CR" % [
-		gs.titan_influence() if gs else 0, MODULE_COUNT, gs.credits if gs else 0]
+	# The HUD already carries the credit balance; the terminal doesn't repeat it.
+	_subhead.visible = false
 	_frame.set_hint("UP/DN SELECT   ENTER CONFIRM   ESC LEAVE")
 
 	_menu_items.clear()
@@ -221,7 +222,8 @@ func _linked_count() -> int:
 func _refresh_transit() -> void:
 	_status.text = TerminalWindow.spaced("TRANSIT")
 	_status.add_theme_color_override("font_color", Colors.TITAN)
-	_credits.text = "LINKED GATES"
+	_subhead.text = "LINKED GATES"
+	_subhead.visible = true
 	_frame.set_hint("UP/DN SELECT   ENTER TRANSIT   ESC BACK")
 
 	_menu_items.clear()
@@ -289,9 +291,10 @@ func _status_line(core: bool, powered: bool) -> String:
 	return "MODULE ONLINE" if powered else "MODULE OFFLINE"
 
 ## The Core's Gate asks for Modules, not credits. Until all five are online the row is
-## dim and reads back how far off that is; at five it offers the Core. Taking it does
-## nothing yet — what happens when the Core comes online is a later endgame issue —
-## so the row logs a placeholder and leaves every bit of state alone.
+## dim and says only that; the player counts the Modules from the Gates themselves, not
+## from a tally here. At five it offers the Core. Taking it does nothing yet — what
+## happens when the Core comes online is a later endgame issue — so the row logs a
+## placeholder and leaves every bit of state alone.
 func _core_row() -> Dictionary:
 	if gate != null and gate.modules_ready(gs):
 		return {
@@ -304,7 +307,7 @@ func _core_row() -> Dictionary:
 		"enabled": false,
 		"action": Callable(),
 		"label": "POWER INSUFFICIENT",
-		"right": "%d/%d MODULES ONLINE" % [gs.titan_influence() if gs else 0, MODULE_COUNT],
+		"right": "MODULES OFFLINE",
 	}
 
 func _on_core_power_pressed() -> void:
@@ -314,7 +317,6 @@ func _on_core_power_pressed() -> void:
 ## than sit above it saying the Module is still offline.
 func _show_hub(shown: bool) -> void:
 	_status.visible = shown
-	_credits.visible = shown
 	_rows.visible = shown
 
 func _refresh_rows() -> void:
@@ -378,7 +380,7 @@ func _on_power_pressed() -> void:
 		return
 	var powered_gate := gate
 	gate_powered.emit(powered_gate)
-	await _run_boot_log(gs.titan_influence())
+	await _run_boot_log()
 	if visible and gate == powered_gate:
 		_log.visible = false
 		_show_hub(true)
@@ -388,7 +390,7 @@ func _on_power_pressed() -> void:
 
 ## What the Gate says to itself as the Module wakes: three lines, typed, the last one
 ## in the Titan's own color. The launch key cuts it short.
-func _run_boot_log(module: int) -> void:
+func _run_boot_log() -> void:
 	_booting = true
 	_show_hub(false)
 	_clear(_log)
@@ -398,7 +400,7 @@ func _run_boot_log(module: int) -> void:
 	var lines := [
 		{"text": "POWER ........ OK", "color": Colors.PRIMARY},
 		{"text": "LINK ......... OK", "color": Colors.PRIMARY},
-		{"text": "MODULE %d/%d ... ONLINE" % [module, MODULE_COUNT], "color": Colors.TITAN},
+		{"text": "MODULE ....... ONLINE", "color": Colors.TITAN},
 	]
 	for line in lines:
 		if not visible:

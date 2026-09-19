@@ -1,5 +1,5 @@
-# Ore depletion: a dig crumbles the rock away and spends the seam (gone from view and
-# map, the drill refuses), the refill timer survives a save + reload, and the seam comes
+# Ore depletion: harvesting crumbles the rock away and the last hit spends the seam (gone from view and
+# map, the key does nothing), the refill timer survives a save + reload, and the seam comes
 # back after its time.
 # Run: tools/play.sh playtests/regrow.play   (frames land in .playtest/regrow_*.png)
 
@@ -25,19 +25,18 @@ land Rook 15 15
 wait 0.5
 screenshot regrow_1_fresh
 
-# --- Dig one layer and bank: the seam is spent ---
+# --- Work it down to the last hit: the seam is emptied ---
 assert not pt.ore("Rook").is_spent() "full seam"
 down action
-wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start 3
+wait_until pt.seam().timing.progress >= pt.seam().timing.zone_start 3
 up action
-wait_until pt.drill().layer == 1 2
+wait_until pt.seam().hits_left == 4 2
 wait 0.5
-assert pt.ore("Rook").remaining() < 1 "the broken layer took rock with it"
+assert pt.ore("Rook").remaining() < 1 "the hit took rock with it"
 assert pt.ore("Rook").visible "the rest of the seam is still there"
 screenshot regrow_1b_part_dug
-hold reverse_thrust 0.1
-wait_until pt.drill().phase == 2 1
-assert pt.ore("Rook").is_spent() "digging spends the seam"
+eval pt.ore("Rook").spend()
+assert pt.ore("Rook").is_spent() "an emptied seam starts its timer"
 assert pt.ore("Rook").regrow_left() > 440 "rich seam refills in ~7.5 min"
 assert not pt.ore("Rook").minimap_target.is_minimap_visible() "and takes it off the map"
 wait 1.5
@@ -45,7 +44,7 @@ assert pt.ore("Rook").remaining() == 0 "the rock is all dug out"
 assert not pt.ore("Rook").visible "the dug-out seam is gone from view"
 screenshot regrow_2_spent
 
-# --- Landing again: the spent seam refuses the drill ---
+# --- Landing again: the spent seam ignores the key ---
 hold thrust 0.1
 wait_until pt.state_name() == "FlyingState" 2
 eval pt.park_near_planet("Rook", 2000, 30)
@@ -55,8 +54,8 @@ land Rook 15 15
 wait 0.3
 assert str(pt.snapshot().action_message).contains("SEAM SPENT") "prompt says the seam is spent"
 hold action 1
-assert pt.drill().layer == 0 and pt.drill().end_reason == "spent" "no drilling a spent seam"
-assert pt.item_count() > 0 "the first dig's gems are still aboard"
+assert not pt.seam().is_harvesting() and pt.seam().timing == null "no working a spent seam"
+assert pt.item_count() > 0 "the first hit's gems are still aboard"
 
 # --- The timer is saved; a reload keeps the site spent ---
 eval gs.tick_ore_regrowth(100)
@@ -73,7 +72,7 @@ assert pt.ore("Rook").is_spent() "spent state restored from the save"
 assert abs(pt.ore("Rook").regrow_left() - pt.get_meta("left_at_save")) < 5 "refill timer restored"
 assert pt.ore("Rook").regrow_left() < 360 "time already waited counts"
 
-# --- Refilled after its time: fresh rock, drillable again ---
+# --- Refilled after its time: fresh rock, workable again ---
 eval gs.tick_ore_regrowth(pt.ore("Rook").regrow_left() + 1)
 assert not pt.ore("Rook").is_spent() "seam refilled"
 assert pt.ore("Rook").minimap_target.is_minimap_visible() "back on the map"
@@ -90,9 +89,10 @@ eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15
 wait 0.5
 screenshot regrow_3_regrown
-assert str(pt.snapshot().action_message).contains("DRILL") "drill offered again"
+assert str(pt.snapshot().action_message).contains("HARVEST") "harvest offered again"
+assert pt.seam().hits_left == pt.seam().max_hits() "fresh rock, a full set of hits"
 down action
-wait_until pt.drill().timing.progress >= pt.drill().timing.zone_start 3
+wait_until pt.seam().timing.progress >= pt.seam().timing.zone_start 3
 up action
-wait_until pt.drill().layer == 1 2
+wait_until pt.seam().hits_left == pt.seam().max_hits() - 1 2
 state

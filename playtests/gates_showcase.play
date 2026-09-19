@@ -35,8 +35,8 @@ hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 wait 2.0
 
-# --- 3. Unidentified: ? ? ? ----------------------------------------------------
-eval pt.caption("In scanner range it is only a contact  //  the minimap reads ? ? ?")
+# --- 3. Unidentified -----------------------------------------------------------
+eval pt.caption("In scanner range it is only a contact  //  a ring with no name to it")
 eval pt.park_at_gate("Veld", 2600.0)
 wait 3.6
 

@@ -29,7 +29,6 @@ func _ready() -> void:
 		fuel_progress_bar.bar_color = Colors.FUEL_FULL
 		fuel_progress_bar.background_color = Colors.PRIMARY_DIM
 	add_child(HarvestMeter.new())
-	add_child(DrillMeter.new())
 	add_child(ScanPanel.new())
 	var radio := RadioPanel.new()
 	var tracking := TrackingIndicator.new()
@@ -89,6 +88,8 @@ func _punch_cargo_label() -> void:
 	_cargo_punch_tween.parallel().tween_property(current_cargo_label, "modulate", Color.WHITE, 0.3)
 
 func _fit_dashboard() -> void:
+	# The panel breathes with the cargo and credit digit counts, so the meters are
+	# fixed-width (no expand flag in HUD.tscn) — a cash-in must not stretch the fuel bar.
 	if not dashboard:
 		return
 	var min_size = dashboard.get_combined_minimum_size()

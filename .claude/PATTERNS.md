@@ -82,8 +82,8 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 ```
 PlanetScanner (on Ship) -> PlanetScan (meter) + ScanSweep (on Planet) -> GameState.scanned_planets -> EventBus.planet_scanned
 OreDeposit (child of Planet, grown by Planet._spawn_ore) -> surfaced on scan; minimap + OreTrackingTarget
-FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom, prompt, OreDrill)
-OreDrill (HarvestTiming per layer, GemData.drill_drops) -> ore.spend() -> GameState.spent_ore (refill timers)
+FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom, prompt, the beam)
+OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend() -> GameState.spent_ore (refill timers)
 ```
 
 - `LandedState` is docking at a port; landing on a planet is `PlanetLandedState`;
@@ -97,9 +97,13 @@ OreDrill (HarvestTiming per layer, GemData.drill_drops) -> ore.spend() -> GameSt
   out of code unit tests reach (the default save path in tests is the player's real save).
 - Scanning only reaches **inner orbit** (`Planet.scan_radius()`, the first gravity ring clear of
   the surface), not the whole gravity field: you fly in close and hold there against the pull.
-- Drilling is the payday: `GemData.DRILL_DEPTH_WEIGHTS` skews to crystals/artifacts and drops
-  more per layer than a scrap hit, so a seam is worth several scrap nodes (see DrillTest).
-- Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `OreDrill.*`, `GemData.DRILL_*`,
+- A seam is harvested with the *same* loop as a scrap node (`HarvestTiming` hold-and-release,
+  `OreDeposit.HITS` / `RICH_HITS` hits, the last one the break). The seam owns the timing and its
+  hits; `PlanetLandedState` feeds it the key and throws the gems. There is no separate drill.
+- A seam is the payday: `GemData.ORE_ROLL_WEIGHTS` / `RICH_ROLL_WEIGHTS` skew to crystals and
+  artifacts and every hit drops more than a scrap hit, so a seam is worth several scrap nodes
+  (see OreHarvestTest).
+- Tuning knobs: `PlanetScan.SCAN_TIME`, `Touchdown.*`, `OreDeposit.HITS` / `RICH_HITS`, `GemData.ORE_*`,
   `Planet.ORE_COUNT` / `MOON_ORE_COUNT`, `OreDeposit.REACH` / `DEPTH_*` / `*REGROW_TIME`.
 
 ## Gates (CONTEXT.md, docs/adr/0001)
@@ -146,3 +150,29 @@ GameState.titan_influence() (0-5)
   Void's `_advance_cuts` curve, which barely moves down at baseline severities.
 - From `FACE_MIN_INFLUENCE` (3) Modules on, roughly every second guide line flashes
   `Colors.TITAN` in `RobotView._face_color()`. Other speakers are left alone.
+
+## Dev Panel (setting game state by hand)
+
+```
+F1 / ` -> DevPanel (ui/DevPanel.gd, CanvasLayer, group `dev_panel`)
+  -> SHIP / UPGRADES / PROGRESS / WARP / SAVE sections of rows
+    -> GameState, Ship, InventoryManager, Playtest's warp helpers
+```
+
+- Debug builds only: `_ready` frees the node when `OS.is_debug_build()` is false, and
+  nothing else in the game refers to it.
+- Only opens while `Main.is_playing()`, and pauses the tree. `Main._input` and
+  `PauseMenu._input` both step aside while it is visible, so it owns I / M / ESC.
+- TAB cycles sections, UP/DOWN picks a row, LEFT/RIGHT nudges a value, ENTER runs it
+  (on a value row: jumps it to the top), ESC closes.
+- Every row is absolute, not a flip: LEFT bottoms a value out, ENTER tops it out. That
+  keeps a repeated key press harmless, which is also what lets `playtests/devpanel.play`
+  drive it without racing the window's focus bounce.
+- Warps close the panel before they move the ship: the physics server has to be running
+  to take the new transform. They reuse `Playtest`'s helpers (`park_at_gate`,
+  `park_near_planet`, `redock`, `warp_to`), so a warp lands where a scenario's would.
+- `Ship.dev_invulnerable` / `Ship.dev_infinite_fuel` are the only gameplay hooks the panel
+  adds; nothing but the panel writes them.
+- Don't let the panel name a class that names it back (it reaches the pause menu through
+  `CanvasItem`, not `PauseMenu`): a `class_name` cycle breaks the script class cache and
+  takes the whole project's resource loading down with it.
