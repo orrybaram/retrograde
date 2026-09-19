@@ -2,7 +2,7 @@ extends Node
 class_name GameState
 
 ## Global singleton holding persistent player progression: credits, upgrade levels,
-## death count, scanned planets and dug-out ore seams. Populated by Save.load() at game start; serialized by Save.save()
+## death count, Visited and scanned Bodies, and dug-out ore seams. Populated by Save.load() at game start; serialized by Save.save()
 ## on dock/game-over. Emits credits_changed and upgrade_level_changed signals.
 
 signal credits_changed
@@ -18,6 +18,11 @@ var has_planet_scanner: bool = false
 
 ## Planets the Planetary Scanner has mapped, keyed by Planet.save_key(). Permanent.
 var scanned_planets: Dictionary = {}
+
+## Bodies the ship has flown into the inner orbit of, keyed by Planet.save_key(). A
+## Visited Body holds a Record in the Log whether or not it has ever been surveyed;
+## scanning fills that Record in (docs/adr/0003). Permanent, and in visit order.
+var visited_planets: Dictionary = {}
 
 ## Dug-out ore seams: OreDeposit.ore_id() -> seconds of play left until they refill.
 var spent_ore: Dictionary = {}
@@ -61,6 +66,12 @@ func is_planet_scanned(key: String) -> bool:
 
 func mark_planet_scanned(key: String) -> void:
 	scanned_planets[key] = true
+
+func is_planet_visited(key: String) -> bool:
+	return visited_planets.has(key)
+
+func mark_planet_visited(key: String) -> void:
+	visited_planets[key] = true
 
 func is_gate_powered(key: String) -> bool:
 	return powered_gates.has(key)
@@ -110,6 +121,7 @@ func reset_all_state() -> void:
 	has_drone_bay = false
 	has_planet_scanner = false
 	scanned_planets.clear()
+	visited_planets.clear()
 	spent_ore.clear()
 	powered_gates.clear()
 	identified_gates.clear()

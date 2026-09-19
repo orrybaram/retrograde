@@ -2,11 +2,13 @@ class_name RecordsTab
 extends LogTab
 
 ## The Log's second tab: one Record per Body the player has Visited and per Automaton
-## they have met. This slice renders the heading and the empty state only; the Records
-## themselves land in a later slice.
+## they have met. This slice renders the Bodies section; the Automatons section lands
+## in its own slice.
 ##
 ## The Log lists only what the player reached — no row for anywhere unvisited, and
-## never `? ? ?` (docs/adr/0003).
+## never `? ? ?` (docs/adr/0003). The Bodies section reads GameState.visited_planets
+## and never the `planets` group: a row per Body in the scene would tell the player how
+## many there are to find, which is the spoiler docs/adr/0002 protects.
 
 ## Shown while the player holds no Records. It says what earns one; it never hints at
 ## how many there are to find.
@@ -17,7 +19,25 @@ const EMPTY_STATE := [
 	"AN AUTOMATON EARNS ONE WHEN YOU MEET IT.",
 ]
 
+## What a Record reads before the Planetary Scanner has surveyed the Body. Visiting
+## earns the Record; scanning fills it in.
+const NO_SURVEY := "NO SURVEY"
+const SURVEYED := "SURVEYED"
+## The keys this tab owns, laid before the shell's in the bottom border.
+const CURSOR_KEYS := "[UP/DOWN] SELECT"
+const TEXT_SIZE := TerminalWindow.TEXT_SIZE
+const DETAIL_WIDTH := 320.0
+
+var gs: GameState = null
+
 var _empty: VBoxContainer
+# --- Bodies ------------------------------------------------------------------
+var _bodies: VBoxContainer
+var _body_rows: VBoxContainer
+var _body_detail: VBoxContainer
+## The Visited Bodies by Planet.save_key(), in the order the player reached them.
+var _visited: PackedStringArray = PackedStringArray()
+var _cursor := 0
 
 
 func _init() -> void:
@@ -32,6 +52,14 @@ func tab_title() -> String:
 	return TerminalWindow.spaced("RECORDS")
 
 
+## The cursor keys only exist once there is something to move through; a player who has
+## stayed home is offered the shell's keys alone.
+func hint() -> String:
+	if _visited.is_empty():
+		return SHELL_KEYS
+	return "%s   %s" % [CURSOR_KEYS, SHELL_KEYS]
+
+
 func _build() -> void:
 	add_child(TerminalWindow.header("R E C O R D S"))
 	_empty = VBoxContainer.new()
@@ -40,4 +68,140 @@ func _build() -> void:
 	for line in EMPTY_STATE:
 		_empty.add_child(TerminalWindow.label(line, TerminalWindow.TEXT_SIZE, Colors.PRIMARY_DIM))
 	add_child(_empty)
+	_bodies = _build_bodies()
+	add_child(_bodies)
 	add_child(TerminalWindow.filler())
+
+
+## The Bodies section: the Visited list on the left, the selected Record on the right.
+func _build_bodies() -> VBoxContainer:
+	var section := VBoxContainer.new()
+	section.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	section.add_theme_constant_override("separation", 8)
+	var gap := Control.new()
+	gap.custom_minimum_size.y = 6
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	section.add_child(gap)
+	section.add_child(TerminalWindow.header("B O D I E S"))
+
+	var columns := HBoxContainer.new()
+	columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	columns.add_theme_constant_override("separation", 20)
+	_body_rows = VBoxContainer.new()
+	_body_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_body_rows.add_theme_constant_override("separation", 4)
+	columns.add_child(_body_rows)
+	columns.add_child(TerminalWindow.rule(true))
+	_body_detail = VBoxContainer.new()
+	_body_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body_detail.custom_minimum_size.x = DETAIL_WIDTH
+	_body_detail.add_theme_constant_override("separation", 4)
+	columns.add_child(_body_detail)
+	section.add_child(columns)
+	return section
+
+
+# --- Content -----------------------------------------------------------------
+
+## Planet.save_key() of the Record the cursor is on, or "" when it holds none.
+## For tests and playtests.
+func selected_key() -> String:
+	return _visited[_cursor] if not _visited.is_empty() else ""
+
+func refresh() -> void:
+	gs = get_tree().get_first_node_in_group("game_state") as GameState
+	_visited = PackedStringArray(gs.visited_planets.keys()) if gs else PackedStringArray()
+	_cursor = clampi(_cursor, 0, maxi(_visited.size() - 1, 0))
+	# An empty list is correct output for a player who has stayed home.
+	_empty.visible = _visited.is_empty()
+	_bodies.visible = not _visited.is_empty()
+	_draw_rows()
+	_draw_detail()
+
+
+func _draw_rows() -> void:
+	_clear(_body_rows)
+	for i in _visited.size():
+		var key := _visited[i]
+		var selected := i == _cursor
+		var body := Planet.find_by_key(get_tree(), key)
+		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_theme_constant_override("separation", 8)
+		row.add_child(TerminalWindow.label(">" if selected else " ", TEXT_SIZE, Colors.PRIMARY))
+		row.add_child(TerminalWindow.label(designation(key, body), TEXT_SIZE,
+				Colors.PRIMARY if selected else Colors.TEXT))
+		row.add_child(TerminalWindow.spacer())
+		var surveyed := body != null and body.is_scanned()
+		row.add_child(TerminalWindow.label(SURVEYED if surveyed else NO_SURVEY, TEXT_SIZE,
+				Colors.PRIMARY if surveyed else Colors.PRIMARY_DIM))
+		_body_rows.add_child(row)
+
+
+
+## The selected Record: the designation, what a moon orbits, and either the survey the
+## scanner wrote or the fact that nothing has surveyed this Body yet.
+func _draw_detail() -> void:
+	_clear(_body_detail)
+	if _visited.is_empty():
+		return
+	var key := _visited[_cursor]
+	var body := Planet.find_by_key(get_tree(), key)
+	var lines: PackedStringArray
+	if body != null and body.is_scanned():
+		lines = PlanetScan.readout_lines(body)
+	else:
+		lines = PlanetScan.identity_lines(designation(key, body), orbits(body))
+		lines.append("")
+		lines.append(NO_SURVEY)
+	for line in lines:
+		var color := Colors.PRIMARY_DIM if line == NO_SURVEY else Colors.PRIMARY
+		_body_detail.add_child(TerminalWindow.label(line, TEXT_SIZE, color))
+
+
+## What the Body is called. A loaded Body knows its own name; a key held over from one
+## that is not in the scene still reads as its own last path segment.
+static func designation(key: String, body: Planet) -> String:
+	if body != null:
+		return body.planet_name.to_upper()
+	var parts := key.split("/")
+	return parts[parts.size() - 1].to_upper()
+
+
+## What `body` orbits, for a moon; "" for anything else, including a planet round the
+## sun — the survey readout names a parent only for a moon.
+static func orbits(body: Planet) -> String:
+	if body != null and body.is_moon():
+		return body.parent_planet.planet_name.to_upper()
+	return ""
+
+
+# --- Input -------------------------------------------------------------------
+
+func handle_key(keycode: int) -> bool:
+	if _visited.is_empty():
+		return false
+	match keycode:
+		KEY_UP:
+			_move_cursor(-1)
+			return true
+		KEY_DOWN:
+			_move_cursor(1)
+			return true
+	return false
+
+
+func _move_cursor(direction: int) -> void:
+	var n := _visited.size()
+	_cursor = (_cursor + direction + n) % n
+	_draw_rows()
+	_draw_detail()
+
+
+## Rows are rebuilt on every cursor move, so they come out of the tree there and then
+## rather than waiting on a frame that a redraw may beat.
+func _clear(box: Container) -> void:
+	for child in box.get_children():
+		box.remove_child(child)
+		child.free()

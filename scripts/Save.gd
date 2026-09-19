@@ -3,7 +3,7 @@ class_name Save
 
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
-## InventoryManager contents, planet orbital angles, scanned planets, dug-out ore seams
+## InventoryManager contents, planet orbital angles, Visited and scanned Bodies, dug-out ore seams
 ## (seconds until they refill), powered and identified Gates, and which radio tips were seen.
 
 const RADIO_SECTION := "radio"
@@ -14,6 +14,8 @@ const ENCOUNTER_ELAPSED_KEY := "elapsed"
 const ENCOUNTER_CLAIMED_KEY := "claimed"
 const SCAN_SECTION := "scan"
 const SCAN_PLANETS_KEY := "planets"
+const VISIT_SECTION := "visited"
+const VISIT_PLANETS_KEY := "planets"
 const ORE_SECTION := "ore"
 const ORE_REGROW_KEY := "regrow"
 const GATE_SECTION := "gates"
@@ -71,6 +73,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 
 	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, RobotRadio.seen_ids())
 	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray(gs.scanned_planets.keys()))
+	cfg.set_value(VISIT_SECTION, VISIT_PLANETS_KEY, PackedStringArray(gs.visited_planets.keys()))
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
 	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray(gs.identified_gates.keys()))
@@ -131,6 +134,25 @@ static func load_scanned_planets(path: String = "") -> PackedStringArray:
 	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray()))
+
+## Writes only the Visited Bodies into an existing save, like save_scanned_planets: a
+## Body is reached in open flight, with no dock to hang a full save off.
+## With no save yet this does nothing; the next full save() writes them.
+static func save_visited_planets(keys: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(VISIT_SECTION, VISIT_PLANETS_KEY, keys)
+	cfg.save(file)
+
+## The Bodies the player has flown into the inner orbit of, in visit order. Each one
+## holds a Record in the Log; anything missing was never reached and has no row.
+static func load_visited_planets(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(VISIT_SECTION, VISIT_PLANETS_KEY, PackedStringArray()))
 
 ## Writes only the spent-ore regrow timers into an existing save, like save_scanned_planets.
 static func save_ore_regrowth(spent: Dictionary, path: String = "") -> void:
@@ -221,6 +243,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.scanned_planets.clear()
 	for key in load_scanned_planets():
 		gs.mark_planet_scanned(key)
+	gs.visited_planets.clear()
+	for key in load_visited_planets():
+		gs.mark_planet_visited(key)
 	gs.spent_ore = load_ore_regrowth()
 	gs.powered_gates.clear()
 	for gate_key in load_powered_gates():
