@@ -20,3 +20,11 @@ greeting = "* Hey there, pilot!
 * I've got everything you need -
 * upgrades, repairs, you name it."
 talk_topics = Array[String](["What is this place?", "Any advice for a new pilot?", "What upgrades do you recommend?"])
+record_notes = Array[String](["UNIT-7 AT SR-7. WALKED ME THROUGH THE
+BEAM TWICE. GOOD VOICE TO HAVE OUT HERE.", "FIRST GATE LIT. IT CHEERED, THEN IT
+THANKED ME. LIKE THE GATE WAS ITS.", "ASKED WHAT THE MODULES DO. BEEP CAME OUT
+WRONG. SCREEN SAID \"IT REMEMBE-\", WIPED
+IT, SAID \"YOUR FUEL BILL!\". FINE AFTER.", "ALL FIVE LIT. PAUSED BEFORE IT SAID
+PILOT. DAY ONE IT SAID \"TOOK A WHILE
+THIS TIME.\" I THOUGHT IT MEANT DOCKING."])
+note_influence = Array[int]([0, 1, 3, 5])

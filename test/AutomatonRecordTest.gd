@@ -87,9 +87,26 @@ func test_a_new_game_clears_the_met_automatons() -> void:
 
 # --- Notes -------------------------------------------------------------------
 
-## The prose is a later slice, so the shipped Record has no Notes in it at all.
-func test_the_guide_ships_with_no_notes() -> void:
-	assert_array(GUIDE.notes_at(5)).is_empty()
+## The Record is never empty: the Guide's first Note is keyed to no Modules online.
+func test_the_guide_holds_a_note_from_the_first_transmission() -> void:
+	assert_array(GUIDE.notes_at(0)).has_size(1)
+
+
+## Every step of Titan Influence, stubbed in turn. The Guide's Notes are keyed to
+## 0, 1, 3 and 5, so steps 2 and 4 add nothing and no step ever takes one back.
+func test_every_step_of_influence_reveals_the_guides_notes() -> void:
+	var counts: Array[int] = []
+	for influence in range(Gate.MODULE_COUNT + 1):
+		counts.append(GUIDE.notes_at(influence).size())
+	assert_array(counts).contains_exactly([1, 2, 2, 3, 3, 4])
+
+
+## A Note is the player's own writing, not the Guide talking: terminal uppercase, and
+## none of the Guide's radio or greeting register (CONTEXT.md).
+func test_the_guides_notes_are_not_the_guide_talking() -> void:
+	for note in GUIDE.notes_at(Gate.MODULE_COUNT):
+		assert_str(note).is_equal(note.to_upper())
+		assert_str(note).not_contains("Welcome")
 
 
 func test_a_note_waits_for_the_influence_step_it_is_keyed_to() -> void:
@@ -148,11 +165,56 @@ func test_the_record_says_nothing_the_guide_would_say() -> void:
 		assert_str(line).not_contains("Welcome")
 
 
-func test_no_notes_renders_no_lines() -> void:
+## The pane lists the unlocked Notes under the designation block, in authored order.
+func test_the_pane_lists_the_notes_the_player_has_reached() -> void:
+	_gs.mark_automaton_met("UNIT-7")
+	_power_modules(3)
+	var tab := _records_tab()
+	assert_array(_text_of(tab._automaton_detail)).contains(GUIDE.notes_at(3))
+
+
+## A locked Note leaves no placeholder and no count — the pane shows what the player
+## reached and nothing standing in for the rest (docs/adr/0003).
+func test_a_locked_note_leaves_nothing_behind_in_the_pane() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	var tab := _records_tab()
-	# Designation, station, portrait. A Note would be a fourth child.
-	assert_int(tab._automaton_detail.get_child_count()).is_equal(3)
+	var text := _text_of(tab._automaton_detail)
+	assert_array(text).contains(GUIDE.notes_at(0))
+	for note in GUIDE.record_notes.slice(1):
+		assert_array(text).not_contains([note])
+	for line in text:
+		assert_str(line).not_contains("? ? ?")
+
+
+## Stepping Modules online is the dev panel's preview path: each step the Guide has a
+## Note keyed to puts one more line in the pane, and no step takes one away.
+func test_raising_modules_online_reveals_further_notes() -> void:
+	_gs.mark_automaton_met("UNIT-7")
+	var tab := _records_tab()
+	var seen := _text_of(tab._automaton_detail).size()
+	for influence in range(1, Gate.MODULE_COUNT + 1):
+		_power_modules(influence)
+		tab.refresh()
+		var lines := _text_of(tab._automaton_detail)
+		assert_array(lines).contains(GUIDE.notes_at(influence))
+		assert_int(lines.size()).is_greater_equal(seen)
+		seen = lines.size()
+
+
+## Notes are not saved: they derive from Titan Influence, which is the powered Gates
+## the save already carries. Reloading those gives the same Notes back.
+func test_unlocked_notes_come_back_with_the_powered_gates() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("stats", "credits", 0)
+	cfg.save(SAVE_FILE)
+	_power_modules(3)
+	Save.save_powered_gates(PackedStringArray(_gs.powered_gates.keys()), SAVE_FILE)
+
+	var loaded := auto_free(GameState.new()) as GameState
+	for key in Save.load_powered_gates(SAVE_FILE):
+		loaded.mark_gate_powered(key)
+	assert_int(loaded.titan_influence()).is_equal(3)
+	assert_array(GUIDE.notes_at(loaded.titan_influence())).is_equal(GUIDE.notes_at(3))
 
 
 ## The one cursor carries out of the Bodies section and into the Automatons, rather
@@ -213,6 +275,15 @@ func _radio() -> Node:
 
 func _conv(id: StringName) -> RadioConversation:
 	return RadioConversation.make(id, [RadioLine.make("%s line" % id)])
+
+
+## Titan Influence stubbed at `count`: one powered Gate per Module online, which is
+## exactly what GameState.titan_influence() counts and what the dev panel's MODULES
+## ONLINE row sets.
+func _power_modules(count: int) -> void:
+	_gs.powered_gates.clear()
+	for i in count:
+		_gs.mark_gate_powered("Sun/Module%d/Gate" % i)
 
 
 func _records_tab() -> RecordsTab:

@@ -1,0 +1,161 @@
+# Notes: UNIT-7's Record sours as the Titan wakes. One Note from the first
+# transmission, further Notes as Modules come online, and nothing at all standing in
+# for the ones the player has not reached yet (docs/adr/0003).
+#
+# The dev panel's MODULES ONLINE row is the preview path, so the steps are driven
+# through it rather than by writing GameState directly.
+# Run: tools/play.sh playtests/notes.play   (frames land in .playtest/notes_*.png)
+
+# The driver suppresses waking up by default, and the wake-up call is the meeting
+# that earns the Guide its Record, so this scenario asks for it (playtests/intro.play).
+eval main.set("force_wake_sequence", true)
+press enter
+wait_until main.current_game_state == 1 15
+wait_until pt.node("radio_panel").visible 15
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_wake" "the wake-up call is on air"
+assert gs.has_met_automaton("UNIT-7") "the first transmission is the meeting"
+
+# Click the transmission through, one press per line once the speech is out
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait_until not get_tree().paused 10
+# The rest of the tutorial transmissions pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+assert gs.titan_influence() == 0 "a new game has no Module online"
+
+# --- No Gate powered: the Record already carries its first Note ---------------
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert pt.node("log_ui").active_tab_title() == "R E C O R D S" "TAB moves to Records"
+assert str(pt.screen_text()["LogUI"]).contains("UNIT-7") "the Guide holds a Record"
+assert str(pt.screen_text()["LogUI"]).contains("WALKED ME THROUGH THE") "and a Note with it"
+# A locked Note leaves no placeholder and no count behind it
+assert not str(pt.screen_text()["LogUI"]).contains("IT CHEERED") "the 1-Module Note is absent"
+assert not str(pt.screen_text()["LogUI"]).contains("IT REMEMBE-") "the 3-Module Note is absent"
+assert not str(pt.screen_text()["LogUI"]).contains("ALL FIVE LIT") "the 5-Module Note is absent"
+assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
+screenshot notes_0_modules
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- Out of the cradle, so the dev panel will open ----------------------------
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 5
+
+# --- One Module online: the second Note arrives -------------------------------
+# TAB resets the row cursor to the top of the section, and MODULES ONLINE is that
+# top row, so two TABs from SHIP land on it. Every reopen after this one starts on
+# PROGRESS already, so it takes a full lap of five sections to land there again.
+press f1
+wait_until pt.node("dev_panel").visible 2
+press tab 2
+press right
+assert gs.titan_influence() == 1 "RIGHT on MODULES ONLINE powers a Gate"
+press escape
+wait_until not pt.node("dev_panel").visible 2
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("WALKED ME THROUGH THE") "the first Note stays"
+assert str(pt.screen_text()["LogUI"]).contains("IT CHEERED") "the 1-Module Note appears"
+assert not str(pt.screen_text()["LogUI"]).contains("IT REMEMBE-") "the 3-Module Note is still absent"
+screenshot notes_1_module
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- Two Modules: this Automaton has nothing keyed here, and nothing is teased --
+press f1
+wait_until pt.node("dev_panel").visible 2
+press tab 5
+press right
+assert gs.titan_influence() == 2 "a second Module online"
+press escape
+wait_until not pt.node("dev_panel").visible 2
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("IT CHEERED") "the Notes so far stay"
+assert not str(pt.screen_text()["LogUI"]).contains("IT REMEMBE-") "a step with no Note adds none"
+screenshot notes_2_modules
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- Three Modules: the beep lands wrong --------------------------------------
+press f1
+wait_until pt.node("dev_panel").visible 2
+press tab 5
+press right
+assert gs.titan_influence() == 3 "a third Module online"
+press escape
+wait_until not pt.node("dev_panel").visible 2
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("IT REMEMBE-") "the 3-Module Note appears"
+assert not str(pt.screen_text()["LogUI"]).contains("ALL FIVE LIT") "the last Note waits"
+screenshot notes_3_modules
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- Five Modules: the last Note ----------------------------------------------
+press f1
+wait_until pt.node("dev_panel").visible 2
+press tab 5
+press right 2
+assert gs.titan_influence() == 5 "every Module online"
+press escape
+wait_until not pt.node("dev_panel").visible 2
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("WALKED ME THROUGH THE") "nothing is taken back"
+assert str(pt.screen_text()["LogUI"]).contains("IT CHEERED") "nothing is taken back"
+assert str(pt.screen_text()["LogUI"]).contains("IT REMEMBE-") "nothing is taken back"
+assert str(pt.screen_text()["LogUI"]).contains("ALL FIVE LIT") "the 5-Module Note appears"
+screenshot notes_5_modules
+press escape
+wait_until not pt.visible_ui().has("LogUI") 2
+
+# --- The Notes derive from the powered Gates, so they come back with the save --
+eval pt.save_now()
+eval gs.powered_gates.clear()
+reload
+assert gs.titan_influence() == 5 "the powered Gates came back"
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+frames 2
+wait 0.4
+assert str(pt.screen_text()["LogUI"]).contains("ALL FIVE LIT") "and the Notes with them"
+screenshot notes_6_reloaded
+press escape
+
+state
