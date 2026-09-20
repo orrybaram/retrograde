@@ -84,9 +84,8 @@ func _process(_delta: float) -> void:
 		var anchor := _edge_marker(rect, dir) - dir * READOUT_GAP
 		var pos := anchor - _readout.size * ((dir + Vector2.ONE) / 2.0)
 		pos = pos.clamp(Vector2.ZERO, (size - _readout.size).max(Vector2.ZERO))
-		for blocked in _blocked_rects():
-			if blocked.intersects(Rect2(pos, _readout.size)):
-				pos.y = blocked.position.y - _readout.size.y
+		# Slides the same way the chevron did, so the two stay together.
+		pos = push_rect_out_of(Rect2(pos, _readout.size), _blocked_rects()).position
 		_readout.position = pos
 	queue_redraw()
 
@@ -187,6 +186,20 @@ static func edge_point(rect: Rect2, origin: Vector2, dir: Vector2) -> Vector2:
 	if is_inf(t):
 		return origin
 	return origin + dir * t
+
+## Moves `rect` just above or just right of the first blocker it overlaps,
+## whichever is the shorter slide. Mirrors `push_out_of` so a readout
+## anchored to a pushed chevron follows it instead of jumping over the blocker.
+static func push_rect_out_of(rect: Rect2, rects: Array[Rect2]) -> Rect2:
+	for r in rects:
+		if not r.intersects(rect):
+			continue
+		var up := rect.position.y + rect.size.y - r.position.y
+		var right := r.end.x - rect.position.x
+		if up <= right:
+			return Rect2(Vector2(rect.position.x, r.position.y - rect.size.y), rect.size)
+		return Rect2(Vector2(r.end.x, rect.position.y), rect.size)
+	return rect
 
 ## Moves `point` to the nearest top or right edge of the first rect containing it.
 ## Blockers sit in screen corners, so this keeps edge markers on the screen edge.

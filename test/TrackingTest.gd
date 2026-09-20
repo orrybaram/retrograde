@@ -104,3 +104,16 @@ func test_push_out_of_blocker_moves_to_nearest_edge() -> void:
 	assert_vector(TrackingIndicator.push_out_of(Vector2(290, 680), blocker)).is_equal(Vector2(300, 680))
 	# Outside: untouched.
 	assert_vector(TrackingIndicator.push_out_of(Vector2(400, 680), blocker)).is_equal(Vector2(400, 680))
+
+
+func test_push_rect_out_of_blocker_follows_shorter_slide() -> void:
+	var blocker: Array[Rect2] = [Rect2(0, 500, 300, 220)]
+	# Readout centred on a chevron just past the blocker's right side: slides right, not up.
+	var near_right := TrackingIndicator.push_rect_out_of(Rect2(250, 600, 100, 40), blocker)
+	assert_vector(near_right.position).is_equal(Vector2(300, 600))
+	# Readout dipping into the blocker's top: slides up.
+	var near_top := TrackingIndicator.push_rect_out_of(Rect2(40, 480, 100, 40), blocker)
+	assert_vector(near_top.position).is_equal(Vector2(40, 460))
+	# Clear of it: untouched.
+	var clear := TrackingIndicator.push_rect_out_of(Rect2(400, 600, 100, 40), blocker)
+	assert_vector(clear.position).is_equal(Vector2(400, 600))
