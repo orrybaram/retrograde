@@ -366,7 +366,7 @@ exists.
 
 ## 12. Vocabulary
 
-**Sweep**: Holding `action`. The one thing the ship can always do.
+**Sweep**: Holding `action`. The one thing the ship can always do — except while carrying Freight, when `action` releases it (ADR 0012).
 _Avoid_: minigame, ping (the rings are the ping, the Sweep is the act)
 
 **Mark**: One release, landing in one **Slot**.
