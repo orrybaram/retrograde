@@ -38,8 +38,9 @@ FlyingState._check_freight_proximity -> Freight.can_clamp (docking checks at the
 CarryingState: action = RELEASE, anywhere -> FlyingState; exit() always calls Ship.release_freight
 ```
 
-- `Freight` (`entities/freight/Freight.gd`) is a RigidBody2D in group `freight`, `gravity_scale` 0, whose
-  `_integrate_forces` parks it (bleeds to exactly zero). One Lug: `lug_position` + `lug_facing`.
+- `Freight` (`entities/freight/Freight.gd`) is a RigidBody2D in group `freight` with no gravity and no
+  damping: released, it coasts with the ship's velocity and heading (`Ship.release_freight`). Planet
+  gravity only pulls `Ship` bodies anyway (`PlanetGravityField`). One Lug: `lug_position` + `lug_facing`.
 - Clamped, the piece is reparented under the ship with `PROCESS_MODE_DISABLED` (out of the physics
   space), its outline is added to the ship as `FreightCollision`, and `Ship._apply_mass` sets mass,
   `center_of_mass` and `inertia` explicitly. Unladen it resets to the ship's own mass, centre (0,0)

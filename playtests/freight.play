@@ -62,10 +62,27 @@ assert pt.state_name() == "FlyingState" "the press let go"
 assert not ship.is_carrying() "the piece is loose"
 assert ship.mass < 3.1 "the ship is its own weight again"
 
-# Loose, it parks: pushed away at speed, it bleeds to a full stop
-eval pt.recall("piece").set("linear_velocity", Vector2(200, 0))
-wait 8
-assert pt.recall("piece").linear_velocity.length() == 0.0 "loose Freight parks"
+# Let go on the move, it carries on exactly as the ship was going
+# (the first piece is coasting just off the nose: move it out of the way)
+eval pt.recall("piece").set("global_position", ship.global_position + Vector2(0, 3000))
+frames 3
+hold thrust 1.0
+eval pt.remember("piece2", pt.stage_freight())
+frames 3
+press action
+frames 3
+assert pt.state_name() == "CarryingState" "clamped again, on the move"
+hold turn_right 0.4
+press action
+frames 2
+assert pt.state_name() == "FlyingState" "let go mid-turn"
+assert pt.recall("piece2").linear_velocity.distance_to(ship.linear_velocity) < 3.0 "released, it keeps the ship's velocity"
+assert absf(pt.recall("piece2").angular_velocity) < 0.001 "and does not spin"
+eval pt.remember("v", pt.recall("piece2").linear_velocity)
+eval pt.remember("gap", pt.recall("piece2").global_position.distance_to(ship.global_position))
+wait 3
+assert absf(pt.recall("piece2").global_position.distance_to(ship.global_position) - pt.recall("gap")) < 5.0 "coasting ship and piece stay together"
+assert pt.recall("piece2").linear_velocity.distance_to(pt.recall("v")) < 1.0 "no damping: it keeps its speed"
 
 # Unladen turning is back to normal
 eval ship.set("angular_velocity", 0.0)

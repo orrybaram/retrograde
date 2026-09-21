@@ -384,18 +384,16 @@ func clamp_freight(f: Freight) -> void:
 	update_mass_from_cargo()
 	linear_velocity = shared
 
-## Let go of whatever is clamped, where it is, moving the way that part of the ship was
-## moving. Returns the piece (null if nothing was clamped).
+## Let go of whatever is clamped, where it is. It carries on exactly as the ship was
+## moving - the ship's velocity, the ship's heading, no spin - so at the moment of release
+## the two sit still relative to each other. Returns the piece (null if nothing was clamped).
 func release_freight() -> Freight:
 	if not is_carrying():
 		freight = null
 		return null
 	var f := freight
-	var com := to_global(center_of_mass)
 	var carried := global_transform * f.transform
-	var piece_velocity := _velocity_at(carried * f.own_center(), com)
-	var hull_velocity := _velocity_at(global_position, com)
-	var spin := angular_velocity
+	var hull_velocity := _velocity_at(global_position, to_global(center_of_mass))
 	freight = null
 	if _freight_collider:
 		remove_child(_freight_collider)
@@ -404,8 +402,8 @@ func release_freight() -> Freight:
 	f.reparent(get_parent(), false)
 	f.global_transform = carried
 	f.process_mode = Node.PROCESS_MODE_INHERIT
-	f.linear_velocity = piece_velocity
-	f.angular_velocity = spin
+	f.linear_velocity = hull_velocity
+	f.angular_velocity = 0.0
 	update_mass_from_cargo()
 	linear_velocity = hull_velocity
 	# It was touching the nose: let the two drift apart before they can collide again.

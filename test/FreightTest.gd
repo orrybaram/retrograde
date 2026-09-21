@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## Freight (docs/adr/0012): the docking-style clamp checks, the pose a Lug fixes, parking,
-## and how a clamped load slows turning without touching unladen flight.
+## Freight (docs/adr/0012): the docking-style clamp checks, the pose a Lug fixes, and how
+## a clamped load slows turning without touching unladen flight.
 
 const NOSE := Vector2(10, 0)
 
@@ -32,23 +32,6 @@ func test_pose_puts_the_lug_on_the_nose_facing_back() -> void:
 	var pose := Freight.clamped_pose(lug, facing, NOSE)
 	assert_vector(pose * lug).is_equal_approx(NOSE, Vector2(0.001, 0.001))
 	assert_vector(pose.basis_xform(facing)).is_equal_approx(Vector2.LEFT, Vector2(0.001, 0.001))
-
-# --- parking ---
-
-func test_loose_freight_slows() -> void:
-	var m := Freight.parked_motion(Vector2(100, 0), 1.0, 0.1)
-	assert_float((m[0] as Vector2).length()).is_less(100.0)
-	assert_float(m[1]).is_less(1.0)
-
-func test_loose_freight_stops_dead() -> void:
-	var v := Vector2(300, 0)
-	var spin := 2.0
-	for i in 600:  # ten seconds at 60 Hz
-		var m := Freight.parked_motion(v, spin, 1.0 / 60.0)
-		v = m[0]
-		spin = m[1]
-	assert_vector(v).is_equal(Vector2.ZERO)
-	assert_float(spin).is_equal(0.0)
 
 # --- turning ---
 

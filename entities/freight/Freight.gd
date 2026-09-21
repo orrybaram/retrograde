@@ -2,16 +2,10 @@ extends RigidBody2D
 class_name Freight
 
 ## Something too big for the hold (docs/adr/0012): clamped rigidly to the ship's nose at
-## its one Lug and pushed home ahead of it. Loose, it parks - momentum bleeds to a full
-## stop and gravity never moves it - so it is always where the ship left it. While
+## its one Lug and pushed home ahead of it. Let go, it coasts on exactly as the ship was
+## moving - same velocity, same heading - and gravity never bends its path. While
 ## clamped it is not a body of its own: Ship.clamp_freight folds its mass, inertia and
 ## outline into the ship's, and Ship.release_freight hands them back.
-
-## Per second, how fast a loose piece sheds its motion...
-const PARK_DAMPING := 1.5
-## ...and the speed (px/s) and spin (rad/s) below which it stops dead.
-const PARK_SPEED := 2.0
-const PARK_SPIN := 0.02
 ## How close the ship's nose must be to the Lug to take hold (px).
 const CLAMP_REACH := 16.0
 ## The docking checks: slower than this relative to the piece, nose within this of the Lug.
@@ -34,7 +28,11 @@ var _collider: CollisionPolygon2D
 
 func _init() -> void:
 	mass = 3.0  # the ship's own mass, so a clamped test piece halves its acceleration
-	gravity_scale = 0.0  # planets pull through Area2D gravity; Freight does not answer it
+	gravity_scale = 0.0  # nothing pulls on Freight; it goes where the ship sent it
+	linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	linear_damp = 0.0
+	angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	angular_damp = 0.0
 	can_sleep = false
 
 func _ready() -> void:
@@ -69,22 +67,6 @@ static func spawn_ahead_of(ship: Ship, gap := 6.0) -> Freight:
 	f.global_rotation = rot
 	f.linear_velocity = ship.linear_velocity
 	return f
-
-func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
-	var parked := parked_motion(state.linear_velocity, state.angular_velocity, state.step)
-	state.linear_velocity = parked[0]
-	state.angular_velocity = parked[1]
-
-## Where a loose piece's motion goes after `dt`: bled down, and zeroed once it is slow.
-static func parked_motion(velocity: Vector2, spin: float, dt: float) -> Array:
-	var k := exp(-PARK_DAMPING * dt)
-	velocity *= k
-	spin *= k
-	if velocity.length() < PARK_SPEED:
-		velocity = Vector2.ZERO
-	if absf(spin) < PARK_SPIN:
-		spin = 0.0
-	return [velocity, spin]
 
 func lug_global() -> Vector2:
 	return to_global(lug_position)

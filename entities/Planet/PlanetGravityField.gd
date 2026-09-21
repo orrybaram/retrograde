@@ -46,7 +46,9 @@ func _apply_gravity_to_ship(ship: Ship) -> void:
 	var dir = planet.global_position.direction_to(ship.global_position)
 	var force_mag = gravity_strength / max(dist * dist, 1.0)
 	
-	ship.apply_force(-dir * force_mag)
+	# Through the centre of mass: with Freight clamped that is ahead of the hull, and a pull
+	# anywhere else would twist the nose (docs/adr/0012: no nose drift)
+	ship.apply_central_force(-dir * force_mag)
 
 func _get_gravity_strength() -> float:
 	return planet.mass * planet.gravitational_constant
