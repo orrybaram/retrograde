@@ -120,7 +120,7 @@ _Avoid_: sighted, discovered, explored
 - Powering a **Gate** brings its **Module** online; there is no way to power a **Module** down again.
 - **Freight** is flown, never stowed: it never enters the hold and never counts against cargo capacity. While clamped, the ship is the ship plus the Freight — heavier and slower to turn, but never lopsided: the nose goes where the player points it.
 - A found **Component** too big for the hold is **Freight** until it is released at a station; it becomes part of the ship only when fitted there through the menus.
-- **Freight** is never lost. Released, it coasts on exactly as the ship was moving — same velocity, same heading — and gravity never bends its path. A clamp will not hold past the edge of the **Void**, so all Freight is always inside the system.
+- **Freight** is never lost. Released, it coasts on as the ship was moving — same velocity, same heading, plus a slow drift off the nose — and gravity never bends its path. A clamp will not hold past the edge of the **Void**, so all Freight is always inside the system.
 - A ship abandoned or destroyed with **Freight** clamped leaves it there; a **Void**-consumed ship never has any, because the clamp let go at the edge.
 - **Freight** the ship has clamped and then let go of — released, or left on an abandoned or destroyed hull — is marked on the **Chart** and tracked at once. These are the ship's own marks, drawn over the Titan's map whether or not the region is **Charted**; **Freight** never touched is never marked. Clamping it again clears the mark and tracks its destination instead: a **Section**'s **Mount**, or the **Cradle** for a **Component**.
 - Each **Section** has exactly one **Mount**; the mast only ever goes where the mast was.

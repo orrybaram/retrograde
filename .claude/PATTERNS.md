@@ -37,7 +37,10 @@ Ship._drive_sonar -> Ship.wants_sonar() -> SonarPulse.charging (held) -> fire() 
   a ring's edge actually reaches that point (`SonarPulse.time_to_reach`). An answer is drawn in
   `Colors.TITAN`, the one sanctioned non-Titan-body use of purple: whatever answers a Sweep is part
   of the Titan. Freight lights its Lug purple and sends a `SonarEcho` (small purple rings) back out.
-  Scrap deliberately does not answer (docs/adr/0007).
+  Scrap deliberately does not *answer* (docs/adr/0007) - no purple, no echo - but it listens too:
+  it passes for debris (tinted `ScrapNode.DORMANT_COLOR`, no sparkles, off the minimap, takes no
+  cut) until a ring reaches it, then `ScrapNode.reveal()` lights it up for the rest of its spawn and sends one cream `SonarEcho` ring back.
+  Containers and derelicts opt out via `_hides_until_pinged()`. Playtest `stage_harvest` reveals.
 
 ## Freight (clamped to the nose, docs/adr/0012)
 
@@ -49,7 +52,7 @@ CarryingState: hold action RELEASE_HOLD (0.8s; the action message is only a fill
 ```
 
 - `Freight` (`entities/freight/Freight.gd`) is a RigidBody2D in group `freight` with no gravity and no
-  damping: released, it coasts with the ship's velocity and heading (`Ship.release_freight`). Planet
+  damping: released, it coasts with the ship's velocity and heading plus `Ship.RELEASE_DRIFT` off the nose (`Ship.release_freight`). Planet
   gravity only pulls `Ship` bodies anyway (`PlanetGravityField`). One Lug: `lug_position` + `lug_facing`.
 - Clamped, the piece is reparented under the ship with `PROCESS_MODE_DISABLED` (out of the physics
   space), its outline is added to the ship as `FreightCollision`, and `Ship._apply_mass` sets mass,

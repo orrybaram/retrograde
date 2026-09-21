@@ -6,6 +6,11 @@ class_name ScrapNode
 ## Each hit is a hold-and-release timing check (see HarvestTiming) that knocks gems loose;
 ## the last hit breaks the scrap into a bigger burst. HP mirrors hits left for visuals.
 ## Returns to pool via ResourceNodePool after the depletion animation completes.
+##
+## Scrap passes for debris until a Sweep finds it: dark, no sparkles, off the minimap, and
+## it takes no cut. A ring reaching it lights it up for the rest of its spawn and sends one
+## cream ring back. It is not an answer - nothing purple - scrap is not part of the Titan,
+## it only shows itself.
 
 signal harvest_started
 signal harvest_stopped
@@ -19,6 +24,17 @@ signal can_harvest_changed(can_harvest: bool)
 
 const NORMAL_HITS := 3
 const TROPHY_HITS := 5
+
+## What unfound scrap is tinted down to: the colour of the ring's debris.
+const DORMANT_COLOR := Colors.HULL_MID
+## The flash as a ring finds it (a brightness multiplier), and how long it takes to settle.
+const REVEAL_FLASH := 1.8
+const REVEAL_TIME := 0.6
+## The ring it sends back when found: how far it reaches, how long it takes, how bright.
+const REVEAL_ECHO_RADIUS := 90.0
+const REVEAL_ECHO_TIME := 1.0
+const REVEAL_ECHO_ALPHA := 0.9
+const REVEAL_ECHO_WIDTH := 2.0
 
 @export var is_trophy: bool = false:
 	set(value):
@@ -37,6 +53,9 @@ var health_component: HealthComponent
 var _shape_instance: Node2D = null
 var timing: HarvestTiming = null  # created lazily when a harvest starts; null = untouched
 var hits_left: int = NORMAL_HITS
+## Found by a Sweep ring this spawn. Until then it looks and acts like debris.
+var revealed := false
+var _reveal_tween: Tween = null
 
 const _SHAPE_SCENES := [
 	preload("res://entities/resources/ScrapShapes/ScrapShape0.tscn"),
@@ -49,6 +68,7 @@ const _SHAPE_SCENES := [
 
 func _ready() -> void:
 	_uses_harvest_detection = true  # keeps monitorable toggled on sleep/wake for HarvestCone
+	revealed = not _hides_until_pinged()
 	monitoring = false  # HarvestCone detects us via area_entered; we don't body-detect the ship
 	_load_shape()  # before super so OrbitalNode caches CollisionArea from the shape sub-scene
 	super._ready()
@@ -59,6 +79,9 @@ func _ready() -> void:
 	add_child(health_component)
 
 	add_to_group("resource_nodes")
+	add_to_group("sonar_listeners")
+	if not revealed:
+		_go_dark()
 
 	# Register with EventBus
 	EventBus.register_resource_node(self)
@@ -126,6 +149,77 @@ func _load_shape() -> void:
 ## a rare lump of scrap wants noticing, a sealed container wants to look sealed.
 func _pulses_when_trophy() -> bool:
 	return true
+
+## Whether this hides as debris until a Sweep finds it. Off for anything whose shape already
+## says what it is: a sealed container, a derelict hull.
+func _hides_until_pinged() -> bool:
+	return true
+
+## A ring has to reach the scrap itself.
+func sonar_point() -> Vector2:
+	return global_position
+
+func on_sonar_touched() -> void:
+	# Pooled nodes keep the group but drop out of resource_nodes
+	if revealed or _is_depleted or not is_in_group("resource_nodes"):
+		return
+	reveal()
+
+## Light up: flash bright and settle to its own colour, sparkles fading in, and one cream ring
+## goes back out to say it was found (animated reveals only). From here on it
+## is on the minimap and takes a cut. `animate` false snaps straight to lit.
+func reveal(animate := true) -> void:
+	revealed = true
+	if _reveal_tween:
+		_reveal_tween.kill()
+		_reveal_tween = null
+	var sparkles := get_node_or_null("SparkleParticles") as CanvasItem
+	if animate:
+		var echo := SonarEcho.answer(self, Vector2.ZERO, Colors.CREAM, 1)
+		echo.end_radius = REVEAL_ECHO_RADIUS
+		echo.lifetime = REVEAL_ECHO_TIME
+		echo.max_alpha = REVEAL_ECHO_ALPHA
+		echo.width = REVEAL_ECHO_WIDTH
+		_reveal_tween = create_tween().set_parallel()
+		if _shape_instance:
+			_shape_instance.modulate = Color(REVEAL_FLASH, REVEAL_FLASH, REVEAL_FLASH)
+			_reveal_tween.tween_property(_shape_instance, "modulate", Color.WHITE, REVEAL_TIME) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		if sparkles:
+			_reveal_tween.tween_property(sparkles, "modulate:a", 1.0, REVEAL_TIME)
+	else:
+		if _shape_instance:
+			_shape_instance.modulate = Color.WHITE
+		if sparkles:
+			sparkles.modulate.a = 1.0
+	if is_trophy:
+		_start_trophy_pulse()
+	if _state_machine and _state_machine.current_state is ScrapInRangeState:
+		_register_indicator()
+
+## Pass for debris: tinted down to DORMANT_COLOR, sparkles hidden. (Sparkles go by alpha,
+## not `visible`: _find_visual_node() turns every Node2D child visible.)
+func _go_dark() -> void:
+	revealed = false
+	if _reveal_tween:
+		_reveal_tween.kill()
+		_reveal_tween = null
+	if _shape_instance:
+		_shape_instance.modulate = _dormant_tint()
+	var sparkles := get_node_or_null("SparkleParticles") as CanvasItem
+	if sparkles:
+		sparkles.modulate.a = 0.0
+
+## The modulate that takes this shape's main colour to DORMANT_COLOR.
+func _dormant_tint() -> Color:
+	for child in _shape_instance.get_children():
+		if child is Polygon2D:
+			var c := (child as Polygon2D).color
+			return Color(
+				minf(DORMANT_COLOR.r / maxf(c.r, 0.01), 1.0),
+				minf(DORMANT_COLOR.g / maxf(c.g, 0.01), 1.0),
+				minf(DORMANT_COLOR.b / maxf(c.b, 0.01), 1.0))
+	return DORMANT_COLOR
 
 ## The shapes this node can be built from, one picked at random. Subclasses override it
 ## to look like something in particular rather than like generic wreckage.
@@ -259,6 +353,8 @@ func on_spawn() -> void:
 
 	timing = null
 	hits_left = NORMAL_HITS
+	if _hides_until_pinged():
+		_go_dark()
 
 	# Trophy roll for pooled nodes
 	is_trophy = RNG.rng.randi() % 10 == 0
@@ -287,6 +383,10 @@ func on_despawn() -> void:
 	_ship_in_range = null
 	_indicator_target = null
 
+	if _reveal_tween:
+		_reveal_tween.kill()
+		_reveal_tween = null
+
 	# Reset trophy state
 	if _trophy_pulse_tween:
 		_trophy_pulse_tween.kill()
@@ -307,7 +407,7 @@ func on_despawn() -> void:
 	super.on_despawn()
 
 func _register_indicator() -> void:
-	if _indicator_manager and not _indicator_target and not _is_depleted:
+	if _indicator_manager and not _indicator_target and not _is_depleted and revealed:
 		var target_class = load("res://ui/indicators/ResourceIndicatorTarget.gd")
 		if target_class:
 			_indicator_target = target_class.new(self)
@@ -370,7 +470,14 @@ func _activate_trophy() -> void:
 	hits_left = TROPHY_HITS
 	health_component.reset()
 
-	# Subtle scale pulse to catch the eye
+	# Hidden scrap doesn't give itself away; reveal() starts the pulse
+	if revealed:
+		_start_trophy_pulse()
+
+## Subtle scale pulse to catch the eye.
+func _start_trophy_pulse() -> void:
+	if _trophy_pulse_tween:
+		return
 	var visual = _find_visual_node() if _pulses_when_trophy() else null
 	if visual:
 		_trophy_pulse_tween = create_tween().set_loops()

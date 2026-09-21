@@ -99,6 +99,23 @@ const DAMAGE_REFERENCE := 20.0
 @export var harvest_shake_duration: float = 0.5  # How long harvest shake lasts (seconds)
 @export var harvest_lockon_shake_intensity: float = 0.8  # Camera bump on harvest lock-on
 @export var harvest_lockon_shake_duration: float = 0.3  # Duration of lock-on bump
+## Clamping Freight: the camera bump, the particle burst (x the base clunk) and the hitstop.
+const CLAMP_SHAKE_INTENSITY := 1.5
+const CLAMP_SHAKE_DURATION := 0.3
+const CLAMP_BURST := 1.7
+## How many times more particles than the burst's strength alone gives, clamping and letting go.
+const CLAMP_DENSITY := 2.5
+const RELEASE_DENSITY := 2.0
+## How opaque the shockwave rings start.
+const CLAMP_RING_ALPHA := 0.4
+const CLAMP_HITSTOP := 0.04
+## Letting go: a lighter version of the same, no hitstop.
+const RELEASE_SHAKE_INTENSITY := 1.0
+const RELEASE_SHAKE_DURATION := 0.25
+const RELEASE_BURST := 1.3
+## Released Freight drifts off the nose this fast (px/s) on top of the ship's velocity, so
+## the two slowly part instead of hanging together.
+const RELEASE_DRIFT := 6.0
 
 var camera_shake_time: float = 0.0
 var damage_shake_time: float = 0.0  # Time remaining for damage shake
@@ -402,11 +419,11 @@ func clamp_freight(f: Freight) -> void:
 	add_child(_freight_collider)
 	update_mass_from_cargo()
 	linear_velocity = shared
-	_clunk(f)
+	_clamp_fx(f)
 
-## Let go of whatever is clamped, where it is. It carries on exactly as the ship was
-## moving - the ship's velocity, the ship's heading, no spin - so at the moment of release
-## the two sit still relative to each other. Returns the piece (null if nothing was clamped).
+## Let go of whatever is clamped, where it is. It carries on as the ship was moving - the
+## ship's velocity, the ship's heading, no spin - plus a nudge of RELEASE_DRIFT straight off
+## the nose, so the two very slowly part. Returns the piece (null if nothing was clamped).
 func release_freight() -> Freight:
 	if not is_carrying():
 		freight = null
@@ -422,25 +439,44 @@ func release_freight() -> Freight:
 	f.reparent(get_parent(), false)
 	f.global_transform = carried
 	f.process_mode = Node.PROCESS_MODE_INHERIT
-	f.linear_velocity = hull_velocity
+	var forward := (to_global(NOSE) - global_position).normalized()
+	f.linear_velocity = hull_velocity + forward * RELEASE_DRIFT
 	f.angular_velocity = 0.0
 	update_mass_from_cargo()
 	linear_velocity = hull_velocity
 	# It was touching the nose: let the two drift apart before they can collide again.
 	f.add_collision_exception_with(self)
-	_clunk(f)
+	_release_fx(f)
 	get_tree().create_timer(0.6).timeout.connect(func() -> void:
 		if is_instance_valid(f):
 			f.remove_collision_exception_with(self))
 	return f
 
-## Clamping or letting go: smoke and sparks where the Lug meets the nose, the piece jolts,
-## and the camera takes a small bump.
-func _clunk(f: Freight) -> void:
-	ClampFX.burst(get_parent(), to_global(NOSE), linear_velocity)
-	f.punch()
-	damage_shake_time = harvest_lockon_shake_duration
-	damage_shake_current_intensity = harvest_lockon_shake_intensity
+## Letting go: smoke and sparks where the Lug leaves the nose, one cream ring, the Lug
+## glints and the piece jolts, and the camera takes a small bump.
+func _release_fx(f: Freight) -> void:
+	var nose := to_global(NOSE)
+	ClampFX.burst(get_parent(), nose, linear_velocity, RELEASE_BURST, RELEASE_DENSITY)
+	HarvestJuice.ring(get_parent(), nose, Color(Colors.CREAM, CLAMP_RING_ALPHA), 50.0, linear_velocity)
+	f.punch(0.1)
+	f.flash_released()
+	damage_shake_time = RELEASE_SHAKE_DURATION
+	damage_shake_current_intensity = RELEASE_SHAKE_INTENSITY
+
+## Taking hold is the big moment, bigger than letting go: a beat of hitstop, two
+## shockwaves off the nose, a heavier spray of sparks, a harder camera bump, and the piece
+## lights up and jolts.
+func _clamp_fx(f: Freight) -> void:
+	var nose := to_global(NOSE)
+	var world := get_parent()
+	ClampFX.burst(world, nose, linear_velocity, CLAMP_BURST, CLAMP_DENSITY)
+	HarvestJuice.ring(world, nose, Color(Colors.CREAM, CLAMP_RING_ALPHA), 45.0, linear_velocity)
+	HarvestJuice.ring(world, nose, Color(Colors.PRIMARY, CLAMP_RING_ALPHA), 80.0, linear_velocity)
+	HarvestJuice.hitstop(get_tree(), CLAMP_HITSTOP)
+	f.punch(0.14)
+	f.flash_clamped()
+	damage_shake_time = CLAMP_SHAKE_DURATION
+	damage_shake_current_intensity = CLAMP_SHAKE_INTENSITY
 
 ## Is `shape_index` (a contact's local shape) part of the clamped load rather than the hull?
 func is_freight_shape(shape_index: int) -> bool:

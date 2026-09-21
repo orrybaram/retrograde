@@ -587,6 +587,7 @@ func test_a_container_does_not_breathe() -> void:
 func test_ordinary_trophy_scrap_still_breathes() -> void:
 	# The pulse is how a rare lump of scrap catches the eye; only containers opt out.
 	var scrap := auto_free(ResourceNodePool.get_instance("Scrap1", self)) as ScrapNode
+	scrap.reveal(false)
 	scrap.is_trophy = true
 	assert_object(scrap._trophy_pulse_tween).is_not_null()
 	ResourceNodePool.return_instance(scrap)

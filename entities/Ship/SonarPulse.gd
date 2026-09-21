@@ -14,7 +14,8 @@ class_name SonarPulse
 ##
 ## Things that answer a Sweep join the `sonar_listeners` group with `sonar_point()` (where
 ## the ring has to reach, global) and `on_sonar_touched()`, which is called the moment a
-## ring's edge actually gets there - not when it leaves the ship. Scrap does not answer.
+## ring's edge actually gets there - not when it leaves the ship. Scrap listens but does not
+## answer: a ring only lights it up out of the debris, with one cream echo (ScrapNode.reveal).
 
 signal pulsed(origin: Vector2)  ## A ring left the ship, from `origin` (global).
 

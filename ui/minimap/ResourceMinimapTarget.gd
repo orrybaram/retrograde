@@ -2,7 +2,7 @@ extends MinimapTarget
 class_name ResourceMinimapTarget
 
 ## MinimapTarget for ScrapNode: a small hull-colored chunk that tumbles with the scrap.
-## Trophy scrap is a larger mustard chunk that twinkles.
+## Trophy scrap is a larger mustard chunk that twinkles. Only once a Sweep has found it.
 
 var resource: ScrapNode
 
@@ -43,7 +43,8 @@ func is_minimap_visible() -> bool:
 		return false
 	if resource._is_depleted:
 		return false
-	return true
+	# Scrap no Sweep has found yet is just debris, and debris isn't on the map
+	return resource.revealed
 
 func get_minimap_node() -> Node2D:
 	return resource

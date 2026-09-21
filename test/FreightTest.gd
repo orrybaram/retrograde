@@ -124,3 +124,14 @@ func test_a_clamped_piece_still_lets_its_echo_fade() -> void:
 	await get_tree().create_timer(SonarEcho.LIFETIME + SonarEcho.STAGGER * SonarEcho.RINGS + 0.2).timeout
 	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(0)
 	assert_float(piece._lug_line.width).is_equal_approx(3.0, 0.01)
+
+func test_clamping_lights_the_piece_up_and_it_settles_back() -> void:
+	var piece: Freight = auto_free(Freight.new())
+	add_child(piece)
+	piece.flash_clamped()
+	assert_that(piece._body.color).is_not_equal(Colors.HULL_MID)
+	assert_that(piece._lug_line.default_color).is_equal(Colors.CREAM)
+	piece.process_mode = Node.PROCESS_MODE_DISABLED  # clamped: the flash must still play out
+	await get_tree().create_timer(Freight.CLAMP_FLASH_TIME * 1.4 + 0.2).timeout
+	assert_that(piece._body.color).is_equal(Colors.HULL_MID)
+	assert_float(piece._lug_line.width).is_equal_approx(3.0, 0.01)

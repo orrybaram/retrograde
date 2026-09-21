@@ -129,6 +129,10 @@ func _arm() -> void:
 	_armed = true
 	monitorable = true
 
+## The player's own lost ship: never hidden among the debris.
+func _hides_until_pinged() -> bool:
+	return false
+
 func _rolls_trophy() -> bool:
 	return false
 
