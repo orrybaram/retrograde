@@ -413,6 +413,14 @@ func _ship_rows() -> Array[Dictionary]:
 	))
 
 	rows.append(_action_row(
+		"SPAWN FREIGHT",
+		"A test piece of Freight with its Lug just ahead of the nose. SPACE clamps it.",
+		func() -> void:
+			Freight.spawn_ahead_of(ship)
+			close()
+	))
+
+	rows.append(_action_row(
 		"STRAND SHIP",
 		"Empties the tank, which is what puts the abandon-ship call on the radio.",
 		func() -> void:

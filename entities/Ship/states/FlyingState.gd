@@ -11,15 +11,24 @@ var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after
 ## A ship breaking ground is released still touching the surface, so the ground rules are
 ## held off this long - otherwise it would be judged as landing again the same instant.
 const LIFTOFF_GRACE := 0.9
+## With a load clamped, how long (s) a turn takes to wind up to speed at a turn ratio of
+## one half; it grows with the load, to at most twice this (see turned_spin). Unladen
+## there is no wind-up.
+const TURN_LAG := 0.3
 
 var _state_enter_time: float = 0.0
 var _touchdown_pending := false
 var _ground_grace := 0.0
+## `action` must be seen up once in this state before a press counts, so the press that
+## brought the ship here (a release, a clamp) is never read twice.
+var _action_armed := false
 
 func enter() -> void:
 	super.enter()
 	_state_enter_time = Time.get_ticks_msec() / 1000.0
 	_touchdown_pending = false
+	_action_armed = false
+	_magnet_target = null
 	# _ground_grace is deliberately left alone: PlanetLandedState sets it on the way out,
 	# before this runs.
 
@@ -61,9 +70,9 @@ func physics_process(delta: float) -> void:
 	# Update camera shake
 	_update_camera_shake(delta)
 	
-	# Check for dockable entities and handle manual docking
-	_check_dockable_proximity()
-	_attempt_dock()
+	if not Input.is_action_pressed("action"):
+		_action_armed = true
+	_update_action()
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if not is_ship_valid():
@@ -79,6 +88,9 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 				continue
 			if not (collider is RigidBody2D):
 				continue
+			# A clamped load collides, but its knocks don't reach the hull (yet: docs/adr/0012)
+			if ship.is_freight_shape(state.get_contact_local_shape(i)):
+				continue
 
 			var ship_speed = state.get_contact_local_velocity_at_position(i)
 			# Ground near an ore seam has its own rules (touch down, or a hard landing)
@@ -90,24 +102,43 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			var speed_along_normal = relative_velocity.dot(collision_normal)
 			var impact_speed: int = abs(speed_along_normal)
 
-			if impact_speed > ship.damage_threshold:
-				var damage: float = (impact_speed - ship.damage_threshold) * ship.crash_damage_multiplier
+			var threshold := knock_threshold(collider, ship.damage_threshold)
+			if impact_speed > threshold:
+				var damage: float = (impact_speed - threshold) * ship.crash_damage_multiplier
 				ship.take_damage(damage)
 				break
 	
 	# Handle movement controls
+	var turn := 0.0
 	if ship.want_turn_left:
-		state.angular_velocity = -ship.turn_speed
+		turn = -1.0
 	elif ship.want_turn_right:
-		state.angular_velocity = ship.turn_speed
-	else:
-		state.angular_velocity = 0.0  # Stop rotation when no input
+		turn = 1.0
+	state.angular_velocity = turned_spin(state.angular_velocity, turn, ship.turn_speed, ship.turn_ratio(), state.step)
 
 	if ship.want_thrust:
 		_apply_thrust(state, Vector2.RIGHT)
 	
 	if ship.want_reverse_thrust:
 		_apply_thrust(state, Vector2.LEFT)
+
+## The closing speed above which bumping into `collider` hurts the hull: the ship's own
+## threshold, or far higher for loose Freight, which the player is meant to nudge about.
+static func knock_threshold(collider: Object, ship_threshold: float) -> float:
+	if collider is Freight:
+		return maxf(ship_threshold, Freight.KNOCK_DAMAGE_SPEED)
+	return ship_threshold
+
+## Spin after one step of turn input `turn` (-1, 0 or 1). Unladen (`ratio` 1) the ship
+## turns at exactly `turn_speed` and stops the instant the key is let go, as it always has.
+## With Freight clamped `ratio` < 1: it turns slower, and winds up to that and back down at
+## a rate that shrinks with the load, so a heavy piece carries the turn on a little.
+static func turned_spin(spin: float, turn: float, turn_speed: float, ratio: float, dt: float) -> float:
+	var target := turn * turn_speed * ratio
+	if ratio >= 1.0:
+		return target
+	var wind_up := 2.0 * TURN_LAG * (1.0 - ratio)
+	return move_toward(spin, target, turn_speed * ratio / wind_up * dt)
 
 ## Thrust in `local_direction`. Ordinary thrust is free and always available; the boost is
 ## the only thing fuel is ever spent on, and the only thing a dry tank or a low-fuel cough
@@ -271,6 +302,72 @@ func _update_camera_shake(dt: float) -> void:
 		ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, dt * 5.0)
 
 var _nearby_dockable: Node2D = null
+
+## What `action` does in open flight: press to dock at a port; hold with a piece of
+## Freight in reach and the magnet pulls it onto the nose. CarryingState overrides this
+## with the one thing it does there - hold to let go.
+func _update_action() -> void:
+	_check_dockable_proximity()
+	_update_magnet()
+	if _magnet_target == null:
+		_attempt_dock()
+
+var _magnet_target: Freight = null
+
+func _update_magnet() -> void:
+	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available()
+	if _magnet_target and not is_instance_valid(_magnet_target):
+		_magnet_target = null
+	var nose := ship.to_global(Ship.NOSE)
+	if _magnet_target and (not holding or not Freight.in_reach(nose, _magnet_target.lug_global(), Freight.MAGNET_HOLD_RANGE)):
+		_drop_magnet()
+	if _magnet_target == null:
+		var near := freight_in_reach()
+		if near == null:
+			return
+		if not holding:
+			return
+		_magnet_target = near
+		near.add_collision_exception_with(ship)
+	var pose := ship.global_transform * Freight.clamped_pose(_magnet_target.lug_position, _magnet_target.lug_facing, Ship.NOSE)
+	if _magnet_target.magnet_step(pose, ship.linear_velocity):
+		var f := _magnet_target
+		_magnet_target = null
+		ship.set_meta("pending_freight", f)
+		ship.state_machine.change_state("CarryingState")
+
+## Let go of a piece mid-pull: it stops closing and moves with the ship, and the two can
+## touch again once it has had a moment to clear.
+func _drop_magnet() -> void:
+	var f := _magnet_target
+	_magnet_target = null
+	if not is_instance_valid(f):
+		return
+	f.linear_velocity = ship.linear_velocity
+	f.angular_velocity = 0.0
+	ship.get_tree().create_timer(0.6).timeout.connect(func() -> void:
+		if is_instance_valid(f) and is_instance_valid(ship):
+			f.remove_collision_exception_with(ship))
+
+## The nearest loose Freight whose Lug is within the magnet's reach of the nose; null if none.
+func freight_in_reach() -> Freight:
+	var nose := ship.to_global(Ship.NOSE)
+	var best: Freight = null
+	var best_d := INF
+	for node in ship.get_tree().get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f == null or f == ship.freight:
+			continue
+		var d := nose.distance_to(f.lug_global())
+		if d <= Freight.MAGNET_RANGE and d < best_d:
+			best = f
+			best_d = d
+	return best
+
+func exit() -> void:
+	if _magnet_target:
+		_drop_magnet()
+	super.exit()
 
 func _check_dockable_proximity() -> void:
 	if not is_ship_valid():

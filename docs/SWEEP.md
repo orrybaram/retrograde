@@ -35,8 +35,11 @@ Retrograde already has that input.
 So the following is already true and already tested (`playtests/sonar.play`,
 `test/SonarPulseTest.gd`):
 
-- Holding `action` emits rings from the hull every `INTERVAL` (0.32s) out to `END_RADIUS`
-  (70px), wherever the ship is free to act.
+- Letting go of `action` sends **one** ring from the hull, wherever the ship is free to act.
+  A tap reaches `END_RADIUS` (280px); holding charges that one ring, adding another
+  `END_RADIUS` of reach every `CHARGE_TIME` (1.5s), with no ceiling. Nothing says so but a
+  faint glow at the hull: the charged ping is left for the player to find. (Earlier builds
+  emitted a ring every 0.32s while held.)
 - `Ship.wants_sonar()` gates on `ShipState.allows_sonar()` and on no UI blocking input.
 - `SonarPulse.pulsed(origin)` and `EventBus.sonar_pulsed(origin)` exist as hooks.
 - There is **no vacuum field** in the code. `action` in `FlyingState` only docks. The
@@ -51,7 +54,7 @@ That missing bar is the whole design.
 
 ## 3. The Bar Is A Ruler
 
-`HarvestMeter` sits at `OFFSET_Y` 46 and is 150x10. `SonarPulse` runs to radius 70. **The
+`HarvestMeter` sits at `OFFSET_Y` 46 and is 150x10. `SonarPulse` runs to radius 280. **The
 bar is already drawn inside the emission.** It is the readout of the ping and always was;
 it just hides when there is nothing to break.
 
@@ -366,7 +369,7 @@ exists.
 
 ## 12. Vocabulary
 
-**Sweep**: Holding `action`. The one thing the ship can always do.
+**Sweep**: Holding `action`. The one thing the ship can always do — except while carrying Freight, when `action` releases it (ADR 0012).
 _Avoid_: minigame, ping (the rings are the ping, the Sweep is the act)
 
 **Mark**: One release, landing in one **Slot**.

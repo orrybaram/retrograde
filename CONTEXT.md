@@ -51,8 +51,12 @@ _Avoid_: system map, star map
 A drifting vessel, one per region, that sells that region's **Chart** in exchange for **Artifacts**. It must be found before it can be traded with: it **broadcasts** a repeating signal the ship homes on by ear, and each one sells a pointer to the next. It is an **Automaton** — the same mind as the **Guide** — behind a scratched cover that reads as wear long before it reads as concealment (docs/adr/0006, docs/adr/0008).
 _Avoid_: trader (that is the Crom **Automaton**), vendor, shop
 
+**Void**:
+The dark past the last orbit, where the system stops being a system. Nothing orbits, reflects or answers out there; stay too long and the ship is **consumed** — no blast, no wreck, nothing to come back for.
+_Avoid_: deep space, out of bounds, edge of the map
+
 **Sweep**:
-Holding `action`. The ship emits, the bar fills, and releasing grades the attempt. It is the one thing the ship can always do, and it is both the harvest verb and the language the world is written in (docs/SWEEP.md).
+Tapping `action` sends one ring out from the ship; holding charges that one ring to reach further, and at a scrap or seam the bar fills and releasing grades the attempt. It is the one thing the ship can always do in open flight — except while carrying **Freight**, when `action` releases instead — and it is both the harvest verb and the language the world is written in (docs/SWEEP.md).
 _Avoid_: minigame, ping, scan
 
 **Procedure**:
@@ -60,8 +64,32 @@ A sequence of **Marks** laid down with the **Sweep** that a piece of hardware an
 _Avoid_: code, combo, puzzle, spell
 
 **Component**:
-A physical object recovered from the world and fitted at a station — the only way the ship is ever upgraded. There is no currency and nothing is bought (docs/adr/0007).
+A physical object recovered from the world and fitted to the ship at a station through the station's menus — the only way the ship is ever upgraded. There is no currency and nothing is bought (docs/adr/0007). A Component is a destination, not a size: it may be found as **Freight** and flown home clamped to the hull.
 _Avoid_: credits, loot, crafting material, resource
+
+**Freight**:
+An object too big for the hold, **clamped** rigidly to the outside of the hull and flown home by hand; while clamped, its mass and shape become the ship's — slower to speed up, slower to turn, slower to stop. Freight is a physical category, not a purpose — a **Section** and a **Component** can both arrive as Freight.
+_Avoid_: carryable, tow, cargo, salvage, component
+
+**Clamp**:
+Attaching **Freight** to the ship: hold `action` with the nose near its **Lug** and the piece is drawn in and turned onto the nose. Freight rides ahead of the ship and is pushed along. **Release** is a deliberate hold of `action` while carrying, anywhere; a carrying ship cannot **Sweep** or dock.
+_Avoid_: grab, pick up, tow, attach
+
+**Lug**:
+The single hardpoint on a piece of **Freight** where the ship takes hold of it. It fixes how the load sits on the ship, so each piece always handles the same way; scrap has none.
+_Avoid_: handle, grip, clamp point, hardpoint
+
+**Section**:
+One of SR-7's missing structural parts (its ring, dorsal arm and mast), recovered as **Freight** and released into its own gap in the station's silhouette in Act 1; the player fills the hole by flying, not through a menu.
+_Avoid_: component, station part, piece
+
+**Mount**:
+The torn place on SR-7 where a **Section** belongs — sheared brackets and broken strut stubs around a gap in the silhouette. Each Mount takes exactly one Section.
+_Avoid_: socket, slot, dock, marker
+
+**Cradle**:
+The place at a station that takes any **Component** delivered as **Freight**; what is in the Cradle is fitted to the ship from the station's menus once the player docks.
+_Avoid_: bay, dock, drop-off, loading zone
 
 **Log**:
 The player's own screen (`I`), kept by the ship, not by the Titan: what is in the hold and what the player has learned. Opens on the **Ship** tab — hull, fuel, hold and upgrades; the **Records** tab holds one entry per thing the player has worked for. The **Chart** is the Titan's map, handed over; the **Log** is the player's, accrued. No **Automaton** speaks from inside the **Log** — it is the player's own instrument, read alone. UNIT-7 is met at SR-7 and heard on the radio in flight, never carried around in a menu.
@@ -90,6 +118,13 @@ _Avoid_: sighted, discovered, explored
 - The **Core**'s **Gate** refuses power until all five **Modules** are online.
 - **Titan Influence** equals the number of **Modules** online; the **Core** coming online is a separate, final state, not step 6.
 - Powering a **Gate** brings its **Module** online; there is no way to power a **Module** down again.
+- **Freight** is flown, never stowed: it never enters the hold and never counts against cargo capacity. While clamped, the ship is the ship plus the Freight — heavier and slower to turn, but never lopsided: the nose goes where the player points it.
+- A found **Component** too big for the hold is **Freight** until it is released at a station; it becomes part of the ship only when fitted there through the menus.
+- **Freight** is never lost. Released, it coasts on exactly as the ship was moving — same velocity, same heading — and gravity never bends its path. A clamp will not hold past the edge of the **Void**, so all Freight is always inside the system.
+- A ship abandoned or destroyed with **Freight** clamped leaves it there; a **Void**-consumed ship never has any, because the clamp let go at the edge.
+- **Freight** the ship has clamped and then let go of — released, or left on an abandoned or destroyed hull — is marked on the **Chart** and tracked at once. These are the ship's own marks, drawn over the Titan's map whether or not the region is **Charted**; **Freight** never touched is never marked. Clamping it again clears the mark and tracks its destination instead: a **Section**'s **Mount**, or the **Cradle** for a **Component**.
+- Each **Section** has exactly one **Mount**; the mast only ever goes where the mast was.
+- A **Section** is **Freight** that is fitted to SR-7, not to the ship. All **Freight** is delivered the same way: pushed into its place and released — a **Section** into its **Mount**, a **Component** into the **Cradle**.
 - The **Guide** is one of the **Automatons**, not a separate kind of thing. The player starts alone and the **Log** starts genuinely empty; the **Guide**'s **Record** is the first one they earn, by waking it. Holding a **Record** about an **Automaton** is the player's note on it, not the **Automaton** being present.
 - Every **Automaton** is the same mind in a different body, and none of them knows it. The differences between them are evidence, not characterisation. Powering a **Module** reconnects the pieces, so an **Automaton** sounds less like itself the further the player gets.
 - **Automatons** encourage the player to power **Gates**; they never ask the player to destroy anything.

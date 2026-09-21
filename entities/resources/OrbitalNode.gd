@@ -57,7 +57,7 @@ func _ready() -> void:
 					break
 
 	if _collision_area_cached:
-		_collision_area_cached.body_entered.connect(_on_collision_area_entered)
+		_collision_area_cached.body_shape_entered.connect(_on_collision_area_entered)
 		_collision_area_cached.body_exited.connect(_on_collision_area_exited)
 
 	# Clear cached ship when ship respawns
@@ -79,27 +79,34 @@ func _setup_orbital_motion() -> void:
 	add_child(_orbital_motion)
 	_orbital_motion.set_physics_process(false)
 
-# Collision area (polygon) - bounce and damage when hitting precise shape
-func _on_collision_area_entered(body: Node2D) -> void:
-	if body is Ship:
-		var orbital_vel = get_orbital_velocity()
-		var relative_velocity = body.linear_velocity - orbital_vel
-		var relative_speed = relative_velocity.length()
+# Collision area (polygon) - bounce and damage when hitting precise shape. Per shape, so a
+# knock on Freight clamped to the ship bounces the ship without reaching its hull
+# (docs/adr/0012), and loose Freight bounces off the same way the ship does.
+func _on_collision_area_entered(_body_rid: RID, body: Node2D, body_shape: int, _local_shape: int) -> void:
+	var ship := body as Ship
+	if ship == null and not (body is Freight):
+		return
+	var on_load := ship != null and ship.is_freight_shape(body_shape)
+	var hit_at := ship.freight_center() if on_load else body.global_position
+	var rigid := body as RigidBody2D
+	var orbital_vel = get_orbital_velocity()
+	var relative_velocity = rigid.linear_velocity - orbital_vel
+	var relative_speed = relative_velocity.length()
 
-		if relative_speed > 50.0:
-			# Reflect ship velocity off the collision normal
-			var collision_normal = (body.global_position - global_position).normalized()
-			var velocity_along_normal = relative_velocity.dot(collision_normal)
+	if relative_speed > 50.0:
+		# Reflect the body's velocity off the collision normal
+		var collision_normal = (hit_at - global_position).normalized()
+		var velocity_along_normal = relative_velocity.dot(collision_normal)
 
-			# Only bounce if moving toward the debris
-			if velocity_along_normal < 0:
-				var bounce = relative_velocity - 2.0 * velocity_along_normal * collision_normal
-				body.linear_velocity = orbital_vel + bounce * COLLISION_SLOWDOWN
+		# Only bounce if moving toward the debris
+		if velocity_along_normal < 0:
+			var bounce = relative_velocity - 2.0 * velocity_along_normal * collision_normal
+			rigid.linear_velocity = orbital_vel + bounce * COLLISION_SLOWDOWN
 
-		if relative_speed > DAMAGE_SPEED_THRESHOLD:
-			var damage = int((relative_speed - DAMAGE_SPEED_THRESHOLD) * DAMAGE_PER_SPEED)
-			if damage > 0:
-				body.take_damage(damage)
+	if ship and not on_load and relative_speed > DAMAGE_SPEED_THRESHOLD:
+		var damage = int((relative_speed - DAMAGE_SPEED_THRESHOLD) * DAMAGE_PER_SPEED)
+		if damage > 0:
+			ship.take_damage(damage)
 
 func _on_collision_area_exited(_body: Node2D) -> void:
 	pass

@@ -1,0 +1,137 @@
+# Freight (docs/adr/0012): hold SPACE and a piece in reach magnets onto the nose; fly it;
+# hold SPACE to let go, and it coasts on as the ship was moving.
+# Run: tools/play.sh --headless playtests/freight.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+# Open space, well clear of the station and the ring
+eval pt.warp_to(ship.global_position + Vector2(0, -30000))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 5
+
+# Unladen baseline: 1s of thrust from rest
+hold thrust 1.0
+eval pt.remember("unladen", ship.linear_velocity.length())
+eval pt.recall("unladen")
+hold reverse_thrust 1.0
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 5
+
+# Out of the magnet's reach but inside the Sweep: the rings light its Lug
+eval pt.remember("far", pt.spawn_freight(ship.to_global(Vector2(110, 0)) - Vector2(-40, 0).rotated(3.14), 3.14, ship.linear_velocity))
+frames 3
+assert pt.recall("far")._lug_line.width == 3.0 "the Lug is dark before a Sweep"
+press action
+wait 0.5
+assert pt.recall("far")._lug_line.width > 3.0 "a Sweep ring lights the Lug"
+frames 3
+assert pt.state_name() == "FlyingState" "out of reach, the Sweep doesn't pull it in"
+eval pt.recall("far").set("global_position", ship.global_position + Vector2(0, 4000))
+frames 3
+
+# A piece in reach, off to one side and turned: the prompt offers it, and holding SPACE
+# magnets it onto the nose
+eval pt.remember("piece", pt.spawn_freight(ship.to_global(Vector2(22, 12)) - Vector2(-40, 0).rotated(1.2), 1.2, ship.linear_velocity))
+frames 5
+assert pt._action_message == "" "no helper text"
+hold action 0.15
+assert pt.state_name() == "FlyingState" "a moment's hold only starts the pull"
+hold action 1.5
+assert pt.state_name() == "CarryingState" "held, the magnet pulls it in and clamps it"
+assert get_tree().get_nodes_in_group("clamp_fx").size() > 0 "clamping kicks up smoke and sparks"
+assert ship.is_carrying() "the ship holds the piece"
+assert ship.mass > 5.9 "its mass joins the ship's"
+frames 3
+assert pt._action_message == "" "carrying, no helper text"
+
+# Loaded: the same 1s of thrust gets about half as far
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 2
+hold thrust 1.0
+eval ship.linear_velocity.length()
+assert ship.linear_velocity.length() < pt.recall("unladen") * 0.6 "a load halves acceleration"
+assert ship.linear_velocity.length() > pt.recall("unladen") * 0.4 "but does not stop the ship"
+hold reverse_thrust 1.0
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 2
+
+# Loaded turning is slower than unladen
+eval pt.remember("r0", ship.rotation)
+hold turn_right 0.5
+eval absf(wrapf(ship.rotation - pt.recall("r0"), -PI, PI))
+assert absf(wrapf(ship.rotation - pt.recall("r0"), -PI, PI)) < 1.0 "a load slows the turn (unladen: 2.5 rad in 0.5s)"
+assert absf(wrapf(ship.rotation - pt.recall("r0"), -PI, PI)) > 0.15 "but it still turns"
+
+# A carrying ship cannot Sweep: its SPACE is the release, and only a full hold lets go
+assert not ship.state_machine.current_state.allows_sonar() "a carrying ship cannot Sweep"
+press action
+frames 3
+assert pt.state_name() == "CarryingState" "a tap does not drop the load"
+down action
+wait 0.4
+eval pt._action_message
+assert pt._action_message.begins_with("RELEASING █") "holding shows RELEASING and the bar filling"
+up action
+frames 3
+assert pt.state_name() == "CarryingState" "letting go early cancels"
+down action
+wait 1.0
+assert pt.state_name() == "FlyingState" "a full hold lets go"
+wait 0.5
+assert not ship.sonar.charging "the release hold doesn't charge a ping"
+up action
+frames 3
+assert ship.sonar.ring_count() == 0 "and letting go after it sends none"
+assert not ship.is_carrying() "the piece is loose"
+assert ship.mass < 3.1 "the ship is its own weight again"
+
+# Let go on the move, it carries on exactly as the ship was going
+# (the first piece is coasting just off the nose: move it out of the way)
+eval pt.recall("piece").set("global_position", ship.global_position + Vector2(0, 3000))
+frames 3
+hold thrust 1.0
+eval pt.remember("piece2", pt.stage_freight())
+frames 3
+hold action 0.6
+frames 3
+assert pt.state_name() == "CarryingState" "clamped again, on the move"
+down turn_right
+hold action 1.0
+up turn_right
+frames 2
+assert pt.state_name() == "FlyingState" "let go mid-turn"
+assert pt.recall("piece2").linear_velocity.distance_to(ship.linear_velocity) < 3.0 "released, it keeps the ship's velocity"
+assert absf(pt.recall("piece2").angular_velocity) < 0.001 "and does not spin"
+eval pt.remember("v", pt.recall("piece2").linear_velocity)
+eval pt.remember("gap", pt.recall("piece2").global_position.distance_to(ship.global_position))
+wait 3
+assert absf(pt.recall("piece2").global_position.distance_to(ship.global_position) - pt.recall("gap")) < 5.0 "coasting ship and piece stay together"
+assert pt.recall("piece2").linear_velocity.distance_to(pt.recall("v")) < 1.0 "no damping: it keeps its speed"
+
+# Bumping into loose Freight doesn't hurt unless it's very fast
+eval pt.recall("piece2").set("global_position", ship.global_position + Vector2(0, 3000))
+eval ship.set("linear_velocity", Vector2(0, 0))
+eval ship.set("angular_velocity", 0.0)
+frames 2
+eval pt.remember("piece3", pt.stage_freight(40.0))
+eval pt.remember("hull", ship.hull_strength)
+eval ship.set("linear_velocity", Vector2(150, 0).rotated(ship.rotation))
+wait 1
+assert ship.hull_strength == pt.recall("hull") "a 150 px/s bump into Freight does no damage"
+assert pt.recall("piece3").linear_velocity.length() > 20.0 "the bump pushes the piece"
+
+# Unladen turning is back to normal
+eval ship.set("angular_velocity", 0.0)
+eval pt.remember("r1", ship.rotation)
+hold turn_right 0.3
+assert absf(wrapf(ship.rotation - pt.recall("r1"), -PI, PI)) > 1.2 "unladen turning is back"
+quit

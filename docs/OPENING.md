@@ -9,7 +9,7 @@ This document is the *content*; `docs/SWEEP.md` is the *system*.
 
 ## 1. The Shape
 
-**Act 1 is the repair of SR-7 from its own debris.** Three components fetched, one thing woken.
+**Act 1 is the repair of SR-7 from its own debris.** Three Sections fetched, one thing woken.
 
 It is not a tutorial for the game. It is the game, performed once on a building instead of
 on a ship, before the player knows it is a mechanic:
@@ -38,6 +38,26 @@ So a broken station is that scene with parts hidden, and a repair is a polygon a
 **The silhouette of the player's house is the progress bar** - no UI, visible from anywhere
 in the ring, and legible at a glance from across the orbit.
 
+And it is a bar the player fills by hand. Each Section is Freight: clamped rigidly to the
+hull, flown home with its mass and shape dragging the ship's handling, and **released into
+its own gap in the silhouette**. Not docked, not fitted from a menu - flown into the hole.
+Components (ship upgrades) are delivered the same way, into the station's Cradle, and fitted
+from the station's menus once docked. One delivery gesture for all Freight.
+
+### Seating a Section
+
+- **The Mount shows the tear, not the answer.** Where each Section belongs, the station
+  draws sheared brackets and broken strut stubs in its own shape language. A gap in a
+  silhouette does not read as a hole; a torn edge does. No ghost outline, no glowing socket.
+- **One Section, one Mount.** The mast only goes where `Tower1` was.
+- **The flying is the hard part; the last few pixels are free.** Within about 40 px of its
+  Mount and 30° of its rotation (the docking tolerance), the action prompt reads
+  **RELEASE**. On release the Mount pulls it home over half a second, with a clunk, and the
+  polygon is the station again.
+- **Miss and nothing is lost.** Released outside tolerance, a Section just floats, still
+  clampable. It is a physics body: a bad approach bumps and bounces off the station, which
+  is feedback, and never damage.
+
 Because the game is top-down, the station's interior is legible from outside by default.
 `CentralCore` is a polygon at the middle of the station. The player can see it. They never
 enter, and they never stop being the ship.
@@ -57,7 +77,7 @@ DAMAGE REPORT — 0347 CYCLES SINCE EVENT
   MAST 1 ............. ABSENT
   CORE ............... PRESENT / NO DRAW
 
-  3 COMPONENTS UNACCOUNTED FOR
+  3 SECTIONS UNACCOUNTED FOR
   LAST VECTOR: LOCAL DEBRIS
 ```
 
@@ -66,7 +86,7 @@ Four lines of objective and zero instruction, in exactly what `TerminalWindow` a
 
 Three things it is doing quietly:
 
-- **The count says 3, not 4.** When the player returns three components and the station
+- **The count says 3, not 4.** When the player returns three Sections and the station
   still is not right, the answer has been in the manifest the whole time. They have to go
   and read it again. Pull, never push.
 - **`CORE — PRESENT / NO DRAW` is the only asymmetric line.** Three things are gone; one
@@ -78,7 +98,7 @@ Three things it is doing quietly:
 RESTORED`. Completion tracking that lives in the fiction and that the player has to choose
 to look at.
 
-## 4. The Three Components
+## 4. The Three Sections
 
 | Manifest line | Node | Teaches |
 |---|---|---|
@@ -104,6 +124,21 @@ It is found by **sweeping and listening for what answers**. In one gesture, with
 That last line is the rule the entire game runs on, taught in minute four as a way of
 finding your own front door. It is also the first time the game asks the player to trust an
 instrument over their eyes, which is the habit every later discovery depends on.
+
+### The mast is the pointer, not a clock
+
+The opening has no clock. The Aux never runs out (ADR 0010), so nothing is draining
+and nothing is urging. A player who cannot find the mast must not be *hurried*; they must
+be *pointed*.
+
+So the mast answers from further off than anything else. At the edge of its range a Sweep
+gets back something faint and broken - a partial ring, a stutter - and the answer firms up
+the closer the ship gets. Warmer, colder, entirely through the instrument. No timer, no
+marker, no text.
+
+This is also what separates "answers" from "harvestable": scrap only ever reacts inside
+the emission, where the bar is. Something that answers from beyond the bar is part of
+something.
 
 When the same player later sweeps the survey marker outside the station and gets a ring
 back, they already know exactly what that means.
@@ -176,12 +211,17 @@ things mean. The rat knows the way home; it has no idea what a subway is.
 | Ship's cold-start boot text | free | the controls, literally, diegetically |
 | The manifest | one `.tres` | objectives |
 | Station silhouette | already built | progress |
-| Shape language | art | components look like they belong to the station; scrap does not |
+| Shape language | art | Sections look like they belong to the station; scrap does not |
 | `EventBus.action_message_changed` | already built | contextual verbs (HARVEST / DOCK) |
 
-**Anti-patterns:** no markers on the Chart, no "press X to Y" popups, no completion
-percentage anywhere. The manifest is the only list and it is a diegetic object the player
-has to travel to.
+**Anti-patterns:** no Titan-drawn markers on the Chart, no "press X to Y" popups, no
+completion percentage anywhere. The manifest is the only list and it is a diegetic object
+the player has to travel to.
+
+**The ship's own marks are the exception, because they are the ship's.** The Chart's
+regions are the Titan's; laid over them are marks the ship made itself - the player's
+tracking point, and Freight it has handled (ADR 0012). Nothing is marked before the ship
+has touched it, so the first search for every Section is still a search.
 
 The boot text is the load-bearing one, and it promotes the Boot Terminal from
 `docs/IDEAS.md` out of the late game. The first thing the player ever reads is the ship
@@ -271,16 +311,17 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > **TODO**: Place the survey marker as an actual coordinate relative to `SpaceStation` and
 > `OrbitalRingSpawner` on Rook, and check it sits in frame on the common run without being
 > a collision hazard.
-> **TODO**: Decide which `Polygon2D` parts are hidden at start. Three named components are
+> **TODO**: Decide which `Polygon2D` parts are hidden at start. Three named Sections are
 > specified; the `Detail*` and `SmallModule*` parts probably stay present so the wreck still
 > reads as a station rather than as a frame.
 > **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
 > dock without ever reading as a tutorial popup.
 > **TODO**: Gate `SpacePortDialogue` on UNIT-7 being awake; the dead station shows the
 > manifest terminal instead.
-> **TODO**: Playtest the opening for wandering. Fuel is the only clock and a player who
-> cannot find the mast has no pressure and no pointer.
-> **TODO**: Decide how the mast's answering ring differs from a scrap node's, so "answers"
-> and "harvestable" are distinguishable at a glance.
+> **TODO**: Playtest the opening for wandering. There is no clock by design; the mast's
+> long-range answer (§4) is the only pointer. Tune its range until a lost player picks it
+> up without being led by the hand.
+> **TODO**: Range separates "answers" from "harvestable" (§4). Still decide how the
+> answering ring *looks* up close, where both are inside the bar.
 > **TODO**: `0347` - pick the number deliberately against whatever the clone counter ends up
 > being (`docs/DESIGN.md` §3.2 leaves it open).

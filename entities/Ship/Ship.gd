@@ -32,6 +32,18 @@ var base_max_cargo_weight: float = 50.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
 @export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
 
+## The tip of the hull, where Freight is clamped (local space).
+const NOSE := Vector2(10, 0)
+## A clamped load slows turning by the ratio of the ship's own inertia to the combined
+## inertia. Taken honestly that leaves a long piece all but unturnable, so the ratio is
+## softened by this power: 1.0 is physical, 0.5 its square root.
+const FREIGHT_TURN_EXPONENT := 0.5
+
+## Freight clamped to the nose (docs/adr/0012), or null. See clamp_freight.
+var freight: Freight = null
+var _freight_collider: CollisionPolygon2D = null
+var _turn_ratio := 1.0
+
 signal fuel_changed
 signal fuel_depleted
 signal cargo_changed(current_weight: float, max_weight: float)
@@ -59,7 +71,8 @@ var dev_invulnerable := false
 var dev_infinite_fuel := false
 var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
-var sonar: SonarPulse = null  # sonar resonance rings while `action` is held (see wants_sonar)
+var sonar: SonarPulse = null
+var _sonar_blocked := false  # this hold of `action` began or passed somewhere it couldn't ping  # sonar resonance rings while `action` is held (see wants_sonar)
 
 # Landing lock system
 var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
@@ -207,11 +220,29 @@ func _physics_process(dt: float) -> void:
 	if state_machine and state_machine.current_state:
 		state_machine.current_state.physics_process(dt)
 	if sonar:
-		sonar.emitting = wants_sonar()
+		_drive_sonar()
 
-## Sonar resonance: holding `action` pings from anywhere the ship is free to act. It is
-## not tied to harvesting; a scrap or a seam in the rings is what makes a ping a harvest.
-## The state decides (ShipState.allows_sonar), and a menu over the game takes the key.
+## `action` held charges a ping, let go sends it. A hold that was ever somewhere a ping
+## isn't allowed (docked, a menu, a load clamped - including the hold that lets the load
+## go) belongs to that, not the sonar: any charge is dropped, and the rest of the hold is
+## ignored until the key comes up.
+func _drive_sonar() -> void:
+	var down := Input.is_action_pressed("action")
+	if not down:
+		_sonar_blocked = false
+	elif not wants_sonar():
+		_sonar_blocked = true
+	if down and not _sonar_blocked:
+		sonar.charging = true
+	elif sonar.charging:
+		if down:
+			sonar.cancel()
+		else:
+			sonar.fire()
+
+## Sonar resonance: `action` pings from anywhere the ship is free to act. It is not tied
+## to harvesting; a scrap or a seam in the rings is what makes a ping a harvest. The state
+## decides (ShipState.allows_sonar), and a menu over the game takes the key.
 func wants_sonar() -> bool:
 	if not Input.is_action_pressed("action"):
 		return false
@@ -310,11 +341,124 @@ func consume_fuel(amount: float) -> bool:
 	
 	return fuel < old_fuel  # Return true if fuel was actually consumed
 
-## Update the ship's physics mass based on current cargo weight
+## Update the ship's physics mass based on current cargo weight, plus any Freight on the nose
 func update_mass_from_cargo() -> void:
 	var cargo_weight = InventoryManager.get_total_weight()
-	mass = base_mass + (cargo_weight * cargo_mass_multiplier)
+	_apply_mass(base_mass + (cargo_weight * cargo_mass_multiplier))
 	cargo_changed.emit(cargo_weight, max_cargo_weight)
+
+## Set the body's mass, centre of mass and inertia from the ship's own mass and whatever
+## is clamped to it. Unladen this is exactly the ship as it always was: its own mass, its
+## centre at the origin, and inertia left to the engine.
+func _apply_mass(own_mass: float) -> void:
+	if not is_carrying():
+		mass = own_mass
+		center_of_mass = Vector2.ZERO
+		inertia = 0.0
+		_turn_ratio = 1.0
+		return
+	var hull := _hull_outline()
+	var carried := freight.transform * freight.outline
+	var carried_box := Freight.bounds(carried)
+	var total := own_mass + freight.mass
+	var com := carried_box.get_center() * freight.mass / total
+	var own_i := Freight.box_inertia(hull, own_mass)
+	var combined_i := own_i + Freight.box_inertia(carried, freight.mass) - total * com.length_squared()
+	mass = total
+	center_of_mass = com
+	inertia = combined_i
+	_turn_ratio = turn_ratio_for(own_i, combined_i)
+
+## How much of its unladen turn a ship keeps with a load: the inertia ratio, softened.
+static func turn_ratio_for(own_inertia: float, combined_inertia: float) -> float:
+	if combined_inertia <= own_inertia or combined_inertia <= 0.0:
+		return 1.0
+	return pow(own_inertia / combined_inertia, FREIGHT_TURN_EXPONENT)
+
+## 1.0 unladen; less with Freight clamped (FlyingState.turned_spin reads it).
+func turn_ratio() -> float:
+	return _turn_ratio
+
+func is_carrying() -> bool:
+	return freight != null and is_instance_valid(freight)
+
+## Take hold of `f` at its Lug. It stops being a body of its own: it rides on the nose in
+## the pose its Lug fixes, its outline becomes part of the hull, and its mass joins the
+## ship's. Momentum is shared, so clamping a piece at rest drags the ship a little.
+func clamp_freight(f: Freight) -> void:
+	if is_carrying() or f == null or not is_instance_valid(f):
+		return
+	var own_mass := mass
+	var shared := (linear_velocity * own_mass + f.linear_velocity * f.mass) / (own_mass + f.mass)
+	var pose := Freight.clamped_pose(f.lug_position, f.lug_facing, NOSE)
+	freight = f
+	f.process_mode = Node.PROCESS_MODE_DISABLED  # out of the physics space while it rides
+	f.reparent(self, false)
+	f.transform = pose
+	_freight_collider = CollisionPolygon2D.new()
+	_freight_collider.name = "FreightCollision"
+	_freight_collider.polygon = f.outline
+	_freight_collider.transform = pose
+	add_child(_freight_collider)
+	update_mass_from_cargo()
+	linear_velocity = shared
+	_clunk(f)
+
+## Let go of whatever is clamped, where it is. It carries on exactly as the ship was
+## moving - the ship's velocity, the ship's heading, no spin - so at the moment of release
+## the two sit still relative to each other. Returns the piece (null if nothing was clamped).
+func release_freight() -> Freight:
+	if not is_carrying():
+		freight = null
+		return null
+	var f := freight
+	var carried := global_transform * f.transform
+	var hull_velocity := _velocity_at(global_position, to_global(center_of_mass))
+	freight = null
+	if _freight_collider:
+		remove_child(_freight_collider)
+		_freight_collider.queue_free()
+		_freight_collider = null
+	f.reparent(get_parent(), false)
+	f.global_transform = carried
+	f.process_mode = Node.PROCESS_MODE_INHERIT
+	f.linear_velocity = hull_velocity
+	f.angular_velocity = 0.0
+	update_mass_from_cargo()
+	linear_velocity = hull_velocity
+	# It was touching the nose: let the two drift apart before they can collide again.
+	f.add_collision_exception_with(self)
+	_clunk(f)
+	get_tree().create_timer(0.6).timeout.connect(func() -> void:
+		if is_instance_valid(f):
+			f.remove_collision_exception_with(self))
+	return f
+
+## Clamping or letting go: smoke and sparks where the Lug meets the nose, the piece jolts,
+## and the camera takes a small bump.
+func _clunk(f: Freight) -> void:
+	ClampFX.burst(get_parent(), to_global(NOSE), linear_velocity)
+	f.punch()
+	damage_shake_time = harvest_lockon_shake_duration
+	damage_shake_current_intensity = harvest_lockon_shake_intensity
+
+## Is `shape_index` (a contact's local shape) part of the clamped load rather than the hull?
+func is_freight_shape(shape_index: int) -> bool:
+	if _freight_collider == null or shape_index < 0:
+		return false
+	return shape_owner_get_owner(shape_find_owner(shape_index)) == _freight_collider
+
+## Where the clamped load's middle is, in world space (the ship's own position if none).
+func freight_center() -> Vector2:
+	return freight.global_transform * freight.own_center() if is_carrying() else global_position
+
+func _velocity_at(point: Vector2, com: Vector2) -> Vector2:
+	var r := point - com
+	return linear_velocity + Vector2(-angular_velocity * r.y, angular_velocity * r.x)
+
+func _hull_outline() -> PackedVector2Array:
+	var hull := get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+	return hull.transform * hull.polygon if hull else PackedVector2Array([Vector2(-12, -9), Vector2(10, 9)])
 
 ## Callback when cargo weight changes in InventoryManager
 func _on_cargo_weight_changed(_total_weight: float) -> void:

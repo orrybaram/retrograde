@@ -1,0 +1,43 @@
+# Freight and scrap (docs/adr/0012): loose Freight bounces off scrap like the ship does,
+# and a knock on a clamped load bounces the ship without hurting the hull.
+# Run: tools/play.sh --headless playtests/freight_scrap.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+stage_harvest 40 plain
+eval pt.remember("d", ship.global_position.direction_to(pt.staged.global_position))
+
+# Loose Freight thrown at the scrap from the far side bounces off it
+eval pt.remember("piece", pt.spawn_freight(pt.staged.global_position + pt.recall("d") * 110.0, pt.recall("d").angle(), pt.staged.get_orbital_velocity() - pt.recall("d") * 150.0))
+wait 1
+eval (pt.recall("piece").linear_velocity - pt.staged.get_orbital_velocity()).dot(pt.recall("d"))
+assert (pt.recall("piece").linear_velocity - pt.staged.get_orbital_velocity()).dot(pt.recall("d")) > 0.0 "Freight bounced off the scrap"
+eval pt.recall("piece").set("global_position", ship.global_position + Vector2(0, 5000))
+
+# A load on the nose rammed into scrap: the ship bounces, the hull is untouched
+# (clamp clear of the scrap: beside it, SPACE belongs to the harvest)
+eval ship.set("global_position", pt.staged.global_position - pt.recall("d") * 400.0)
+eval ship.set("linear_velocity", pt.staged.get_orbital_velocity())
+frames 5
+eval pt.remember("load", pt.stage_freight())
+frames 3
+hold action 0.6
+frames 3
+assert pt.state_name() == "CarryingState" "clamped"
+eval pt.remember("hull", ship.hull_strength)
+eval ship.set("global_position", pt.staged.global_position - pt.recall("d") * 120.0)
+eval ship.set("rotation", pt.recall("d").angle())
+eval ship.set("linear_velocity", pt.staged.get_orbital_velocity() + pt.recall("d") * 220.0)
+wait 1
+eval (ship.linear_velocity - pt.staged.get_orbital_velocity()).dot(pt.recall("d"))
+assert (ship.linear_velocity - pt.staged.get_orbital_velocity()).dot(pt.recall("d")) < 100.0 "the knock on the load bounced the ship"
+assert ship.hull_strength == pt.recall("hull") "a 220 px/s knock on the load does no hull damage"
+quit
