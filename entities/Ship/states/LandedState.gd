@@ -17,6 +17,10 @@ var _refueling := false
 ## Seconds for a port to fill an empty tank.
 const REFUEL_TIME := 5.0
 
+## Docked: `action` is the port's key, not the sonar's.
+func allows_sonar() -> bool:
+	return false
+
 func enter() -> void:
 	super.enter()
 

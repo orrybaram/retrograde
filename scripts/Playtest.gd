@@ -629,6 +629,7 @@ func snapshot() -> Dictionary:
 			"max_hull": ship.max_hull,
 			"cargo_weight": ship.get_cargo_weight(),
 			"max_cargo_weight": ship.max_cargo_weight,
+			"sonar": ship.sonar != null and ship.sonar.emitting,
 		}
 		s["nearest"] = {
 			"planet": nearest("planets"),

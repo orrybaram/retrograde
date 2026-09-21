@@ -12,7 +12,8 @@ class_name PlanetLandedState
 ## planet, and climbs out of the gravity well on its own engines for as long as the player
 ## holds thrust. A heavy planet or a full hold makes that climb longer, so it burns more
 ## thruster fuel - and running dry on the way up strands the ship where it sits.
-## Owns the landed camera zoom, the harvest beam and the landed action prompt.
+## Owns the landed camera zoom and the landed action prompt. (The sonar rings that play
+## under the beam are the ship's own, driven by Ship.wants_sonar.)
 
 const CAMERA_ZOOM := Vector2(1.5, 1.5)
 const LANDED_HEIGHT := 13.0  # ship centre above the surface (tail length)
@@ -57,7 +58,6 @@ func enter() -> void:
 	if NavSystem.get_target() == ore.tracking_target():
 		NavSystem.track_home()
 	ore.harvest_hit.connect(_on_harvest_hit)
-	_pulse().emitting = false
 	_prompt = ""
 	_update_prompt()
 
@@ -68,7 +68,6 @@ func exit() -> void:
 		if ore.harvest_hit.is_connected(_on_harvest_hit):
 			ore.harvest_hit.disconnect(_on_harvest_hit)
 	ore = null
-	_pulse().emitting = false
 	_launching = false
 	_prompt = ""
 	EventBus.action_message_changed.emit("")
@@ -98,14 +97,12 @@ func physics_process(delta: float) -> void:
 	var holding := Input.is_action_pressed("action") if ore.is_harvesting() \
 		else Input.is_action_just_pressed("action")
 	ore.tick_harvest(delta, holding)
-	_pulse().emitting = ore.is_harvesting()
 	_update_prompt()
 
 ## Release the ship. Nothing is charged for it: the climb is the player's to fly, on
 ## ordinary thruster fuel, and running the tank dry on the way up strands them.
 func lift_off() -> void:
 	ore.abort_harvest()
-	_pulse().emitting = false
 	_launching = true
 	ship.thruster_particles.emitting = true
 
@@ -143,15 +140,6 @@ func _on_harvest_hit(grade: HarvestTiming.Grade, drops: Array[String], final: bo
 	EventBus.harvest_hit.emit(ore, grade, drops, final)
 	if final:
 		_save_spent_ore()
-
-## The rings that pulse off the ship while the beam is on, shared with scrap harvesting.
-func _pulse() -> HarvestPulse:
-	var pulse := ship.get_node_or_null("HarvestPulse") as HarvestPulse
-	if not pulse:
-		pulse = HarvestPulse.new()
-		pulse.name = "HarvestPulse"
-		ship.add_child(pulse)
-	return pulse
 
 ## Keep the spent seam across a quit without saving the landed ship itself.
 func _save_spent_ore() -> void:

@@ -13,3 +13,7 @@ var ship: Ship:
 func is_ship_valid() -> bool:
 	return ship != null and is_instance_valid(ship)
 
+## Whether holding `action` in this state sends out the sonar resonance (SonarPulse).
+## On by default; the states where the ship is tied up or has no power say no.
+func allows_sonar() -> bool:
+	return true

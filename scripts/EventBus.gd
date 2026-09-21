@@ -42,6 +42,10 @@ signal harvest_hit(node: Node, grade: HarvestTiming.Grade, gem_ids: Array[String
 ## OreDeposit alike. `final` is the hit that breaks the node open. EARLY releases are
 ## not hits and are not reported here.
 
+signal sonar_pulsed(origin: Vector2)
+## A sonar resonance ring left the ship at `origin` (global). Holding `action` sends one
+## every SonarPulse.INTERVAL wherever the ship is free to act; puzzles listen here.
+
 signal gem_collected(item_id: String, world_position: Vector2)
 ## Emitted when the ship picks up a loose gem (after it is added to the hold).
 

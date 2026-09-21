@@ -16,6 +16,20 @@ Each state implements: `enter()`, `exit()`, `physics_process(delta)`, `integrate
 
 Don't use state machines for: simple booleans, linear sequences (use await), pure data.
 
+## Sonar Resonance (hold `action`)
+
+```
+Ship._physics_process -> Ship.wants_sonar() -> SonarPulse.emitting -> rings + SonarPulse.pulsed / EventBus.sonar_pulsed(origin)
+```
+
+- Holding `action` (SPACE) pings from the ship wherever it is free to act: flying, over a scrap,
+  or sitting on a seam. It is not gated on a harvest target; harvesting is what a ping does
+  when a scrap or seam is in the rings. Puzzles that answer a ping listen on `EventBus.sonar_pulsed`.
+- A state opts out by overriding `ShipState.allows_sonar()` (docked at a port or Gate, stranded,
+  destroyed, consumed all say no). A menu over the game (`FlyingState._is_ui_blocking_input`)
+  also takes the key. Nothing else touches `SonarPulse.emitting`.
+- Playtest state reports it as `ship.sonar`.
+
 ## Terminal UI Patterns
 
 Panel: `StyleBoxFlat: draw_center=false, border_width=2, border_color=Colors.UI_BORDER`
@@ -83,7 +97,7 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 ```
 PlanetScanner (on Ship) -> PlanetScan (meter) + ScanSweep (on Planet) -> GameState.scanned_planets -> EventBus.planet_scanned
 OreDeposit (child of Planet, grown by Planet._spawn_ore) -> surfaced on scan; minimap + OreTrackingTarget
-FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom, prompt, the beam)
+FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom and prompt; rings are the ship's sonar)
 OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend() -> GameState.spent_ore (refill timers)
 ```
 

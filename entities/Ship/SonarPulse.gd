@@ -1,8 +1,15 @@
 extends Node2D
-class_name HarvestPulse
+class_name SonarPulse
 
-## Faint rings that pulse outward from the ship while the harvest beam is held.
-## Owned by the ship's HarvestingState; rings already in flight finish after `emitting` stops.
+## Sonar resonance: faint rings that pulse outward from the ship while `action` is held.
+## Always on offer - in flight, over a scrap, on the ground - so it is the one thing the
+## ship can always do; the states that can't (docked, stranded, gone) say so through
+## ShipState.allows_sonar(), and Ship drives `emitting` from that every physics tick.
+## Harvesting is what happens when a ring finds a scrap or a seam; puzzles that listen
+## for a ping hook `pulsed` (or EventBus.sonar_pulsed). Rings already in flight finish
+## after `emitting` stops.
+
+signal pulsed(origin: Vector2)  ## A new ring left the ship, from `origin` (global).
 
 const INTERVAL := 0.32
 const LIFETIME := 1.0
@@ -24,6 +31,8 @@ func _process(delta: float) -> void:
 		if _spawn_timer <= 0.0:
 			_spawn_timer = INTERVAL
 			_rings.append(0.0)
+			pulsed.emit(global_position)
+			EventBus.sonar_pulsed.emit(global_position)
 	else:
 		_spawn_timer = 0.0
 
@@ -33,6 +42,10 @@ func _process(delta: float) -> void:
 		_rings[i] += delta
 	_rings = _rings.filter(func(age: float): return age < LIFETIME)
 	queue_redraw()
+
+## How many rings are in the air right now.
+func ring_count() -> int:
+	return _rings.size()
 
 func _draw() -> void:
 	for age in _rings:

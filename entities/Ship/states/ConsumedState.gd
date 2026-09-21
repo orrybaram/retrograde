@@ -8,6 +8,9 @@ class_name ConsumedState
 
 var _last_seen := Vector2.ZERO
 
+func allows_sonar() -> bool:
+	return false
+
 func enter() -> void:
 	super.enter()
 

@@ -11,6 +11,10 @@ var _requested: bool = false
 var _in_beam: bool = false
 var _derelict: DerelictShip = null
 
+## No power, no ping: a stranded ship's `action` stays with the radio's offer.
+func allows_sonar() -> bool:
+	return false
+
 func enter() -> void:
 	super.enter()
 

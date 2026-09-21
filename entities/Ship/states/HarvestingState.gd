@@ -32,8 +32,6 @@ func enter() -> void:
 	ship.damage_shake_time = ship.harvest_lockon_shake_duration
 	ship.damage_shake_current_intensity = ship.harvest_lockon_shake_intensity
 
-	_get_pulse().emitting = Input.is_action_pressed("action")
-
 func exit() -> void:
 	super.exit()
 	focus = null
@@ -43,8 +41,6 @@ func exit() -> void:
 	velocity_tween_start = Vector2.ZERO
 
 	ship.camera.zoom_camera_out()
-
-	_get_pulse().emitting = false
 
 ## Called by ScrapHarvestingState each time the beam starts on a scrap.
 func focus_on(scrap: ScrapNode) -> void:
@@ -76,15 +72,12 @@ func physics_process(delta: float) -> void:
 	velocity_tween_time += delta
 
 	if not _focus_alive():
-		_get_pulse().emitting = false
 		if _linger < 0.0:
 			_linger = LINGER_AFTER_BREAK
 		_linger -= delta
 		if _linger <= 0.0:
 			_exit_to_flying()
 		return
-
-	_get_pulse().emitting = focus.is_harvesting() and Input.is_action_pressed("action")
 
 	# Left harvest range (only possible once the lock is released): drop focus.
 	if not focus.is_harvesting() and not _focus_in_range():
@@ -111,14 +104,6 @@ func _focus_in_range() -> bool:
 
 func _flying() -> FlyingState:
 	return ship.state_machine.states.get("FlyingState") as FlyingState
-
-func _get_pulse() -> HarvestPulse:
-	var pulse := ship.get_node_or_null("HarvestPulse") as HarvestPulse
-	if not pulse:
-		pulse = HarvestPulse.new()
-		pulse.name = "HarvestPulse"
-		ship.add_child(pulse)
-	return pulse
 
 func _exit_to_flying() -> void:
 	var state_machine: StateMachine = ship.get_node_or_null("StateMachine") as StateMachine

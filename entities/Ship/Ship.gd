@@ -55,6 +55,7 @@ var dev_invulnerable := false
 var dev_infinite_fuel := false
 var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
+var sonar: SonarPulse = null  # sonar resonance rings while `action` is held (see wants_sonar)
 
 # Landing lock system
 var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
@@ -135,6 +136,10 @@ func _ready() -> void:
 	low_hull_effect.name = "LowHullEffect"
 	add_child(low_hull_effect)
 
+	sonar = SonarPulse.new()
+	sonar.name = "SonarPulse"
+	add_child(sonar)
+
 	var magnet := GemMagnet.new()
 	magnet.name = "GemMagnet"
 	add_child(magnet)
@@ -197,6 +202,20 @@ func _physics_process(dt: float) -> void:
 	# Delegate to current state
 	if state_machine and state_machine.current_state:
 		state_machine.current_state.physics_process(dt)
+	if sonar:
+		sonar.emitting = wants_sonar()
+
+## Sonar resonance: holding `action` pings from anywhere the ship is free to act. It is
+## not tied to harvesting; a scrap or a seam in the rings is what makes a ping a harvest.
+## The state decides (ShipState.allows_sonar), and a menu over the game takes the key.
+func wants_sonar() -> bool:
+	if not Input.is_action_pressed("action"):
+		return false
+	var state := state_machine.current_state as ShipState if state_machine else null
+	if state == null or not state.allows_sonar():
+		return false
+	var flying := state_machine.states.get("FlyingState") as FlyingState
+	return flying == null or not flying._is_ui_blocking_input()
 
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	# Delegate to current state

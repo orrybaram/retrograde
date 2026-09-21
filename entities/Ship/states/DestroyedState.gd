@@ -7,6 +7,9 @@ class_name DestroyedState
 
 var _impact := Vector2.ZERO
 
+func allows_sonar() -> bool:
+	return false
+
 func enter() -> void:
 	super.enter()
 	

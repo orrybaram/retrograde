@@ -26,6 +26,10 @@ var _refuelling := false
 ## The screen is already going dark; nothing else about this dock matters any more.
 var _transiting := false
 
+## Clamped in the cradle: `action` is the terminal's key, not the sonar's.
+func allows_sonar() -> bool:
+	return false
+
 func enter() -> void:
 	super.enter()
 	if not is_ship_valid():

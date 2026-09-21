@@ -366,6 +366,9 @@ Harvest resources             Find lore / story fragments
 
 ### 4.1 Flight
 
+> **SUPERSEDED — in part.** See `docs/FLIGHT.md` and ADR 0010. The Feel, Navigation, Inter-Planetary Travel and Transit Encounters all stand. **The physics model does not**: there is no single throttle with a 3x boost. There are two drives — an **Aux** that never runs out and a **Burn** that spends mined fuel. The Chart subsection is also superseded by ADR 0006 (charts are bought, not granted by Gates).
+
+
 #### The Feel
 
 The ship starts **heavy and sluggish** - a junker held together with duct tape. Thrust is slow to build, turning is wide, stopping takes planning. The player feels the mass of their vessel in every maneuver.
@@ -521,6 +524,11 @@ A **Gate** is the dormant orbital structure at a planet that powers its Module a
 
 ### 4.2 Resource Collection
 
+> **SUPERSEDED — in part.** See `docs/SWEEP.md`. This section describes the pre-Sweep design and is kept for reference only.
+
+> The three collection methods stand. The **vacuum field** was never built and will not be: holding `action` is the **Sweep**, and harvesting is what happens when it finds something.
+
+
 Three collection methods, matched to resource type. The method reflects the nature of what you're collecting.
 
 #### Debris vs. Scrap
@@ -664,6 +672,9 @@ Derelicts are **external salvage encounters** - the player stays in their ship t
 
 ### 4.4 Economy
 
+> **SUPERSEDED — wholly.** See ADR 0007 and ADR 0005. This section describes the pre-found-object design and is kept for reference only.
+
+
 **Simple sell & buy.** No price fluctuation, no trade routes, no market manipulation.
 
 - Sell scrap and resources at stations for credits
@@ -688,6 +699,11 @@ Gates are not sold at stations - each is paid for at the Gate itself, in credits
 > **TODO**: Define repair/refuel pricing.
 
 ### 4.5 Upgrades
+
+> **SUPERSEDED — in part.** See ADR 0007. This section describes the pre-found-object design and is kept for reference only.
+
+> The upgrade *list* and the feel goals stand. Nothing is bought: every upgrade is a physical object recovered from the world and fitted at a station.
+
 
 Two categories of ship upgrades that affect how the ship *feels*, not just its stats:
 
@@ -790,6 +806,9 @@ Powered Gates are never lost. Whatever else a death costs, Titan Influence only 
 > **TODO**: Implement the subtle post-death changes (see Clone System section 3.2).
 
 #### Fuel Depletion
+
+> **SUPERSEDED — wholly.** See ADR 0010 and ADR 0011. The ship cannot run dry: the Aux drive has no fuel. The distress-beacon beat survives, promoted — abandoning is now a deliberate choice available anywhere, at any time, and the player will take it casually to save a dull trip home.
+
 
 **Running out of fuel is a death. The player just doesn't know it yet.**
 
@@ -1355,6 +1374,11 @@ The player pays the Core's Gate. The terminal acknowledges in the same flat voic
 
 ### 4.9 Progression System
 
+> **SUPERSEDED — in part.** See ADR 0005, ADR 0007 and `docs/SWEEP.md`. This section describes the pre-Sweep design and is kept for reference only.
+
+> The acquisition ladder, Gate prices and the three-beat tier transition are superseded — Gates cost literacy, not credits, and pacing is by `min_radius` rather than price. **Ship Visual Transformation is now literally true**: every bolted-on part is a specific object from a specific place.
+
+
 #### The Upgrade Journey
 
 The player starts with almost nothing and gradually builds a capable vessel. The key design principle: **every upgrade should change how you play, not just how well you play.** Numbers going up is satisfying, but a new tool that transforms your interaction with the world is *exciting*.
@@ -1494,6 +1518,11 @@ The ship starts as a clean (if ugly) junker and gradually becomes a **patchwork 
 
 ### 4.10 Planetary Scanner & Landing
 
+> **SUPERSEDED — in part.** See `docs/SWEEP.md` §4. This section describes the pre-Sweep design and is kept for reference only.
+
+> "The Upgrade" is superseded: the scanner is not a purchase but a learned **Procedure**, `⟨echo⟩·<body>`. `has_planet_scanner` survives as a flag. Passive scan, ore seams, touchdown, harvest and depletion all stand — though seams need a new job now that they are no longer the pull on an upgrade (ADR 0007).
+
+
 Planets and moons stop being scenery. An early upgrade, the **Planetary Scanner**, reveals planet data and the **ore seams** just under the surface, where the player sets down and harvests them for gems.
 
 #### The Upgrade
@@ -1598,6 +1627,11 @@ Lore is delivered through **every available channel**, layered so that engaged p
 > **TODO**: Write detailed beat sheet for each act.
 
 ### 5.3 The Automatons
+
+> **SUPERSEDED — in part.** See ADR 0008 and ADR 0009. This section describes the pre-fractures design and is kept for reference only.
+
+> All three Automatons are one mind, cut apart, unaware of each other. Their dialogue and awareness levels stand; their **separateness** does not. They no longer sell Gates — they **translate** them. UNIT-7 is woken by the player rather than met.
+
 
 **What they are:** leftover subprocesses of the Titan, still running in robot bodies. Not servants of it, not corrupted by it - *pieces* of it, left powered when everything else went dark, carrying on with the last shape of themselves they had. This is why they want the Gates powered, and it is also why they are not villains: a process that misses being whole is not lying when it says the road would be useful.
 
