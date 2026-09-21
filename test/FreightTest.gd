@@ -68,3 +68,13 @@ func test_a_long_piece_has_more_inertia_than_a_short_one() -> void:
 	var long := PackedVector2Array([Vector2(-40, -6), Vector2(40, 6)])
 	var short := PackedVector2Array([Vector2(-10, -6), Vector2(10, 6)])
 	assert_float(Freight.box_inertia(long, 3.0)).is_greater(Freight.box_inertia(short, 3.0))
+
+# --- knocks ---
+
+func test_bumping_freight_needs_a_very_fast_hit() -> void:
+	var piece: Freight = auto_free(Freight.new())
+	assert_float(FlyingState.knock_threshold(piece, 50.0)).is_equal(Freight.KNOCK_DAMAGE_SPEED)
+
+func test_other_bodies_keep_the_ship_threshold() -> void:
+	var rock: RigidBody2D = auto_free(RigidBody2D.new())
+	assert_float(FlyingState.knock_threshold(rock, 50.0)).is_equal(50.0)

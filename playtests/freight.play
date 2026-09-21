@@ -84,6 +84,18 @@ wait 3
 assert absf(pt.recall("piece2").global_position.distance_to(ship.global_position) - pt.recall("gap")) < 5.0 "coasting ship and piece stay together"
 assert pt.recall("piece2").linear_velocity.distance_to(pt.recall("v")) < 1.0 "no damping: it keeps its speed"
 
+# Bumping into loose Freight doesn't hurt unless it's very fast
+eval pt.recall("piece2").set("global_position", ship.global_position + Vector2(0, 3000))
+eval ship.set("linear_velocity", Vector2(0, 0))
+eval ship.set("angular_velocity", 0.0)
+frames 2
+eval pt.remember("piece3", pt.stage_freight(40.0))
+eval pt.remember("hull", ship.hull_strength)
+eval ship.set("linear_velocity", Vector2(150, 0).rotated(ship.rotation))
+wait 1
+assert ship.hull_strength == pt.recall("hull") "a 150 px/s bump into Freight does no damage"
+assert pt.recall("piece3").linear_velocity.length() > 20.0 "the bump pushes the piece"
+
 # Unladen turning is back to normal
 eval ship.set("angular_velocity", 0.0)
 eval pt.remember("r1", ship.rotation)

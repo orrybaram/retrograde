@@ -49,7 +49,7 @@ extends Node
 ##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
 ##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
 ##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.seam(),
-##       pt.stage_freight([gap]) (test Freight on the nose, ready to clamp),
+##       pt.stage_freight([gap]) (test Freight on the nose, ready to clamp), pt.spawn_freight(pos, [rot], [vel]),
 ##       pt.caption(text) (on-screen caption for recorded videos))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
@@ -901,6 +901,11 @@ func abandoned_ship() -> DerelictShip:
 func stage_freight(gap := 6.0) -> Freight:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	return Freight.spawn_ahead_of(ship, gap)
+
+## A test piece of Freight at `pos`, turned to `rot`, moving at `velocity`.
+func spawn_freight(pos: Vector2, rot := 0.0, velocity := Vector2.ZERO) -> Freight:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	return Freight.spawn(ship.get_parent(), pos, rot, velocity)
 
 func spawn_gem(id: String, offset: Vector2, rel_velocity := Vector2.ZERO) -> Gem:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship

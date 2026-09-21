@@ -29,7 +29,11 @@ Freight is a physical category, not a purpose. It is handed over one way: pushed
 - This narrows `docs/SWEEP.md`'s "the one thing the ship can always do": carrying joins docked, stranded and gone as states where `allows_sonar()` is false.
 - Consequence for Act 1: the player cannot listen for the mast with a Section on the hull. Deliver first, then search. One thing at a time is fine for a tutorial.
 - Clamping stays on `action` too; it is gated on slow + aligned + in range, so a Sweep near Freight only clamps when the player is already lined up to take it.
-- **Freight damage is deferred.** For now a clamped load collides physically and nothing more: no hull damage through the Freight, no clamp shearing loose, and Freight cannot be destroyed. Revisit once hauling is playable — the candidate is "a hit on the Freight is a hit on the hull; a harder hit shears the clamp."
+- **Knocks.** Nudging Freight about is expected, so it is gentle on the hull:
+  - Bumping into a **loose** piece only damages the ship above 250 px/s closing speed (`Freight.KNOCK_DAMAGE_SPEED`), against the ship's ordinary 50.
+  - A knock on a **clamped** load bounces the ship but never reaches the hull — against rocks, stations and scrap alike.
+  - Loose Freight bounces off scrap and debris the way the ship does (`OrbitalNode`, per shape). Scrap stays on its rails.
+- **Freight damage is deferred.** Beyond the above, Freight collides physically and nothing more: no clamp shearing loose, and Freight cannot be destroyed. Revisit once hauling is playable — the candidate is "a hit on the Freight is a hit on the hull; a harder hit shears the clamp."
 - **Freight is never lost.** A Section that cannot be recovered is a soft-lock, so:
   - **Released Freight coasts.** It keeps exactly the ship's velocity and heading at the moment of release — no spin, no damping — and gravity does not act on it, so it goes precisely where the ship sent it until it hits something or reaches the Void's edge. (First built as "parks: momentum bleeds to zero"; in play a piece released on the move visibly fell away behind the ship, which read as wrong. Coasting is what a rigid object let go of does.) It is saved where it is (position, rotation, velocity, clamped or not), alongside derelicts in `Save.gd`, and never respawns or despawns.
   - **Abandoning while carrying** (ADR 0011): the Freight stays clamped to the abandoned hull, and a derelict holding Freight damps to a full stop. Salvaging the derelict frees it.

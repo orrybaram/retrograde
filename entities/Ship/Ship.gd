@@ -419,6 +419,10 @@ func is_freight_shape(shape_index: int) -> bool:
 		return false
 	return shape_owner_get_owner(shape_find_owner(shape_index)) == _freight_collider
 
+## Where the clamped load's middle is, in world space (the ship's own position if none).
+func freight_center() -> Vector2:
+	return freight.global_transform * freight.own_center() if is_carrying() else global_position
+
 func _velocity_at(point: Vector2, com: Vector2) -> Vector2:
 	var r := point - com
 	return linear_velocity + Vector2(-angular_velocity * r.y, angular_velocity * r.x)

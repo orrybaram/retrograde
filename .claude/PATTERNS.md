@@ -47,7 +47,9 @@ CarryingState: action = RELEASE, anywhere -> FlyingState; exit() always calls Sh
   and engine-computed inertia.
 - Turning reads `Ship.turn_ratio()` in `FlyingState.turned_spin`: 1.0 unladen (identical to before),
   softened inertia ratio loaded (`Ship.FREIGHT_TURN_EXPONENT`, wind-up `FlyingState.TURN_LAG`).
-- Contacts on `FreightCollision` do no hull damage (`Ship.is_freight_shape`). A carrying ship can't
+- Contacts on `FreightCollision` do no hull damage (`Ship.is_freight_shape`); bumping loose Freight
+  only hurts above `Freight.KNOCK_DAMAGE_SPEED` (`FlyingState.knock_threshold`). Scrap and debris
+  (`OrbitalNode`) handle hits per shape via `body_shape_entered`, bouncing loose Freight too. A carrying ship can't
   harvest (`ScrapInRangeState`) or touch down (`CarryingState._ground_contact`).
 - Spawn a test piece: dev panel SPAWN FREIGHT, or `pt.stage_freight()` in a playtest (`playtests/freight.play`).
 

@@ -103,8 +103,9 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			var speed_along_normal = relative_velocity.dot(collision_normal)
 			var impact_speed: int = abs(speed_along_normal)
 
-			if impact_speed > ship.damage_threshold:
-				var damage: float = (impact_speed - ship.damage_threshold) * ship.crash_damage_multiplier
+			var threshold := knock_threshold(collider, ship.damage_threshold)
+			if impact_speed > threshold:
+				var damage: float = (impact_speed - threshold) * ship.crash_damage_multiplier
 				ship.take_damage(damage)
 				break
 	
@@ -121,6 +122,13 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	
 	if ship.want_reverse_thrust:
 		_apply_thrust(state, Vector2.LEFT)
+
+## The closing speed above which bumping into `collider` hurts the hull: the ship's own
+## threshold, or far higher for loose Freight, which the player is meant to nudge about.
+static func knock_threshold(collider: Object, ship_threshold: float) -> float:
+	if collider is Freight:
+		return maxf(ship_threshold, Freight.KNOCK_DAMAGE_SPEED)
+	return ship_threshold
 
 ## Spin after one step of turn input `turn` (-1, 0 or 1). Unladen (`ratio` 1) the ship
 ## turns at exactly `turn_speed` and stops the instant the key is let go, as it always has.

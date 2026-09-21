@@ -216,15 +216,15 @@ func _deplete_resource() -> void:
 	_unregister_indicator()
 
 	# Disable all collision so ship can't interact.
-	# Also disconnect body_entered — Godot can fire it during reparent even with monitoring=false,
+	# Also disconnect body_shape_entered — Godot can fire it during reparent even with monitoring=false,
 	# which would trigger the bounce code and kick the ship.
 	monitoring = false
 	monitorable = false
 	if _collision_area_cached:
 		_collision_area_cached.monitoring = false
 		_collision_area_cached.monitorable = false
-		if _collision_area_cached.body_entered.is_connected(_on_collision_area_entered):
-			_collision_area_cached.body_entered.disconnect(_on_collision_area_entered)
+		if _collision_area_cached.body_shape_entered.is_connected(_on_collision_area_entered):
+			_collision_area_cached.body_shape_entered.disconnect(_on_collision_area_entered)
 
 	EventBus.unregister_resource_node(self)
 
@@ -242,8 +242,8 @@ func on_spawn() -> void:
 	super.on_spawn()  # OrbitalNode.on_spawn() restores monitorable = true
 
 	# Reconnect collision handler (disconnected on depletion to prevent reparent physics artifacts)
-	if _collision_area_cached and not _collision_area_cached.body_entered.is_connected(_on_collision_area_entered):
-		_collision_area_cached.body_entered.connect(_on_collision_area_entered)
+	if _collision_area_cached and not _collision_area_cached.body_shape_entered.is_connected(_on_collision_area_entered):
+		_collision_area_cached.body_shape_entered.connect(_on_collision_area_entered)
 
 	if not is_in_group("resource_nodes"):
 		add_to_group("resource_nodes")

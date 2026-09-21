@@ -11,6 +11,9 @@ const CLAMP_REACH := 16.0
 ## The docking checks: slower than this relative to the piece, nose within this of the Lug.
 const CLAMP_SPEED := 50.0
 const CLAMP_ANGLE_DEG := 30.0
+## Bumping into a loose piece only hurts the hull above this closing speed (px/s); the
+## ship's ordinary knock threshold is far lower. Nudging Freight around is expected.
+const KNOCK_DAMAGE_SPEED := 250.0
 
 ## A test piece: a long mast-like bar with its Lug on one end.
 const TEST_OUTLINE := [
