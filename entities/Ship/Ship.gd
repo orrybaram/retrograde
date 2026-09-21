@@ -12,6 +12,10 @@ class_name Ship
 @export var fuel_consumption_rate: float = 5.0  # Fuel consumed per second when thrusting
 @export var boost_power_multiplier: float = 2.667  # Multiplier for boost thrust power (keeps the boost at ~700)
 @export var boost_fuel_multiplier: float = 3.0  # Multiplier for boost fuel consumption
+## Ordinary thrust stops adding speed past this (px/s). It still steers and brakes up
+## there; only the boost (or gravity) takes the ship faster. Keeps short hops around a
+## debris field untouched while making the long haul between planets a slow cruise.
+@export var cruise_speed: float = 300.0
 
 @export var max_hull: float = 100.0
 @export var crash_damage_multiplier: float = 0.5  # Damage per unit of collision velocity

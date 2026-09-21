@@ -112,12 +112,25 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 ## Thrust in `local_direction`. Ordinary thrust is free and always available; the boost is
 ## the only thing fuel is ever spent on, and the only thing a dry tank or a low-fuel cough
 ## can take away. One helper for both directions, so forward and reverse cannot drift apart.
+## Ordinary thrust is held to `ship.cruise_speed` (see cruise_velocity); the boost is not.
 func _apply_thrust(state: PhysicsDirectBodyState2D, local_direction: Vector2) -> void:
-	var power := ship.thrust_power
+	var force := local_direction.rotated(ship.rotation) * ship.thrust_power
 	if _boosting():
 		if ship.consume_fuel(ship.fuel_consumption_rate * ship.boost_fuel_multiplier * state.step):
-			power *= ship.boost_power_multiplier
-	state.apply_central_force(local_direction.rotated(ship.rotation) * power)
+			state.apply_central_force(force * ship.boost_power_multiplier)
+			return
+	var dv := force * state.inverse_mass * state.step
+	state.linear_velocity = cruise_velocity(state.linear_velocity, dv, ship.cruise_speed)
+
+## Velocity after ordinary thrust adds `dv` to `velocity`, held to `cap`: it may speed the
+## ship up to the cap, but never past it, and never faster than it already was once over
+## it (after a boost or a gravity slingshot). Steering and braking always go through.
+static func cruise_velocity(velocity: Vector2, dv: Vector2, cap: float) -> Vector2:
+	var next := velocity + dv
+	var limit := maxf(cap, velocity.length())
+	if next.length() <= limit:
+		return next
+	return next.normalized() * limit
 
 ## Is the boost actually lit? It needs the key, fuel in the tank, and an engine that is not
 ## coughing. Failing any of those drops the throttle back to ordinary thrust - it never

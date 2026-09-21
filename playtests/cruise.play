@@ -1,0 +1,54 @@
+# Ordinary thrust tops out at ship.cruise_speed; the boost still goes past it.
+# Run: tools/play.sh --headless playtests/cruise.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+# Out of anything's way: no collisions, parked in open space
+eval ship.set("collision_mask", 0)
+eval ship.set("collision_layer", 0)
+eval pt.warp_to(ship.global_position + Vector2(0, -30000))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+
+# Short hops feel the same as before: 1s of thrust from rest is well under the cap
+hold thrust 1.0
+assert ship.linear_velocity.length() > 60 and ship.linear_velocity.length() < 120 "1s of thrust unchanged"
+eval pt.remember("hop", ship.linear_velocity.length())
+log hop speed after 1s
+eval pt.recall("hop")
+
+# Long thrust tops out at the cap
+hold thrust 8.0
+eval ship.linear_velocity.length()
+assert ship.linear_velocity.length() <= ship.cruise_speed + 15.0 "ordinary thrust capped (gravity may add a little)"
+assert ship.linear_velocity.length() >= ship.cruise_speed - 20.0 "ordinary thrust reaches the cap"
+
+# Boost goes past it and ordinary thrust doesn't drag it back
+down boost
+hold thrust 2.0
+up boost
+# The last boost frame's force lands on the next physics step
+frames 3
+assert ship.linear_velocity.length() > ship.cruise_speed + 100.0 "boost exceeds the cap"
+eval pt.remember("boosted", ship.linear_velocity.length())
+hold thrust 1.0
+assert ship.linear_velocity.length() <= pt.recall("boosted") + 2.0 "thrust adds nothing above the cap"
+assert ship.linear_velocity.length() > ship.cruise_speed + 50.0 "thrust does not brake a boosted ship"
+
+# Reverse thrust still brakes
+hold reverse_thrust 2.0
+assert ship.linear_velocity.length() < pt.recall("boosted") - 100.0 "reverse brakes above the cap"
+
+# Planet speeds, for tuning the cap against catching up with an orbit
+eval get_tree().get_nodes_in_group("planets").size()
+eval pt.planet("Rook").linear_velocity.length()
+eval pt.planet("Veld").linear_velocity.length()
+quit
