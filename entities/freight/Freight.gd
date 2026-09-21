@@ -2,8 +2,8 @@ extends RigidBody2D
 class_name Freight
 
 ## Something too big for the hold (docs/adr/0012): clamped rigidly to the ship's nose at
-## its one Lug and pushed home ahead of it. Let go, it coasts on exactly as the ship was
-## moving - same velocity, same heading - and gravity never bends its path. While
+## its one Lug and pushed home ahead of it. Let go, it coasts on as the ship was moving -
+## same velocity, same heading, plus a slow drift off the nose - and gravity never bends its path. While
 ## clamped it is not a body of its own: Ship.clamp_freight folds its mass, inertia and
 ## outline into the ship's, and Ship.release_freight hands them back.
 ## Holding `action` with the nose this close to the Lug (px) starts the magnet. Angle and
@@ -36,10 +36,15 @@ const TEST_OUTLINE := [
 
 ## How long the Lug stays lit after a Sweep ring passes over it.
 const LUG_GLOW_TIME := 0.6
+## How long the whole piece takes to fade from lit back to its own colours once clamped.
+const CLAMP_FLASH_TIME := 0.35
 
 var _collider: CollisionPolygon2D
 var _visual: Node2D
 var _lug_line: Line2D
+var _body: Polygon2D
+var _edge: Line2D
+var _clamp_flash: Tween
 var _lug_glow: Tween
 
 func _init() -> void:
@@ -83,13 +88,47 @@ func on_sonar_touched() -> void:
 	_lug_glow.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, LUG_GLOW_TIME)
 	_lug_glow.tween_property(_lug_line, "width", 3.0, LUG_GLOW_TIME)
 
-## The clunk of being clamped or let go: a short punch in scale.
-func punch() -> void:
+## The clunk of being clamped or let go: a short punch in scale. `amount` is how far past
+## its own size it jolts.
+func punch(amount := 0.08) -> void:
 	if not _visual:
 		return
-	_visual.scale = Vector2(1.08, 1.08)
-	_visual.create_tween().tween_property(_visual, "scale", Vector2.ONE, 0.18) \
+	_visual.scale = Vector2.ONE * (1.0 + amount)
+	_visual.create_tween().tween_property(_visual, "scale", Vector2.ONE, 0.18 + amount) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## Clamped: the whole piece lights up - body, outline and Lug - and settles back to its
+## own colours, so the moment it takes hold is unmistakable.
+func flash_clamped() -> void:
+	if not _body:
+		return
+	if _clamp_flash:
+		_clamp_flash.kill()
+	if _lug_glow:
+		_lug_glow.kill()
+	_body.color = Colors.HULL_MID.lerp(Colors.PRIMARY, 0.65)
+	_edge.default_color = Colors.CREAM
+	_edge.width = 2.0
+	_lug_line.default_color = Colors.CREAM
+	_lug_line.width = 5.5
+	_clamp_flash = _visual.create_tween().set_parallel().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_clamp_flash.tween_property(_body, "color", Colors.HULL_MID, CLAMP_FLASH_TIME)
+	_clamp_flash.tween_property(_edge, "default_color", Colors.HULL_LIGHT, CLAMP_FLASH_TIME)
+	_clamp_flash.tween_property(_edge, "width", 1.0, CLAMP_FLASH_TIME)
+	_clamp_flash.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, CLAMP_FLASH_TIME * 1.4)
+	_clamp_flash.tween_property(_lug_line, "width", 3.0, CLAMP_FLASH_TIME * 1.4)
+
+## Let go: just the Lug glints cream and fades - a lighter mark than the clamp's flash.
+func flash_released() -> void:
+	if not _lug_line:
+		return
+	if _lug_glow:
+		_lug_glow.kill()
+	_lug_line.default_color = Colors.CREAM
+	_lug_line.width = 5.0
+	_lug_glow = _visual.create_tween().set_parallel()
+	_lug_glow.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, LUG_GLOW_TIME)
+	_lug_glow.tween_property(_lug_line, "width", 3.0, LUG_GLOW_TIME)
 
 ## Spawn a piece into `world` at `pos`, turned to `rot`.
 static func spawn(world: Node, pos: Vector2, rot := 0.0, velocity := Vector2.ZERO) -> Freight:
@@ -184,12 +223,14 @@ func _build_visual() -> Node2D:
 	body.polygon = outline
 	body.color = Colors.HULL_MID
 	root.add_child(body)
+	_body = body
 	var edge := Line2D.new()
 	edge.points = outline
 	edge.closed = true
 	edge.width = 1.0
 	edge.default_color = Colors.HULL_LIGHT
 	root.add_child(edge)
+	_edge = edge
 	# The Lug: a flange across the end the ship takes hold of. Scrap has nothing like it.
 	var across := lug_facing.orthogonal().normalized()
 	var lug := Line2D.new()

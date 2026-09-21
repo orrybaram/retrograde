@@ -11,14 +11,15 @@ const SPARK_LIFETIME := 0.35
 const DRIFT := 0.3
 
 ## Burst at `pos` (global) in `world`, drifting with `velocity` for its first instant.
-static func burst(world: Node, pos: Vector2, velocity := Vector2.ZERO) -> ClampFX:
+## `strength` scales how many particles fly and how hard; `density` multiplies just the count.
+static func burst(world: Node, pos: Vector2, velocity := Vector2.ZERO, strength := 1.0, density := 1.0) -> ClampFX:
 	var fx := ClampFX.new()
 	fx.add_to_group("clamp_fx")
 	world.add_child(fx)
 	fx.global_position = pos
 	fx.z_index = 3
-	fx._emit(_smoke())
-	fx._emit(_sparks())
+	fx._emit(_smoke(strength, density))
+	fx._emit(_sparks(strength, density))
 	# Drift on a little with the ship, easing to a stop, so it isn't nailed to space
 	fx.create_tween().tween_property(fx, "global_position", pos + velocity * DRIFT, SMOKE_LIFETIME) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
@@ -31,11 +32,11 @@ func _emit(p: GPUParticles2D) -> void:
 	add_child(p)
 	p.emitting = true
 
-static func _smoke() -> GPUParticles2D:
-	var p := _particles(10, SMOKE_LIFETIME)
+static func _smoke(strength := 1.0, density := 1.0) -> GPUParticles2D:
+	var p := _particles(int(10 * strength * density), SMOKE_LIFETIME)
 	var mat := p.process_material as ParticleProcessMaterial
-	mat.initial_velocity_min = 8.0
-	mat.initial_velocity_max = 26.0
+	mat.initial_velocity_min = 8.0 * strength
+	mat.initial_velocity_max = 26.0 * strength
 	mat.damping_min = 20.0
 	mat.damping_max = 30.0
 	mat.scale_min = 3.0
@@ -44,11 +45,11 @@ static func _smoke() -> GPUParticles2D:
 	mat.color_ramp = _fade(Color(Colors.HULL_LIGHT, 0.55))
 	return p
 
-static func _sparks() -> GPUParticles2D:
-	var p := _particles(14, SPARK_LIFETIME)
+static func _sparks(strength := 1.0, density := 1.0) -> GPUParticles2D:
+	var p := _particles(int(14 * strength * density), SPARK_LIFETIME * sqrt(strength))
 	var mat := p.process_material as ParticleProcessMaterial
-	mat.initial_velocity_min = 50.0
-	mat.initial_velocity_max = 120.0
+	mat.initial_velocity_min = 50.0 * strength
+	mat.initial_velocity_max = 120.0 * strength
 	mat.damping_min = 120.0
 	mat.damping_max = 180.0
 	mat.scale_min = 1.0

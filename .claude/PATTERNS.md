@@ -52,7 +52,7 @@ CarryingState: hold action RELEASE_HOLD (0.8s; the action message is only a fill
 ```
 
 - `Freight` (`entities/freight/Freight.gd`) is a RigidBody2D in group `freight` with no gravity and no
-  damping: released, it coasts with the ship's velocity and heading (`Ship.release_freight`). Planet
+  damping: released, it coasts with the ship's velocity and heading plus `Ship.RELEASE_DRIFT` off the nose (`Ship.release_freight`). Planet
   gravity only pulls `Ship` bodies anyway (`PlanetGravityField`). One Lug: `lug_position` + `lug_facing`.
 - Clamped, the piece is reparented under the ship with `PROCESS_MODE_DISABLED` (out of the physics
   space), its outline is added to the ship as `FreightCollision`, and `Ship._apply_mass` sets mass,
