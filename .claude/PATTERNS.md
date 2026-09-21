@@ -37,7 +37,10 @@ Ship._drive_sonar -> Ship.wants_sonar() -> SonarPulse.charging (held) -> fire() 
   a ring's edge actually reaches that point (`SonarPulse.time_to_reach`). An answer is drawn in
   `Colors.TITAN`, the one sanctioned non-Titan-body use of purple: whatever answers a Sweep is part
   of the Titan. Freight lights its Lug purple and sends a `SonarEcho` (small purple rings) back out.
-  Scrap deliberately does not answer (docs/adr/0007).
+  Scrap deliberately does not *answer* (docs/adr/0007) - no purple, no echo - but it listens too:
+  it passes for debris (tinted `ScrapNode.DORMANT_COLOR`, no sparkles, off the minimap, takes no
+  cut) until a ring reaches it, then `ScrapNode.reveal()` lights it up for the rest of its spawn and sends one cream `SonarEcho` ring back.
+  Containers and derelicts opt out via `_hides_until_pinged()`. Playtest `stage_harvest` reveals.
 
 ## Freight (clamped to the nose, docs/adr/0012)
 

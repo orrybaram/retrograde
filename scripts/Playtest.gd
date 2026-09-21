@@ -496,6 +496,9 @@ func _stage_harvest(dist: float, trophy: bool, plain: bool, want_kind: String, r
 		reply["ok"] = false
 		reply["error"] = "stage_harvest: no ship or no live %s node" % (want_kind if want_kind != "" else "scrap")
 		return
+	# Found, as if a Sweep had already reached it
+	if not scrap.revealed:
+		scrap.reveal(false)
 	if trophy and not scrap.is_trophy:
 		scrap.is_trophy = true
 	# A trophy roll would otherwise make the hit count vary run to run

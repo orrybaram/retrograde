@@ -14,3 +14,7 @@ func _shape_scenes() -> Array:
 ## pulsing one reads as soft.
 func _pulses_when_trophy() -> bool:
 	return false
+
+## A box is plainly a box; it doesn't hide among the debris waiting for a Sweep.
+func _hides_until_pinged() -> bool:
+	return false

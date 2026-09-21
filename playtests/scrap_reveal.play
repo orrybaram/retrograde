@@ -1,0 +1,36 @@
+# Scrap passes for debris until a Sweep ring reaches it: dark, no sparkles, off the minimap.
+# A ping lights it up and puts it on the map.
+# Run: tools/play.sh playtests/scrap_reveal.play   (add --headless to skip screenshots)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+wait 0.5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 1.5
+wait 1
+
+eval pt.warp_to(pt.nearest_kind("Scrap").global_position + Vector2(150, 0))
+frames 30
+eval pt.set("staged", pt.nearest_kind("Scrap"))
+assert not pt.staged.revealed "scrap starts hidden"
+assert pt.staged.minimap_target == null or not pt.staged.minimap_target.is_minimap_visible() "hidden scrap is off the minimap"
+assert pt.staged.global_position.distance_to(ship.global_position) < 250 "a scrap within one ring"
+screenshot scrap_reveal_1_hidden
+
+press action
+wait 0.25
+screenshot scrap_reveal_2_flash
+wait 1.0
+assert pt.staged.revealed "the ring lit it up"
+assert pt.staged.minimap_target.is_minimap_visible() "found scrap is on the minimap"
+screenshot scrap_reveal_3_lit
