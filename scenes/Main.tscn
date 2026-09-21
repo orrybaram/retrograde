@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=23 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -13,7 +13,6 @@
 [ext_resource type="PackedScene" uid="uid://bwsj15cppch3l" path="res://ui/store/StoreUI.tscn" id="15"]
 [ext_resource type="PackedScene" path="res://ui/log/LogUI.tscn" id="16"]
 [ext_resource type="PackedScene" uid="uid://cwp82l3asrkgc" path="res://scenes/HomeSystem.tscn" id="18"]
-[ext_resource type="PackedScene" uid="uid://c7g87paxkwjsm" path="res://ui/system_map/SystemMap.tscn" id="19"]
 [ext_resource type="Script" uid="uid://b4chiaxpicref" path="res://scripts/ShipSpawner.gd" id="20"]
 [ext_resource type="PackedScene" uid="uid://c2o4vbaw813u0" path="res://ui/LoadingScreen.tscn" id="21"]
 [ext_resource type="PackedScene" path="res://ui/PauseMenu.tscn" id="22"]
@@ -73,8 +72,6 @@ mouse_filter = 0
 [node name="StoreUI" parent="CanvasLayer" unique_id=1196473327 instance=ExtResource("15")]
 
 [node name="LogUI" parent="CanvasLayer" unique_id=215892337 instance=ExtResource("16")]
-
-[node name="SystemMap" parent="CanvasLayer" unique_id=1107096874 instance=ExtResource("19")]
 
 [node name="GateTerminal" type="Control" parent="CanvasLayer"]
 layout_mode = 3

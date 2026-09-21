@@ -40,11 +40,13 @@ func test_opens_on_the_hold() -> void:
 	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
 
 
-func test_tab_moves_to_records_and_back() -> void:
+func test_tab_moves_through_records_and_map_and_back() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
 	assert_str(log_ui.active_tab_title()).is_equal("RECORDS")
+	_press_tab()
+	assert_str(log_ui.active_tab_title()).is_equal("MAP")
 	_press_tab()
 	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
 
@@ -53,7 +55,7 @@ func test_shift_tab_reverses() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab(true)
-	assert_str(log_ui.active_tab_title()).is_equal("RECORDS")
+	assert_str(log_ui.active_tab_title()).is_equal("MAP")
 
 
 ## Only the tab that is up is lit; the rest of the notches stay dim. Which one the
@@ -88,6 +90,7 @@ func test_a_notch_reads_as_a_label_not_a_heading() -> void:
 	log_ui.open_log()
 	assert_str(log_ui._frame._tab_labels[0].text).is_equal("SHIP")
 	assert_str(log_ui._frame._tab_labels[1].text).is_equal("RECORDS")
+	assert_str(log_ui._frame._tab_labels[2].text).is_equal("MAP")
 	for notch in log_ui._frame._tab_labels:
 		assert_int(notch.horizontal_alignment).is_equal(HORIZONTAL_ALIGNMENT_LEFT)
 
@@ -120,13 +123,63 @@ func test_no_robot_on_the_log() -> void:
 	assert_int(_count(log_ui, "RobotView")).is_equal(0)
 
 
-## LEFT / RIGHT are unclaimed, so a future tab can take them for adjustable rows.
-func test_left_and_right_stay_unclaimed() -> void:
+## Only the chart takes LEFT / RIGHT, to drive its mark; the other tabs leave them free
+## for adjustable rows.
+func test_only_the_map_claims_left_and_right() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	for tab in log_ui._tabs:
+		if tab is MapTab:
+			continue
 		assert_bool(tab.handle_key(KEY_LEFT)).is_false()
 		assert_bool(tab.handle_key(KEY_RIGHT)).is_false()
+	log_ui.open_map()
+	assert_bool(log_ui._tabs[LogUI.MAP_TAB].handle_key(KEY_LEFT)).is_true()
+	assert_bool(log_ui._tabs[LogUI.MAP_TAB].handle_key(KEY_RIGHT)).is_true()
+
+
+## "M" opens the Log straight onto the star chart, and the chart is up with it.
+func test_open_map_opens_on_the_chart() -> void:
+	var log_ui := _log_in_tree()
+	log_ui.open_map()
+	assert_bool(log_ui.visible).is_true()
+	assert_bool(log_ui.is_on_map()).is_true()
+	assert_str(log_ui.active_tab_title()).is_equal("MAP")
+	assert_bool(_map(log_ui).visible).is_true()
+
+
+## From another tab, "M" switches to the chart rather than closing.
+func test_open_map_switches_from_another_tab() -> void:
+	var log_ui := _log_in_tree()
+	log_ui.open_log()
+	assert_bool(log_ui.is_on_map()).is_false()
+	log_ui.open_map()
+	assert_bool(log_ui.is_on_map()).is_true()
+
+
+## Leaving the chart, by tab or by closing the Log, puts it away with it: everything that
+## asks whether the chart is up (the void's shroud, the hull alarm) goes by the map itself.
+func test_the_chart_goes_down_with_its_tab() -> void:
+	var log_ui := _log_in_tree()
+	log_ui.open_map()
+	_press_tab()
+	assert_bool(_map(log_ui).visible).is_false()
+	log_ui.open_map()
+	log_ui.close_log()
+	assert_bool(_map(log_ui).visible).is_false()
+	assert_bool(log_ui.is_on_map()).is_false()
+
+
+## The chart's own keys ride in the Log's bottom border, beside the shell's.
+func test_the_map_hint_carries_the_chart_keys() -> void:
+	var log_ui := _log_in_tree()
+	log_ui.open_map()
+	assert_str(log_ui._frame._hint.text).contains("ZOOM")
+	assert_str(log_ui._frame._hint.text).contains(LogTab.SHELL_KEYS)
+
+
+func _map(log_ui: LogUI) -> SystemMap:
+	return (log_ui._tabs[LogUI.MAP_TAB] as MapTab).map
 
 
 ## A scan landing while the Log is up fills that Body's Record where the player can see

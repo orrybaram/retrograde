@@ -16,7 +16,6 @@ enum MainGameState {
 @onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
 @onready var log_ui: LogUI = $"CanvasLayer/LogUI"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
-@onready var system_map: SystemMap = $"CanvasLayer/SystemMap"
 @onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
 @onready var hud: Control = $"CanvasLayer/HUD"
 @onready var encounter_field: EncounterField = $EncounterField
@@ -103,17 +102,13 @@ func _input(event: InputEvent) -> void:
 		# Handle Log toggle with "i" key
 		if event.keycode == KEY_I:
 			_toggle_log()
-		# Handle system map toggle with "m" key
+		# "m" goes straight to the Log's star chart tab
 		elif event.keycode == KEY_M:
 			_toggle_system_map()
-		# Handle ESC to close the Log or the map
+		# Handle ESC to close the Log (the chart included)
 		elif event.keycode == KEY_ESCAPE:
-			print("Escape key pressed")
 			if log_ui and log_ui.visible:
 				log_ui.close_log()
-				get_viewport().set_input_as_handled()
-			elif system_map and system_map.visible:
-				system_map.close_map()
 				get_viewport().set_input_as_handled()
 
 ## A transmission that pauses the game has to be answered, and the radio panel
@@ -124,8 +119,6 @@ func _on_radio_line_started(_line: RadioLine, conversation: RadioConversation) -
 		return
 	if log_ui and log_ui.visible:
 		log_ui.close_log()
-	if system_map and system_map.visible:
-		system_map.close_map()
 
 func _toggle_log() -> void:
 	if not log_ui:
@@ -133,8 +126,6 @@ func _toggle_log() -> void:
 
 	# Don't toggle if other menus are open
 	if start_menu and start_menu.visible:
-		return
-	if system_map and system_map.visible:
 		return
 	if pause_menu and pause_menu.visible:
 		return
@@ -144,22 +135,22 @@ func _toggle_log() -> void:
 	else:
 		log_ui.open_log()
 
+## M opens the Log on its star chart, jumps to the chart from another tab, and closes
+## the Log when the chart is already up.
 func _toggle_system_map() -> void:
-	if not system_map:
+	if not log_ui:
 		return
 
 	# Don't toggle if other menus are open
 	if start_menu and start_menu.visible:
 		return
-	if log_ui and log_ui.visible:
-		return
 	if pause_menu and pause_menu.visible:
 		return
 
-	if system_map.visible:
-		system_map.close_map()
+	if log_ui.is_on_map():
+		log_ui.close_log()
 	else:
-		system_map.open_map()
+		log_ui.open_map()
 
 func _on_start_game() -> void:
 	await start_game()

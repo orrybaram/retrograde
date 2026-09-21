@@ -44,7 +44,7 @@ A region the star chart draws: a planet, its orbit, its moons, its station and i
 _Avoid_: discovered, explored, revealed
 
 **Chart**:
-The full-screen star chart (`SystemMap`), which starts holding only Rook, its station and the void, and fills in one Charted region per chart bought. It is still the Titan's own map arriving piece by piece — now through an intermediary taking a cut.
+The star chart (`SystemMap`, the Log's MAP tab), which starts holding only Rook, its station and the void, and fills in one Charted region per chart bought. It is still the Titan's own map arriving piece by piece — now through an intermediary taking a cut.
 _Avoid_: system map, star map
 
 **Merchant**:

@@ -3,7 +3,8 @@ extends Control
 
 ## The Log: the player's own screen, kept by the ship, not by the Titan. A tabbed
 ## terminal window that opens on the Hold; the Records tab holds one entry per thing
-## the player has reached. Opens and closes with "I" (ESC also closes; see Main).
+## the player has reached, and the Map tab carries the star chart. Opens and closes
+## with "I", or with "M" straight onto the chart (ESC also closes; see Main).
 ##
 ## No Automaton speaks from inside the Log — it is the player's own instrument, read
 ## alone. UNIT-7 is met at SR-7 and heard on the radio, never carried around in a menu.
@@ -13,12 +14,16 @@ extends Control
 
 signal dialogue_closed
 
-const WINDOW_SIZE := Vector2(880, 440)
+## Sized for the star chart, which used to fill the screen inside a margin.
+const WINDOW_SIZE := Vector2(1160, 640)
 ## The tabs, in notch order. The first one is what the Log opens on.
 const TABS := [
 	preload("res://ui/log/ShipTab.gd"),
 	preload("res://ui/log/RecordsTab.gd"),
+	preload("res://ui/log/MapTab.gd"),
 ]
+## Where the star chart sits in TABS, for "M" to open straight onto it.
+const MAP_TAB := 2
 
 var gs: GameState = null
 var inventory_manager: InventoryManager = null
@@ -49,11 +54,23 @@ func _ready() -> void:
 	_connect_ship()
 
 
-func open_log() -> void:
+func open_log(tab := 0) -> void:
 	_connect_ship()
 	visible = true
-	_show_tab(0)
+	_show_tab(tab)
 	_frame.animate_in()
+
+
+## Onto the star chart: open the Log there, or switch to it if the Log is already up.
+func open_map() -> void:
+	if visible:
+		_show_tab(MAP_TAB)
+	else:
+		open_log(MAP_TAB)
+
+
+func is_on_map() -> bool:
+	return visible and _active == MAP_TAB
 
 
 func close_log() -> void:
@@ -138,9 +155,10 @@ func _input(event: InputEvent) -> void:
 		_cycle_tab(-1 if key_event.shift_pressed else 1)
 		get_viewport().set_input_as_handled()
 		return
-	# Everything else is the active tab's to take. Nothing claims LEFT / RIGHT yet,
-	# so they stay free for a future tab's adjustable rows.
+	# Everything else is the active tab's to take. A key it takes can change what its
+	# hint offers (the chart's CLEAR comes and goes with a tracking point).
 	if not _tabs.is_empty() and _tabs[_active].handle_key(key):
+		_frame.set_hint(_tabs[_active].hint())
 		get_viewport().set_input_as_handled()
 
 

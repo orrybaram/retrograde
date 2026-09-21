@@ -14,7 +14,7 @@ assert get_node("/root/NavSystem").is_tracking_home() "tracks home base by defau
 
 press m
 wait 0.6
-assert pt.visible_ui().has("SystemMap") "map open"
+assert pt.node("log_ui").is_on_map() "map open"
 # The dock rides its orbit, so the ship has drifted a little since the map opened
 assert pt.node("system_map").cursor_world.distance_to(ship.global_position) < 500 "the mark starts on the ship"
 screenshot mark_1_open
@@ -56,7 +56,7 @@ assert get_node("/root/NavSystem").is_tracking_home() "DEL returns to home base"
 screenshot mark_4_cleared
 
 press m
-wait_until not pt.visible_ui().has("SystemMap") 2
+wait_until not pt.node("log_ui").is_on_map() 2
 
 # Dying with the chart up used to be a dead end: the radio panel steps aside for
 # menus, so a transmission that pauses the game got stuck behind the map with no
@@ -65,10 +65,10 @@ hold thrust 1.2
 wait_until pt.state_name() == "FlyingState" 3
 press m
 wait 0.6
-assert pt.visible_ui().has("SystemMap") "map open"
+assert pt.node("log_ui").is_on_map() "map open"
 eval ship.explode()
 wait_until main.current_game_state == 2 10
-wait_until not pt.visible_ui().has("SystemMap") 3
+wait_until not pt.node("log_ui").is_on_map() 3
 wait_until pt.node("radio_panel").visible 3
 assert pt.node("radio_panel").visible "the robot's call is readable, not hidden behind the chart"
 screenshot mark_5_game_over

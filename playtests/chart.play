@@ -14,7 +14,7 @@ eval gs.set("credits", 5000)
 # A new chart holds home and nothing else
 press m
 wait 1.2
-assert pt.visible_ui().has("SystemMap") "the chart is open"
+assert pt.node("log_ui").is_on_map() "the chart is open"
 screenshot chart_1_blank
 assert pt.node("system_map")._charted(pt.planet("Rook")) "home is on the chart from the first minute"
 assert not pt.node("system_map")._charted(pt.planet("Veld")) "Veld waits for its Gate"

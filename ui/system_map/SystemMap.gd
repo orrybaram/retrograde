@@ -1,14 +1,13 @@
 extends Control
 class_name SystemMap
 
-## Fullscreen star chart: a dimmed backdrop behind a generously padded terminal
-## frame that expands open from the middle, and a clipped chart view holding the
-## sun, orbits, planets, stations, the ship reticle and the current nav target.
+## Star chart, carried in the Log's MAP tab (ui/log/MapTab.gd): a terminal frame that
+## expands open from the middle, and a clipped chart view holding the sun, orbits,
+## planets, stations, the ship reticle and the current nav target. It fills whatever
+## rect its parent gives it; the Log owns the backdrop, the window and the key hint.
 ##
 ## The arrow keys drive a mark across the chart; ENTER hands it to the NavSystem,
 ## either as the body it has locked onto or as a fixed waypoint out in the black.
-
-signal map_closed
 
 ## Chart contents. Clipped and scaled by the open animation, so it can never
 ## bleed into the padding around the frame.
@@ -28,8 +27,6 @@ class ChromeCanvas extends Control:
 
 const BORDER_WIDTH := 2.0
 const OPEN_TIME := 0.24
-const CLOSE_TIME := 0.14
-const TITLE_SIZE := 11
 const TEXT_SIZE := 9
 const SMALL_SIZE := 8
 const READOUT_INSET := 18.0
@@ -80,8 +77,6 @@ const REVEAL_SPAN := REVEAL_TIME + REVEAL_STAGGER * float(Reveal.GATE)
 @export var void_color: Color = Colors.DANGER
 
 @export_group("Display")
-@export var screen_margin_ratio: Vector2 = Vector2(0.065, 0.085)  ## Frame inset as a fraction of the screen
-@export var min_screen_margin: Vector2 = Vector2(44.0, 34.0)  ## Floor for that inset, in pixels
 @export var padding: float = 44.0  ## Gap between the frame and the outermost orbit
 @export var planet_size_multiplier: float = 1.0  ## Multiplier for planet size (0.5 = half actual size for visibility)
 @export var sun_size_multiplier: float = 1.0  ## Multiplier for sun size
@@ -105,13 +100,12 @@ var zoom_level: float = 0.0  ## Current zoom multiplier (0 until the first open;
 var pan_offset: Vector2 = Vector2.ZERO  ## Current pan offset from center
 var cursor_world: Vector2 = Vector2.ZERO  ## World position the mark sits on
 
-var _backdrop: ColorRect
 var _chart: ChartCanvas
 var _chrome: ChromeCanvas
 var _font: Font
 var _frame_rect: Rect2 = Rect2()
 var _anim: float = 0.0  ## 0 = closed, 1 = fully open
-var _anim_dir: int = 0  ## +1 opening, -1 closing, 0 settled
+var _anim_dir: int = 0  ## +1 opening, 0 settled
 var _time: float = 0.0
 var _stars: PackedVector2Array = PackedVector2Array()  ## Unit-square star positions
 var _star_alpha: PackedFloat32Array = PackedFloat32Array()
@@ -125,17 +119,9 @@ var _game_state: GameState = null
 
 func _ready() -> void:
 	visible = false
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	# The chart keeps working while a transmission holds the game, so it can always
-	# be closed again. Without this, dying with the map up is a dead end.
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("system_map")
 	_font = get_theme_default_font()
-
-	_backdrop = ColorRect.new()
-	_backdrop.color = Color(Colors.SPACE_BG, 0.97)
-	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_backdrop)
 
 	_chart = ChartCanvas.new()
 	_chart.map = self
@@ -150,7 +136,7 @@ func _ready() -> void:
 
 	_build_starfield()
 	_layout()
-	resized.connect(_layout)
+	resized.connect(_on_resized)
 
 	# Find references
 	_find_celestial_bodies()
@@ -169,14 +155,7 @@ func _build_starfield() -> void:
 		_star_alpha.append(rng.randf_range(0.05, 0.22))
 
 func _layout() -> void:
-	var margin := Vector2(
-		maxf(min_screen_margin.x, size.x * screen_margin_ratio.x),
-		maxf(min_screen_margin.y, size.y * screen_margin_ratio.y)
-	).floor()
-	_frame_rect = Rect2(margin, (size - margin * 2.0).floor())
-
-	_backdrop.position = Vector2.ZERO
-	_backdrop.size = size
+	_frame_rect = Rect2(Vector2.ZERO, size.floor())
 
 	_chrome.position = _frame_rect.position
 	_chrome.size = _frame_rect.size
@@ -186,6 +165,15 @@ func _layout() -> void:
 	_chart.size = _frame_rect.size - inset * 2.0
 	_chart.pivot_offset = _chart.size / 2.0
 	map_center = _chart.size / 2.0
+
+## The Log's container sizes the chart a beat after the tab first shows, so the fit
+## and the centring are taken again once the real size arrives.
+func _on_resized() -> void:
+	_layout()
+	if visible:
+		_calculate_scale()
+		_refocus()
+		_reset_cursor()
 
 func _find_celestial_bodies() -> void:
 	# Find all planets in the scene
@@ -202,74 +190,55 @@ func _find_celestial_bodies() -> void:
 				planets.append(planet)
 
 func _process(delta: float) -> void:
-	if _anim_dir == 0 and not visible:
+	if not visible:
 		return
 
 	_time += delta
 	_advance_anim(delta)
-	if visible:
-		_handle_panning(delta)
-		_calculate_scale()
-		_handle_cursor(delta)
-		_advance_reveals(delta)
-		_mark_flash = maxf(_mark_flash - delta / MARK_FLASH_TIME, 0.0)
-		_chart.queue_redraw()
-		_chrome.queue_redraw()
+	_handle_panning(delta)
+	_calculate_scale()
+	_handle_cursor(delta)
+	_advance_reveals(delta)
+	_mark_flash = maxf(_mark_flash - delta / MARK_FLASH_TIME, 0.0)
+	_chart.queue_redraw()
+	_chrome.queue_redraw()
 
 func _advance_anim(delta: float) -> void:
 	if _anim_dir > 0:
 		_anim = minf(_anim + delta / OPEN_TIME, 1.0)
 		if is_equal_approx(_anim, 1.0):
 			_anim_dir = 0
-	elif _anim_dir < 0:
-		_anim = maxf(_anim - delta / CLOSE_TIME, 0.0)
-		if _anim <= 0.0:
-			_anim_dir = 0
-			visible = false
-			map_closed.emit()
-			return
 
-	# Backdrop dims in first, then the chart fades up and settles into place.
-	_backdrop.modulate.a = _ease_out(_anim)
+	# The frame draws itself on first, then the chart fades up and settles into place.
 	var chart_t := _ease_out(clampf((_anim - 0.35) / 0.65, 0.0, 1.0))
 	_chart.modulate.a = chart_t
 	_chart.scale = Vector2.ONE * lerpf(0.965, 1.0, chart_t)
 
-func _input(event: InputEvent) -> void:
-	if not visible or _anim_dir < 0:
-		return
-
-	if event is InputEventKey and event.pressed and not event.echo:
-		# Close on M or Escape
-		if event.keycode == KEY_M or event.keycode == KEY_ESCAPE:
-			close_map()
-			get_viewport().set_input_as_handled()
-		# Zoom in with + or =
-		elif event.keycode == KEY_PLUS or event.keycode == KEY_EQUAL:
+## A key the Log handed over while the chart is up. Returns true when the chart takes
+## it. The arrows are claimed but polled each frame, so the mark glides while held.
+func handle_key(keycode: int) -> bool:
+	if not visible:
+		return false
+	match keycode:
+		KEY_PLUS, KEY_EQUAL:
 			_zoom_in()
-			get_viewport().set_input_as_handled()
-		# Zoom out with - or _
-		elif event.keycode == KEY_MINUS or event.keycode == KEY_UNDERSCORE:
+		KEY_MINUS, KEY_UNDERSCORE:
 			_zoom_out()
-			get_viewport().set_input_as_handled()
-		# Recenter on the ship with C, bringing the mark back with the view
-		elif event.keycode == KEY_C:
+		# Recenter on the ship, bringing the mark back with the view
+		KEY_C:
 			_center_on_player()
 			_reset_cursor()
-			get_viewport().set_input_as_handled()
 		# Hand whatever the mark is sitting on to the nav system
-		elif event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+		KEY_ENTER, KEY_KP_ENTER:
 			_set_tracking_point()
-			get_viewport().set_input_as_handled()
 		# Drop the tracking point and fall back to home base
-		elif event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE:
+		KEY_DELETE, KEY_BACKSPACE:
 			NavSystem.track_home()
-			get_viewport().set_input_as_handled()
-
-func _gui_input(event: InputEvent) -> void:
-	# Close on click
-	if event is InputEventMouseButton and event.pressed:
-		close_map()
+		KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT:
+			pass
+		_:
+			return false
+	return true
 
 func open_map() -> void:
 	# Refresh references
@@ -293,12 +262,13 @@ func open_map() -> void:
 	_anim_dir = 1
 	_advance_anim(0.0)
 
+## Put away at once: the Log is closing or another tab is taking its place.
 func close_map() -> void:
-	if not visible or _anim_dir < 0:
-		return
-	_anim_dir = -1
+	visible = false
+	_anim = 0.0
+	_anim_dir = 0
 
-## True while the map is on screen, including its close animation.
+## True while the chart is on screen.
 func is_open() -> bool:
 	return visible
 
@@ -388,7 +358,7 @@ func _calculate_scale() -> void:
 
 	# Fit the outermost orbit and the edge of the void inside the padded chart at zoom 1
 	var span = _chart_radius()
-	var available_size = min(_chart.size.x, _chart.size.y) - padding * 2.0
+	var available_size = maxf(minf(_chart.size.x, _chart.size.y) - padding * 2.0, 1.0)
 	base_scale_factor = available_size / (span * 2.0)
 	scale_factor = base_scale_factor * zoom_level
 
@@ -1134,17 +1104,16 @@ func draw_chrome(c: Control) -> void:
 
 	_draw_corner_brackets(c, text_a)
 	_draw_edge_ticks(c, text_a)
-	_draw_tab(c, TerminalWindow.spaced_title("SYSTEM MAP"), TITLE_SIZE, Color(Colors.PRIMARY, text_a), false)
-	_draw_tab(c, _hint_text(), SMALL_SIZE, Color(Colors.PRIMARY_DIM, text_a), true)
 	_draw_readout(c, text_a)
 	_draw_scale_bar(c, text_a)
 
-## Controls strip. Dropping the point is only offered once there is one to drop.
-func _hint_text() -> String:
+## The chart's own keys, for the Log's bottom border. Dropping the point is only
+## offered once there is one to drop.
+func hint_text() -> String:
 	var hint := "[ +/- ] ZOOM   [ WASD ] PAN   [ ARROWS ] MARK   [ ENTER ] TRACK"
 	if NavSystem.get_target() != null and not NavSystem.is_tracking_home():
 		hint += "   [ DEL ] CLEAR"
-	return hint + "   [ C ] CENTER   [ M ] CLOSE"
+	return hint + "   [ C ] CENTER"
 
 func _draw_corner_brackets(c: Control, alpha: float) -> void:
 	var arm := 16.0
@@ -1173,19 +1142,6 @@ func _draw_edge_ticks(c: Control, alpha: float) -> void:
 		points.append(Vector2(x, c.size.y - BORDER_WIDTH - 5.0))
 		x += 72.0
 	c.draw_multiline(points, Color(Colors.PRIMARY, 0.18 * alpha), 1.0)
-
-func _draw_tab(c: Control, text: String, font_size: int, color: Color, bottom: bool) -> void:
-	# Notch the label into the border, terminal-window style
-	var text_size := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var pad := 8.0
-	var y := c.size.y if bottom else 0.0
-	var box := Rect2(
-		Vector2(c.size.x - 20.0 - text_size.x - pad * 2.0, y - text_size.y / 2.0),
-		Vector2(text_size.x + pad * 2.0, text_size.y)
-	)
-	c.draw_rect(box, Color(Colors.UI_BACKGROUND_SOLID, color.a))
-	var baseline := box.position + Vector2(pad, _font.get_ascent(font_size))
-	c.draw_string(_font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 func _draw_readout(c: Control, alpha: float) -> void:
 	var key_color := Color(Colors.PRIMARY, 0.4 * alpha)

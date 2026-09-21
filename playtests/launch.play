@@ -45,7 +45,7 @@ screenshot 04_log
 press i
 wait_until not pt.visible_ui().has("LogUI") 2
 press m
-wait_until pt.visible_ui().has("SystemMap") 2
+wait_until pt.node("log_ui").is_on_map() 2
 screenshot 05_system_map
 press m
 wait_until pt.visible_ui().is_empty() 2

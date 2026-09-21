@@ -49,7 +49,13 @@ assert str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "Records s
 assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
 press tab
 frames 2
+assert pt.node("log_ui").active_tab_title() == "MAP" "TAB moves on to the chart"
+screenshot log_map
+assert pt.node("system_map").visible "the chart is up in its tab"
+press tab
+frames 2
 assert pt.node("log_ui").active_tab_title() == "SHIP" "TAB comes back round to the Ship tab"
+assert not pt.node("system_map").visible "the chart goes down with its tab"
 
 press escape
 wait_until not pt.visible_ui().has("LogUI") 2

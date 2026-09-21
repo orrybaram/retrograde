@@ -40,7 +40,7 @@ assert ship.sonar.ring_count() == 0 "rings in flight fade out"
 
 # A menu over the game takes the key
 press m
-wait_until pt.visible_ui().has("SystemMap") 2
+wait_until pt.node("log_ui").is_on_map() 2
 down action
 wait 0.5
 assert not ship.sonar.emitting "no sonar under the system map"

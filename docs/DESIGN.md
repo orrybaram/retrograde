@@ -395,7 +395,7 @@ Players find things through **visual scanning + ship scanner**, with occasional 
 
 #### The Chart
 
-The full-screen star chart (`SystemMap`) is not the minimap and does not behave like one. See `docs/adr/0002-chart-starts-blank-and-is-filled-by-gates.md`.
+The star chart (`SystemMap`, the Log's MAP tab) is not the minimap and does not behave like one. See `docs/adr/0002-chart-starts-blank-and-is-filled-by-gates.md`.
 
 - It opens holding **Rook, its station, and the void.** That's all. A page with an edge drawn on it.
 - A region - planet, orbit, moons, station, Gate - is **Charted** and drawn only once that planet's Gate is powered. A body existing in the scene is not enough; the Chart filters on `GameState.powered_gates`.

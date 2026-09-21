@@ -19,7 +19,7 @@ assert not get_node("/root/VoidZone").is_inside() "docked ship is not in the voi
 # The chart marks the void before anyone flies into it
 press m
 wait 0.6
-assert pt.visible_ui().has("SystemMap") "map open"
+assert pt.node("log_ui").is_on_map() "map open"
 screenshot void_1_chart
 press m
 wait 0.4

@@ -30,7 +30,7 @@ func refresh() -> void:
 
 
 ## Handle a key the shell did not claim. Return true to swallow it.
-## UP / DOWN arrive here; so do LEFT / RIGHT, which no tab claims yet.
+## The arrows arrive here; only the Map tab claims LEFT / RIGHT, to drive its mark.
 func handle_key(_keycode: int) -> bool:
 	return false
 
