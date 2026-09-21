@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://cl0sr554oon" path="res://entities/Ship/states/StrandedState.gd" id="7"]
 [ext_resource type="Script" path="res://entities/Ship/states/ConsumedState.gd" id="8_void"]
 [ext_resource type="Script" path="res://entities/Ship/states/GateDockedState.gd" id="9_gate"]
+[ext_resource type="Script" path="res://entities/Ship/states/CarryingState.gd" id="10_carrying"]
 [ext_resource type="PackedScene" uid="uid://wcorfxm65hls" path="res://entities/Ship/HarvestCone.tscn" id="9_vnnms"]
 
 [sub_resource type="Gradient" id="Gradient_1"]
@@ -147,6 +148,9 @@ script = ExtResource("2")
 
 [node name="FlyingState" type="Node" parent="StateMachine" unique_id=593654084]
 script = ExtResource("3")
+
+[node name="CarryingState" type="Node" parent="StateMachine"]
+script = ExtResource("10_carrying")
 
 [node name="LandedState" type="Node" parent="StateMachine" unique_id=2013158335]
 script = ExtResource("4")

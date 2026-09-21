@@ -11,15 +11,25 @@ var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after
 ## A ship breaking ground is released still touching the surface, so the ground rules are
 ## held off this long - otherwise it would be judged as landing again the same instant.
 const LIFTOFF_GRACE := 0.9
+## With a load clamped, how long (s) a turn takes to wind up to speed at a turn ratio of
+## one half; it grows with the load, to at most twice this (see turned_spin). Unladen
+## there is no wind-up.
+const TURN_LAG := 0.3
 
 var _state_enter_time: float = 0.0
 var _touchdown_pending := false
 var _ground_grace := 0.0
+## `action` must be seen up once in this state before a press counts, so the press that
+## brought the ship here (a release, a clamp) is never read twice.
+var _action_armed := false
+var _nearby_freight: Freight = null
 
 func enter() -> void:
 	super.enter()
 	_state_enter_time = Time.get_ticks_msec() / 1000.0
 	_touchdown_pending = false
+	_action_armed = false
+	_nearby_freight = null
 	# _ground_grace is deliberately left alone: PlanetLandedState sets it on the way out,
 	# before this runs.
 
@@ -61,9 +71,9 @@ func physics_process(delta: float) -> void:
 	# Update camera shake
 	_update_camera_shake(delta)
 	
-	# Check for dockable entities and handle manual docking
-	_check_dockable_proximity()
-	_attempt_dock()
+	if not Input.is_action_pressed("action"):
+		_action_armed = true
+	_update_action()
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if not is_ship_valid():
@@ -78,6 +88,9 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			if collider == null or collider == ship:
 				continue
 			if not (collider is RigidBody2D):
+				continue
+			# A clamped load collides, but its knocks don't reach the hull (yet: docs/adr/0012)
+			if ship.is_freight_shape(state.get_contact_local_shape(i)):
 				continue
 
 			var ship_speed = state.get_contact_local_velocity_at_position(i)
@@ -96,18 +109,29 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 				break
 	
 	# Handle movement controls
+	var turn := 0.0
 	if ship.want_turn_left:
-		state.angular_velocity = -ship.turn_speed
+		turn = -1.0
 	elif ship.want_turn_right:
-		state.angular_velocity = ship.turn_speed
-	else:
-		state.angular_velocity = 0.0  # Stop rotation when no input
+		turn = 1.0
+	state.angular_velocity = turned_spin(state.angular_velocity, turn, ship.turn_speed, ship.turn_ratio(), state.step)
 
 	if ship.want_thrust:
 		_apply_thrust(state, Vector2.RIGHT)
 	
 	if ship.want_reverse_thrust:
 		_apply_thrust(state, Vector2.LEFT)
+
+## Spin after one step of turn input `turn` (-1, 0 or 1). Unladen (`ratio` 1) the ship
+## turns at exactly `turn_speed` and stops the instant the key is let go, as it always has.
+## With Freight clamped `ratio` < 1: it turns slower, and winds up to that and back down at
+## a rate that shrinks with the load, so a heavy piece carries the turn on a little.
+static func turned_spin(spin: float, turn: float, turn_speed: float, ratio: float, dt: float) -> float:
+	var target := turn * turn_speed * ratio
+	if ratio >= 1.0:
+		return target
+	var wind_up := 2.0 * TURN_LAG * (1.0 - ratio)
+	return move_toward(spin, target, turn_speed * ratio / wind_up * dt)
 
 ## Thrust in `local_direction`. Ordinary thrust is free and always available; the boost is
 ## the only thing fuel is ever spent on, and the only thing a dry tank or a low-fuel cough
@@ -271,6 +295,44 @@ func _update_camera_shake(dt: float) -> void:
 		ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, dt * 5.0)
 
 var _nearby_dockable: Node2D = null
+
+## What `action` does in open flight: dock at a port, or take hold of Freight at its Lug.
+## CarryingState overrides this with the one thing it does there - let go.
+func _update_action() -> void:
+	_check_dockable_proximity()
+	_check_freight_proximity()
+	if not _attempt_clamp():
+		_attempt_dock()
+
+func _check_freight_proximity() -> void:
+	_nearby_freight = null
+	if EventBus.is_harvest_available():
+		return  # the harvest owns the key, as it does over docking
+	_nearby_freight = clampable_freight()
+	if _nearby_freight:
+		EventBus.action_message_changed.emit(EventBus.action_prompt("CLAMP"))
+
+## The loose Freight whose Lug the nose is on, slow and lined up; null if none.
+func clampable_freight() -> Freight:
+	var nose := ship.to_global(Ship.NOSE)
+	var heading := Vector2.RIGHT.rotated(ship.global_rotation)
+	for node in ship.get_tree().get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f == null or f == ship.freight:
+			continue
+		var rel := ship.linear_velocity - f.linear_velocity
+		if Freight.can_clamp(nose, heading, rel, f.lug_global(), f.lug_facing_global()):
+			return f
+	return null
+
+func _attempt_clamp() -> bool:
+	if _nearby_freight == null or not is_instance_valid(_nearby_freight):
+		return false
+	if not _action_armed or not Input.is_action_just_pressed("action"):
+		return false
+	ship.set_meta("pending_freight", _nearby_freight)
+	ship.state_machine.change_state("CarryingState")
+	return true
 
 func _check_dockable_proximity() -> void:
 	if not is_ship_valid():

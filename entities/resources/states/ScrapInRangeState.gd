@@ -37,10 +37,11 @@ func process(delta: float) -> void:
 		return
 
 	var new_can_harvest := false
-	# A stranded, wrecked or landed ship can't harvest (the action key abandons ship /
-	# works the seam it is parked on)
+	# A stranded, wrecked, landed or carrying ship can't harvest (the action key abandons
+	# ship / works the seam it is parked on / lets go of its Freight)
 	var current := ship.state_machine.current_state if ship.state_machine else null
-	var disabled := current is StrandedState or current is DestroyedState or current is PlanetLandedState
+	var disabled := current is StrandedState or current is DestroyedState or current is PlanetLandedState \
+		or current is CarryingState
 	if scrap_node.amount > 0 and not scrap_node._is_depleted and not disabled:
 		var relative_velocity := ship.linear_velocity - scrap_node.get_orbital_velocity()
 		if relative_velocity.length() < 100.0:

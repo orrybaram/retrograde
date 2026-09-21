@@ -1,0 +1,75 @@
+# Freight (docs/adr/0012): clamp a piece at its Lug, fly it, let go, and it parks.
+# Run: tools/play.sh --headless playtests/freight.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+# Open space, well clear of the station and the ring
+eval pt.warp_to(ship.global_position + Vector2(0, -30000))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 5
+
+# Unladen baseline: 1s of thrust from rest
+hold thrust 1.0
+eval pt.remember("unladen", ship.linear_velocity.length())
+eval pt.recall("unladen")
+hold reverse_thrust 1.0
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 5
+
+# A piece on the nose: the prompt offers CLAMP, and SPACE takes it
+eval pt.remember("piece", pt.stage_freight())
+frames 5
+assert pt._action_message.contains("CLAMP") "lined up at the Lug, the prompt offers CLAMP"
+press action
+frames 3
+assert pt.state_name() == "CarryingState" "SPACE clamps it"
+assert ship.is_carrying() "the ship holds the piece"
+assert ship.mass > 5.9 "its mass joins the ship's"
+assert pt._action_message.contains("RELEASE") "carrying, the prompt offers RELEASE"
+
+# Loaded: the same 1s of thrust gets about half as far
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 2
+hold thrust 1.0
+eval ship.linear_velocity.length()
+assert ship.linear_velocity.length() < pt.recall("unladen") * 0.6 "a load halves acceleration"
+assert ship.linear_velocity.length() > pt.recall("unladen") * 0.4 "but does not stop the ship"
+hold reverse_thrust 1.0
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 2
+
+# Loaded turning is slower than unladen
+eval pt.remember("r0", ship.rotation)
+hold turn_right 0.5
+eval absf(wrapf(ship.rotation - pt.recall("r0"), -PI, PI))
+assert absf(wrapf(ship.rotation - pt.recall("r0"), -PI, PI)) < 1.0 "a load slows the turn (unladen: 2.5 rad in 0.5s)"
+assert absf(wrapf(ship.rotation - pt.recall("r0"), -PI, PI)) > 0.15 "but it still turns"
+
+# A carrying ship cannot Sweep: its SPACE is the release
+assert not ship.state_machine.current_state.allows_sonar() "a carrying ship cannot Sweep"
+press action
+frames 3
+assert pt.state_name() == "FlyingState" "the press let go"
+assert not ship.is_carrying() "the piece is loose"
+assert ship.mass < 3.1 "the ship is its own weight again"
+
+# Loose, it parks: pushed away at speed, it bleeds to a full stop
+eval pt.recall("piece").set("linear_velocity", Vector2(200, 0))
+wait 8
+assert pt.recall("piece").linear_velocity.length() == 0.0 "loose Freight parks"
+
+# Unladen turning is back to normal
+eval ship.set("angular_velocity", 0.0)
+eval pt.remember("r1", ship.rotation)
+hold turn_right 0.3
+assert absf(wrapf(ship.rotation - pt.recall("r1"), -PI, PI)) > 1.2 "unladen turning is back"
+quit

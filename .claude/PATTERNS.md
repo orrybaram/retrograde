@@ -26,9 +26,29 @@ Ship._physics_process -> Ship.wants_sonar() -> SonarPulse.emitting -> rings + So
   or sitting on a seam. It is not gated on a harvest target; harvesting is what a ping does
   when a scrap or seam is in the rings. Puzzles that answer a ping listen on `EventBus.sonar_pulsed`.
 - A state opts out by overriding `ShipState.allows_sonar()` (docked at a port or Gate, stranded,
-  destroyed, consumed all say no). A menu over the game (`FlyingState._is_ui_blocking_input`)
+  destroyed, consumed and carrying Freight all say no). A menu over the game (`FlyingState._is_ui_blocking_input`)
   also takes the key. Nothing else touches `SonarPulse.emitting`.
 - Playtest state reports it as `ship.sonar`.
+
+## Freight (clamped to the nose, docs/adr/0012)
+
+```
+FlyingState._check_freight_proximity -> Freight.can_clamp (docking checks at the Lug) -> CLAMP prompt
+  -> press action -> CarryingState.enter -> Ship.clamp_freight
+CarryingState: action = RELEASE, anywhere -> FlyingState; exit() always calls Ship.release_freight
+```
+
+- `Freight` (`entities/freight/Freight.gd`) is a RigidBody2D in group `freight`, `gravity_scale` 0, whose
+  `_integrate_forces` parks it (bleeds to exactly zero). One Lug: `lug_position` + `lug_facing`.
+- Clamped, the piece is reparented under the ship with `PROCESS_MODE_DISABLED` (out of the physics
+  space), its outline is added to the ship as `FreightCollision`, and `Ship._apply_mass` sets mass,
+  `center_of_mass` and `inertia` explicitly. Unladen it resets to the ship's own mass, centre (0,0)
+  and engine-computed inertia.
+- Turning reads `Ship.turn_ratio()` in `FlyingState.turned_spin`: 1.0 unladen (identical to before),
+  softened inertia ratio loaded (`Ship.FREIGHT_TURN_EXPONENT`, wind-up `FlyingState.TURN_LAG`).
+- Contacts on `FreightCollision` do no hull damage (`Ship.is_freight_shape`). A carrying ship can't
+  harvest (`ScrapInRangeState`) or touch down (`CarryingState._ground_contact`).
+- Spawn a test piece: dev panel SPAWN FREIGHT, or `pt.stage_freight()` in a playtest (`playtests/freight.play`).
 
 ## Terminal UI Patterns
 
