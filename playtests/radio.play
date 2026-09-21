@@ -23,8 +23,9 @@ wait 1
 assert not pt.node("radio_panel").visible "departure is quiet now"
 
 # Low fuel: a tutorial, so it pauses and SPACE drives it
+# Thrust no longer touches the gauge, so the tank is nudged directly to trip the warning
 eval ship.set("fuel", 30.0)
-hold thrust 0.2
+eval ship.consume_fuel(0.1)
 wait_until pt.node("radio_panel").visible 3
 assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_low_fuel" "low-fuel tutorial on air"
 assert get_tree().paused "low-fuel tutorial pauses the game"
@@ -78,9 +79,12 @@ assert not get_tree().paused "closing the tutorial unpauses"
 
 # Out of fuel: the robot offers to abandon ship (a confirm call), game keeps running
 eval ship.set("fuel", 0.5)
-# Hold long enough that the low-fuel engine sputter can't swallow the whole burn
-hold thrust 2
+# Thrust is free now, so a dry tank no longer strands the ship on its own. The state is
+# entered directly; what this scenario covers is the radio traffic once it is.
+eval ship.consume_fuel(ship.fuel + 1.0)
+eval ship.state_machine.change_state("StrandedState")
 wait_until pt.state_name() == "StrandedState" 3
+frames 5
 assert not bus.is_harvest_available() "a stranded ship can't harvest the scrap beside it"
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 3
 assert not get_tree().paused "abandon offer doesn't pause (you may be drifting home)"

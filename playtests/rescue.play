@@ -41,7 +41,10 @@ wait_until pt.state_name() == "FlyingState" 3
 eval pt.warp_to(pt.recall("home").global_position + Vector2(0, -600))
 frames 5
 assert main.is_within_tractor_beam() "parked inside the station's tractor beam"
+# Fuel is only ever spent on the boost now, so a dry tank no longer strands the ship.
+# The state is entered directly; what this scenario covers is what happens after it.
 eval ship.consume_fuel(ship.fuel + 1.0)
+eval ship.state_machine.change_state("StrandedState")
 wait_until pt.state_name() == "StrandedState" 3
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel_beam" 3
 wait_until not pt.node("radio_panel").is_typing() 5

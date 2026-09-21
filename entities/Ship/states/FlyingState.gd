@@ -104,36 +104,26 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		state.angular_velocity = 0.0  # Stop rotation when no input
 
 	if ship.want_thrust:
-		# Calculate fuel consumption (boost consumes more)
-		var fuel_rate = ship.fuel_consumption_rate
-		if ship.want_boost:
-			fuel_rate *= ship.boost_fuel_multiplier
-		
-		# Try to consume fuel - only thrust if we have fuel (a low-fuel cough cuts the engine)
-		if not _engine_coughing() and ship.consume_fuel(fuel_rate * state.step):
-			# Calculate thrust power (boost adds extra power)
-			var power = ship.thrust_power
-			if ship.want_boost:
-				power *= ship.boost_power_multiplier
-			
-			var force = Vector2.RIGHT.rotated(ship.rotation) * power
-			state.apply_central_force(force)
+		_apply_thrust(state, Vector2.RIGHT)
 	
 	if ship.want_reverse_thrust:
-		# Calculate fuel consumption (boost consumes more)
-		var fuel_rate = ship.fuel_consumption_rate
-		if ship.want_boost:
-			fuel_rate *= ship.boost_fuel_multiplier
-		
-		# Try to consume fuel - only thrust if we have fuel (a low-fuel cough cuts the engine)
-		if not _engine_coughing() and ship.consume_fuel(fuel_rate * state.step):
-			# Calculate thrust power (boost adds extra power)
-			var power = ship.thrust_power
-			if ship.want_boost:
-				power *= ship.boost_power_multiplier
-			
-			var force = Vector2.LEFT.rotated(ship.rotation) * power
-			state.apply_central_force(force)
+		_apply_thrust(state, Vector2.LEFT)
+
+## Thrust in `local_direction`. Ordinary thrust is free and always available; the boost is
+## the only thing fuel is ever spent on, and the only thing a dry tank or a low-fuel cough
+## can take away. One helper for both directions, so forward and reverse cannot drift apart.
+func _apply_thrust(state: PhysicsDirectBodyState2D, local_direction: Vector2) -> void:
+	var power := ship.thrust_power
+	if _boosting():
+		if ship.consume_fuel(ship.fuel_consumption_rate * ship.boost_fuel_multiplier * state.step):
+			power *= ship.boost_power_multiplier
+	state.apply_central_force(local_direction.rotated(ship.rotation) * power)
+
+## Is the boost actually lit? It needs the key, fuel in the tank, and an engine that is not
+## coughing. Failing any of those drops the throttle back to ordinary thrust - it never
+## takes the thrust away.
+func _boosting() -> bool:
+	return ship.want_boost and ship.fuel > 0.0 and not _engine_coughing()
 
 ## Contact with a planet within reach of one of its revealed ore seams: touch down
 ## gently, or take damage and bounce. Returns true when the ship is over a seam (the
@@ -169,7 +159,8 @@ func _update_particles() -> void:
 		return
 	
 	# Determine if we're thrusting (forward or reverse)
-	var is_thrusting = (ship.want_thrust or ship.want_reverse_thrust) and ship.fuel > 0.0 and not _engine_coughing()
+	# Thrust costs no fuel, so the plume shows whenever the throttle is on, dry tank or not.
+	var is_thrusting = ship.want_thrust or ship.want_reverse_thrust
 	
 	if is_thrusting:
 		# Update particle direction based on thrust direction
@@ -185,8 +176,8 @@ func _update_particles() -> void:
 			material_normal.direction = dir_vec3
 			material_boost.direction = dir_vec3
 		
-		# Switch between normal and boost particles
-		if ship.want_boost:
+		# Switch between normal and boost particles (the boost only lights if it is lit)
+		if _boosting():
 			ship.thruster_particles.emitting = false
 			ship.boost_particles.emitting = true
 		else:
@@ -247,8 +238,8 @@ func _update_camera_shake(dt: float) -> void:
 			cos(damage_shake_phase * 1.9) * current_damage_intensity
 		)
 	
-	# Add boost shake on top of damage shake
-	if ship.want_boost and ship.want_thrust:
+	# Add boost shake on top of damage shake (only while the boost is actually lit)
+	if _boosting() and ship.want_thrust:
 		# Apply camera shake during boost
 		ship.camera_shake_time += dt * ship.camera_shake_speed
 		shake_offset += Vector2(

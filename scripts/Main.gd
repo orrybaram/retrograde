@@ -182,11 +182,12 @@ func _on_radio_confirmed(id: StringName) -> void:
 			reset_game()
 			return
 
+## Running the tank dry no longer takes the ship away. Fuel is only ever spent on the
+## boost, so an empty tank costs the boost and nothing else - ordinary thrust still flies.
+## StrandedState is left in place (the dev panel and the salvage scenarios still enter it
+## directly); it just has no trigger of its own any more.
 func _on_fuel_depleted() -> void:
-	if current_game_state == MainGameState.PLAYING and not game_over_pending:
-		# Transition ship to stranded state (player must abandon ship)
-		if ship and ship.state_machine and ship.state_machine.has_state("StrandedState"):
-			ship.state_machine.change_state("StrandedState")
+	pass
 
 func is_within_tractor_beam() -> bool:
 	return tractor_beam_station() != null

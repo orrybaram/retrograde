@@ -31,7 +31,7 @@ wait_until pt.visible_ui().is_empty() 2
 # Launch
 hold thrust 1.5
 assert pt.state_name() == "FlyingState" "thrust undocks the ship"
-assert ship.fuel < ship.max_fuel "thrusting burns fuel"
+assert ship.fuel == ship.max_fuel "thrusting is free; only the boost burns fuel"
 assert ship.linear_velocity.length() > 50 "ship is moving"
 face planets 5
 assert abs(pt.nearest("planets").bearing_deg) <= 10 "face turns toward target"

@@ -20,7 +20,10 @@ hold thrust 0.4
 wait_until pt.state_name() == "FlyingState" 3
 
 # --- Near the station the prompt offers a tow (then refuel and carry on) ---
+# Fuel is only ever spent on the boost now, so a dry tank no longer strands the ship.
+# The state is entered directly; what this scenario covers is what happens after it.
 eval ship.consume_fuel(ship.fuel + 1.0)
+eval ship.state_machine.change_state("StrandedState")
 wait_until pt.state_name() == "StrandedState" 2
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel_beam" 2
 assert get_tree().root.get_node("RobotRadio").current_line().confirm == "CALL TRACTOR BEAM" "robot offers a tow inside the beam"
@@ -37,7 +40,10 @@ eval inv.add_item("shard", 20)
 eval inv.add_item("gem", 10)
 eval inv.add_item("artifact", 3)
 eval ship.set("linear_velocity", Vector2(120, 40))
+# Fuel is only ever spent on the boost now, so a dry tank no longer strands the ship.
+# The state is entered directly; what this scenario covers is what happens after it.
 eval ship.consume_fuel(ship.fuel + 1.0)
+eval ship.state_machine.change_state("StrandedState")
 wait_until pt.state_name() == "StrandedState" 2
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 2
 press action

@@ -25,7 +25,8 @@ wait 0.3
 down thrust
 wait_until ship.low_fuel_effect.is_coughing() 3
 frames 2
-assert not ship.thruster_particles.emitting "plume stops emitting during a cough"
+assert ship.thruster_particles.emitting "the cough takes the boost, not the thrust"
+assert not ship.boost_particles.emitting "the boost plume is what a cough cuts"
 burst alert_sputter 6 0.06
 up thrust
 eval ship.set("fuel", 150.0)

@@ -82,15 +82,16 @@ up thrust
 assert pt.state_name() == "FlyingState" "climbing away under thrust without landing again"
 assert pt.get_meta("landed_fuel") - ship.fuel < 30 "only the climb costs fuel, no launch fee"
 
-# --- Too little fuel to climb out: the tank runs dry on the way up and strands the ship.
-# Breaking ground is free, so this is the honest failure now: not "you can't afford to
-# leave" but "you spent your last fuel trying to". 5 fuel still gets off Rook; 2 doesn't.
+# --- A nearly dry tank climbs out just the same. Thrust costs nothing now, so the only
+# thing an empty tank takes away is the boost: 2 fuel gets off Rook and still has 2 left.
 eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15
 wait 0.5
 eval ship.set("fuel", 2.0)
 down thrust
-wait_until pt.state_name() == "StrandedState" 5
+wait_until pt.state_name() == "FlyingState" 5
+wait 1.0
 up thrust
-assert ship.fuel == 0 "tank burned dry climbing"
+assert ship.fuel == 2.0 "climbing out spent no fuel"
+assert pt.state_name() == "FlyingState" "a near-empty tank still breaks ground"
 state
