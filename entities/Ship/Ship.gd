@@ -7,10 +7,10 @@ class_name Ship
 ## HarvestingState / StrandedState / DestroyedState.
 ## Signals: fuel_changed, fuel_depleted, cargo_changed.
 
-@export var thrust_power: float = 350.0
+@export var thrust_power: float = 262.5
 @export var turn_speed: float = 5
 @export var fuel_consumption_rate: float = 5.0  # Fuel consumed per second when thrusting
-@export var boost_power_multiplier: float = 2.0  # Multiplier for boost thrust power
+@export var boost_power_multiplier: float = 2.667  # Multiplier for boost thrust power (keeps the boost at ~700)
 @export var boost_fuel_multiplier: float = 3.0  # Multiplier for boost fuel consumption
 
 @export var max_hull: float = 100.0
