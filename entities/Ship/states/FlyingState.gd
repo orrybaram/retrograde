@@ -22,14 +22,13 @@ var _ground_grace := 0.0
 ## `action` must be seen up once in this state before a press counts, so the press that
 ## brought the ship here (a release, a clamp) is never read twice.
 var _action_armed := false
-var _nearby_freight: Freight = null
 
 func enter() -> void:
 	super.enter()
 	_state_enter_time = Time.get_ticks_msec() / 1000.0
 	_touchdown_pending = false
 	_action_armed = false
-	_nearby_freight = null
+	_magnet_target = null
 	# _ground_grace is deliberately left alone: PlanetLandedState sets it on the way out,
 	# before this runs.
 
@@ -304,43 +303,71 @@ func _update_camera_shake(dt: float) -> void:
 
 var _nearby_dockable: Node2D = null
 
-## What `action` does in open flight: dock at a port, or take hold of Freight at its Lug.
-## CarryingState overrides this with the one thing it does there - let go.
+## What `action` does in open flight: press to dock at a port; hold with a piece of
+## Freight in reach and the magnet pulls it onto the nose. CarryingState overrides this
+## with the one thing it does there - hold to let go.
 func _update_action() -> void:
 	_check_dockable_proximity()
-	_check_freight_proximity()
-	if not _attempt_clamp():
+	_update_magnet()
+	if _magnet_target == null:
 		_attempt_dock()
 
-func _check_freight_proximity() -> void:
-	_nearby_freight = null
-	if EventBus.is_harvest_available():
-		return  # the harvest owns the key, as it does over docking
-	_nearby_freight = clampable_freight()
-	if _nearby_freight:
-		EventBus.action_message_changed.emit(EventBus.action_prompt("CLAMP"))
+var _magnet_target: Freight = null
 
-## The loose Freight whose Lug the nose is on, slow and lined up; null if none.
-func clampable_freight() -> Freight:
+func _update_magnet() -> void:
+	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available()
+	if _magnet_target and not is_instance_valid(_magnet_target):
+		_magnet_target = null
 	var nose := ship.to_global(Ship.NOSE)
-	var heading := Vector2.RIGHT.rotated(ship.global_rotation)
+	if _magnet_target and (not holding or not Freight.in_reach(nose, _magnet_target.lug_global(), Freight.MAGNET_HOLD_RANGE)):
+		_drop_magnet()
+	if _magnet_target == null:
+		var near := freight_in_reach()
+		if near == null:
+			return
+		if not holding:
+			return
+		_magnet_target = near
+		near.add_collision_exception_with(ship)
+	var pose := ship.global_transform * Freight.clamped_pose(_magnet_target.lug_position, _magnet_target.lug_facing, Ship.NOSE)
+	if _magnet_target.magnet_step(pose, ship.linear_velocity):
+		var f := _magnet_target
+		_magnet_target = null
+		ship.set_meta("pending_freight", f)
+		ship.state_machine.change_state("CarryingState")
+
+## Let go of a piece mid-pull: it stops closing and moves with the ship, and the two can
+## touch again once it has had a moment to clear.
+func _drop_magnet() -> void:
+	var f := _magnet_target
+	_magnet_target = null
+	if not is_instance_valid(f):
+		return
+	f.linear_velocity = ship.linear_velocity
+	f.angular_velocity = 0.0
+	ship.get_tree().create_timer(0.6).timeout.connect(func() -> void:
+		if is_instance_valid(f) and is_instance_valid(ship):
+			f.remove_collision_exception_with(ship))
+
+## The nearest loose Freight whose Lug is within the magnet's reach of the nose; null if none.
+func freight_in_reach() -> Freight:
+	var nose := ship.to_global(Ship.NOSE)
+	var best: Freight = null
+	var best_d := INF
 	for node in ship.get_tree().get_nodes_in_group("freight"):
 		var f := node as Freight
 		if f == null or f == ship.freight:
 			continue
-		var rel := ship.linear_velocity - f.linear_velocity
-		if Freight.can_clamp(nose, heading, rel, f.lug_global(), f.lug_facing_global()):
-			return f
-	return null
+		var d := nose.distance_to(f.lug_global())
+		if d <= Freight.MAGNET_RANGE and d < best_d:
+			best = f
+			best_d = d
+	return best
 
-func _attempt_clamp() -> bool:
-	if _nearby_freight == null or not is_instance_valid(_nearby_freight):
-		return false
-	if not _action_armed or not Input.is_action_just_pressed("action"):
-		return false
-	ship.set_meta("pending_freight", _nearby_freight)
-	ship.state_machine.change_state("CarryingState")
-	return true
+func exit() -> void:
+	if _magnet_target:
+		_drop_magnet()
+	super.exit()
 
 func _check_dockable_proximity() -> void:
 	if not is_ship_valid():

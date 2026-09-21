@@ -1,9 +1,11 @@
-# Sonar resonance: holding ACTION pings from the ship wherever it is free to act.
-# Docked, the key belongs to the port; in flight it pings; a menu over the game takes it.
+# Sonar resonance: a tap of ACTION sends one ring from wherever the ship is free to act;
+# holding charges that one ring to reach further. Docked, the key belongs to the port; a
+# menu over the game takes it.
 # Run: tools/play.sh playtests/sonar.play   (add --headless to skip screenshots)
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
@@ -14,8 +16,10 @@ wait 0.5
 # Docked: ACTION is the port's key (it opens the dialogue), no ping
 down action
 wait 0.5
-assert not ship.sonar.emitting "no sonar while docked"
+assert not ship.sonar.charging "no sonar while docked"
 up action
+frames 3
+assert ship.sonar.ring_count() == 0 "no ring from the dock"
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
 press enter
@@ -26,26 +30,36 @@ hold thrust 1.5
 assert pt.state_name() == "FlyingState" "thrust undocks the ship"
 wait 2
 
-# In flight: hold ACTION and the rings go out
-down action
-wait 0.5
-assert ship.sonar.emitting "sonar pings in open flight"
-assert ship.sonar.ring_count() > 0 "rings are in the air"
+# In flight: a tap sends one ordinary ring
+press action
+frames 3
+assert ship.sonar.ring_count() == 1 "a tap sends one ring"
+assert ship.sonar.widest_ring() < ship.sonar.END_RADIUS * 1.1 "a tap's ring is an ordinary one"
 assert pt.state_name() == "FlyingState" "pinging alone doesn't change state"
+wait 1.2
+assert ship.sonar.ring_count() == 0 "rings in flight fade out"
+
+# Holding charges one ring and sends nothing until let go
+down action
+wait 1.5
+assert ship.sonar.charging "holding charges"
+assert ship.sonar.ring_count() == 0 "no ring while charging"
 burst sonar 3 0.25
 up action
-wait 1.2
-assert not ship.sonar.emitting "release stops the ping"
-assert ship.sonar.ring_count() == 0 "rings in flight fade out"
+frames 3
+assert ship.sonar.ring_count() == 1 "let go, one ring"
+assert ship.sonar.widest_ring() > ship.sonar.END_RADIUS * 1.8 "a held ring reaches further"
+wait 3.5
 
 # A menu over the game takes the key
 press m
 wait_until pt.node("log_ui").is_on_map() 2
 down action
 wait 0.5
-assert not ship.sonar.emitting "no sonar under the system map"
+assert not ship.sonar.charging "no sonar under the system map"
 up action
 press m
 wait_until pt.visible_ui().is_empty() 2
+assert ship.sonar.ring_count() == 0 "no ring from under the map"
 
 state

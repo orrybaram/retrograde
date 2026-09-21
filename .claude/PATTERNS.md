@@ -19,23 +19,33 @@ Don't use state machines for: simple booleans, linear sequences (use await), pur
 ## Sonar Resonance (hold `action`)
 
 ```
-Ship._physics_process -> Ship.wants_sonar() -> SonarPulse.emitting -> rings + SonarPulse.pulsed / EventBus.sonar_pulsed(origin)
+Ship._drive_sonar -> Ship.wants_sonar() -> SonarPulse.charging (held) -> fire() on release / cancel() if the key is taken
+  -> one ring + SonarPulse.pulsed / EventBus.sonar_pulsed(origin)
 ```
 
-- Holding `action` (SPACE) pings from the ship wherever it is free to act: flying, over a scrap,
-  or sitting on a seam. It is not gated on a harvest target; harvesting is what a ping does
+- A tap of `action` (SPACE) sends one ring from the ship wherever it is free to act: flying, over a
+  scrap, or sitting on a seam. Holding charges that single ring (`SonarPulse.strength_for`: +1x reach
+  per `CHARGE_TIME`, uncapped) and it fires on release; there is no continuous emission. It is not gated on a harvest target; harvesting is what a ping does
   when a scrap or seam is in the rings. Puzzles that answer a ping listen on `EventBus.sonar_pulsed`.
 - A state opts out by overriding `ShipState.allows_sonar()` (docked at a port or Gate, stranded,
   destroyed, consumed and carrying Freight all say no). A menu over the game (`FlyingState._is_ui_blocking_input`)
-  also takes the key. Nothing else touches `SonarPulse.emitting`.
+  also takes the key; a charge the key is taken from mid-hold is cancelled, not fired. Nothing else
+  touches `SonarPulse.charging`.
 - Playtest state reports it as `ship.sonar`.
+- Rings run to `SonarPulse.END_RADIUS` (280). Things that **answer** a Sweep join group
+  `sonar_listeners` with `sonar_point()` and `on_sonar_touched()`; SonarPulse calls the latter when
+  a ring's edge actually reaches that point (`SonarPulse.time_to_reach`). An answer is drawn in
+  `Colors.TITAN`, the one sanctioned non-Titan-body use of purple: whatever answers a Sweep is part
+  of the Titan. Freight lights its Lug purple and sends a `SonarEcho` (small purple rings) back out.
+  Scrap deliberately does not answer (docs/adr/0007).
 
 ## Freight (clamped to the nose, docs/adr/0012)
 
 ```
-FlyingState._check_freight_proximity -> Freight.can_clamp (docking checks at the Lug) -> CLAMP prompt
-  -> press action -> CarryingState.enter -> Ship.clamp_freight
-CarryingState: action = RELEASE, anywhere -> FlyingState; exit() always calls Ship.release_freight
+FlyingState._update_magnet: Lug within Freight.MAGNET_RANGE (no prompt text)
+  -> hold action -> Freight.magnet_step each tick (pulled + turned into its pose) -> seated
+  -> CarryingState.enter -> Ship.clamp_freight
+CarryingState: hold action RELEASE_HOLD (0.8s; the action message is only a filling bar) -> FlyingState; exit() always calls Ship.release_freight
 ```
 
 - `Freight` (`entities/freight/Freight.gd`) is a RigidBody2D in group `freight` with no gravity and no
@@ -51,6 +61,8 @@ CarryingState: action = RELEASE, anywhere -> FlyingState; exit() always calls Sh
   only hurts above `Freight.KNOCK_DAMAGE_SPEED` (`FlyingState.knock_threshold`). Scrap and debris
   (`OrbitalNode`) handle hits per shape via `body_shape_entered`, bouncing loose Freight too. A carrying ship can't
   harvest (`ScrapInRangeState`) or touch down (`CarryingState._ground_contact`).
+- Clamp and release both `Ship._clunk`: `ClampFX.burst` (smoke puff + sparks, own randomness),
+  `Freight.punch()` and a camera bump.
 - Spawn a test piece: dev panel SPAWN FREIGHT, or `pt.stage_freight()` in a playtest (`playtests/freight.play`).
 
 ## Terminal UI Patterns

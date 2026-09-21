@@ -56,7 +56,7 @@ The dark past the last orbit, where the system stops being a system. Nothing orb
 _Avoid_: deep space, out of bounds, edge of the map
 
 **Sweep**:
-Holding `action`. The ship emits, the bar fills, and releasing grades the attempt. It is the one thing the ship can always do in open flight — except while carrying **Freight**, when `action` releases instead — and it is both the harvest verb and the language the world is written in (docs/SWEEP.md).
+Tapping `action` sends one ring out from the ship; holding charges that one ring to reach further, and at a scrap or seam the bar fills and releasing grades the attempt. It is the one thing the ship can always do in open flight — except while carrying **Freight**, when `action` releases instead — and it is both the harvest verb and the language the world is written in (docs/SWEEP.md).
 _Avoid_: minigame, ping, scan
 
 **Procedure**:
@@ -72,7 +72,7 @@ An object too big for the hold, **clamped** rigidly to the outside of the hull a
 _Avoid_: carryable, tow, cargo, salvage, component
 
 **Clamp**:
-Attaching **Freight** to the ship, done like docking: bring the nose to its **Lug** slowly and aligned, press `action`. Freight clamps to the ship's nose and is pushed ahead of it. **Release** is pressing `action` while carrying, anywhere, always; a carrying ship cannot **Sweep** or dock.
+Attaching **Freight** to the ship: hold `action` with the nose near its **Lug** and the piece is drawn in and turned onto the nose. Freight rides ahead of the ship and is pushed along. **Release** is a deliberate hold of `action` while carrying, anywhere; a carrying ship cannot **Sweep** or dock.
 _Avoid_: grab, pick up, tow, attach
 
 **Lug**:

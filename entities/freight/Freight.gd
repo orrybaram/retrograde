@@ -6,11 +6,18 @@ class_name Freight
 ## moving - same velocity, same heading - and gravity never bends its path. While
 ## clamped it is not a body of its own: Ship.clamp_freight folds its mass, inertia and
 ## outline into the ship's, and Ship.release_freight hands them back.
-## How close the ship's nose must be to the Lug to take hold (px).
-const CLAMP_REACH := 16.0
-## The docking checks: slower than this relative to the piece, nose within this of the Lug.
-const CLAMP_SPEED := 50.0
-const CLAMP_ANGLE_DEG := 30.0
+## Holding `action` with the nose this close to the Lug (px) starts the magnet. Angle and
+## speed don't matter: the magnet turns the piece into its pose on the way in.
+const MAGNET_RANGE := 25.0
+## Once pulling, it keeps pulling out to this far - the ship may drift while it holds.
+const MAGNET_HOLD_RANGE := 50.0
+## How hard the magnet closes the gap (per second of offset), and its top speeds.
+const MAGNET_GAIN := 6.0
+const MAGNET_SPEED := 160.0  # px/s, relative to the ship
+const MAGNET_SPIN := 4.0     # rad/s
+## Close enough to its pose to clamp.
+const SEAT_DISTANCE := 3.0
+const SEAT_ANGLE := 0.08
 ## Bumping into a loose piece only hurts the hull above this closing speed (px/s); the
 ## ship's ordinary knock threshold is far lower. Nudging Freight around is expected.
 const KNOCK_DAMAGE_SPEED := 250.0
@@ -27,7 +34,13 @@ const TEST_OUTLINE := [
 @export var lug_position := Vector2(-40, 0)
 @export var lug_facing := Vector2.LEFT
 
+## How long the Lug stays lit after a Sweep ring passes over it.
+const LUG_GLOW_TIME := 0.6
+
 var _collider: CollisionPolygon2D
+var _visual: Node2D
+var _lug_line: Line2D
+var _lug_glow: Tween
 
 func _init() -> void:
 	mass = 3.0  # the ship's own mass, so a clamped test piece halves its acceleration
@@ -40,12 +53,43 @@ func _init() -> void:
 
 func _ready() -> void:
 	add_to_group("freight")
+	add_to_group("sonar_listeners")
 	z_index = 1
 	_collider = CollisionPolygon2D.new()
 	_collider.name = "Collision"
 	_collider.polygon = outline
 	add_child(_collider)
-	add_child(_build_visual())
+	_visual = _build_visual()
+	# Clamped, this body is disabled to take it out of physics; its looks must keep
+	# running regardless, or an echo, a glow or a punch caught mid-way would freeze there.
+	_visual.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(_visual)
+
+## A Sweep ring reaches the Lug (not the middle of the piece): that is the part that answers.
+func sonar_point() -> Vector2:
+	return lug_global()
+
+## The Lug answers as the ring passes: it lights up in the Titan's purple, sends small rings
+## back out, and fades.
+func on_sonar_touched() -> void:
+	if not _lug_line:
+		return
+	SonarEcho.answer(_visual, lug_position)
+	if _lug_glow:
+		_lug_glow.kill()
+	_lug_line.default_color = Colors.TITAN
+	_lug_line.width = 5.0
+	_lug_glow = _visual.create_tween().set_parallel()
+	_lug_glow.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, LUG_GLOW_TIME)
+	_lug_glow.tween_property(_lug_line, "width", 3.0, LUG_GLOW_TIME)
+
+## The clunk of being clamped or let go: a short punch in scale.
+func punch() -> void:
+	if not _visual:
+		return
+	_visual.scale = Vector2(1.08, 1.08)
+	_visual.create_tween().tween_property(_visual, "scale", Vector2.ONE, 0.18) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 ## Spawn a piece into `world` at `pos`, turned to `rot`.
 static func spawn(world: Node, pos: Vector2, rot := 0.0, velocity := Vector2.ZERO) -> Freight:
@@ -57,7 +101,7 @@ static func spawn(world: Node, pos: Vector2, rot := 0.0, velocity := Vector2.ZER
 	return f
 
 ## Spawn a piece with its Lug `gap` px ahead of `ship`'s nose, facing it, moving with it:
-## one press of `action` from clamped.
+## a moment's hold of `action` from clamped.
 static func spawn_ahead_of(ship: Ship, gap := 6.0) -> Freight:
 	var nose := ship.to_global(Ship.NOSE)
 	var heading := Vector2.RIGHT.rotated(ship.global_rotation)
@@ -77,15 +121,34 @@ func lug_global() -> Vector2:
 func lug_facing_global() -> Vector2:
 	return lug_facing.rotated(global_rotation).normalized()
 
-## Can a ship whose nose is at `nose`, pointing along `heading`, moving at `rel_velocity`
-## relative to the piece, take hold of a Lug at `lug` facing `facing`? The docking checks:
-## close, slow, and nose-in to the Lug.
-static func can_clamp(nose: Vector2, heading: Vector2, rel_velocity: Vector2, lug: Vector2, facing: Vector2) -> bool:
-	if nose.distance_to(lug) > CLAMP_REACH:
-		return false
-	if rel_velocity.length() >= CLAMP_SPEED:
-		return false
-	return heading.normalized().dot(-facing.normalized()) >= cos(deg_to_rad(CLAMP_ANGLE_DEG))
+## Is the Lug at `lug` within reach of a nose at `nose` - `reach` px?
+static func in_reach(nose: Vector2, lug: Vector2, reach := MAGNET_RANGE) -> bool:
+	return nose.distance_to(lug) <= reach
+
+## One step of the magnet pulling this piece toward `target` (a global transform: where it
+## rides once clamped) on a carrier moving at `carrier_velocity`. Returns true once it is
+## seated and can be clamped.
+func magnet_step(target: Transform2D, carrier_velocity: Vector2) -> bool:
+	var gap := target.origin - global_position
+	var turn := wrapf(target.get_rotation() - global_rotation, -PI, PI)
+	if is_seated(gap, turn):
+		return true
+	var pull := magnet_motion(gap, turn)
+	linear_velocity = carrier_velocity + pull[0]
+	angular_velocity = pull[1]
+	return false
+
+## The magnet's velocity (relative to the carrier) and spin for a piece `gap` px and
+## `turn` radians away from its pose: proportional, capped, and never stalling short.
+static func magnet_motion(gap: Vector2, turn: float) -> Array:
+	var v := (gap * MAGNET_GAIN).limit_length(MAGNET_SPEED)
+	if v.length() < 20.0 and gap.length() > 0.0:
+		v = gap.normalized() * minf(20.0, gap.length() * 60.0)  # don't creep the last few px
+	var w := clampf(turn * MAGNET_GAIN, -MAGNET_SPIN, MAGNET_SPIN)
+	return [v, w]
+
+static func is_seated(gap: Vector2, turn: float) -> bool:
+	return gap.length() <= SEAT_DISTANCE and absf(turn) <= SEAT_ANGLE
 
 ## Where a clamped piece sits in its carrier's local space: the Lug on `nose`, facing
 ## straight back along the carrier. The pose is fixed by the Lug, so a piece always
@@ -136,4 +199,5 @@ func _build_visual() -> Node2D:
 	lug.width = 3.0
 	lug.default_color = Colors.HULL_LIGHT
 	root.add_child(lug)
+	_lug_line = lug
 	return root

@@ -71,7 +71,8 @@ var dev_invulnerable := false
 var dev_infinite_fuel := false
 var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
-var sonar: SonarPulse = null  # sonar resonance rings while `action` is held (see wants_sonar)
+var sonar: SonarPulse = null
+var _sonar_blocked := false  # this hold of `action` began or passed somewhere it couldn't ping  # sonar resonance rings while `action` is held (see wants_sonar)
 
 # Landing lock system
 var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
@@ -219,11 +220,29 @@ func _physics_process(dt: float) -> void:
 	if state_machine and state_machine.current_state:
 		state_machine.current_state.physics_process(dt)
 	if sonar:
-		sonar.emitting = wants_sonar()
+		_drive_sonar()
 
-## Sonar resonance: holding `action` pings from anywhere the ship is free to act. It is
-## not tied to harvesting; a scrap or a seam in the rings is what makes a ping a harvest.
-## The state decides (ShipState.allows_sonar), and a menu over the game takes the key.
+## `action` held charges a ping, let go sends it. A hold that was ever somewhere a ping
+## isn't allowed (docked, a menu, a load clamped - including the hold that lets the load
+## go) belongs to that, not the sonar: any charge is dropped, and the rest of the hold is
+## ignored until the key comes up.
+func _drive_sonar() -> void:
+	var down := Input.is_action_pressed("action")
+	if not down:
+		_sonar_blocked = false
+	elif not wants_sonar():
+		_sonar_blocked = true
+	if down and not _sonar_blocked:
+		sonar.charging = true
+	elif sonar.charging:
+		if down:
+			sonar.cancel()
+		else:
+			sonar.fire()
+
+## Sonar resonance: `action` pings from anywhere the ship is free to act. It is not tied
+## to harvesting; a scrap or a seam in the rings is what makes a ping a harvest. The state
+## decides (ShipState.allows_sonar), and a menu over the game takes the key.
 func wants_sonar() -> bool:
 	if not Input.is_action_pressed("action"):
 		return false
@@ -383,6 +402,7 @@ func clamp_freight(f: Freight) -> void:
 	add_child(_freight_collider)
 	update_mass_from_cargo()
 	linear_velocity = shared
+	_clunk(f)
 
 ## Let go of whatever is clamped, where it is. It carries on exactly as the ship was
 ## moving - the ship's velocity, the ship's heading, no spin - so at the moment of release
@@ -408,10 +428,19 @@ func release_freight() -> Freight:
 	linear_velocity = hull_velocity
 	# It was touching the nose: let the two drift apart before they can collide again.
 	f.add_collision_exception_with(self)
+	_clunk(f)
 	get_tree().create_timer(0.6).timeout.connect(func() -> void:
 		if is_instance_valid(f):
 			f.remove_collision_exception_with(self))
 	return f
+
+## Clamping or letting go: smoke and sparks where the Lug meets the nose, the piece jolts,
+## and the camera takes a small bump.
+func _clunk(f: Freight) -> void:
+	ClampFX.burst(get_parent(), to_global(NOSE), linear_velocity)
+	f.punch()
+	damage_shake_time = harvest_lockon_shake_duration
+	damage_shake_current_intensity = harvest_lockon_shake_intensity
 
 ## Is `shape_index` (a contact's local shape) part of the clamped load rather than the hull?
 func is_freight_shape(shape_index: int) -> bool:

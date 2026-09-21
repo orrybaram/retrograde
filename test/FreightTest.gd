@@ -1,30 +1,43 @@
 extends GdUnitTestSuite
 
-## Freight (docs/adr/0012): the docking-style clamp checks, the pose a Lug fixes, and how
+## Freight (docs/adr/0012): the magnet, the pose a Lug fixes, the release meter, and how
 ## a clamped load slows turning without touching unladen flight.
 
 const NOSE := Vector2(10, 0)
 
-# --- clamping ---
+# --- the magnet ---
 
-func test_clamps_nose_in_slow_and_close() -> void:
-	assert_bool(Freight.can_clamp(NOSE, Vector2.RIGHT, Vector2.ZERO, NOSE + Vector2(6, 0), Vector2.LEFT)).is_true()
+func test_in_reach_of_the_magnet() -> void:
+	assert_bool(Freight.in_reach(NOSE, NOSE + Vector2(20, 0))).is_true()
 
-func test_too_far_from_the_lug() -> void:
-	assert_bool(Freight.can_clamp(NOSE, Vector2.RIGHT, Vector2.ZERO, NOSE + Vector2(40, 0), Vector2.LEFT)).is_false()
+func test_out_of_reach_of_the_magnet() -> void:
+	assert_bool(Freight.in_reach(NOSE, NOSE + Vector2(40, 0))).is_false()
 
-func test_too_fast() -> void:
-	assert_bool(Freight.can_clamp(NOSE, Vector2.RIGHT, Vector2(60, 0), NOSE + Vector2(6, 0), Vector2.LEFT)).is_false()
+func test_the_magnet_pulls_toward_the_pose() -> void:
+	var m := Freight.magnet_motion(Vector2(50, 0), 0.0)
+	assert_float((m[0] as Vector2).x).is_greater(0.0)
+	assert_float((m[0] as Vector2).length()).is_less_equal(Freight.MAGNET_SPEED)
 
-func test_within_thirty_degrees_of_nose_in() -> void:
-	var facing := Vector2.LEFT.rotated(deg_to_rad(25))
-	assert_bool(Freight.can_clamp(NOSE, Vector2.RIGHT, Vector2.ZERO, NOSE + Vector2(6, 0), facing)).is_true()
+func test_the_magnet_turns_the_piece_into_place() -> void:
+	var m := Freight.magnet_motion(Vector2.ZERO, 1.0)
+	assert_float(m[1]).is_greater(0.0)
+	assert_float(m[1]).is_less_equal(Freight.MAGNET_SPIN)
 
-func test_not_side_on() -> void:
-	assert_bool(Freight.can_clamp(NOSE, Vector2.RIGHT, Vector2.ZERO, NOSE + Vector2(6, 0), Vector2.UP)).is_false()
+func test_the_magnet_never_creeps_the_last_few_pixels() -> void:
+	var m := Freight.magnet_motion(Vector2(2, 0), 0.0)
+	assert_float((m[0] as Vector2).length()).is_greater(1.0)
 
-func test_not_from_behind_the_lug() -> void:
-	assert_bool(Freight.can_clamp(NOSE, Vector2.RIGHT, Vector2.ZERO, NOSE + Vector2(6, 0), Vector2.RIGHT)).is_false()
+func test_seated_only_close_and_square() -> void:
+	assert_bool(Freight.is_seated(Vector2(1, 0), 0.01)).is_true()
+	assert_bool(Freight.is_seated(Vector2(10, 0), 0.01)).is_false()
+	assert_bool(Freight.is_seated(Vector2(1, 0), 0.5)).is_false()
+
+# --- releasing ---
+
+func test_release_meter_fills() -> void:
+	assert_str(CarryingState.release_meter(0.0)).is_equal("······")
+	assert_str(CarryingState.release_meter(0.5)).is_equal("███···")
+	assert_str(CarryingState.release_meter(1.0)).is_equal("██████")
 
 func test_pose_puts_the_lug_on_the_nose_facing_back() -> void:
 	var lug := Vector2(-40, 0)
@@ -78,3 +91,36 @@ func test_bumping_freight_needs_a_very_fast_hit() -> void:
 func test_other_bodies_keep_the_ship_threshold() -> void:
 	var rock: RigidBody2D = auto_free(RigidBody2D.new())
 	assert_float(FlyingState.knock_threshold(rock, 50.0)).is_equal(50.0)
+
+func test_release_label_reads_releasing() -> void:
+	assert_str(CarryingState.release_label(0.5)).is_equal("RELEASING ███···")
+
+# --- the Sweep ---
+
+func test_a_ring_reaches_nearby_things_first() -> void:
+	var near := SonarPulse.time_to_reach(30.0)
+	var far := SonarPulse.time_to_reach(240.0)
+	assert_float(near).is_greater_equal(0.0)
+	assert_float(far).is_greater(near)
+	assert_float(far).is_less_equal(SonarPulse.LIFETIME)
+
+func test_a_ring_never_reaches_past_its_edge() -> void:
+	assert_float(SonarPulse.time_to_reach(SonarPulse.END_RADIUS + 1.0)).is_equal(-1.0)
+
+func test_freight_answers_a_sweep_at_its_lug() -> void:
+	var piece: Freight = auto_free(Freight.new())
+	add_child(piece)
+	assert_bool(piece.is_in_group("sonar_listeners")).is_true()
+	assert_vector(piece.sonar_point()).is_equal(piece.lug_global())
+	piece.on_sonar_touched()
+	assert_object(piece._lug_line.default_color).is_equal(Colors.TITAN)
+	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(1)
+
+func test_a_clamped_piece_still_lets_its_echo_fade() -> void:
+	var piece: Freight = auto_free(Freight.new())
+	add_child(piece)
+	piece.on_sonar_touched()
+	piece.process_mode = Node.PROCESS_MODE_DISABLED  # what clamping does
+	await get_tree().create_timer(SonarEcho.LIFETIME + SonarEcho.STAGGER * SonarEcho.RINGS + 0.2).timeout
+	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(0)
+	assert_float(piece._lug_line.width).is_equal_approx(3.0, 0.01)
