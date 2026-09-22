@@ -16,9 +16,11 @@ class_name HudGlitch
 ##   instruments take the blow with the ship, then steady up.
 ## - Titan Influence, a floor that rises one step per Module online and never drops.
 ##   The first two pass; this one doesn't, so after the first Gate the dashboard is
-##   never quite clean again. It stays under ROT_THRESHOLD by design (TitanInfluence),
-##   and it never pushes the panel around: the Titan only dims the readouts and blinks
-##   them out, more often with each Module, so five Modules in the HUD is still legible.
+##   never quite clean again. It stays under ROT_THRESHOLD by design (TitanInfluence):
+##   the Titan dims the readouts, and every so often - more often with each Module -
+##   breaks in for a fraction of a second (the panel tears sideways, flickers, and its
+##   readouts scramble into the Titan's purple) before handing it back exactly as it
+##   was, so five Modules in the HUD is still legible.
 ## Low hull deliberately does NOT drive it: a player down to their last few blocks
 ## needs to be able to READ the hull bar, so that alarm is carried by HullSegmentBar,
 ## HullAlarm and the ship itself instead of by rotting the numbers.
@@ -47,7 +49,8 @@ var _written: Array[String] = [] ## what we last wrote, to tell ours from theirs
 var _anchor := Vector2.ZERO
 var _cut_left := 0.0  ## seconds remaining in the current dropout
 var _next_cut := 0.0  ## seconds until the next one
-var _blink_left := 0.0  ## seconds remaining in the Titan's own blink
+var _blink_left := 0.0  ## seconds remaining in the Titan's own interruption
+var _blinking := false  ## one was running last frame, so its mess needs clearing up
 var _next_blink := 0.0  ## seconds until the next one
 var _hit := 0.0       ## the decaying kick from the last hull hit
 var _acute := false   ## something is wrong right now, as opposed to always
@@ -102,8 +105,10 @@ func _process(delta: float) -> void:
 		if _acute or (sev <= 0.001 and not _pristine()):
 			restore()
 		# The panel is still now, so wherever the dashboard sits is home. Keeps the
-		# anchor honest through layout passes and resolution changes.
-		_anchor = dashboard.position
+		# anchor honest through layout passes and resolution changes - except while the
+		# Titan has it torn sideways.
+		if not _blinking:
+			_anchor = dashboard.position
 	_acute = acute
 
 	if sev <= 0.001:
@@ -116,8 +121,23 @@ func _process(delta: float) -> void:
 		_advance_cuts(delta, sev)
 		dashboard.position = _anchor + Vector2(_rng.randfn(0.0, 1.0), _rng.randfn(0.0, 1.0)) * MAX_JITTER * sev * sev
 	_advance_blink(delta)
-	dashboard.modulate.a = 0.0 if _cut_left > 0.0 or _blink_left > 0.0 else lerpf(1.0, 0.55, sev)
-	_rot_labels(sev)
+	var titan := _blink_left > 0.0
+	if _blinking and not titan and not acute:
+		restore()  # the Titan lets go: the panel is back exactly as it was
+	_blinking = titan
+	if _cut_left > 0.0:
+		dashboard.modulate.a = 0.0
+	elif titan:
+		dashboard.modulate.a = _rng.randf_range(TitanInfluence.BLINK_FLICKER_MIN, 1.0)
+	else:
+		dashboard.modulate.a = lerpf(1.0, 0.55, sev)
+	if titan and not acute:
+		dashboard.position = _anchor + Vector2(_rng.randf_range(-1.0, 1.0) * TitanInfluence.BLINK_TEAR_PX, 0.0)
+	_rot_labels(sev, titan)
+
+## True while the Titan is breaking in on the dashboard.
+func is_titan_glitching() -> bool:
+	return _blink_left > 0.0
 
 ## Nothing of ours left on the panel: lit, still, and where the layout put it. Checked
 ## whenever there is no reason for a glitch at all, which includes a new game taking the
@@ -174,8 +194,10 @@ func _advance_blink(delta: float) -> void:
 	var spread := TitanInfluence.BLINK_GAP_SPREAD
 	_next_blink = gap * _rng.randf_range(1.0 - spread, 1.0 + spread)
 
-func _rot_labels(sev: float) -> void:
+func _rot_labels(sev: float, titan := false) -> void:
 	var rot := smoothstep(ROT_THRESHOLD, 1.0, sev) * MAX_ROT
+	if titan:
+		rot = maxf(rot, TitanInfluence.BLINK_ROT)
 	for i in _labels.size():
 		var label := _labels[i]
 		if not is_instance_valid(label):
@@ -189,8 +211,9 @@ func _rot_labels(sev: float) -> void:
 		var out := corrupt(_clean[i], rot, _rng)
 		label.text = out
 		_written[i] = out
-		# Mustard is the readout color; damage and the void aren't, so the rot reads as alarm.
-		label.modulate = Colors.PRIMARY.lerp(Colors.DANGER, rot * _rng.randf())
+		# Mustard is the readout color; damage and the void aren't, so the rot reads as
+		# alarm. The Titan's interference is its own purple.
+		label.modulate = Colors.PRIMARY.lerp(Colors.TITAN if titan else Colors.DANGER, rot * _rng.randf())
 
 ## Replaces about `amount` of the characters with line noise, leaving spaces be
 ## so the layout doesn't shift under the corruption.
@@ -213,6 +236,7 @@ func restore() -> void:
 	_cut_left = 0.0
 	_next_cut = 0.0
 	_blink_left = 0.0
+	_blinking = false
 	if dashboard:
 		dashboard.position = _anchor
 		dashboard.modulate.a = 1.0

@@ -116,7 +116,8 @@ eval pt.remember("gap", pt.recall("piece2").global_position.distance_to(ship.glo
 wait 3
 assert pt.recall("piece2").global_position.distance_to(ship.global_position) - pt.recall("gap") > 5.0 "coasting, the piece slowly drifts off"
 assert pt.recall("piece2").global_position.distance_to(ship.global_position) - pt.recall("gap") < ship.RELEASE_DRIFT * 3.0 + 8.0 "but only slowly"
-assert pt.recall("piece2").linear_velocity.distance_to(pt.recall("v")) < 1.0 "no damping: it keeps its speed"
+assert pt.recall("piece2").linear_velocity.length() > pt.recall("v").length() * 0.95 "only a trace of drag: it all but keeps its speed"
+assert pt.recall("piece2").linear_velocity.length() < pt.recall("v").length() "but it does slow, very slightly"
 
 # Bumping into loose Freight doesn't hurt unless it's very fast
 eval pt.recall("piece2").set("global_position", ship.global_position + Vector2(0, 3000))

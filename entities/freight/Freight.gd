@@ -3,7 +3,8 @@ class_name Freight
 
 ## Something too big for the hold (docs/adr/0012): clamped rigidly to the ship's nose at
 ## its one Lug and pushed home ahead of it. Let go, it coasts on as the ship was moving -
-## same velocity, same heading, plus a slow drift off the nose - and gravity never bends its path. While
+## same velocity, same heading, plus a slow drift off the nose, losing only a trace of speed
+## to DRAG - and gravity never bends its path. While
 ## clamped it is not a body of its own: Ship.clamp_freight folds its mass, inertia and
 ## outline into the ship's, and Ship.release_freight hands them back.
 ## Holding `action` with the nose this close to the Lug (px) starts the magnet. Angle and
@@ -18,6 +19,10 @@ const MAGNET_SPIN := 4.0     # rad/s
 ## Close enough to its pose to clamp.
 const SEAT_DISTANCE := 3.0
 const SEAT_ANGLE := 0.08
+## Loose Freight bleeds off speed at this rate (per second): a trace of drag, far too
+## little to notice on an ordinary release, but enough that a piece let go of after a
+## long boost slows below the ship's cruise speed in time and can be caught again.
+const DRAG := 0.01
 ## Bumping into a loose piece only hurts the hull above this closing speed (px/s); the
 ## ship's ordinary knock threshold is far lower. Nudging Freight around is expected.
 const KNOCK_DAMAGE_SPEED := 250.0
@@ -64,7 +69,7 @@ func _init() -> void:
 	mass = 3.0  # the ship's own mass, so a clamped test piece halves its acceleration
 	gravity_scale = 0.0  # nothing pulls on Freight; it goes where the ship sent it
 	linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
-	linear_damp = 0.0
+	linear_damp = DRAG
 	angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
 	angular_damp = 0.0
 	can_sleep = false

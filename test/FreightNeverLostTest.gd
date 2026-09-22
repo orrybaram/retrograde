@@ -227,3 +227,14 @@ func test_salvaging_the_hull_frees_the_freight_beside_it() -> void:
 	assert_vector(f.global_position).is_equal_approx(at, Vector2(0.05, 0.05))
 	assert_vector(f.linear_velocity).is_equal(Vector2.ZERO)
 	assert_object(NavSystem.get_target()).is_same(f.tracking_target())
+
+# --- drag ---
+
+func test_loose_freight_bleeds_a_trace_of_speed() -> void:
+	var f := Freight.spawn(_world, Vector2(2000, 0), 0.0, Vector2(1000, 0))
+	assert_float(f.linear_damp).is_equal_approx(Freight.DRAG, 0.0001)
+	assert_float(Freight.DRAG).is_greater(0.0)
+	assert_float(Freight.DRAG).is_less_equal(0.02)  # a trace: an ordinary release barely notices
+	# A piece let go of at boost speed gets below a ship's cruise speed in a few minutes
+	var seconds_to_cruise := log(1000.0 / 300.0) / Freight.DRAG
+	assert_float(seconds_to_cruise).is_less(180.0)
