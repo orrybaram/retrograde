@@ -5,7 +5,6 @@
 [ext_resource type="PackedScene" path="res://entities/resources/OrbitalRingSpawner.tscn" id="2_vpsiu"]
 [ext_resource type="PackedScene" path="res://entities/structures/Gate.tscn" id="3_gate"]
 [ext_resource type="PackedScene" path="res://entities/structures/SunStation.tscn" id="4_sunst"]
-[ext_resource type="Script" path="res://entities/structures/Mount.gd" id="5_mount"]
 
 [node name="HomeSystem" type="Node2D" unique_id=1363253957]
 
@@ -153,12 +152,6 @@ position = Vector2(3165, 0)
 orbital_distance = 6000.0
 orbital_speed = 20.0
 initial_angle_degrees = 180.0
-
-[node name="Mast1Mount" type="Node2D" parent="Sun/Veld/Rook/SpaceStation"]
-position = Vector2(0, -82.5)
-script = ExtResource("5_mount")
-part = NodePath("../Visuals/Tower1")
-collision = NodePath("../CollisionShape2D")
 
 [node name="Gate" parent="Sun/Veld" unique_id=200000011 instance=ExtResource("3_gate")]
 position = Vector2(-10800, 0)

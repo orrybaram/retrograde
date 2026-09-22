@@ -13,14 +13,8 @@ func before_test() -> void:
 	_world = auto_free(Node2D.new()) as Node2D
 	add_child(_world)
 	_station = load("res://entities/structures/SpaceStation.tscn").instantiate() as SpaceStation
-	# As on SR-7 in scenes/HomeSystem.tscn
-	_mount = Mount.new()
-	_mount.name = "Mast1Mount"
-	_mount.position = Vector2(0, -82.5)
-	_mount.part = NodePath("../Visuals/Tower1")
-	_mount.collision = NodePath("../CollisionShape2D")
-	_station.add_child(_mount)
 	_world.add_child(_station)
+	_mount = _station.get_node("Mast1Mount") as Mount
 	await get_tree().process_frame
 
 func after_test() -> void:
