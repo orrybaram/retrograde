@@ -52,7 +52,7 @@ func _fit() -> void:
 func _process(delta: float) -> void:
 	var relief := UI_RELIEF if _something_to_read() else 1.0
 	_shroud = _ease(_shroud, VoidZone.shroud * relief, delta)
-	_dread = _ease(_dread, VoidZone.dread * relief, delta)
+	_dread = _ease(_dread, VoidZone.shroud * relief, delta)
 
 	visible = _shroud > 0.002
 	if not visible:

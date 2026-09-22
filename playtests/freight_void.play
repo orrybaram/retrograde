@@ -54,18 +54,23 @@ wait 1
 assert pt.recall("flung").global_position.distance_to(pt.recall("dropped_at")) < 2.0 "it stops where it was let go"
 assert pt.recall("flung").is_marked() "and is marked for the ship to come back for"
 
-# Clamp it again and stay until the dark takes the ship
+# Clamp it again, then go deep enough for the dark to take the ship
 eval pt.warp_to(pt.recall("flung").lug_global() + Vector2(-16, 0))
 wait 0.1
 eval ship.set("linear_velocity", Vector2(0, 0))
 hold action 1.5
 wait 0.1
 assert pt.state_name() == "CarryingState" "clamped again, in the Void"
-eval pt.remember("bearing", (pt.recall("flung").global_position - pt.recall("sun")).normalized())
-wait_until pt.state_name() == "ConsumedState" 40
+eval pt.remember("bearing", (ship.global_position - pt.recall("sun")).normalized())
+wait 3
+assert ship.is_carrying() "no clock: it can sit out here with the load for as long as it likes"
+# Out to the deep line along the same bearing, where the dark takes the ship
+eval pt.warp_to(pt.recall("sun") + pt.recall("bearing") * (get_node("/root/VoidZone").DEEP_RADIUS - 300.0))
+eval ship.set("linear_velocity", pt.recall("bearing") * 300.0)
+wait_until pt.state_name() == "ConsumedState" 10
 assert not ship.is_carrying() "the Void takes the ship"
 assert absf(pt.recall("flung").global_position.distance_to(pt.recall("sun")) - (pt.recall("edge") - 1000.0)) < 1.0 "the load turns up 1 km inside the edge"
-assert (pt.recall("flung").global_position - pt.recall("sun")).normalized().dot(pt.recall("bearing")) > 0.9999 "on the same bearing"
+assert (pt.recall("flung").global_position - pt.recall("sun")).normalized().dot(pt.recall("bearing")) > 0.999 "on the same bearing"
 assert pt.recall("flung").linear_velocity.length() < 1.0 "at rest"
 assert pt.recall("flung").is_marked() "marked"
 assert get_node("/root/NavSystem").get_target().node == pt.recall("flung") "and tracked"

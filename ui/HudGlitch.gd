@@ -11,7 +11,7 @@ class_name HudGlitch
 ## the one voice still telling you what to do.
 ##
 ## Three things drive it, and the loudest one wins:
-## - The Void, a slow swell over half a minute that ends with the panel not coming back.
+## - The Void, swelling with every step deeper, until the panel doesn't come back.
 ## - A hit on the hull, a hard spike that decays in a fraction of a second. The
 ##   instruments take the blow with the ship, then steady up.
 ## - Titan Influence, a floor that rises one step per Module online and never drops.
@@ -77,7 +77,7 @@ func hit(strength: float) -> void:
 ## The loudest thing currently wrong. The Void swells, a hit spikes, and under both
 ## sits however much of the Titan is already awake.
 func severity() -> float:
-	return maxf(maxf(VoidZone.dread, _hit), baseline())
+	return maxf(maxf(VoidZone.shroud, _hit), baseline())
 
 ## The Titan's share, which is simply how many Modules are online. Nothing to recover
 ## from: this is where the readouts sit from now on.
@@ -95,7 +95,7 @@ func _process(delta: float) -> void:
 		return
 
 	_hit = maxf(_hit - HIT_DECAY * delta, 0.0)
-	var acute := maxf(VoidZone.dread, _hit) > 0.001
+	var acute := maxf(VoidZone.shroud, _hit) > 0.001
 	var sev := severity()
 
 	if not acute:

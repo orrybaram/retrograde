@@ -5,7 +5,7 @@ shader_type canvas_item;
 // giving up. Alpha only — the world underneath is what gets eaten.
 
 uniform float shroud: hint_range(0.0, 1.0, 0.01) = 0.0;  // how far gone the sky is
-uniform float dread: hint_range(0.0, 1.0, 0.01) = 0.0;   // how far gone the clock is
+uniform float dread: hint_range(0.0, 1.0, 0.01) = 0.0;   // how deep into the Void the ship is (VoidZone.shroud)
 uniform vec2 half_extent = vec2(0.5, 0.5);  // (0.5 * aspect, 0.5), so the aperture stays round
 uniform vec4 void_color: source_color = vec4(0.0, 0.0, 0.0, 1.0);
 

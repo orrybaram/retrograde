@@ -1206,12 +1206,12 @@ func _draw_readout(c: Control, alpha: float) -> void:
 		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), row[1], HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, value_color)
 		y += _font.get_height(TEXT_SIZE) + 3.0
 
-	# The chart is the one instrument the void leaves half-working, so the clock
-	# lives here rather than on the dashboard that's busy falling apart.
+	# The chart is the one instrument the void leaves half-working, so how much
+	# further out the ship can go lives here, not on the dashboard falling apart.
 	if VoidZone.is_inside():
-		var left := VoidZone.time_left()
+		var left := VoidZone.distance_left()
 		c.draw_string(_font, Vector2(READOUT_INSET, y), "VOID", HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, 0.6 * alpha))
-		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), "%.1f s" % left, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, alpha))
+		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), _format_distance(left), HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, alpha))
 
 func _draw_scale_bar(c: Control, alpha: float) -> void:
 	var step := _nice_step(120.0 / scale_factor)

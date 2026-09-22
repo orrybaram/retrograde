@@ -29,40 +29,33 @@ func test_depth_is_zero_inside_and_one_past_the_deep_radius() -> void:
 	assert_float(middle).is_between(0.49, 0.51)
 
 
-func test_the_fringe_gives_the_full_thirty_seconds() -> void:
-	var exposure := 0.0
-	var elapsed := 0.0
-	while exposure < VoidZone.SURVIVAL_TIME and elapsed < 120.0:
-		exposure = VoidZone.step_exposure(exposure, 0.05, 0.0, true)
-		elapsed += 0.05
-	assert_float(elapsed).is_between(29.9, 30.1)
+func test_there_is_no_clock_the_fringe_never_takes_the_ship() -> void:
+	# Loitering just past the edge is eerie, never fatal: only depth kills.
+	assert_bool(VoidZone.consumes_at(VoidZone.depth_at(VoidZone.EDGE_RADIUS + 10.0))).is_false()
+	assert_bool(VoidZone.consumes_at(VoidZone.depth_at(VoidZone.DEEP_RADIUS - 10.0))).is_false()
 
 
-func test_going_deeper_runs_the_clock_out_sooner() -> void:
-	var shallow := VoidZone.seconds_left(0.0, 0.0)
-	var deep := VoidZone.seconds_left(0.0, 1.0)
-	assert_float(shallow).is_equal_approx(VoidZone.SURVIVAL_TIME, 0.001)
-	assert_float(deep).is_less(shallow)
-	# Whatever the depth, nobody ever gets more than the advertised thirty.
+func test_the_deep_line_takes_the_ship() -> void:
+	assert_bool(VoidZone.consumes_at(VoidZone.depth_at(VoidZone.DEEP_RADIUS))).is_true()
+	assert_bool(VoidZone.consumes_at(VoidZone.depth_at(VoidZone.DEEP_RADIUS * 2.0))).is_true()
+
+
+func test_the_dark_deepens_with_every_step_out() -> void:
+	var previous := -1.0
 	for step in 11:
-		assert_float(VoidZone.seconds_left(0.0, step / 10.0)).is_less_equal(VoidZone.SURVIVAL_TIME)
+		var d := VoidZone.depth_at(lerpf(VoidZone.EDGE_RADIUS, VoidZone.DEEP_RADIUS, step / 10.0))
+		assert_float(d).is_greater(previous)
+		previous = d
 
 
-func test_exposure_winds_back_once_the_ship_is_clear() -> void:
-	var exposure := VoidZone.SURVIVAL_TIME * 0.5
-	var before := exposure
-	exposure = VoidZone.step_exposure(exposure, 1.0, 0.0, false)
-	assert_float(exposure).is_less(before)
-	# And it bottoms out rather than going negative.
-	for i in 100:
-		exposure = VoidZone.step_exposure(exposure, 1.0, 0.0, false)
-	assert_float(exposure).is_equal(0.0)
-
-
-func test_recovery_is_faster_than_the_clock_that_built_it() -> void:
-	var gained := VoidZone.step_exposure(0.0, 1.0, 0.0, true)
-	var lost := VoidZone.SURVIVAL_TIME - VoidZone.step_exposure(VoidZone.SURVIVAL_TIME, 1.0, 0.0, false)
-	assert_float(lost).is_greater(gained)
+func test_taken_the_dark_holds_until_the_respawn() -> void:
+	VoidZone.reset()
+	VoidZone._taken = true
+	VoidZone._relax(0.1)
+	assert_float(VoidZone.shroud).is_equal(1.0)
+	VoidZone.reset()
+	VoidZone._relax(0.1)
+	assert_float(VoidZone.shroud).is_equal(0.0)
 
 
 # --- Chart hatching ----------------------------------------------------------
@@ -147,7 +140,7 @@ func test_a_ship_sitting_on_the_line_stays_in_one_state() -> void:
 # --- The warning -------------------------------------------------------------
 
 func test_the_edge_warning_goes_out_on_every_crossing() -> void:
-	# It's the only warning for something that kills in thirty seconds. A `once`
+	# It's the only warning for something that kills. A `once`
 	# flag would spend it the first time — including on a crossing the player
 	# never saw, because RobotRadio marks once-conversations seen when they are
 	# merely queued, and a game over clears the queue.

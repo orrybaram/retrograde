@@ -555,7 +555,7 @@ func _progress_rows() -> Array[Dictionary]:
 
 	rows.append(_action_row(
 		"RESET VOID CLOCK",
-		"Puts the Void's depth, dread and survival clock back to zero.",
+		"Puts the Void's depth and shroud back to zero.",
 		func() -> void: VoidZone.reset()
 	))
 	return rows

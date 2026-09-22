@@ -616,9 +616,8 @@ func snapshot() -> Dictionary:
 		"void": {
 			"inside": VoidZone.is_inside(),
 			"depth": snappedf(VoidZone.depth, 0.001),
-			"dread": snappedf(VoidZone.dread, 0.001),
 			"shroud": snappedf(VoidZone.shroud, 0.001),
-			"exposure": snappedf(VoidZone.exposure, 0.1),
+			"distance_left": snappedf(VoidZone.distance_left(), 1.0) if VoidZone.is_inside() else -1.0,
 		},
 	}
 	if ship:

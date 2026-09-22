@@ -1,16 +1,15 @@
 extends Node
 
 ## The Void: the dark past the last orbit. Nothing orbits out there, nothing
-## reflects, nothing answers. Crossing EDGE_RADIUS starts a clock the player
-## can't stop, only outrun.
+## reflects, nothing answers. There is no clock: how far past EDGE_RADIUS the ship
+## is decides everything.
 ##
-## Two numbers drive the whole effect:
-##   depth — how far past the edge the ship is (0 at EDGE_RADIUS, 1 at DEEP_RADIUS)
-##   dread — how much of the clock is spent (exposure / SURVIVAL_TIME)
+##   depth - 0 at EDGE_RADIUS, 1 at DEEP_RADIUS
 ##
-## `shroud` is the worse of the two, and it's what the starfield, the HUD glitch
-## and the overlay read. So a deep crossing goes dark immediately, and loitering
-## on the fringe goes dark slowly — either way it ends in the same nothing.
+## `shroud` is what the starfield, the HUD glitch, the overlay and the maps read, and
+## it is simply the depth: the fringe is eerie, halfway in the sky is going, and at
+## DEEP_RADIUS there is nothing left and the ship is taken. Loitering is never what
+## kills; going deeper is, and turning back hands everything back at once.
 
 ## First entry into the void (once per trip, not once per save).
 signal entered()
@@ -23,27 +22,17 @@ signal consumed()
 ## station rides Rook around it and swings out to roughly 295000 at apoapsis —
 ## the edge has to sit well clear of that, or the dock itself is in the dark.
 const EDGE_RADIUS := 340_000.0
-## Where there is nothing left to see. Past here the sky is already gone.
+## Where there is nothing left to see, and the dark takes the ship.
 const DEEP_RADIUS := 380_000.0
 ## Once past the edge, the ship has to come back this far inside before the void
 ## lets go. Without it a ship flying the boundary flickers in and out of the dark
 ## and retriggers the warning every few frames.
 const RE_ENTRY_MARGIN := 4_000.0
-## Seconds of exposure at the very fringe before the ship is taken.
-const SURVIVAL_TIME := 30.0
-## The clock runs this much faster at full depth (so ~12s deep, 30s at the edge).
-const DEPTH_URGENCY := 1.5
-## Exposure bleeds off this much faster than it built, once the ship is back in.
-const RECOVERY_RATE := 2.5
 
 ## 0 inside the system, 1 at DEEP_RADIUS and beyond.
 var depth: float = 0.0
-## 0 to 1 as the survival clock runs down.
-var dread: float = 0.0
-## What the visuals read: max(depth, dread).
+## What the visuals read: the depth, while the ship is out there to feel it.
 var shroud: float = 0.0
-## Seconds spent in the dark, out of SURVIVAL_TIME.
-var exposure: float = 0.0
 
 var _inside := false
 var _taken := false  ## latched so `consumed` only fires once per ship
@@ -67,30 +56,23 @@ static func inside_at(distance_from_sun: float, was_inside: bool) -> bool:
 	var threshold := EDGE_RADIUS - RE_ENTRY_MARGIN if was_inside else EDGE_RADIUS
 	return distance_from_sun >= threshold
 
-## The survival clock, one step. Inside the void it runs forward faster the
-## deeper the ship is; outside it winds back at RECOVERY_RATE.
-static func step_exposure(seconds: float, delta: float, at_depth: float, inside: bool) -> float:
-	if inside:
-		return minf(seconds + delta * (1.0 + at_depth * DEPTH_URGENCY), SURVIVAL_TIME)
-	return maxf(seconds - delta * RECOVERY_RATE, 0.0)
-
-## Seconds of real time left at this depth before the clock runs out.
-static func seconds_left(seconds: float, at_depth: float) -> float:
-	return maxf(SURVIVAL_TIME - seconds, 0.0) / (1.0 + at_depth * DEPTH_URGENCY)
+## Whether a ship at this depth has gone too far to come back.
+static func consumes_at(at_depth: float) -> bool:
+	return at_depth >= 1.0
 
 ## True while the ship is past the edge.
 func is_inside() -> bool:
 	return _inside
 
-## Seconds left before the dark takes the ship, or INF outside it.
-func time_left() -> float:
-	return seconds_left(exposure, depth) if _inside else INF
+## How much further out the ship can go before the dark takes it, or INF inside the system.
+func distance_left() -> float:
+	if not _inside or _ship == null or not is_instance_valid(_ship):
+		return INF
+	return maxf(DEEP_RADIUS - _distance_from_sun(), 0.0)
 
 ## Back to a clean sky: called on respawn, and by tests.
 func reset() -> void:
-	exposure = 0.0
 	depth = 0.0
-	dread = 0.0
 	shroud = 0.0
 	_taken = false
 	if _inside:
@@ -105,12 +87,9 @@ func _process(delta: float) -> void:
 
 	var distance := _distance_from_sun()
 	depth = depth_at(distance)
+	shroud = depth
 	var was_inside := _inside
 	_inside = inside_at(distance, was_inside)
-
-	exposure = step_exposure(exposure, delta, depth, _inside)
-	dread = clampf(exposure / SURVIVAL_TIME, 0.0, 1.0)
-	shroud = maxf(depth, dread)
 
 	if _inside and not was_inside:
 		entered.emit()
@@ -120,25 +99,25 @@ func _process(delta: float) -> void:
 	elif was_inside and not _inside:
 		exited.emit()
 
-	if _inside and not _taken and exposure >= SURVIVAL_TIME:
+	if not _taken and consumes_at(depth):
 		_taken = true
 		consumed.emit()
 
-## Docked, destroyed or on a menu: the void lets go, but not instantly, so a
-## respawn doesn't snap the sky back on.
-func _relax(delta: float) -> void:
-	if exposure <= 0.0 and shroud <= 0.0:
+## Docked, destroyed or on a menu: out of the dark. The overlays ease themselves
+## back, so a respawn doesn't snap the sky on. Once the ship has been taken the dark
+## holds, through the silence and the robot's call, until the respawn resets it.
+func _relax(_delta: float) -> void:
+	if _taken:
+		depth = 1.0
+		shroud = 1.0
 		return
-	exposure = maxf(exposure - delta * RECOVERY_RATE, 0.0)
 	depth = 0.0
-	dread = clampf(exposure / SURVIVAL_TIME, 0.0, 1.0)
-	shroud = dread
+	shroud = 0.0
 	if _inside:
 		_inside = false
 		exited.emit()
 
-## Menus and game overs don't run the clock. The dark hangs on through the
-## robot's call, though — `_relax` only bleeds it off slowly.
+## Menus and game overs take the ship out of the dark.
 func _playing() -> bool:
 	var main := get_tree().get_first_node_in_group("main")
 	return main != null and main.current_game_state == main.MainGameState.PLAYING
