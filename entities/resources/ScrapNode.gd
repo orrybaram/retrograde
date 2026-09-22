@@ -159,7 +159,7 @@ func _hides_until_pinged() -> bool:
 func sonar_point() -> Vector2:
 	return global_position
 
-func on_sonar_touched() -> void:
+func on_sonar_touched(_strength := 1.0) -> void:
 	# Pooled nodes keep the group but drop out of resource_nodes
 	if revealed or _is_depleted or not is_in_group("resource_nodes"):
 		return

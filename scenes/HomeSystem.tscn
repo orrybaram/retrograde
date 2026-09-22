@@ -133,6 +133,7 @@ planet_name = "Rook"
 radius = 1600.0
 color = Color(0.45, 0.42, 0.4, 1)
 planet_type = 7
+density_trim = 0.336
 gravity_radius_multiplier = 2.7
 orbital_distance = 20000.0
 orbital_speed = 20.0

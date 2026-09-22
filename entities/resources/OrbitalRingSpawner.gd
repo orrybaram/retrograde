@@ -177,6 +177,43 @@ func spawn_ring() -> void:
 		if spawned_count < total_count:
 			await get_tree().process_frame
 
+## One piece of scrap going round `radius` px out, starting at `angle`: left beside a
+## Section adrift in the ring (Mount.start_beside_scrap). Its looks come from its own
+## randomness, so placing it never shifts the shared RNG's rolls.
+func spawn_scrap_at(radius: float, angle: float) -> ScrapNode:
+	var body := parent_planet as Node2D if parent_planet else parent_station as Node2D
+	if body == null or scene_root == null or scrap_scenes.is_empty() and resource_scene == null:
+		return null
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var scene: PackedScene = resource_scene if resource_scene else scrap_scenes[rng.randi() % scrap_scenes.size()]
+	var node := ResourceNodePool.get_instance(scene.resource_path.get_file().get_basename(), scene_root) as ScrapNode
+	if node == null:
+		return null
+	node.global_position = body.global_position + Vector2.from_angle(angle) * radius
+	node.rotation = rng.randf() * TAU
+	node._rotation_speed = rng.randf_range(-0.5, 0.5)
+	var s := rng.randf_range(0.7, 1.0)
+	node.scale = Vector2(s, s)
+	_spawned_nodes.append(node)
+	if node._orbital_motion:
+		var motion = node._orbital_motion
+		motion.orbital_distance = radius
+		motion.orbital_speed = (angular_speed(orbital_speed, radius) / motion.speed_scale) * 100.0
+		motion.initial_angle = angle
+		motion.initialize(body)
+	node.amount = 1
+	node.max_amount = 1
+	if not node.resource_depleted.is_connected(_on_resource_depleted):
+		node.resource_depleted.connect(_on_resource_depleted.bind(node))
+	node._update_visual()
+	return node
+
+## How fast (radians/s) a ring at `speed` (0-100) carries something `radius` px out: the
+## nearer in, the faster. Freight adrift in the ring goes round at the same rate.
+static func angular_speed(speed: float, radius: float) -> float:
+	return speed / 100.0 * 1000.0 / maxf(radius, 100.0)
+
 func _spawn_single_node(i: int, angle_step: float, absolute_inner_radius: float,
 		absolute_outer_radius: float, body_pos: Vector2,
 		scrap_scenes_to_use: Array[PackedScene], orbital_body: Node2D, is_debris: bool) -> void:
@@ -227,9 +264,7 @@ func _spawn_single_node(i: int, angle_step: float, absolute_inner_radius: float,
 		var motion = node._orbital_motion
 		motion.orbital_distance = radius
 
-		var speed_rad_per_sec = orbital_speed / 100.0
-		var distance_factor = 1000.0 / max(radius, 100.0)
-		var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
+		var calculated_speed_rad_per_sec = angular_speed(orbital_speed, radius)
 
 		motion.orbital_speed = (calculated_speed_rad_per_sec / motion.speed_scale) * 100.0
 		motion.initial_angle = angle
@@ -343,9 +378,7 @@ func _spawn_single_node_at_angle(angle: float, absolute_inner_radius: float,
 	if node._orbital_motion:
 		var motion = node._orbital_motion
 		motion.orbital_distance = radius
-		var speed_rad_per_sec = orbital_speed / 100.0
-		var distance_factor = 1000.0 / max(radius, 100.0)
-		var calculated_speed_rad_per_sec = speed_rad_per_sec * distance_factor
+		var calculated_speed_rad_per_sec = angular_speed(orbital_speed, radius)
 		motion.orbital_speed = (calculated_speed_rad_per_sec / motion.speed_scale) * 100.0
 		motion.initial_angle = angle
 		motion.initialize(orbital_body)

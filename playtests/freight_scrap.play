@@ -13,6 +13,8 @@ wait_until pt.state_name() == "LandedState" 5
 hold thrust 1.5
 assert pt.state_name() == "FlyingState" "thrust undocks the ship"
 stage_harvest 40 plain
+# Nothing else from the ring beside it: the ram below must only meet this scrap
+eval pt.clear_around(pt.staged, 500.0)
 eval pt.remember("d", ship.global_position.direction_to(pt.staged.global_position))
 
 # Loose Freight thrown at the scrap from the far side bounces off it

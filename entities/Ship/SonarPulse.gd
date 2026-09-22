@@ -13,8 +13,9 @@ class_name SonarPulse
 ## in flight finish on their own.
 ##
 ## Things that answer a Sweep join the `sonar_listeners` group with `sonar_point()` (where
-## the ring has to reach, global) and `on_sonar_touched()`, which is called the moment a
-## ring's edge actually gets there - not when it leaves the ship. Scrap listens but does not
+## the ring has to reach, global) and `on_sonar_touched(strength)`, which is called the
+## moment a ring's edge actually gets there - not when it leaves the ship - with the
+## ring's strength, so an answer can match it (SonarEcho.answer_ping). Scrap listens but does not
 ## answer: a ring only lights it up out of the debris, with one cream echo (ScrapNode.reveal).
 
 signal pulsed(origin: Vector2)  ## A ring left the ship, from `origin` (global).
@@ -63,7 +64,14 @@ func held() -> float:
 func fire() -> void:
 	var strength := strength_for(_held)
 	charging = false
-	_rings.append({"age": 0.0, "lifetime": LIFETIME * strength, "radius": END_RADIUS * strength})
+	send(strength)
+
+## Send one ring worth `strength` ordinary rings, drawn at `alpha` and `width` - the ship's
+## own ring by default; SR-7's dish sends a far bigger, brighter, Titan-purple one
+## (CommDish.ping).
+func send(strength: float, alpha := MAX_ALPHA, width := WIDTH, color := Colors.PRIMARY) -> void:
+	_rings.append({"age": 0.0, "lifetime": LIFETIME * strength, "radius": END_RADIUS * strength,
+		"alpha": alpha, "width": width, "color": color})
 	pulsed.emit(global_position)
 	EventBus.sonar_pulsed.emit(global_position)
 	_reach_listeners(global_position, strength)
@@ -91,7 +99,7 @@ func _reach_listeners(origin: Vector2, strength: float) -> void:
 		get_tree().create_timer(delay, false).timeout.connect(func() -> void:
 			var listener := instance_from_id(id)
 			if listener and is_instance_valid(listener):
-				listener.on_sonar_touched())
+				listener.on_sonar_touched(strength))
 
 ## Seconds after leaving the ship that a ring of `strength` reaches `distance`; -1 if it
 ## never does.
@@ -122,6 +130,6 @@ func _draw() -> void:
 	for ring in _rings:
 		var t: float = ring.age / ring.lifetime
 		var radius := lerpf(START_RADIUS, ring.radius, 1.0 - pow(1.0 - t, 2.0))
-		var color := Colors.PRIMARY
-		color.a = MAX_ALPHA * (1.0 - t)
-		draw_arc(Vector2.ZERO, radius, 0.0, TAU, clampi(int(radius / 4.0), 48, 512), color, WIDTH, true)
+		var color: Color = ring.get("color", Colors.PRIMARY)
+		color.a = ring.get("alpha", MAX_ALPHA) * (1.0 - t)
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, clampi(int(radius / 4.0), 48, 512), color, ring.get("width", WIDTH), true)

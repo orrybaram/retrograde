@@ -41,6 +41,13 @@ var save_path := ""
 ## Off in tests so flags never touch a save file.
 var persist := true
 
+## UNIT-7 is off when the game opens (docs/OPENING.md §5): the station is dead and nobody
+## is on the comms. Until it wakes, its tutorial tips and alarms stay parked - the
+## triggers below drop them - and MSG_WAKE is never sent. The radio itself still carries
+## the calls the game needs (relaunch, tow, the Void), and is the comms system to reuse.
+## Nothing sets this yet: the core's cold start will.
+var guide_awake := false
+
 ## Nothing teaches boosting any more — the wake-up call is story, not controls. If the
 ## player hasn't found it after this much play, the guide mentions it.
 const BOOST_HINT_AFTER := 300.0
@@ -218,7 +225,7 @@ func on_ship_state_changed(from: State, to: State) -> void:
 ## the first departure with the array aboard and never again. Taking off from a planet
 ## isn't an undock (PlanetLandedState), so it can't fire there.
 func check_undock(from: State, to: State, has_scanner: bool) -> void:
-	if has_scanner and from is LandedState and to is FlyingState:
+	if guide_awake and has_scanner and from is LandedState and to is FlyingState:
 		request(MSG_SCANNER)
 
 func _has_planet_scanner() -> bool:
@@ -241,7 +248,7 @@ func _process(delta: float) -> void:
 ## The hint is held back until the player is actually flying, so it doesn't cut across
 ## a dock or a seam.
 func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
-	if not _watching_boost:
+	if not _watching_boost or not guide_awake:
 		return
 	if boosting:
 		_watching_boost = false  # they worked it out on their own
@@ -252,7 +259,7 @@ func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
 		request(MSG_BOOST_HINT)
 
 func check_fuel(fuel: float, max_fuel: float) -> void:
-	if max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:
+	if guide_awake and max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:
 		request(MSG_LOW_FUEL)
 
 ## Two steps, both show-once: the first venting gets the full briefing with the game
@@ -260,7 +267,7 @@ func check_fuel(fuel: float, max_fuel: float) -> void:
 ## frozen mid-fight one hit from death would be a worse warning than no warning.
 func check_hull(hull: float, max_hull: float) -> void:
 	# A hull at zero is a destroyed ship, and MSG_SHIP_DESTROYED has that conversation.
-	if max_hull <= 0.0 or hull <= 0.0:
+	if not guide_awake or max_hull <= 0.0 or hull <= 0.0:
 		return
 	match LowHullEffect.level_for(hull, max_hull):
 		LowHullEffect.Level.CRITICAL:
@@ -272,9 +279,9 @@ func check_hull(hull: float, max_hull: float) -> void:
 			pass
 
 func check_cargo(weight: float, max_weight: float) -> void:
-	if max_weight > 0.0 and weight >= max_weight:
+	if guide_awake and max_weight > 0.0 and weight >= max_weight:
 		request(MSG_CARGO_FULL)
 
 func _on_harvest_available_changed(can_harvest: bool) -> void:
-	if can_harvest:
+	if guide_awake and can_harvest:
 		request(MSG_SCRAP)

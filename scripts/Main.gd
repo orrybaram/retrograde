@@ -289,6 +289,13 @@ func clear_screen_effects() -> void:
 	VoidZone.clear_now()
 	get_tree().call_group("screen_effects", "clear_now")
 
+static func _depth(n: Node) -> int:
+	var d := 0
+	while n.get_parent():
+		n = n.get_parent()
+		d += 1
+	return d
+
 func start_game() -> void:
 	clear_screen_effects()
 	if start_menu:
@@ -304,6 +311,13 @@ func start_game() -> void:
 	RobotRadio.reset()
 	if encounter_field:
 		encounter_field.reset()
+
+	# Every orbit back to where the scene starts it, parents first so each body is placed
+	# off its parent's new position
+	var bodies := get_tree().get_nodes_in_group("orbiting_bodies")
+	bodies.sort_custom(func(a: Node, b: Node) -> bool: return _depth(a) < _depth(b))
+	for body in bodies:
+		body.reset_orbit()
 
 	# Reset ship to initial state
 	if ship:
@@ -354,10 +368,10 @@ func start_game() -> void:
 	current_game_state = MainGameState.PLAYING
 	EventBus.ship_respawned.emit()
 
-	# A beat of silence in the dark, then the guide is already waiting on the comms
+	# A beat of silence in the dark, then the lights come up on a dead station. Nobody is
+	# on the comms: UNIT-7 is off until the core's cold start (RobotRadio.guide_awake).
 	if wake:
 		await _wake_from_black()
-		RobotRadio.request(RobotRadio.MSG_WAKE)
 
 func load_game() -> void:
 	clear_screen_effects()

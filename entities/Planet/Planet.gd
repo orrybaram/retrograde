@@ -252,6 +252,7 @@ func _setup_orbital_motion(body: Node2D) -> void:
 	_orbital_motion.update_velocity = true # RigidBody2D needs velocity updates
 	add_child(_orbital_motion)
 	_orbital_motion.initialize(body)
+	add_to_group("orbiting_bodies")
 
 func _register_with_minimap() -> void:
 	var minimap = Minimap.get_instance(get_tree())
@@ -266,3 +267,11 @@ func _exit_tree() -> void:
 		if minimap:
 			minimap.unregister_target(minimap_target)
 		minimap_target = null
+
+## A new game: back to where the scene starts this orbit, on a fresh clock. Orbits run on
+## wall-clock time and a load re-bases them on the saved angle, so without this a new game
+## started after any play finds the system wherever it had got to.
+func reset_orbit() -> void:
+	if _orbital_motion:
+		_orbital_motion.initialize(null, initial_angle)
+		_orbital_motion.update_orbit()

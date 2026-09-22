@@ -116,12 +116,26 @@ func test_freight_answers_a_sweep_at_its_lug() -> void:
 	assert_object(piece._lug_line.default_color).is_equal(Colors.TITAN)
 	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(1)
 
+func test_freight_pings_back_as_strong_as_it_was_pinged() -> void:
+	var piece: Freight = auto_free(Freight.new())
+	add_child(piece)
+	piece.on_sonar_touched(1.0)
+	piece.on_sonar_touched(4.0)
+	var echoes: Array = piece._visual.get_children().filter(func(c): return c is SonarEcho)
+	assert_int(echoes.size()).is_equal(2)
+	# One ring back, half the ping's reach and as slow to fade: small for a tap, big for a charge
+	assert_float(echoes[0].end_radius).is_equal_approx(SonarPulse.END_RADIUS * SonarEcho.ANSWER_REACH, 0.01)
+	assert_int(echoes[0].rings).is_equal(1)
+	assert_float(echoes[0].lifetime).is_equal_approx(SonarPulse.LIFETIME, 0.01)
+	assert_float(echoes[1].end_radius).is_equal_approx(SonarPulse.END_RADIUS * 4.0 * SonarEcho.ANSWER_REACH, 0.01)
+	assert_float(echoes[1].lifetime).is_equal_approx(SonarPulse.LIFETIME * 4.0, 0.01)
+
 func test_a_clamped_piece_still_lets_its_echo_fade() -> void:
 	var piece: Freight = auto_free(Freight.new())
 	add_child(piece)
 	piece.on_sonar_touched()
 	piece.process_mode = Node.PROCESS_MODE_DISABLED  # what clamping does
-	await get_tree().create_timer(SonarEcho.LIFETIME + SonarEcho.STAGGER * SonarEcho.RINGS + 0.2).timeout
+	await get_tree().create_timer(SonarPulse.LIFETIME + SonarEcho.STAGGER * SonarEcho.RINGS + 0.2).timeout
 	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(0)
 	assert_float(piece._lug_line.width).is_equal_approx(3.0, 0.01)
 

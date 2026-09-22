@@ -58,6 +58,10 @@ signal planet_scanned(planet: Planet)
 signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
 
+signal section_seated(id: String)
+## A piece of SR-7 went home: a Section pulled into its Mount, or the hanging wing locked
+## true. Fires once the clunk lands, with the Sections id.
+
 signal ship_damaged(amount: float, hull_ratio: float)
 ## The hull actually lost HP — a hit the damage cooldown swallowed doesn't reach here.
 ## `amount` is the HP taken, `hull_ratio` what's left of the hull (0-1) after it.

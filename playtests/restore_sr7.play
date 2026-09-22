@@ -20,13 +20,34 @@ assert ship.global_position.distance_to(pt.recall("station").get_node("SpacePort
 assert not pt.mount("fuel_tank").seated and not pt.mount("solar_array").seated and not pt.mount("dorsal_arm").seated "all three Mounts empty"
 assert not pt.recall("station").get_node("Visuals/FuelTank").visible "the fuel tank is gone"
 assert not pt.nudge().seated and absf(pt.nudge().off_true()) > 0.3 "the right wing hangs off true"
+# A dead station: no power, the dish hanging, every cut sparking under a red strobe
+assert not pt.recall("station").get_node("StationPower").powered "no power on a new game"
+assert not pt.recall("station").get_node("Lights").lit "every light out"
+assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").limp "the dish hangs limp"
+assert pt.mount("fuel_tank").alarm.active and pt.mount("solar_array").alarm.active and pt.mount("dorsal_arm").alarm.active and pt.nudge().alarm.active "an alarm at every cut"
 screenshot restore_1_new_game
 
-# --- The Sections are out in Rook's debris, one line, nearest-first: array, arm, tank ---
-assert pt.section("fuel_tank").lodged_in == pt.planet("Rook") "hung in Rook's frame"
-assert pt.section("fuel_tank").global_position.distance_to(pt.planet("Rook").global_position) > 2400.0 "the tank sits at the ring's inner edge"
-assert pt.section("solar_array").global_position.distance_to(pt.recall("station").global_position) < pt.section("dorsal_arm").global_position.distance_to(pt.recall("station").global_position) "the array is nearest the station"
-assert pt.section("dorsal_arm").global_position.distance_to(pt.recall("station").global_position) < pt.section("fuel_tank").global_position.distance_to(pt.recall("station").global_position) "then the arm, then the tank"
+# --- The Sections: the tank adrift just past the dock, the arm going round in Rook's
+# debris with the ring, the array lying on Rook's sunlit ground ---
+assert pt.section("fuel_tank").lodged_in == pt.recall("station") "the tank keeps pace with SR-7, not Rook"
+assert pt.section("fuel_tank").global_position.distance_to(ship.global_position) > 1100.0 and pt.section("fuel_tank").global_position.distance_to(ship.global_position) < 1600.0 "just off screen from the dock"
+assert pt.section("fuel_tank").global_position.x > ship.global_position.x "off to the right"
+assert pt.section("dorsal_arm").lodged_in == pt.planet("Rook") and pt.section("dorsal_arm").lodged_spin > 0.0 "the arm goes round Rook with the debris"
+wait_until pt.section("dorsal_arm").lodged_beside != null 3
+assert pt.section("dorsal_arm").lodged_beside != null "a piece of scrap goes round beside it"
+assert pt.section("dorsal_arm").global_position.distance_to(pt.section("dorsal_arm").lodged_beside.global_position) < 300.0 "close beside it"
+eval pt.remember("arm_at", pt.section("dorsal_arm").lodged_offset)
+wait 1.0
+assert pt.section("dorsal_arm").lodged_offset.angle_to(pt.recall("arm_at")) < 0.0 "and it has moved on round, the ring's way"
+assert pt.section("dorsal_arm").global_position.distance_to(pt.section("dorsal_arm").lodged_beside.global_position) < 300.0 "still beside its scrap"
+# Harvested, the companion is gone for good: no new one turns up beside the arm
+eval pt.section("dorsal_arm").lodged_beside._deplete_resource()
+wait 2.5
+assert pt.section("dorsal_arm").beside_spent and pt.section("dorsal_arm").lodged_beside == null "harvested scrap is not given back"
+assert pt.section("solar_array").lodged_in == pt.planet("Rook") and pt.section("solar_array").lodged_spin == 0.0 "the array lies still on Rook"
+assert absf(pt.section("solar_array").global_position.distance_to(pt.planet("Rook").global_position) - 1600.0) < 40.0 "in the ground"
+assert (pt.section("solar_array").global_position - pt.planet("Rook").global_position).dot(get_node("/root/VoidZone").sun_position() - pt.planet("Rook").global_position) > 0.0 "on the sunlit face"
+assert (pt.section("solar_array").global_position - pt.planet("Rook").global_position).dot(pt.recall("station").global_position - pt.planet("Rook").global_position) < 0.0 "the far side from SR-7"
 assert pt.chart_marks().is_empty() "never touched, so never marked"
 
 # --- FUEL TANK: fetch, release at its Mount, seated ---
@@ -49,21 +70,69 @@ assert pt.mount("fuel_tank").seated "the tank is seated"
 wait 0.7
 assert pt.recall("station").get_node("Visuals/FuelTank").visible "the tank is back"
 
-# --- SOLAR ARRAY ---
+# --- SOLAR ARRAY: buried in Rook. A hold couples on, like any clamp; pull back hard and
+# it comes a little, then the coupling snaps. The third pull rips it out ---
 wait 0.2
+assert pt.section("solar_array").is_buried() and pt.section("solar_array").buried_tugs_left == 3 "the array is buried: three pulls"
+eval pt.remember("sunk", pt.section("solar_array").lodged_offset.length())
 eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
 eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
 eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
 wait 0.1
-hold action 0.8
+eval pt.remember("rings", ship.sonar.ring_count())
+hold action 0.4
+wait 1.0
+assert ship.sonar.ring_count() == pt.recall("rings") "coupling on sends no Sweep ring, like any clamp"
+assert pt._action_message == "" "no prompt while coupled"
+assert pt.section("solar_array").buried_tugs_left == 3 "coupled on, the key let go, not pulling: nothing gives"
+assert ship.global_position.distance_to(pt.section("solar_array").lug_global()) < 60.0 "still coupled with the key let go"
+assert ship.to_global(Vector2(ship.NOSE)).distance_to(pt.section("solar_array").lug_global()) < 4.0 "nose on the Lug, like any clamp"
+assert ship.state_machine.current_state._latched "latched on"
+hold reverse_thrust 2.0
 wait 0.1
-assert pt.state_name() == "CarryingState" "the array is clamped"
+assert pt.section("solar_array").buried_tugs_left == 2 "a full pull snaps the coupling"
+assert pt.section("solar_array").lodged "still in the ground"
+assert pt.section("solar_array").lodged_offset.length() > pt.recall("sunk") + 4.0 "but it came up a little"
+assert pt.state_name() == "FlyingState" "and the ship is free"
+eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
+eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
+wait 0.1
+hold action 0.4
+wait 0.2
+hold action 0.15
+wait 0.1
+assert ship.state_machine.current_state._coupled == null "a fresh press lets go of it"
+assert ship.sonar.ring_count() == 0 "and letting go sends none either"
+hold reverse_thrust 0.5
+assert pt.section("solar_array").buried_tugs_left == 2 "and letting go costs no pull"
+eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
+eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
+wait 0.1
+hold action 0.4
+hold reverse_thrust 2.0
+wait 0.1
+assert pt.section("solar_array").buried_tugs_left == 1 "the second pull"
+eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
+eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
+wait 0.1
+hold action 0.4
+hold reverse_thrust 2.0
+wait 0.1
+assert not pt.section("solar_array").is_buried() "the third pull rips it out"
+assert get_tree().get_nodes_in_group("ground_fx").size() > 0 "the ground bursts where it came out"
+wait_until pt.state_name() == "CarryingState" 3
+assert pt.state_name() == "CarryingState" "and the magnet takes it"
 eval pt.stage_at_mount("solar_array", Vector2(-20, 5), -10.0)
 frames 3
 assert pt._action_message == "RELEASE" "RELEASE at the keel"
 hold action 1.0
 assert pt.mount("solar_array").seated "the array is seated"
 wait 0.7
+assert not pt.mount("solar_array").alarm.active "its alarm stops once it is home"
+assert not pt.recall("station").get_node("StationPower").powered "one wing is not enough power"
 
 # --- DORSAL ARM, lowered nose-first onto its plate ---
 wait 0.2
@@ -91,12 +160,33 @@ wait_until pt.nudge().seated 3
 assert pt.nudge().seated "the wing locked true"
 wait 0.5
 assert absf(pt.nudge().off_true()) < 0.01 "and it sits true"
+assert not pt.nudge().alarm.active "the hinge stops sparking"
+assert pt.recall("station").get_node("StationPower").powered "both wings home: power"
+assert pt.recall("station").get_node("Lights").lit and pt.recall("station").get_node("Lights").is_waking() "the lights start coming on, one by one"
+assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").limp "the dish waits for the lights"
+wait_until not pt.recall("station").get_node("Lights").is_waking() 12
+wait 0.2
+assert not pt.recall("station").get_node("Visuals/KeelLower/CommDish").limp "then the dish comes up"
+wait_until pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node_or_null("Ping") != null 15
+assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping").ring_count() == 1 "on the Sun, it pings"
+assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping")._rings[0]["color"] == Color(0.710, 0.541, 0.878, 1.0) "in the Titan's purple"
+# Powered, a Sweep that reaches the dish is answered with the same ping
+wait 3.0
+eval pt.warp_to(pt.recall("station").get_node("Visuals/KeelLower/CommDish").global_position + Vector2(150, 60))
+eval ship.set("linear_velocity", pt.recall("station").linear_velocity)
+wait 0.2
+eval pt.remember("dish_rings", pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping").ring_count())
+hold action 0.1
+wait 1.0
+assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping").ring_count() > pt.recall("dish_rings") "the dish answers a Sweep"
 screenshot restore_3_whole
 
 # --- Seated survives reload ---
 reload
 assert pt.mount("fuel_tank").seated and pt.mount("solar_array").seated and pt.mount("dorsal_arm").seated "all three still seated"
 assert pt.nudge().seated and absf(pt.nudge().off_true()) < 0.01 "the wing still true"
+assert get_tree().get_first_node_in_group("station_power").powered "still powered after a reload"
+assert get_tree().get_nodes_in_group("ground_fx").is_empty() "the scar in Rook's ground doesn't outlive the session"
 assert pt.section("fuel_tank") == null and pt.section("dorsal_arm") == null "no Section comes back as Freight"
 eval pt.redock()
 wait 0.5
