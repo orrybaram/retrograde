@@ -118,13 +118,43 @@ func _check_harvest_state() -> void:
 func harvest_prompt() -> String:
 	return action_prompt("HARVEST")
 
-## "[SPACE] HARVEST": the bound action key, then what it does.
+## "HARVEST" over "[SPACE]": what it does, then the bound action key on the line below.
+## The prompt label centres each line, so the key sits under the middle of the word.
 func action_prompt(verb: String) -> String:
 	return key_prompt("action", verb)
 
-## The same for any other action: "[UP] LIFT OFF".
+## The same for any other action: "LIFT OFF" over "[UP]".
 func key_prompt(action: String, verb: String) -> String:
-	return "[%s] %s" % [InputUtils.get_action_key_name(action).to_upper(), verb]
+	return "%s\n[%s]" % [verb, _key_label(action)]
+
+## One line, for a terminal window's footer hint: "[SPACE] SKIP".
+func inline_key_prompt(action: String, verb: String) -> String:
+	return "[%s] %s" % [_key_label(action), verb]
+
+## Several prompts side by side, each still word over key, centred in its own column.
+## The prompt font is monospace, so padding with spaces lines the columns up.
+func prompt_row(prompts: Array[String], gap := 3) -> String:
+	var cols: Array = []
+	var rows := 0
+	for p in prompts:
+		var lines := p.split("\n")
+		var width := 0
+		for line in lines:
+			width = maxi(width, line.length())
+		cols.append({"lines": lines, "width": width})
+		rows = maxi(rows, lines.size())
+	var out: PackedStringArray = []
+	for r in rows:
+		var cells: PackedStringArray = []
+		for c in cols:
+			var line: String = c["lines"][r] if r < c["lines"].size() else ""
+			var pad: int = c["width"] - line.length()
+			cells.append(" ".repeat(pad / 2) + line + " ".repeat(pad - pad / 2))
+		out.append(" ".repeat(gap).join(cells))
+	return "\n".join(out)
+
+func _key_label(action: String) -> String:
+	return InputUtils.get_action_key_name(action).to_upper()
 
 func _cleanup_invalid_nodes() -> void:
 	for node in _harvestable_nodes.keys():

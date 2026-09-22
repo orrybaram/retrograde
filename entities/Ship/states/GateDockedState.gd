@@ -235,10 +235,10 @@ func _refuel(delta: float) -> void:
 			_terminal.set_refuel_readout("%d%%" % roundi(ship.fuel / ship.max_fuel * 100.0))
 
 func _show_prompt() -> void:
-	EventBus.action_message_changed.emit("%s   %s" % [
+	EventBus.action_message_changed.emit(EventBus.prompt_row([
 		EventBus.key_prompt("thrust", "LIFT OFF"),
 		EventBus.action_prompt("TERMINAL"),
-	])
+	]))
 
 ## A Module coming online is worth keeping even if the session ends here.
 func _autosave() -> void:
