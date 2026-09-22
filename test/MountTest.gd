@@ -95,6 +95,22 @@ func test_only_mast_1_fits_this_mount() -> void:
 	assert_bool(_mount.fits(mast)).is_true()
 	assert_object(Mount.accepting(get_tree(), mast)).is_same(_mount)
 
+func test_mast_1_fits_pushed_in_from_either_side() -> void:
+	var flipped := _mast(_mount.global_transform * Transform2D(PI + 0.2, Vector2(20, -5)))
+	assert_object(Mount.accepting(get_tree(), flipped)).is_same(_mount)
+
+func test_mast_1_fits_the_lower_tear_too() -> void:
+	# Tower1's stem, the other gap it left, between the core and the bottom module
+	var stem := _mount.global_transform * Transform2D(0.0, Vector2(0, 159.5 + 82.5))
+	assert_object(Mount.accepting(get_tree(), _mast(stem))).is_same(_mount)
+	assert_object(Mount.accepting(get_tree(), _mast(stem * Transform2D(PI, Vector2(15, 0))))).is_same(_mount)
+
+func test_the_mount_starts_outside_the_station() -> void:
+	var start := _mount.section_start_offset
+	var body := _station.get_node("CollisionShape2D") as CollisionPolygon2D
+	assert_bool(Geometry2D.is_point_in_polygon(body.transform.affine_inverse() * start, body.polygon)).is_false()
+	assert_float(start.length()).is_less(800.0)
+
 func test_mast_1_out_of_tolerance_does_not_fit() -> void:
 	var mast := _mast(_mount.global_transform * Transform2D(0.0, Vector2(-60, 0)))
 	assert_object(Mount.accepting(get_tree(), mast)).is_null()
@@ -121,6 +137,16 @@ func test_seating_pulls_it_home_and_tower1_is_back() -> void:
 	assert_bool(_solid_at(Vector2(0, -82.5))).is_true()
 	assert_bool(NavSystem.is_tracking_home()).is_true()
 
+func test_seating_in_the_lower_tear_pulls_it_there() -> void:
+	var stem := _mount.global_transform * Transform2D(PI, Vector2(10, 242))
+	var mast := _mast(stem)
+	_mount.seat(mast)
+	await await_millis(int(Mount.SEAT_TIME * 1000.0) - 60)
+	if is_instance_valid(mast):
+		assert_float(mast.global_position.distance_to(_mount.to_global(Vector2(0, 242)))).is_less(8.0)
+	await await_millis(250)
+	assert_bool(_tower().visible).is_true()
+
 func test_a_seated_mount_takes_nothing_more() -> void:
 	_mount.seat(_mast(_mount.global_transform))
 	assert_bool(_mount.fits(_mast(_mount.global_transform))).is_false()
@@ -130,15 +156,15 @@ func test_the_pull_in_is_eased_and_about_half_a_second() -> void:
 
 # --- never lost ---
 
-func test_an_empty_mount_leaves_its_section_lodged_in_the_debris() -> void:
+func test_an_empty_mount_leaves_its_section_floating_just_outside_the_station() -> void:
 	_mount.ensure_section()
 	var found := _sections()
 	assert_int(found.size()).is_equal(1)
 	var mast: Freight = found[0]
 	assert_bool(mast.lodged).is_true()
-	assert_object(mast.lodged_in).is_same(_world)  # the body the station circles
+	assert_object(mast.lodged_in).is_same(_station)  # floating dead beside it
 	assert_bool(mast.handled).is_false()
-	assert_vector(mast.global_position).is_equal_approx(_world.global_position + _mount.section_start_offset, Vector2(0.1, 0.1))
+	assert_vector(mast.global_position).is_equal_approx(_station.to_global(_mount.section_start_offset), Vector2(0.1, 0.1))
 
 func test_the_section_is_never_left_twice() -> void:
 	_mount.ensure_section()
@@ -151,7 +177,7 @@ func test_a_seated_mount_clears_a_stale_copy() -> void:
 	_mount.ensure_section()
 	assert_array(_sections()).is_empty()
 
-func test_a_lodged_section_keeps_pace_with_the_debris() -> void:
+func test_a_lodged_section_keeps_pace_with_what_it_is_lodged_in() -> void:
 	_mount.ensure_section()
 	var mast: Freight = _sections()[0]
 	var anchor := Node2D.new()

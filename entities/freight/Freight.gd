@@ -60,9 +60,9 @@ var handled := false
 ## goes into the Mount with the same id and nowhere else.
 var section := ""
 
-## Lodged in a debris field: held at `lodged_offset` from `lodged_in` (the body the
-## debris circles) so it stays among the debris instead of being left behind as that body
-## moves on. The magnet breaks it free. `lodged_in` is set by whoever placed it there
+## Lodged: held at `lodged_offset` in `lodged_in`'s frame (a new game's Section, floating
+## dead beside SR-7) so it keeps pace with it instead of being left behind as it moves on
+## - to the player it just hangs there. The magnet breaks it free. `lodged_in` is set by whoever placed it there
 ## (Mount.ensure_section), and is not saved; `lodged` and the offset are.
 var lodged := false
 var lodged_offset := Vector2.ZERO
@@ -237,8 +237,8 @@ func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
 ## The Void never draws loose Freight in: headed out, it stops at the edge.
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if lodged and is_instance_valid(lodged_in):
-		# Keep pace with the debris: close on the lodged spot within the step
-		var spot := lodged_in.global_position + lodged_offset
+		# Keep pace: close on the lodged spot within the step
+		var spot := lodged_in.to_global(lodged_offset)
 		state.linear_velocity = (spot - state.transform.origin) / maxf(state.step, 0.0001)
 		state.angular_velocity = 0.0
 		return

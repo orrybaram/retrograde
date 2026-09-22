@@ -6,9 +6,11 @@ class_name Mount
 ## that showed are cut out of the station's collision, and their torn edges are drawn
 ## as sheared brackets and broken strut stubs - never a ghost outline or a socket.
 ##
-## The Mount's own transform is where the Section sits once home. Released within
-## SEAT_RANGE px and SEAT_ANGLE of it, the Section is pulled home over SEAT_TIME with a
-## clunk, the Freight is gone, and `part` is the station again. Only the Section with
+## The Section goes home into any of the part's gaps - wherever the tear shows - pushed in
+## from either side: a strut has no front. Released within SEAT_RANGE px and SEAT_ANGLE
+## of a seat, it is pulled home over SEAT_TIME with a clunk, the Freight is gone, and
+## `part` is the station again. The Mount's own transform is its main seat (and what the
+## tracker points at). Only the Section with
 ## the Mount's id fits. The seated state lives in GameState.seated_sections.
 
 ## Close enough to seat: the docking tolerance.
@@ -24,8 +26,8 @@ const CLUNK_SHAKE_INTENSITY := 2.5
 const CLUNK_SHAKE_DURATION := 0.4
 const CLUNK_FELT_WITHIN := 1500.0
 ## How deep the torn edge's teeth run into the gap, cycling along the edge (px), and how
-## far apart they are.
-const TEAR_TEETH := [6.0, 11.0, 4.0, 9.0, 3.0, 12.0, 7.0, 5.0]
+## far apart they are. Shallow, so the gap still reads as wide enough for the Section.
+const TEAR_TEETH := [3.0, 6.0, 2.0, 5.0, 2.0, 7.0, 4.0, 3.0]
 const TEAR_TOOTH_WIDTH := 7.0
 
 ## Which Section fits here (Sections.gd).
@@ -34,10 +36,10 @@ const TEAR_TOOTH_WIDTH := 7.0
 @export var part: NodePath
 ## The station's collision, which loses the part's exposed pieces while it is missing.
 @export var collision: NodePath
-## Where a new game leaves the Section: this far from the body the station circles (the
-## debris field around it), and turned this much.
-@export var section_start_offset := Vector2(-2800, -1000)
-@export var section_start_rotation := 0.7
+## Where a new game leaves the Section: floating dead this far from the station (in the
+## station's frame), turned this much.
+@export var section_start_offset := Vector2(-460, 110)
+@export var section_start_rotation := 0.25
 
 var seated := false
 var _part: Polygon2D
@@ -79,7 +81,29 @@ static func accepting(tree: SceneTree, f: Freight) -> Mount:
 ## enough in place and turn to be pulled home.
 func fits(f: Freight) -> bool:
 	return not seated and f != null and f.section == section \
-		and in_tolerance(f.global_transform, global_transform)
+		and matching_seat(f.global_transform, seats()) >= 0
+
+## Every pose the Section can be pulled home into, in world space: the middle of each of
+## the part's gaps, the Mount's way round and turned end for end.
+func seats() -> Array[Transform2D]:
+	var out: Array[Transform2D] = [global_transform, global_transform * Transform2D(PI, Vector2.ZERO)]
+	if _part == null:
+		return out
+	var to_me := global_transform.affine_inverse() * _part.global_transform
+	for gap in _gaps:
+		var at := to_me * Freight.bounds(gap).get_center()
+		if at.length() < 1.0:
+			continue  # the Mount's own seat, already in
+		out.append(global_transform * Transform2D(0.0, at))
+		out.append(global_transform * Transform2D(PI, at))
+	return out
+
+## The index of the first of `seat_poses` that `piece` is within tolerance of, or -1.
+static func matching_seat(piece: Transform2D, seat_poses: Array[Transform2D]) -> int:
+	for i in seat_poses.size():
+		if in_tolerance(piece, seat_poses[i]):
+			return i
+	return -1
 
 static func in_tolerance(piece: Transform2D, mount: Transform2D) -> bool:
 	return piece.origin.distance_to(mount.origin) <= SEAT_RANGE \
@@ -98,8 +122,9 @@ func refresh() -> void:
 	ensure_section()
 
 ## The Section is never lost: while the Mount is empty and no piece of it is anywhere in
-## the world (a new game, or a save from before Sections), one is left lodged in the
-## debris. A piece put back from a save still lodged is lodged again.
+## the world (a new game, or a save from before Sections), one is left floating dead just
+## outside the station, keeping pace with it. A piece put back from a save still lodged
+## is lodged again.
 func ensure_section() -> void:
 	var piece := _find_section()
 	if seated:
@@ -107,13 +132,13 @@ func ensure_section() -> void:
 			piece.remove_from_group("freight")
 			piece.queue_free()
 		return
-	var anchor := _debris_body()
+	var anchor := get_parent() as Node2D
 	if piece == null:
 		if anchor == null:
 			return
 		var world := get_tree().get_first_node_in_group("ship")
 		world = world.get_parent() if world else anchor
-		piece = Freight.spawn_section(world, section, anchor.global_position + section_start_offset, section_start_rotation)
+		piece = Freight.spawn_section(world, section, anchor.to_global(section_start_offset), anchor.global_rotation + section_start_rotation)
 		piece.lodge_in(anchor, section_start_offset)
 	elif piece.lodged and anchor:
 		piece.lodge_in(anchor, piece.lodged_offset)
@@ -131,10 +156,12 @@ func seat(f: Freight) -> void:
 	f.remove_from_group("freight")
 	f.remove_from_group("sonar_listeners")
 	f.process_mode = Node.PROCESS_MODE_DISABLED
+	var poses := seats()
+	var home := poses[maxi(matching_seat(f.global_transform, poses), 0)]
 	f.reparent(self, true)
 	NavSystem.track_home()
 	_seating = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	_seating.tween_property(f, "transform", Transform2D.IDENTITY, SEAT_TIME)
+	_seating.tween_property(f, "transform", global_transform.affine_inverse() * home, SEAT_TIME)
 	_seating.tween_callback(func() -> void:
 		_clunk()
 		f.queue_free()
@@ -222,11 +249,6 @@ func _find_section() -> Freight:
 			return f
 	return null
 
-## The body the station circles, which the debris field circles too.
-func _debris_body() -> Node2D:
-	var station := get_parent()
-	return station.get_parent() as Node2D if station else null
-
 func _clunk() -> void:
 	var world := get_tree().get_first_node_in_group("ship")
 	var ship := world as Ship
@@ -290,7 +312,7 @@ func _draw_torn_edge(to_me: Transform2D, from: Vector2, to: Vector2, inward: Vec
 	for f: float in [0.2, 0.55, 0.85]:
 		var base := from + along * length * f
 		var bend := inward.rotated(0.35 if f < 0.5 else -0.3)
-		var reach := 14.0 + 6.0 * f
+		var reach := 7.0 + 4.0 * f
 		var tip := base + bend * reach
 		var sheared := tip + along * 4.0 - bend * 3.0
 		var stub := PackedVector2Array([

@@ -1,5 +1,5 @@
 # Seating a Section (docs/adr/0012, docs/OPENING.md §2): a new game has Tower1 missing
-# from SR-7 and MAST 1 lodged as Freight in Rook's debris. Fetch it, and clamping it
+# from SR-7 and MAST 1 floating dead just outside the station. Fetch it, and clamping it
 # tracks its Mount. A bad approach bounces off the station and never hurts the hull; let
 # go outside tolerance it just floats, still clampable. Within tolerance the prompt reads
 # RELEASE, and letting go seats it: the Mount pulls it home, the Freight is gone, Tower1 is
@@ -15,21 +15,20 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
 
-# --- New game: the tear, and MAST 1 out in the debris ---
+# --- New game: the tear, and MAST 1 floating beside the station ---
 eval pt.remember("tower", pt.mount("mast_1").get_parent().get_node("Visuals/Tower1"))
 assert not pt.mount("mast_1").seated "the Mount is empty"
 assert not pt.recall("tower").visible "Tower1 is missing from SR-7"
 assert pt.section("mast_1") != null "MAST 1 exists as Freight"
-assert pt.section("mast_1").lodged and not pt.section("mast_1").handled "lodged in the debris, never touched"
-eval pt.remember("rook_d", pt.section("mast_1").global_position.distance_to(pt.planet("Rook").global_position))
-assert pt.recall("rook_d") > 2400.0 and pt.recall("rook_d") < 3600.0 "in Rook's debris ring"
+assert pt.section("mast_1").lodged and not pt.section("mast_1").handled "floating dead, never touched"
+assert pt.section("mast_1").global_position.distance_to(pt.mount("mast_1").get_parent().global_position) < 800.0 "just outside the station"
 assert pt.chart_marks().is_empty() "never touched, so never marked"
 eval pt.save_now()
 
-# It keeps pace with the debris while Rook moves on
-eval pt.remember("offset", pt.section("mast_1").global_position - pt.planet("Rook").global_position)
+# It keeps pace with the station as the station moves on
+eval pt.remember("offset", pt.section("mast_1").global_position - pt.mount("mast_1").get_parent().global_position)
 wait 2
-assert (pt.section("mast_1").global_position - pt.planet("Rook").global_position).distance_to(pt.recall("offset")) < 5.0 "still where it was among the debris"
+assert (pt.section("mast_1").global_position - pt.mount("mast_1").get_parent().global_position).distance_to(pt.recall("offset")) < 5.0 "still hanging where it was beside the station"
 
 # --- Fetch it: nose to the Lug, hold action ---
 hold thrust 1.5
@@ -73,8 +72,9 @@ hold action 1.5
 wait 0.1
 assert pt.state_name() == "CarryingState" "clamped again"
 
-# --- Within tolerance: RELEASE, and the Mount pulls it home ---
-eval pt.stage_at_mount("mast_1", Vector2(-25, 6), 12.0)
+# --- Within tolerance: RELEASE, and the Mount pulls it home (pushed in from the right,
+# end for end - a strut has no front) ---
+eval pt.stage_at_mount("mast_1", Vector2(25, 6), 192.0)
 frames 3
 assert pt._action_message == "RELEASE" "the prompt reads RELEASE at the Mount"
 screenshot seat_mast_approach
