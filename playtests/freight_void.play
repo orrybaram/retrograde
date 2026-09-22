@@ -1,6 +1,7 @@
-# The Void cannot take Freight (docs/adr/0012): crossing EDGE_RADIUS with a load on the
-# nose faults the clamp and lets it go at the edge, and loose Freight is stopped just
-# inside it, however hard it is sent.
+# The Void cannot take Freight (docs/adr/0012): a load stays clamped through the edge,
+# and when the dark takes the ship the load turns up on the same bearing, 1 km (1000 px)
+# inside the edge, at rest, marked and tracked. Loose Freight never drifts out through
+# the edge, and a piece let go of past it stops where it is.
 # Run: PLAYTEST_PORT=7791 tools/play.sh --headless playtests/freight_void.play
 
 press enter
@@ -13,39 +14,59 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
 hold thrust 1.5
 assert pt.state_name() == "FlyingState" "thrust undocks the ship"
-
-# Nose-out, 1500 px inside the edge, at rest
 eval pt.remember("sun", get_node("/root/VoidZone").sun_position())
-eval ship.set("rotation", 0.0)
-eval pt.warp_to(pt.recall("sun") + Vector2(get_node("/root/VoidZone").EDGE_RADIUS - 1500.0, 0))
-frames 5
-eval ship.set("linear_velocity", Vector2(0, 0))
-frames 3
-eval pt.remember("piece", pt.stage_freight())
-frames 3
-hold action 0.6
-wait 0.1
-assert pt.state_name() == "CarryingState" "clamped"
-
-# Out through the edge at 400 px/s
-eval ship.set("linear_velocity", Vector2(400, 0))
-wait_until not ship.is_carrying() 8
-wait 0.1
-assert ship.global_position.distance_to(pt.recall("sun")) > get_node("/root/VoidZone").EDGE_RADIUS - 200.0 "the clamp faults at the edge, not before"
-assert pt.state_name() == "FlyingState" "the ship flies on, unladen"
-assert ship.mass < 3.1 "the mass drops away"
-wait 2
-assert pt.recall("piece").global_position.distance_to(pt.recall("sun")) < get_node("/root/VoidZone").EDGE_RADIUS "the load stays inside the edge"
-assert pt.recall("piece").linear_velocity.length() < 1.0 "stopped there"
-assert pt.recall("piece").is_marked() "and marked, since the ship let go of it"
+eval pt.remember("edge", get_node("/root/VoidZone").EDGE_RADIUS)
 
 # Loose Freight flung at the edge is stopped just inside it
+eval ship.set("rotation", 0.0)
+eval pt.warp_to(pt.recall("sun") + Vector2(pt.recall("edge") - 1500.0, 0))
+wait 0.1
 eval ship.set("linear_velocity", Vector2(0, 0))
-eval pt.warp_to(pt.recall("sun") + Vector2(0, get_node("/root/VoidZone").EDGE_RADIUS - 3000.0))
-frames 3
-eval pt.remember("flung", pt.spawn_freight(pt.recall("sun") + Vector2(0, get_node("/root/VoidZone").EDGE_RADIUS - 400.0), 0.0, Vector2(0, 600)))
-wait 3
-assert pt.recall("flung").global_position.distance_to(pt.recall("sun")) < get_node("/root/VoidZone").EDGE_RADIUS "loose Freight never crosses the edge"
-assert pt.recall("flung").global_position.distance_to(pt.recall("sun")) > get_node("/root/VoidZone").EDGE_RADIUS - 20.0 "it stops just inside it"
+eval pt.remember("flung", pt.spawn_freight(pt.recall("sun") + Vector2(pt.recall("edge") - 400.0, 0), 0.0, Vector2(600, 0)))
+wait 2
+assert pt.recall("flung").global_position.distance_to(pt.recall("sun")) < pt.recall("edge") "loose Freight never crosses the edge"
+assert pt.recall("flung").global_position.distance_to(pt.recall("sun")) > pt.recall("edge") - 20.0 "it stops just inside it"
 assert pt.recall("flung").linear_velocity.length() < 1.0 "and stays stopped"
+
+# Picked up right at the edge, it stays on
+eval pt.warp_to(pt.recall("flung").lug_global() + Vector2(-16, 0))
+wait 0.1
+eval ship.set("linear_velocity", Vector2(0, 0))
+hold action 1.5
+wait 0.1
+assert pt.state_name() == "CarryingState" "clamped at the edge"
+wait 1
+assert ship.is_carrying() "and it stays clamped"
+
+# Carried out through the edge: still clamped
+eval ship.set("linear_velocity", Vector2(300, 0))
+wait 1.5
+assert ship.global_position.distance_to(pt.recall("sun")) > pt.recall("edge") "the ship is past the edge"
+assert ship.is_carrying() "the load is still on the nose"
+
+# Let go past the edge: it stops where it is
+eval ship.set("linear_velocity", Vector2(0, 0))
+hold action 1.0
+wait 0.1
+assert not ship.is_carrying() "let go out in the dark"
+eval pt.remember("dropped_at", pt.recall("flung").global_position)
+wait 1
+assert pt.recall("flung").global_position.distance_to(pt.recall("dropped_at")) < 2.0 "it stops where it was let go"
+assert pt.recall("flung").is_marked() "and is marked for the ship to come back for"
+
+# Clamp it again and stay until the dark takes the ship
+eval pt.warp_to(pt.recall("flung").lug_global() + Vector2(-16, 0))
+wait 0.1
+eval ship.set("linear_velocity", Vector2(0, 0))
+hold action 1.5
+wait 0.1
+assert pt.state_name() == "CarryingState" "clamped again, in the Void"
+eval pt.remember("bearing", (pt.recall("flung").global_position - pt.recall("sun")).normalized())
+wait_until pt.state_name() == "ConsumedState" 40
+assert not ship.is_carrying() "the Void takes the ship"
+assert absf(pt.recall("flung").global_position.distance_to(pt.recall("sun")) - (pt.recall("edge") - 1000.0)) < 1.0 "the load turns up 1 km inside the edge"
+assert (pt.recall("flung").global_position - pt.recall("sun")).normalized().dot(pt.recall("bearing")) > 0.9999 "on the same bearing"
+assert pt.recall("flung").linear_velocity.length() < 1.0 "at rest"
+assert pt.recall("flung").is_marked() "marked"
+assert get_node("/root/NavSystem").get_target().node == pt.recall("flung") "and tracked"
 quit

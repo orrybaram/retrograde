@@ -238,8 +238,6 @@ func _physics_process(dt: float) -> void:
 		state_machine.current_state.physics_process(dt)
 	if sonar:
 		_drive_sonar()
-	if is_carrying() and Freight.faults_at_edge(global_position, freight_center(), VoidZone.sun_position()):
-		fault_freight()
 
 ## `action` held charges a ping, let go sends it. A hold that was ever somewhere a ping
 ## isn't allowed (docked, a menu, a load clamped - including the hold that lets the load
@@ -454,14 +452,23 @@ func release_freight() -> Freight:
 	NavSystem.track(f.tracking_target())
 	return f
 
-## The clamp faults at the Void's edge: the load lets go on its own, harder than a
-## release, and the Void stops it just inside (Freight.held_at_edge).
-func fault_freight() -> Freight:
-	var f := release_freight()
-	if f:
-		ClampFX.burst(get_parent(), to_global(NOSE), linear_velocity, CLAMP_BURST, CLAMP_DENSITY)
-		damage_shake_time = CLAMP_SHAKE_DURATION
-		damage_shake_current_intensity = CLAMP_SHAKE_INTENSITY
+## The Void takes the ship but never its load: the piece turns up on the same bearing
+## from the sun, Freight.VOID_RETURN_DISTANCE inside the edge, at rest, marked and
+## tracked. Returns it, or null if nothing was clamped.
+func surrender_freight_to_void() -> Freight:
+	if not is_carrying():
+		return null
+	var f := freight
+	var carried := global_transform * f.transform
+	_detach_freight()
+	f.reparent(get_parent(), false)
+	var at := Freight.void_return_point(carried.origin, VoidZone.sun_position())
+	f.global_transform = Transform2D(carried.get_rotation(), at)
+	f.process_mode = Node.PROCESS_MODE_INHERIT
+	f.linear_velocity = Vector2.ZERO
+	f.angular_velocity = 0.0
+	update_mass_from_cargo()
+	NavSystem.track(f.tracking_target())
 	return f
 
 ## Hand the clamped load, still clamped and out of physics, to `holder` (an abandoned

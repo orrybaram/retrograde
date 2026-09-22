@@ -5,8 +5,9 @@ class_name CarryingState
 ## thrust, turning (slowed by the load through Ship.turn_ratio), knocks, particles - except
 ## that `action` means one thing here: hold it to let go, anywhere - a deliberate hold, so
 ## a tap never drops the load. A carrying ship cannot Sweep, dock, harvest or touch down.
-## Leaving this state lets go of the load, except into StrandedState: a ship that loses
-## power keeps what is on its nose, and an abandoned hull keeps it after that (ADR 0011).
+## Leaving this state lets go of the load, except into StrandedState - a ship that loses
+## power keeps what is on its nose, and an abandoned hull keeps it after that (ADR 0011) -
+## and ConsumedState, where the Void hands it back inside the edge.
 
 ## Seconds `action` must be held to let go.
 const RELEASE_HOLD := 0.8
@@ -36,8 +37,8 @@ func holds_freight() -> bool:
 func allows_sonar() -> bool:
 	return false
 
-## The load can go without a release (the clamp faults at the Void's edge) while a radio
-## call or a menu holds the controls, so this is checked before anything else.
+## The load can go without a release (a load or a new game clears it) while a radio call
+## or a menu holds the controls, so this is checked before anything else.
 func physics_process(delta: float) -> void:
 	if is_ship_valid() and not ship.is_carrying():
 		ship.state_machine.change_state("FlyingState")

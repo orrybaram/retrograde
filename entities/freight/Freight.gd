@@ -25,6 +25,10 @@ const KNOCK_DAMAGE_SPEED := 250.0
 const VOID_MARGIN := 8.0
 const _VOID := preload("res://scripts/VoidZone.gd")
 const VOID_STOP_RADIUS := _VOID.EDGE_RADIUS - VOID_MARGIN
+## A load still clamped when the Void takes the ship turns up this far inside the edge
+## (px; 1 km on the HUD's readout), on the same bearing from the sun.
+const VOID_RETURN_DISTANCE := 1000.0
+const VOID_RETURN_RADIUS := _VOID.EDGE_RADIUS - VOID_RETURN_DISTANCE
 
 ## A test piece: a long mast-like bar with its Lug on one end.
 const TEST_OUTLINE := [
@@ -197,7 +201,7 @@ func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
 		if is_instance_valid(self) and is_instance_valid(body):
 			remove_collision_exception_with(body))
 
-## The Void stops loose Freight just inside its edge.
+## The Void never draws loose Freight in: headed out, it stops at the edge.
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	var held := held_at_edge(state.transform.origin, state.linear_velocity, VoidZone.sun_position())
 	if held.is_empty():
@@ -208,22 +212,24 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = Vector2.ZERO
 	state.angular_velocity = 0.0
 
-## Where a piece at `pos` moving at `velocity` is held by the Void's edge: [position] if it
-## has to be stopped (reaching the stop radius outward bound, or already past the edge),
-## [] if it is free to go on.
+## Whether a loose piece at `pos` moving at `velocity` is stopped by the Void's edge:
+## [where it stops], or [] if it goes on. Headed out through the edge from inside, it
+## stops just inside it, so nothing can drift or be pushed out. Let go of somewhere past
+## the edge, it stops where it is, still headed nowhere, for the ship to come back for.
 static func held_at_edge(pos: Vector2, velocity: Vector2, sun: Vector2) -> Array:
 	var out := pos - sun
 	var d := out.length()
-	if d < VOID_STOP_RADIUS:
+	if d < VOID_STOP_RADIUS or velocity.dot(out) <= 0.0:
 		return []
-	if d <= _VOID.EDGE_RADIUS and velocity.dot(out) <= 0.0:
-		return []
+	if d > _VOID.EDGE_RADIUS:
+		return [pos]
 	return [sun + out / d * VOID_STOP_RADIUS]
 
-## Should a load clamped to a ship at `ship_pos` (its middle at `load_pos`) fault and let go?
-## As either crosses the Void's edge.
-static func faults_at_edge(ship_pos: Vector2, load_pos: Vector2, sun: Vector2) -> bool:
-	return ship_pos.distance_to(sun) >= _VOID.EDGE_RADIUS or load_pos.distance_to(sun) >= _VOID.EDGE_RADIUS
+## Where a load still clamped when the Void takes its ship at `pos` turns up: on the same
+## bearing from the sun, VOID_RETURN_DISTANCE inside the edge.
+static func void_return_point(pos: Vector2, sun: Vector2) -> Vector2:
+	var out := pos - sun
+	return sun + (out.normalized() if out.length() > 0.0 else Vector2.RIGHT) * VOID_RETURN_RADIUS
 
 # --- saving (docs/adr/0012: saved where it is, never respawned or despawned) ---
 

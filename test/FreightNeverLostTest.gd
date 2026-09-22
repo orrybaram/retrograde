@@ -44,28 +44,46 @@ func test_loose_freight_is_stopped_just_inside_the_edge() -> void:
 func test_freight_at_the_edge_may_still_head_back_in() -> void:
 	assert_array(Freight.held_at_edge(Vector2(EDGE - 2.0, 0), Vector2(-50, 0), Vector2.ZERO)).is_empty()
 
-func test_freight_past_the_edge_is_brought_back_inside() -> void:
-	var held := Freight.held_at_edge(Vector2(0, EDGE + 900.0), Vector2.ZERO, Vector2.ZERO)
-	assert_vector(held[0]).is_equal_approx(Vector2(0, Freight.VOID_STOP_RADIUS), Vector2(0.01, 0.01))
+func test_freight_let_go_past_the_edge_stops_where_it_is() -> void:
+	var at := Vector2(0, EDGE + 900.0)
+	var held := Freight.held_at_edge(at, Vector2(0, 40), Vector2.ZERO)
+	assert_vector(held[0]).is_equal(at)
+
+func test_freight_past_the_edge_may_still_head_back_in() -> void:
+	assert_array(Freight.held_at_edge(Vector2(0, EDGE + 900.0), Vector2(0, -40), Vector2.ZERO)).is_empty()
 
 func test_the_edge_is_measured_from_the_sun() -> void:
 	var sun := Vector2(1000, 1000)
 	assert_array(Freight.held_at_edge(sun + Vector2(EDGE - 2.0, 0), Vector2(1, 0), sun)).has_size(1)
 	assert_array(Freight.held_at_edge(Vector2(EDGE - 2.0, 0), Vector2(1, 0), sun)).is_empty()
 
-func test_the_clamp_faults_as_the_ship_or_its_load_crosses_the_edge() -> void:
-	assert_bool(Freight.faults_at_edge(Vector2(EDGE - 200.0, 0), Vector2(EDGE - 150.0, 0), Vector2.ZERO)).is_false()
-	assert_bool(Freight.faults_at_edge(Vector2(EDGE - 60.0, 0), Vector2(EDGE + 1.0, 0), Vector2.ZERO)).is_true()
-	assert_bool(Freight.faults_at_edge(Vector2(EDGE + 1.0, 0), Vector2(EDGE - 60.0, 0), Vector2.ZERO)).is_true()
+func test_the_void_returns_a_load_a_kilometre_inside_on_the_same_bearing() -> void:
+	var sun := Vector2(500, -200)
+	var at := Freight.void_return_point(sun + Vector2(3, 4).normalized() * (EDGE + 20000.0), sun)
+	assert_float(at.distance_to(sun)).is_equal_approx(EDGE - 1000.0, 0.1)
+	assert_vector((at - sun).normalized()).is_equal_approx(Vector2(0.6, 0.8), Vector2(0.0001, 0.0001))
 
-func test_a_ship_crossing_the_edge_lets_go_of_its_load() -> void:
+func test_a_ship_crossing_the_edge_keeps_its_load() -> void:
 	var f := _piece()
 	_ship.clamp_freight(f, true)
-	_ship.global_position = Vector2(EDGE + 1.0, 0)
+	_ship.global_position = Vector2(EDGE + 500.0, 0)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
+	assert_bool(_ship.is_carrying()).is_true()
+
+func test_the_void_takes_the_ship_but_hands_the_load_back() -> void:
+	var f := _piece()
+	_ship.state_machine.change_state("CarryingState")
+	_ship.clamp_freight(f, true)
+	_ship.global_position = Vector2(0, EDGE + 5000.0)
+	_ship.state_machine.change_state("ConsumedState")
 	assert_bool(_ship.is_carrying()).is_false()
 	assert_bool(f.is_loose()).is_true()
+	assert_float(f.global_position.length()).is_equal_approx(EDGE - 1000.0, 0.1)
+	assert_float(f.global_position.normalized().y).is_greater(0.9999)  # the same bearing it was carried on
+	assert_vector(f.linear_velocity).is_equal(Vector2.ZERO)
+	assert_bool(f.is_marked()).is_true()
+	assert_object(NavSystem.get_target()).is_same(f.tracking_target())
 
 # --- marked and tracked ---
 
