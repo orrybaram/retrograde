@@ -14,15 +14,21 @@ class_name TitanInfluence
 const MODULES := 5
 
 ## What the dashboard's permanent glitch reaches with all five Modules online.
-## Deliberately under `HudGlitch.ROT_THRESHOLD`: the Titan dims the readouts and cuts
-## them out, but it never eats the characters. Five Modules in, the HUD is still a
-## HUD you can fly on.
+## Deliberately under `HudGlitch.ROT_THRESHOLD`: between its interruptions the Titan
+## only dims the readouts and never eats the characters. Five Modules in, the HUD is
+## still a HUD you can fly on.
 const MAX_BASELINE_GLITCH := 0.3
 
-## How long the Titan holds the dashboard dark when it blinks it. Short enough to read
-## as an interruption rather than a fault — the readouts are never wrong, just gone
-## for a moment.
-const BLINK_SEC := 0.05
+## How long each of the Titan's interruptions of the dashboard lasts. Not a clean blink
+## (a panel that simply vanishes for a frame reads as a rendering bug): a short burst of
+## interference - the panel tears sideways, flickers, and its readouts scramble into the
+## Titan's color - and then it is exactly as it was.
+const BLINK_SEC := 0.2
+## How far the panel tears sideways during one (px), how dim its flicker gets, and how
+## much of each readout scrambles.
+const BLINK_TEAR_PX := 5.0
+const BLINK_FLICKER_MIN := 0.2
+const BLINK_ROT := 0.4
 
 ## Seconds between blinks with one Module online, and with all five. This is what makes
 ## each Gate the player powers show up on the HUD: same blink, steadily more often.

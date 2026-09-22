@@ -44,21 +44,25 @@ func _glitch_over_a_dashboard() -> HudGlitch:
 	return glitch
 
 
-## Runs `frames` of the glitch and reports how many of them the dashboard was dark for.
-## Every frame it is not dark it has to be sitting at the dim `influence` calls for, and
-## every frame it has to be where the layout put it — the Titan never moves the panel.
+## Runs `frames` of the glitch and reports how many of them the Titan spent breaking in.
+## During one the panel is never blanked outright (a clean blink reads as a bug) and only
+## tears sideways; every other frame it sits at the dim `influence` calls for, exactly
+## where the layout put it.
 func _run_frames(glitch: HudGlitch, frames: int, influence: int) -> int:
 	var lit := lerpf(1.0, 0.55, TitanInfluence.baseline_glitch(influence))
-	var dark := 0
+	var glitching := 0
 	for frame in frames:
 		glitch._process(1.0 / 60.0)
 		var alpha := glitch.dashboard.modulate.a
-		if alpha <= 0.0:
-			dark += 1
+		if glitch.is_titan_glitching():
+			glitching += 1
+			assert_float(alpha).is_greater_equal(TitanInfluence.BLINK_FLICKER_MIN)
+			assert_float(glitch.dashboard.position.y).is_equal(DASHBOARD_HOME.y)
+			assert_float(absf(glitch.dashboard.position.x - DASHBOARD_HOME.x)).is_less_equal(TitanInfluence.BLINK_TEAR_PX)
 		else:
 			assert_float(alpha).is_equal_approx(lit, 0.0001)
-		assert_vector(glitch.dashboard.position).is_equal(DASHBOARD_HOME)
-	return dark
+			assert_vector(glitch.dashboard.position).is_equal(DASHBOARD_HOME)
+	return glitching
 
 
 func _seeded(seed_value: int) -> RandomNumberGenerator:
@@ -119,7 +123,7 @@ func test_every_module_that_comes_online_blinks_the_dashboard_more_often() -> vo
 ## couldn't fly on it.
 func test_the_dashboard_is_lit_between_blinks_even_at_five_modules() -> void:
 	var duty := TitanInfluence.BLINK_SEC / TitanInfluence.blink_gap(TitanInfluence.MODULES)
-	assert_float(duty).is_less(0.05)
+	assert_float(duty).is_less(0.1)
 
 
 func test_the_hud_reads_its_baseline_off_the_modules_that_are_online() -> void:
@@ -145,14 +149,14 @@ func test_a_hud_with_nothing_online_is_left_completely_alone() -> void:
 	assert_float(glitch.dashboard.modulate.a).is_equal(1.0)
 
 
-## Ten seconds with all five Modules online: the panel blinks several times and is
-## dimmed the rest of the time, but it is lit and readable for nearly all of it.
-func test_with_every_module_online_the_dashboard_blinks_but_stays_readable() -> void:
+## Ten seconds with all five Modules online: the Titan breaks in several times and the
+## panel is dimmed the rest of the time, but it is clean and readable for nearly all of it.
+func test_with_every_module_online_the_dashboard_glitches_but_stays_readable() -> void:
 	_power_up_to(_game_state(), TitanInfluence.MODULES)
 	var glitch := _glitch_over_a_dashboard()
-	var dark := _run_frames(glitch, 600, TitanInfluence.MODULES)
-	assert_int(dark).is_greater(0)
-	assert_int(dark).is_less(60)
+	var glitching := _run_frames(glitch, 600, TitanInfluence.MODULES)
+	assert_int(glitching).is_greater(0)
+	assert_int(glitching).is_less(90)
 
 
 ## And one Module online blinks it far less than five do: the same HUD, a minute at a

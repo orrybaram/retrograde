@@ -402,13 +402,16 @@ func is_carrying() -> bool:
 ## Take hold of `f` at its Lug. It stops being a body of its own: it rides on the nose in
 ## the pose its Lug fixes, its outline becomes part of the hull, and its mass joins the
 ## ship's. Momentum is shared, so clamping a piece at rest drags the ship a little.
-func clamp_freight(f: Freight) -> void:
+## Its mark comes off the Chart and the ship tracks where it is headed instead. `quiet`
+## skips the clunk (a load being put back on the nose from a save).
+func clamp_freight(f: Freight, quiet := false) -> void:
 	if is_carrying() or f == null or not is_instance_valid(f):
 		return
 	var own_mass := mass
 	var shared := (linear_velocity * own_mass + f.linear_velocity * f.mass) / (own_mass + f.mass)
 	var pose := Freight.clamped_pose(f.lug_position, f.lug_facing, NOSE)
 	freight = f
+	f.handled = true
 	f.process_mode = Node.PROCESS_MODE_DISABLED  # out of the physics space while it rides
 	f.reparent(self, false)
 	f.transform = pose
@@ -419,11 +422,14 @@ func clamp_freight(f: Freight) -> void:
 	add_child(_freight_collider)
 	update_mass_from_cargo()
 	linear_velocity = shared
-	_clamp_fx(f)
+	NavSystem.track(f.destination())
+	if not quiet:
+		_clamp_fx(f)
 
 ## Let go of whatever is clamped, where it is. It carries on as the ship was moving - the
 ## ship's velocity, the ship's heading, no spin - plus a nudge of RELEASE_DRIFT straight off
-## the nose, so the two very slowly part. Returns the piece (null if nothing was clamped).
+## the nose, so the two very slowly part. It is marked on the Chart and becomes the
+## tracked target at once. Returns the piece (null if nothing was clamped).
 func release_freight() -> Freight:
 	if not is_carrying():
 		freight = null
@@ -431,11 +437,7 @@ func release_freight() -> Freight:
 	var f := freight
 	var carried := global_transform * f.transform
 	var hull_velocity := _velocity_at(global_position, to_global(center_of_mass))
-	freight = null
-	if _freight_collider:
-		remove_child(_freight_collider)
-		_freight_collider.queue_free()
-		_freight_collider = null
+	_detach_freight()
 	f.reparent(get_parent(), false)
 	f.global_transform = carried
 	f.process_mode = Node.PROCESS_MODE_INHERIT
@@ -445,12 +447,52 @@ func release_freight() -> Freight:
 	update_mass_from_cargo()
 	linear_velocity = hull_velocity
 	# It was touching the nose: let the two drift apart before they can collide again.
-	f.add_collision_exception_with(self)
+	f.part_from(self)
 	_release_fx(f)
-	get_tree().create_timer(0.6).timeout.connect(func() -> void:
-		if is_instance_valid(f):
-			f.remove_collision_exception_with(self))
+	NavSystem.track(f.tracking_target())
 	return f
+
+## The Void takes the ship but never its load: the piece turns up on the same bearing
+## from the sun, Freight.VOID_RETURN_DISTANCE inside the edge, at rest, marked and
+## tracked. Returns it, or null if nothing was clamped.
+func surrender_freight_to_void() -> Freight:
+	if not is_carrying():
+		return null
+	var f := freight
+	var carried := global_transform * f.transform
+	_detach_freight()
+	f.reparent(get_parent(), false)
+	var at := Freight.void_return_point(carried.origin, VoidZone.sun_position())
+	f.global_transform = Transform2D(carried.get_rotation(), at)
+	f.process_mode = Node.PROCESS_MODE_INHERIT
+	f.linear_velocity = Vector2.ZERO
+	f.angular_velocity = 0.0
+	update_mass_from_cargo()
+	NavSystem.track(f.tracking_target())
+	return f
+
+## Hand the clamped load, still clamped and out of physics, to `holder` (an abandoned
+## hull), where it is. Returns it, or null if nothing was clamped.
+func hand_freight_to(holder: Node2D) -> Freight:
+	if not is_carrying():
+		return null
+	var f := freight
+	_detach_freight()
+	f.reparent(holder, true)
+	update_mass_from_cargo()
+	return f
+
+## Forget the clamped load without letting it go anywhere (it is about to be freed).
+func discard_freight() -> void:
+	_detach_freight()
+	update_mass_from_cargo()
+
+func _detach_freight() -> void:
+	freight = null
+	if _freight_collider:
+		remove_child(_freight_collider)
+		_freight_collider.queue_free()
+		_freight_collider = null
 
 ## Letting go: smoke and sparks where the Lug leaves the nose, one cream ring, the Lug
 ## glints and the piece jolts, and the camera takes a small bump.

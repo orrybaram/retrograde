@@ -1,0 +1,66 @@
+# Handled Freight is marked and tracked (docs/adr/0012): letting go of a piece marks it
+# on the Chart and tracks it at once, over a manual waypoint; clamping it again clears
+# the mark and tracks its destination (HOME until Mounts and the Cradle exist). A piece
+# the ship never touched has no mark.
+# Run: PLAYTEST_PORT=7791 tools/play.sh --headless playtests/freight_track.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+# Far out, in space the Chart has not drawn yet
+eval pt.warp_to(ship.global_position + Vector2(60000, -60000))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+wait 0.1
+
+# Untouched: no mark
+eval pt.remember("untouched", pt.spawn_freight(ship.global_position + Vector2(0, 800)))
+eval pt.remember("piece", pt.stage_freight())
+frames 3
+assert pt.chart_marks().is_empty() "Freight never touched has no mark"
+
+# A manual waypoint, then clamp: the ship tracks home instead
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(5000, 0), "WAYPOINT")
+hold action 0.6
+wait 0.1
+assert pt.state_name() == "CarryingState" "clamped"
+assert get_node("/root/NavSystem").is_tracking_home() "clamping tracks the destination: HOME for now"
+
+# Let go: marked on the Chart and tracked straight away, over any waypoint
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(5000, 0), "WAYPOINT")
+hold action 1.0
+wait 0.1
+assert pt.state_name() == "FlyingState" "let go"
+assert get_node("/root/NavSystem").get_target().get_label() == "FREIGHT" "the piece is the tracked target"
+assert get_node("/root/NavSystem").get_target().node == pt.recall("piece") "that piece, not another"
+assert pt.chart_marks().size() == 1 "one mark on the Chart"
+assert pt.chart_marks()[0].position.distance_to(pt.recall("piece").global_position) < 1.0 "on the piece"
+
+# The Chart draws it over uncharted space
+eval ship.set("linear_velocity", Vector2(0, 0))
+eval pt.warp_to(ship.global_position + Vector2(-600, 0))
+frames 3
+press m
+wait 1
+screenshot freight_track_chart
+press m
+wait 0.5
+
+# Clamp it again: the mark clears, and home is tracked again
+eval ship.set("linear_velocity", Vector2(0, 0))
+eval ship.set("rotation", 0.0)
+eval pt.recall("piece").set("linear_velocity", Vector2(0, 0))
+eval pt.warp_to(pt.recall("piece").lug_global() + pt.recall("piece").lug_facing_global() * 16.0 - Vector2(10, 0).rotated(0.0))
+wait 0.1
+hold action 1.5
+assert pt.state_name() == "CarryingState" "clamped again"
+assert pt.chart_marks().is_empty() "re-clamping clears the mark"
+assert get_node("/root/NavSystem").is_tracking_home() "and tracks HOME"
+quit

@@ -52,6 +52,8 @@ func _ready() -> void:
 	# see it, without closing and reopening.
 	EventBus.planet_scanned.connect(_refresh)
 	_connect_ship()
+	# The Log and its chart are instruments too: out in the Void they glitch with the HUD
+	add_child(VoidGlitch.new())
 
 
 func open_log(tab := 0) -> void:

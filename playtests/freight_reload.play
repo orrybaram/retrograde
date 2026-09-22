@@ -1,0 +1,77 @@
+# Freight is never lost (docs/adr/0012): loose and clamped Freight survive save/reload in
+# place, and repeated reloads never duplicate or lose a piece. Saved with a load clamped,
+# the ship comes back in flight with it still on the nose.
+# Run: PLAYTEST_PORT=7791 tools/play.sh --headless playtests/freight_reload.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+eval pt.warp_to(ship.global_position + Vector2(0, -30000))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 5
+
+# An untouched piece, and one clamped then let go
+eval pt.remember("untouched", pt.spawn_freight(ship.global_position + Vector2(0, 600), 0.4))
+eval pt.remember("dropped", pt.stage_freight())
+frames 3
+hold action 0.6
+wait 0.1
+assert pt.state_name() == "CarryingState" "clamped"
+hold action 1.0
+assert pt.state_name() == "FlyingState" "let go"
+eval pt.recall("dropped").set("linear_velocity", Vector2(0, 0))
+eval ship.set("linear_velocity", Vector2(0, 0))
+eval pt.warp_to(ship.global_position + Vector2(-400, 0))
+frames 5
+eval pt.remember("dropped_at", pt.recall("dropped").global_position)
+eval pt.remember("untouched_at", pt.recall("untouched").global_position)
+eval pt.save_now()
+
+# --- Reload: both come back where they were, and only once ---
+reload
+assert pt.freight().size() == 2 "both pieces restored, no copies"
+assert pt.freight_near(pt.recall("dropped_at")).size() == 1 and pt.freight_near(pt.recall("dropped_at"))[0].handled "the dropped piece is back where it was, still handled"
+assert pt.freight_near(pt.recall("untouched_at")).size() == 1 and not pt.freight_near(pt.recall("untouched_at"))[0].handled "the untouched piece is back where it was, still untouched"
+assert pt.chart_marks().size() == 1 "only the handled piece is marked"
+reload
+reload
+assert pt.freight().size() == 2 "repeated reloads never duplicate or lose a piece"
+
+# --- Saved carrying: back in flight with the load clamped ---
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.warp_to(ship.global_position + Vector2(3000, -26000))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 3
+eval pt.stage_freight()
+frames 3
+hold action 0.6
+wait 0.1
+assert pt.state_name() == "CarryingState" "clamped a third piece"
+eval pt.remember("ship_at", ship.global_position)
+eval pt.save_now()
+reload
+wait_until pt.state_name() == "CarryingState" 3
+assert ship.is_carrying() "reloaded with the load still clamped"
+assert ship.global_position.distance_to(pt.recall("ship_at")) < 50.0 "back in flight where it was saved, not at a dock"
+assert pt.freight().size() == 3 "three pieces, no copies"
+assert ship.mass > 5.9 "the load's mass is the ship's again"
+screenshot freight_reload_carrying
+reload
+wait_until pt.state_name() == "CarryingState" 3
+assert pt.freight().size() == 3 "still three after another reload"
+quit

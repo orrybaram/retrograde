@@ -10,7 +10,7 @@ expression = &"worried"
 
 [sub_resource type="Resource" id="line_2"]
 script = ExtResource("2_line")
-text = "Thirty seconds. That's everything anyone has ever come back with. Turn around."
+text = "Every klick further out, there's less of you coming back. Turn around."
 expression = &"surprise"
 glitch = true
 

@@ -20,6 +20,10 @@ class_name Minimap
 @export var ring_color: Color = Colors.PRIMARY_MEDIUM
 @export var ship_color: Color = Colors.CREAM
 @export var nav_color: Color = Colors.NAV
+## The Void is hatched in the same red, at the same spacing and strength, as on the chart.
+@export var void_color: Color = Colors.DANGER
+## Matches SystemMap.HATCH_SPACING_PX, so both read as the same hatching.
+const VOID_HATCH_SPACING := 13.0
 
 const SHIP_SIZE := 7.0
 const NAV_SIZE := 9.0
@@ -58,6 +62,10 @@ func _draw() -> void:
 		var ring_radius = display_radius * (float(i) / float(ring_count))
 		draw_arc(center, ring_radius, 0, TAU, 64, ring_color, 1.0)
 	
+	var ship_rotation = ship.rotation if ship and is_instance_valid(ship) and rotate_with_ship else 0.0
+	if ship and is_instance_valid(ship):
+		_draw_void(center, ship_rotation)
+
 	# Draw border
 	draw_arc(center, display_radius, 0, TAU, 64, border_color, 2.0)
 	
@@ -66,8 +74,6 @@ func _draw() -> void:
 	
 	if not ship or not is_instance_valid(ship):
 		return
-	
-	var ship_rotation = ship.rotation if rotate_with_ship else 0.0
 	
 	# Draw all visible targets
 	var visible_targets: Array[MinimapTarget] = []
@@ -86,6 +92,86 @@ func _draw() -> void:
 
 	# Draw ship indicator at center (always on top)
 	_draw_ship_indicator(center)
+
+## The Void, as the chart draws it (SystemMap._draw_void) but unlabelled: diagonals past
+## EDGE_RADIUS, doubled past DEEP_RADIUS, and the boundary line, breathing red while the
+## ship is out there. All of it clipped to the minimap's disc.
+func _draw_void(center: Vector2, ship_rotation: float) -> void:
+	var sun := _to_minimap_unclamped(center, VoidZone.sun_position(), ship_rotation)
+	var px_per_unit := display_radius / world_range
+	var edge := VoidZone.EDGE_RADIUS * px_per_unit
+	var deep := VoidZone.DEEP_RADIUS * px_per_unit
+	var alarm := VoidZone.shroud
+	var spacing := VOID_HATCH_SPACING
+	var band := void_hatching(center, display_radius, sun, edge, spacing, 0.0)
+	if not band.is_empty():
+		draw_multiline(band, Color(void_color, 0.11 + 0.07 * alarm), 1.0)
+	var deeper := void_hatching(center, display_radius, sun, deep, spacing, spacing / 2.0)
+	if not deeper.is_empty():
+		draw_multiline(deeper, Color(void_color, 0.09 + 0.07 * alarm), 1.0)
+	var boundary := Color(void_color, lerpf(0.3, 0.75, alarm * (0.6 + 0.4 * sin(now() * 4.0))))
+	_draw_void_boundary(center, sun, edge, boundary)
+	_draw_void_boundary(center, sun, deep, Color(void_color, boundary.a * 0.4))
+
+## Diagonal hatching across the disc at `center` (radius `disc`), kept only outside the
+## circle of `radius` around `sun`: where the Void is. Point pairs for draw_multiline.
+static func void_hatching(center: Vector2, disc: float, sun: Vector2, radius: float, spacing: float, phase: float) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	# The whole disc inside the system: nothing to hatch
+	if center.distance_to(sun) + disc <= radius:
+		return points
+	var direction := Vector2.from_angle(PI / 4.0)
+	var normal := direction.orthogonal()
+	var offset := -disc + phase
+	while offset <= disc:
+		# The chord of this diagonal inside the disc, then the parts of it past the edge
+		var half := sqrt(maxf(disc * disc - offset * offset, 0.0))
+		if half > 0.5:
+			var start := center + normal * offset - direction * half
+			_append_outside_circle(points, start, direction, half * 2.0, sun, radius)
+		offset += spacing
+	return points
+
+## The parts of start -> start + direction * length outside the circle, as point pairs
+## (the same clip SystemMap uses for the chart's hatching).
+static func _append_outside_circle(points: PackedVector2Array, start: Vector2, direction: Vector2, length: float, center: Vector2, radius: float) -> void:
+	var to_center := start - center
+	var b := to_center.dot(direction)
+	var discriminant := b * b - (to_center.length_squared() - radius * radius)
+	if discriminant <= 0.0:
+		if to_center.length() > radius:
+			points.append(start)
+			points.append(start + direction * length)
+		return
+	var root := sqrt(discriminant)
+	var t_in := clampf(-b - root, 0.0, length)
+	var t_out := clampf(-b + root, 0.0, length)
+	if t_in > 0.5:
+		points.append(start)
+		points.append(start + direction * t_in)
+	if t_out < length - 0.5:
+		points.append(start + direction * t_out)
+		points.append(start + direction * length)
+
+## The stretch of a Void boundary circle that crosses the disc.
+func _draw_void_boundary(center: Vector2, sun: Vector2, radius: float, color: Color) -> void:
+	var d := center.distance_to(sun)
+	if d <= 0.0 or absf(d - radius) >= display_radius:
+		return
+	var cos_half := clampf((d * d + radius * radius - display_radius * display_radius) / (2.0 * d * radius), -1.0, 1.0)
+	var half := acos(cos_half)
+	var mid := (center - sun).angle()
+	var points := PackedVector2Array()
+	for i in 25:
+		points.append(sun + Vector2.from_angle(mid - half + 2.0 * half * i / 24.0) * radius)
+	draw_polyline(points, color, 1.0, true)
+
+## A world position on the minimap's plane, however far off the disc it falls.
+func _to_minimap_unclamped(center: Vector2, world_pos: Vector2, ship_rotation: float) -> Vector2:
+	var relative_pos := world_pos - ship.global_position
+	if rotate_with_ship:
+		relative_pos = relative_pos.rotated(-ship_rotation - PI / 2)
+	return center + relative_pos / world_range * display_radius
 
 func _draw_cardinal_indicators(center: Vector2) -> void:
 	var indicator_distance = display_radius + 8

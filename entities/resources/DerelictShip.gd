@@ -7,6 +7,9 @@ class_name DerelictShip
 ## decides how much of that share survives, so all-PERFECT salvage recovers 100%.
 ## The hull itself is always worth something: the final hit adds a normal scrap break
 ## on top, and a ship abandoned with an empty hold salvages like ordinary scrap. Not pooled: lives in the world until broken, and is saved with the game.
+## Abandoned with Freight clamped, it keeps the load on its nose (docs/adr/0012), damps
+## to a full stop instead of a slow drift, and is marked on the Chart with what it holds.
+## Breaking it frees the Freight, parked beside the wreck.
 
 const HITS := 5
 const COLLISION_RADIUS := 12.0
@@ -33,13 +36,20 @@ var _armed := false             # harvestable once the player has respawned
 ## Belongs to the encounter field, which rebuilds it from the seed. Saving it too would
 ## leave a copy behind on every load.
 var transient := false
+## Freight left clamped to this hull, or null.
+var freight: Freight = null
+var _tracking: NodeTrackingTarget
 
 ## Leave `ship` adrift with its hold aboard (a bare hull if the hold is empty).
+## A load on the nose stays on it, and the hull becomes the tracked target.
 static func abandon(ship: Ship) -> DerelictShip:
 	var items := HoldCashIn.launch_order(InventoryManager.get_all_items())
 	var hits := HITS if not items.is_empty() else ScrapNode.NORMAL_HITS
-	return spawn(ship.get_parent(), ship.ship_polygon, items, ship.global_position,
+	var derelict := spawn(ship.get_parent(), ship.ship_polygon, items, ship.global_position,
 		ship.linear_velocity, ship.rotation, randf_range(-MAX_SPIN, MAX_SPIN), hits, false)
+	if ship.is_carrying():
+		derelict.hold_freight(ship.hand_freight_to(derelict))
+	return derelict
 
 ## `armed` false keeps it out of harvest range detection until the player respawns.
 static func spawn(world: Node, hull: Node2D, gems: Array[String], pos: Vector2, velocity: Vector2,
@@ -74,6 +84,7 @@ static func snapshot_all(tree: SceneTree) -> Array:
 				"vx": d.drift.x, "vy": d.drift.y,
 				"rot": d.rotation, "spin": d.spin,
 				"hits": d.hits_left, "loot": Array(d.loot), "hull_only": d.hull_only,
+				"freight": d.freight.to_row() if d.is_holding_freight() else {},
 			})
 	return rows
 
@@ -90,9 +101,55 @@ static func restore_all(world: Node, hull: Node2D, rows: Array) -> void:
 			row.get("spin", 0.0), int(row.get("hits", HITS)))
 		# A loaded derelict whose hold ran dry mid-salvage still has hits left, not scrap drops
 		d.hull_only = bool(row.get("hull_only", false))
+		var load_row = row.get("freight", {})
+		if load_row is Dictionary and not load_row.is_empty():
+			var f := Freight.from_row(world, load_row)
+			f.process_mode = Node.PROCESS_MODE_DISABLED
+			d.hold_freight(f, false)
 
 ## Gems released by one hit: an even share of what's aboard (everything on the last
 ## hit), thinned by the grade. Removes the whole share from `gems`.
+func is_holding_freight() -> bool:
+	return freight != null and is_instance_valid(freight) and freight.get_parent() == self
+
+## Keep `f` clamped where it is, out of physics. `track` makes this hull the tracked
+## target, as abandoning it does.
+func hold_freight(f: Freight, track := true) -> void:
+	if f == null:
+		return
+	freight = f
+	f.handled = true
+	if f.get_parent() != self:
+		f.reparent(self, true)
+	if track:
+		NavSystem.track(tracking_target())
+
+## What the Chart calls this hull: what it holds.
+func chart_label() -> String:
+	return "HULL / %s" % freight.label if is_holding_freight() else "HULL"
+
+func tracking_target() -> NodeTrackingTarget:
+	if _tracking == null:
+		_tracking = NodeTrackingTarget.new(self, chart_label(), 80.0)
+	return _tracking
+
+## Broken up: the Freight comes loose, parked beside the wreck, marked and tracked, like
+## any piece the ship lets go of.
+func free_freight() -> Freight:
+	if not is_holding_freight():
+		return null
+	var f := freight
+	freight = null
+	f.reparent(get_parent(), true)
+	f.process_mode = Node.PROCESS_MODE_INHERIT
+	f.linear_velocity = Vector2.ZERO
+	f.angular_velocity = 0.0
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if ship:
+		f.part_from(ship, 1.0)
+	NavSystem.track(f.tracking_target())
+	return f
+
 static func take_share(gems: Array[String], hits_left_after: int, grade: HarvestTiming.Grade, rng: RandomNumberGenerator) -> Array[String]:
 	var count := gems.size() if hits_left_after <= 0 else ceili(gems.size() / float(hits_left_after + 1))
 	var share: Array[String] = []
@@ -107,6 +164,7 @@ func _ready() -> void:
 	amount = 1
 	max_amount = 1
 	returned_to_pool.connect(queue_free)
+	resource_depleted.connect(free_freight)
 	if not EventBus.ship_respawned.is_connected(_arm):
 		EventBus.ship_respawned.connect(_arm)
 
@@ -155,14 +213,24 @@ func get_orbital_velocity() -> Vector2:
 	return drift + super.get_orbital_velocity()
 
 func _physics_process(delta: float) -> void:
-	var slow := drift.limit_length(RESIDUAL_DRIFT)
-	drift = slow + (drift - slow) * exp(-DRIFT_DAMPING * delta)
+	drift = damped_drift(drift, delta, is_holding_freight())
+	if is_holding_freight():
+		spin *= exp(-DRIFT_DAMPING * delta)
 	global_position += drift * delta
 	rotation += spin * delta
 	# Keep the player's own (pinned) ship from salvaging it before respawning.
 	if not _armed:
 		monitorable = false
 	super._physics_process(delta)
+
+## One step of the drift bleeding off: down to a slow residual drift, or - holding
+## Freight, which must never wander off - to a full stop.
+static func damped_drift(v: Vector2, delta: float, holding: bool) -> Vector2:
+	var slow := v.limit_length(0.0 if holding else RESIDUAL_DRIFT)
+	var out := slow + (v - slow) * exp(-DRIFT_DAMPING * delta)
+	if holding and out.length() < 0.5:
+		return Vector2.ZERO
+	return out
 
 func _load_shape() -> void:
 	var circle := CircleShape2D.new()

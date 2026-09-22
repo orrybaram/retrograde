@@ -75,6 +75,28 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 	print("Ship spawned at dock: ", dockable.name, " position: ", spawn_pos)
 	spawn_complete.emit()
 
+## Put the ship back in open flight at `pos`, turned to `rot`, moving at `velocity`:
+## a save made away from any dock (with Freight clamped, which no dock takes).
+func spawn_in_flight(pos: Vector2, rot: float, velocity: Vector2) -> void:
+	if not ship or not is_instance_valid(ship):
+		push_error("ShipSpawner: No valid ship reference")
+		return
+	await get_tree().process_frame
+	if not is_instance_valid(ship):
+		return
+	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
+	if state_machine and state_machine.has_state("FlyingState"):
+		state_machine.change_state("FlyingState")
+	var rid := ship.get_rid()
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rot, pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, velocity)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_position = pos
+	ship.rotation = rot
+	ship.linear_velocity = velocity
+	ship.angular_velocity = 0.0
+	spawn_complete.emit()
+
 ## Find the default dock for new games.
 ## Priority: SpaceStation > SpacePort > First dockable
 func find_default_dock() -> Node2D:

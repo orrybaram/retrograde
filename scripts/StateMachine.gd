@@ -9,6 +9,9 @@ signal state_changed(from_state: State, to_state: State)
 ## The currently active state
 var current_state: State = null
 
+## The state being changed to, while the current one exits (null otherwise)
+var next_state: State = null
+
 ## Dictionary mapping state names to State nodes
 var states: Dictionary = {}
 
@@ -57,8 +60,10 @@ func change_state(state_name: String) -> void:
 	var new_state: State = states[state_name]
 	
 	# Exit current state
+	next_state = new_state
 	if current_state:
 		current_state.exit()
+	next_state = null
 	
 	# Store old state for signal
 	var old_state = current_state

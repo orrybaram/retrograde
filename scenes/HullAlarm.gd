@@ -36,6 +36,7 @@ var _hit: float = 0.0
 
 func _ready() -> void:
 	add_to_group("hull_alarm")
+	add_to_group("screen_effects")
 	layer = LAYER
 	# Menus pause the tree; the overlay still has to ease itself out of the way.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -92,6 +93,13 @@ func _process(delta: float) -> void:
 	_material.set_shader_parameter("alarm", _alarm)
 	_material.set_shader_parameter("hit", _hit)
 	_material.set_shader_parameter("pulse", _pulse())
+
+## Gone at once, not eased out: a relaunch or a load boots onto a clean screen.
+func clear_now() -> void:
+	_level = LowHullEffect.Level.OK
+	_alarm = 0.0
+	_hit = 0.0
+	visible = false
 
 func _ease(current: float, target: float, delta: float) -> float:
 	var speed := RISE_SPEED if target > current else FALL_SPEED

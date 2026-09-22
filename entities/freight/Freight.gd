@@ -3,7 +3,8 @@ class_name Freight
 
 ## Something too big for the hold (docs/adr/0012): clamped rigidly to the ship's nose at
 ## its one Lug and pushed home ahead of it. Let go, it coasts on as the ship was moving -
-## same velocity, same heading, plus a slow drift off the nose - and gravity never bends its path. While
+## same velocity, same heading, plus a slow drift off the nose, losing only a trace of speed
+## to DRAG - and gravity never bends its path. While
 ## clamped it is not a body of its own: Ship.clamp_freight folds its mass, inertia and
 ## outline into the ship's, and Ship.release_freight hands them back.
 ## Holding `action` with the nose this close to the Lug (px) starts the magnet. Angle and
@@ -18,9 +19,21 @@ const MAGNET_SPIN := 4.0     # rad/s
 ## Close enough to its pose to clamp.
 const SEAT_DISTANCE := 3.0
 const SEAT_ANGLE := 0.08
+## Loose Freight bleeds off speed at this rate (per second): a trace of drag, far too
+## little to notice on an ordinary release, but enough that a piece let go of after a
+## long boost slows below the ship's cruise speed in time and can be caught again.
+const DRAG := 0.001
 ## Bumping into a loose piece only hurts the hull above this closing speed (px/s); the
 ## ship's ordinary knock threshold is far lower. Nudging Freight around is expected.
 const KNOCK_DAMAGE_SPEED := 250.0
+## The Void cannot take Freight: loose, it is stopped this far (px) inside VoidZone.EDGE_RADIUS.
+const VOID_MARGIN := 8.0
+const _VOID := preload("res://scripts/VoidZone.gd")
+const VOID_STOP_RADIUS := _VOID.EDGE_RADIUS - VOID_MARGIN
+## A load still clamped when the Void takes the ship turns up this far inside the edge
+## (px; 1 km on the HUD's readout), on the same bearing from the sun.
+const VOID_RETURN_DISTANCE := 1000.0
+const VOID_RETURN_RADIUS := _VOID.EDGE_RADIUS - VOID_RETURN_DISTANCE
 
 ## A test piece: a long mast-like bar with its Lug on one end.
 const TEST_OUTLINE := [
@@ -39,7 +52,12 @@ const LUG_GLOW_TIME := 0.6
 ## How long the whole piece takes to fade from lit back to its own colours once clamped.
 const CLAMP_FLASH_TIME := 0.35
 
+## The ship has had hold of this piece. From then on it is never lost from view: let go,
+## it is marked on the Chart and tracked (docs/adr/0012). Never touched, it has no mark.
+var handled := false
+
 var _collider: CollisionPolygon2D
+var _tracking: NodeTrackingTarget
 var _visual: Node2D
 var _lug_line: Line2D
 var _body: Polygon2D
@@ -51,7 +69,7 @@ func _init() -> void:
 	mass = 3.0  # the ship's own mass, so a clamped test piece halves its acceleration
 	gravity_scale = 0.0  # nothing pulls on Freight; it goes where the ship sent it
 	linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
-	linear_damp = 0.0
+	linear_damp = DRAG
 	angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
 	angular_damp = 0.0
 	can_sleep = false
@@ -153,6 +171,130 @@ static func spawn_ahead_of(ship: Ship, gap := 6.0) -> Freight:
 	f.global_rotation = rot
 	f.linear_velocity = ship.linear_velocity
 	return f
+
+## Riding on a ship's nose.
+func is_clamped() -> bool:
+	return get_parent() is Ship
+
+## Left clamped to an abandoned hull.
+func is_aboard_derelict() -> bool:
+	return get_parent() is DerelictShip
+
+## A body of its own, out in space: the only kind the magnet can take.
+func is_loose() -> bool:
+	return not is_clamped() and not is_aboard_derelict()
+
+## Handled and let go: drawn on the Chart as the ship's own mark.
+func is_marked() -> bool:
+	return handled and is_loose()
+
+## This piece, as something to steer toward. One per piece, so NavSystem can tell it is
+## still the one being tracked.
+func tracking_target() -> NodeTrackingTarget:
+	if _tracking == null:
+		_tracking = NodeTrackingTarget.new(self, label, 60.0)
+	return _tracking
+
+## Where a clamped piece is headed: its Mount, or the Cradle. Until those exist, home.
+func destination() -> TrackingTarget:
+	return NavSystem.home_target()
+
+## Don't collide with `body` for `seconds`: they were touching when they parted.
+func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
+	add_collision_exception_with(body)
+	get_tree().create_timer(seconds).timeout.connect(func() -> void:
+		if is_instance_valid(self) and is_instance_valid(body):
+			remove_collision_exception_with(body))
+
+## The Void never draws loose Freight in: headed out, it stops at the edge.
+func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	var held := held_at_edge(state.transform.origin, state.linear_velocity, VoidZone.sun_position())
+	if held.is_empty():
+		return
+	var t := state.transform
+	t.origin = held[0]
+	state.transform = t
+	state.linear_velocity = Vector2.ZERO
+	state.angular_velocity = 0.0
+
+## Whether a loose piece at `pos` moving at `velocity` is stopped by the Void's edge:
+## [where it stops], or [] if it goes on. Headed out through the edge from inside, it
+## stops just inside it, so nothing can drift or be pushed out. Let go of somewhere past
+## the edge, it stops where it is, still headed nowhere, for the ship to come back for.
+static func held_at_edge(pos: Vector2, velocity: Vector2, sun: Vector2) -> Array:
+	var out := pos - sun
+	var d := out.length()
+	if d < VOID_STOP_RADIUS or velocity.dot(out) <= 0.0:
+		return []
+	if d > _VOID.EDGE_RADIUS:
+		return [pos]
+	return [sun + out / d * VOID_STOP_RADIUS]
+
+## Where a load still clamped when the Void takes its ship at `pos` turns up: on the same
+## bearing from the sun, VOID_RETURN_DISTANCE inside the edge.
+static func void_return_point(pos: Vector2, sun: Vector2) -> Vector2:
+	var out := pos - sun
+	return sun + (out.normalized() if out.length() > 0.0 else Vector2.RIGHT) * VOID_RETURN_RADIUS
+
+# --- saving (docs/adr/0012: saved where it is, never respawned or despawned) ---
+
+## This piece as plain data: where it is, how it is moving, and whether it is clamped.
+func to_row() -> Dictionary:
+	var v := linear_velocity
+	var ship := get_parent() as Ship
+	if ship:
+		v = ship.linear_velocity
+	return {
+		"x": global_position.x, "y": global_position.y, "rot": global_rotation,
+		"vx": v.x, "vy": v.y, "spin": angular_velocity if is_loose() else 0.0,
+		"label": label, "handled": handled, "clamped": is_clamped(),
+	}
+
+static func from_row(world: Node, row: Dictionary) -> Freight:
+	var f := Freight.new()
+	f.label = str(row.get("label", f.label))
+	f.handled = bool(row.get("handled", false))
+	world.add_child(f)
+	f.global_position = Vector2(float(row.get("x", 0.0)), float(row.get("y", 0.0)))
+	f.global_rotation = float(row.get("rot", 0.0))
+	f.linear_velocity = Vector2(float(row.get("vx", 0.0)), float(row.get("vy", 0.0)))
+	f.angular_velocity = float(row.get("spin", 0.0))
+	return f
+
+## Every piece not aboard a derelict (those are saved with their derelict), for saving.
+static func snapshot_all(tree: SceneTree) -> Array:
+	var rows := []
+	for node in tree.get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f and not f.is_aboard_derelict() and not f.is_queued_for_deletion():
+			rows.append(f.to_row())
+	return rows
+
+## Put saved pieces back into `world`. Returns the one that was clamped (not yet on any
+## ship: the caller clamps it once the ship is in place), or null.
+static func restore_all(world: Node, rows: Array) -> Freight:
+	var clamped: Freight = null
+	for row in rows:
+		if not row is Dictionary:
+			continue
+		var f := from_row(world, row)
+		if bool(row.get("clamped", false)) and clamped == null:
+			clamped = f
+			f.process_mode = Node.PROCESS_MODE_DISABLED  # waits, out of physics, for its ship
+	return clamped
+
+## Take every piece out of the world, including one on the ship's nose: a load or a new
+## game replaces them all.
+static func clear_all(tree: SceneTree) -> void:
+	for node in tree.get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f == null:
+			continue
+		var ship := f.get_parent() as Ship
+		if ship:
+			ship.discard_freight()
+		f.remove_from_group("freight")  # gone for saves this frame, not just at free
+		f.queue_free()
 
 func lug_global() -> Vector2:
 	return to_global(lug_position)
