@@ -1,0 +1,104 @@
+# Act 1, the repair of SR-7 (docs/OPENING.md §2-4). A new game docks the ship at the head
+# of the refuel boom on a station missing its FUEL TANK, SOLAR ARRAY and DORSAL ARM, with
+# the right solar wing hanging off true. The three Sections float dead out in Rook's
+# debris on one line; each is fetched, released at its own Mount and seated, and the wing
+# is pushed home with the hull. It all survives reloads.
+# Run: PLAYTEST_PORT=7793 tools/play.sh --headless playtests/restore_sr7.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+
+# --- New game: docked at the boom, three cut gaps, a hanging wing ---
+eval pt.remember("station", pt.mount("fuel_tank").get_parent())
+assert ship.global_position.distance_to(pt.recall("station").get_node("SpacePort").get_dock_position()) < 25.0 "docked at the head of the refuel boom (a frame behind the orbiting station)"
+assert not pt.mount("fuel_tank").seated and not pt.mount("solar_array").seated and not pt.mount("dorsal_arm").seated "all three Mounts empty"
+assert not pt.recall("station").get_node("Visuals/FuelTank").visible "the fuel tank is gone"
+assert not pt.nudge().seated and absf(pt.nudge().off_true()) > 0.3 "the right wing hangs off true"
+screenshot restore_1_new_game
+
+# --- The Sections are out in Rook's debris, one line, nearest-first: array, arm, tank ---
+assert pt.section("fuel_tank").lodged_in == pt.planet("Rook") "hung in Rook's frame"
+assert pt.section("fuel_tank").global_position.distance_to(pt.planet("Rook").global_position) > 2400.0 "the tank sits at the ring's inner edge"
+assert pt.section("solar_array").global_position.distance_to(pt.recall("station").global_position) < pt.section("dorsal_arm").global_position.distance_to(pt.recall("station").global_position) "the array is nearest the station"
+assert pt.section("dorsal_arm").global_position.distance_to(pt.recall("station").global_position) < pt.section("fuel_tank").global_position.distance_to(pt.recall("station").global_position) "then the arm, then the tank"
+assert pt.chart_marks().is_empty() "never touched, so never marked"
+
+# --- FUEL TANK: fetch, release at its Mount, seated ---
+hold thrust 1.0
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+eval ship.set("rotation", (-pt.section("fuel_tank").lug_facing_global()).angle())
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 0.1
+hold action 0.8
+wait 0.1
+assert pt.state_name() == "CarryingState" "the tank is clamped"
+assert get_node("/root/NavSystem").get_target().node == pt.mount("fuel_tank") "clamping it tracks its Mount"
+eval pt.stage_at_mount("fuel_tank", Vector2(15, -6), 8.0)
+frames 3
+assert pt._action_message == "RELEASE" "RELEASE at the tank's cradle"
+screenshot restore_2_tank_approach
+hold action 1.0
+assert pt.mount("fuel_tank").seated "the tank is seated"
+wait 0.7
+assert pt.recall("station").get_node("Visuals/FuelTank").visible "the tank is back"
+
+# --- SOLAR ARRAY ---
+wait 0.2
+eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
+eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
+wait 0.1
+hold action 0.8
+wait 0.1
+assert pt.state_name() == "CarryingState" "the array is clamped"
+eval pt.stage_at_mount("solar_array", Vector2(-20, 5), -10.0)
+frames 3
+assert pt._action_message == "RELEASE" "RELEASE at the keel"
+hold action 1.0
+assert pt.mount("solar_array").seated "the array is seated"
+wait 0.7
+
+# --- DORSAL ARM, lowered nose-first onto its plate ---
+wait 0.2
+eval ship.set("rotation", (-pt.section("dorsal_arm").lug_facing_global()).angle())
+eval pt.warp_to(pt.section("dorsal_arm").lug_global() + pt.section("dorsal_arm").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.section("dorsal_arm").linear_velocity)
+wait 0.1
+hold action 0.8
+wait 0.1
+assert pt.state_name() == "CarryingState" "the arm is clamped"
+eval pt.stage_at_mount("dorsal_arm", Vector2(-14, 8), 6.0)
+frames 3
+assert pt._action_message == "RELEASE" "RELEASE on the fin plate"
+hold action 1.0
+assert pt.mount("dorsal_arm").seated "the arm is seated"
+wait 0.7
+assert pt.section("fuel_tank") == null and pt.section("solar_array") == null and pt.section("dorsal_arm") == null "no Section left as Freight"
+
+# --- The hanging wing: pushed home with the hull ---
+eval pt.stage_nudge()
+wait 0.1
+eval pt.remember("off", absf(pt.nudge().off_true()))
+hold thrust 2.5
+wait_until pt.nudge().seated 3
+assert pt.nudge().seated "the wing locked true"
+wait 0.5
+assert absf(pt.nudge().off_true()) < 0.01 "and it sits true"
+screenshot restore_3_whole
+
+# --- Seated survives reload ---
+reload
+assert pt.mount("fuel_tank").seated and pt.mount("solar_array").seated and pt.mount("dorsal_arm").seated "all three still seated"
+assert pt.nudge().seated and absf(pt.nudge().off_true()) < 0.01 "the wing still true"
+assert pt.section("fuel_tank") == null and pt.section("dorsal_arm") == null "no Section comes back as Freight"
+eval pt.redock()
+wait 0.5
+assert pt.state_name() == "LandedState" "docks at the boom again"
+quit

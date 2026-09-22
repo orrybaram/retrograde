@@ -3,6 +3,8 @@
 [ext_resource type="Script" uid="uid://c6x45wnjj471j" path="res://entities/structures/SpaceStation.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="5"]
 [ext_resource type="Script" path="res://entities/structures/Mount.gd" id="6_mount"]
+[ext_resource type="Script" path="res://entities/structures/ArrayNudge.gd" id="7_nudge"]
+[ext_resource type="Script" path="res://entities/structures/CommDish.gd" id="8_dish"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
@@ -17,95 +19,1640 @@ orbital_distance = 1000.0
 orbital_speed = 64.43
 
 [node name="CollisionShape2D" type="CollisionPolygon2D" parent="." unique_id=1813966489]
-position = Vector2(56, 4)
-polygon = PackedVector2Array(182, -403, 182, -201, 145, -201, 145, -112, -6, -112, -6, -61, 55, -61, 55, 70, 65, 70, 65, 120, -6, 120, -6, 191, 1, 191, 1, 209, -113, 209, -113, 191, -106, 191, -106, 120, -175, 120, -175, 70, -165, 70, -165, -61, -106, -61, -106, -112, -255, -112, -255, -201, -294, -201, -294, -403, -456, -403, -456, -503, -420, -503, -420, -525, -387, -525, -387, -540, 270, -540, 270, -525, 310, -525, 310, -503, 342, -503, 342, -403)
+polygon = PackedVector2Array(29.4, -549, 35, -543.4, 35, -429, 41, -429, 41, -421, 169, -421, 169, -539, 193, -539, 193, -421, 330, -421, 330, -401, 391.4, -401, 398, -394.4, 398, -353.6, 389.1, -344.7, 390.7, -341, 391, -341, 391, -311, 271, -311, 271, -303, 391, -303, 391, -273, 271, -273, 271, -265, 391, -265, 391, -235, 237, -235, 237, -222.6, 233.1, -218.7, 234.7, -215, 241, -215, 241, -199, 190.7, -199, 189.1, -195.3, 197, -187.4, 197, -122.6, 191.4, -117, 23, -117, 23, -51, 111, -51, 111, 5, 125, 5, 125, -25.6, 140.7, -41.3, 139.2, -45, 121, -45, 121, -55, 183, -55, 183, -45, 162.8, -45, 161.3, -41.3, 177, -25.6, 177, 63.6, 161.3, 79.3, 162.8, 83, 187, 83, 187, 91, 341, 91, 341, 109, 125, 109, 125, 93, 117, 93, 117, 115.4, 111.4, 121, 23, 121, 23, 175, 31, 175, 31, 195, 23, 195, 23, 291, -23, 291, -23, 211, -181, 211, -181, 159, -23, 159, -23, 121, -111.4, 121, -117, 115.4, -117, 86.6, -111, 80.6, -111, 31, -125, 31, -125, 63.6, -146.4, 85, -155.6, 85, -177, 63.6, -177, -25.6, -155.6, -47, -146.4, -47, -125, -25.6, -125, 5, -111, 5, -111, -51, -23, -51, -23, -117, -191.4, -117, -197, -122.6, -197, -187.4, -189.1, -195.3, -190.7, -199, -241, -199, -241, -215, -234.7, -215, -233.1, -218.7, -237, -222.6, -237, -235, -391, -235, -391, -265, -271, -265, -271, -273, -391, -273, -391, -303, -271, -303, -271, -311, -391, -311, -391, -341, -390.7, -341, -389.1, -344.7, -398, -353.6, -398, -394.4, -391.4, -401, -330, -401, -330, -421, -193, -421, -193, -539, -169, -539, -169, -421, -41, -421, -41, -429, -35, -429, -35, -543.4, -29.4, -549)
 
 [node name="Visuals" type="Node2D" parent="." unique_id=1837500441]
 z_index = 1
 material = SubResource("CanvasItemMaterial_1")
 
-[node name="Tower2" type="Polygon2D" parent="Visuals" unique_id=630651126]
+[node name="Mast1" type="Polygon2D" parent="Visuals"]
 color = Color(0.184, 0.173, 0.145, 1)
-polygon = PackedVector2Array(-311, -598, -290, -598, -290, -515, -311, -515)
+polygon = PackedVector2Array(-192, -538, -170, -538, -170, -422, -192, -422)
 
-[node name="ExtraModule3" type="Polygon2D" parent="Visuals" unique_id=1865401052]
-color = Color(0.353, 0.333, 0.278, 1)
-polygon = PackedVector2Array(-331, -536, 326, -536, 326, -513, -331, -513)
+[node name="D0" type="Line2D" parent="Visuals/Mast1"]
+points = PackedVector2Array(-190, -538, -172, -514.8)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
 
-[node name="Tower4" type="Polygon2D" parent="Visuals" unique_id=1097602942]
+[node name="D1" type="Line2D" parent="Visuals/Mast1"]
+points = PackedVector2Array(-190, -514.8, -172, -491.6)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D2" type="Line2D" parent="Visuals/Mast1"]
+points = PackedVector2Array(-190, -491.6, -172, -468.4)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D3" type="Line2D" parent="Visuals/Mast1"]
+points = PackedVector2Array(-190, -468.4, -172, -445.2)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D4" type="Line2D" parent="Visuals/Mast1"]
+points = PackedVector2Array(-190, -445.2, -172, -422)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D5" type="Polygon2D" parent="Visuals/Mast1"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(-194, -538, -168, -538, -168, -535, -194, -535)
+
+[node name="D6" type="Polygon2D" parent="Visuals/Mast1"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(-194, -425, -168, -425, -168, -422, -194, -422)
+
+[node name="D7" type="Polygon2D" parent="Visuals/Mast1"]
+color = Color(0.58, 0.545, 0.451, 0.9)
+polygon = PackedVector2Array(-172, -530, -172.69, -526.56, -174.64, -523.64, -177.56, -521.69, -181, -521, -184.44, -521.69, -187.36, -523.64, -189.31, -526.56, -190, -530, -189.31, -533.44, -187.36, -536.36, -184.44, -538.31, -181, -539, -177.56, -538.31, -174.64, -536.36, -172.69, -533.44)
+
+[node name="D8" type="Polygon2D" parent="Visuals/Mast1"]
 color = Color(0.184, 0.173, 0.145, 1)
-polygon = PackedVector2Array(284, -698, 302, -698, 302, -489, 284, -489)
+polygon = PackedVector2Array(-177.85, -530, -178.45, -528.15, -180.03, -527, -181.97, -527, -183.55, -528.15, -184.15, -530, -183.55, -531.85, -181.97, -533, -180.03, -533, -178.45, -531.85)
 
-[node name="Tower1" type="Polygon2D" parent="Visuals" unique_id=938997562]
+[node name="Mast2" type="Polygon2D" parent="Visuals"]
 color = Color(0.184, 0.173, 0.145, 1)
-polygon = PackedVector2Array(-50, -406, 50, -406, 50, 211, -50, 211)
+polygon = PackedVector2Array(170, -538, 192, -538, 192, -422, 170, -422)
 
-[node name="SmallModule3" type="Polygon2D" parent="Visuals" unique_id=1890118020]
+[node name="D0" type="Line2D" parent="Visuals/Mast2"]
+points = PackedVector2Array(172, -538, 190, -514.8)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D1" type="Line2D" parent="Visuals/Mast2"]
+points = PackedVector2Array(172, -514.8, 190, -491.6)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D2" type="Line2D" parent="Visuals/Mast2"]
+points = PackedVector2Array(172, -491.6, 190, -468.4)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D3" type="Line2D" parent="Visuals/Mast2"]
+points = PackedVector2Array(172, -468.4, 190, -445.2)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D4" type="Line2D" parent="Visuals/Mast2"]
+points = PackedVector2Array(172, -445.2, 190, -422)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D5" type="Polygon2D" parent="Visuals/Mast2"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(168, -538, 194, -538, 194, -535, 168, -535)
+
+[node name="D6" type="Polygon2D" parent="Visuals/Mast2"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(168, -425, 194, -425, 194, -422, 168, -422)
+
+[node name="D7" type="Polygon2D" parent="Visuals/Mast2"]
+color = Color(0.58, 0.545, 0.451, 0.9)
+polygon = PackedVector2Array(190, -530, 189.31, -526.56, 187.36, -523.64, 184.44, -521.69, 181, -521, 177.56, -521.69, 174.64, -523.64, 172.69, -526.56, 172, -530, 172.69, -533.44, 174.64, -536.36, 177.56, -538.31, 181, -539, 184.44, -538.31, 187.36, -536.36, 189.31, -533.44)
+
+[node name="D8" type="Polygon2D" parent="Visuals/Mast2"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(184.15, -530, 183.55, -528.15, 181.97, -527, 180.03, -527, 178.45, -528.15, 177.85, -530, 178.45, -531.85, 180.03, -533, 181.97, -533, 183.55, -531.85)
+
+[node name="Container1" type="Polygon2D" parent="Visuals"]
 color = Color(0.29, 0.275, 0.231, 1)
-polygon = PackedVector2Array(-364, -521, 366, -521, 366, -471, -364, -471)
+polygon = PackedVector2Array(-329, -420, -221, -420, -221, -402, -329, -402)
 
-[node name="CentralHub" type="Polygon2D" parent="Visuals" unique_id=421597117]
-color = Color(0.263, 0.251, 0.208, 1)
-polygon = PackedVector2Array(-199, -198, 201, -198, 201, -108, -199, -108)
+[node name="D0" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-321.8, -419, -321.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
 
-[node name="CentralCore" type="Polygon2D" parent="Visuals" unique_id=1630805651]
+[node name="D1" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-314.6, -419, -314.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D2" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-307.4, -419, -307.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D3" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-300.2, -419, -300.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D4" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-293, -419, -293, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D5" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-285.8, -419, -285.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D6" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-278.6, -419, -278.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D7" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-271.4, -419, -271.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D8" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-264.2, -419, -264.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D9" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-257, -419, -257, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D10" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-249.8, -419, -249.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D11" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-242.6, -419, -242.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D12" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-235.4, -419, -235.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D13" type="Line2D" parent="Visuals/Container1"]
+points = PackedVector2Array(-228.2, -419, -228.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D14" type="Polygon2D" parent="Visuals/Container1"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(-329, -420, -326, -420, -326, -417, -329, -417)
+
+[node name="D15" type="Polygon2D" parent="Visuals/Container1"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(-224, -405, -221, -405, -221, -402, -224, -402)
+
+[node name="Container2" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-219, -420, -111, -420, -111, -402, -219, -402)
+
+[node name="D0" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-211.8, -419, -211.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D1" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-204.6, -419, -204.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D2" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-197.4, -419, -197.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D3" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-190.2, -419, -190.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D4" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-183, -419, -183, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D5" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-175.8, -419, -175.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D6" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-168.6, -419, -168.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D7" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-161.4, -419, -161.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D8" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-154.2, -419, -154.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D9" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-147, -419, -147, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D10" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-139.8, -419, -139.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D11" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-132.6, -419, -132.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D12" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-125.4, -419, -125.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D13" type="Line2D" parent="Visuals/Container2"]
+points = PackedVector2Array(-118.2, -419, -118.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D14" type="Polygon2D" parent="Visuals/Container2"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(-219, -420, -216, -420, -216, -417, -219, -417)
+
+[node name="D15" type="Polygon2D" parent="Visuals/Container2"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(-114, -405, -111, -405, -111, -402, -114, -402)
+
+[node name="Container3" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-109, -420, -1, -420, -1, -402, -109, -402)
+
+[node name="D0" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-101.8, -419, -101.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D1" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-94.6, -419, -94.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D2" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-87.4, -419, -87.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D3" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-80.2, -419, -80.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D4" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-73, -419, -73, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D5" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-65.8, -419, -65.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D6" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-58.6, -419, -58.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D7" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-51.4, -419, -51.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D8" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-44.2, -419, -44.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D9" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-37, -419, -37, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D10" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-29.8, -419, -29.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D11" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-22.6, -419, -22.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D12" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-15.4, -419, -15.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D13" type="Line2D" parent="Visuals/Container3"]
+points = PackedVector2Array(-8.2, -419, -8.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D14" type="Polygon2D" parent="Visuals/Container3"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(-109, -420, -106, -420, -106, -417, -109, -417)
+
+[node name="D15" type="Polygon2D" parent="Visuals/Container3"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(-4, -405, -1, -405, -1, -402, -4, -402)
+
+[node name="Container4" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(1, -420, 109, -420, 109, -402, 1, -402)
+
+[node name="D0" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(8.2, -419, 8.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D1" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(15.4, -419, 15.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D2" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(22.6, -419, 22.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D3" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(29.8, -419, 29.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D4" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(37, -419, 37, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D5" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(44.2, -419, 44.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D6" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(51.4, -419, 51.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D7" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(58.6, -419, 58.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D8" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(65.8, -419, 65.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D9" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(73, -419, 73, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D10" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(80.2, -419, 80.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D11" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(87.4, -419, 87.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D12" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(94.6, -419, 94.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D13" type="Line2D" parent="Visuals/Container4"]
+points = PackedVector2Array(101.8, -419, 101.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D14" type="Polygon2D" parent="Visuals/Container4"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(1, -420, 4, -420, 4, -417, 1, -417)
+
+[node name="D15" type="Polygon2D" parent="Visuals/Container4"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(106, -405, 109, -405, 109, -402, 106, -402)
+
+[node name="Container5" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(111, -420, 219, -420, 219, -402, 111, -402)
+
+[node name="D0" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(118.2, -419, 118.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D1" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(125.4, -419, 125.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D2" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(132.6, -419, 132.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D3" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(139.8, -419, 139.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D4" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(147, -419, 147, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D5" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(154.2, -419, 154.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D6" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(161.4, -419, 161.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D7" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(168.6, -419, 168.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D8" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(175.8, -419, 175.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D9" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(183, -419, 183, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D10" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(190.2, -419, 190.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D11" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(197.4, -419, 197.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D12" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(204.6, -419, 204.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D13" type="Line2D" parent="Visuals/Container5"]
+points = PackedVector2Array(211.8, -419, 211.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D14" type="Polygon2D" parent="Visuals/Container5"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(111, -420, 114, -420, 114, -417, 111, -417)
+
+[node name="D15" type="Polygon2D" parent="Visuals/Container5"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(216, -405, 219, -405, 219, -402, 216, -402)
+
+[node name="Container6" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(221, -420, 329, -420, 329, -402, 221, -402)
+
+[node name="D0" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(228.2, -419, 228.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D1" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(235.4, -419, 235.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D2" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(242.6, -419, 242.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D3" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(249.8, -419, 249.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D4" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(257, -419, 257, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D5" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(264.2, -419, 264.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D6" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(271.4, -419, 271.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D7" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(278.6, -419, 278.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D8" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(285.8, -419, 285.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D9" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(293, -419, 293, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D10" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(300.2, -419, 300.2, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D11" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(307.4, -419, 307.4, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D12" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(314.6, -419, 314.6, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D13" type="Line2D" parent="Visuals/Container6"]
+points = PackedVector2Array(321.8, -419, 321.8, -403)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.7)
+
+[node name="D14" type="Polygon2D" parent="Visuals/Container6"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(221, -420, 224, -420, 224, -417, 221, -417)
+
+[node name="D15" type="Polygon2D" parent="Visuals/Container6"]
+color = Color(0.58, 0.545, 0.451, 0.7)
+polygon = PackedVector2Array(326, -405, 329, -405, 329, -402, 326, -402)
+
+[node name="FinPlate" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-40, -428, 40, -428, 40, -420, -40, -420)
+
+[node name="RingPod1" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-391, -400, -309, -400, -303, -394, -303, -354, -309, -348, -391, -348, -397, -354, -397, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod1"]
+points = PackedVector2Array(-388, -374, -312, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod1"]
+points = PackedVector2Array(-397, -394, -303, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Polygon2D" parent="Visuals/RingPod1"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-303, -382, -297, -382, -297, -366, -303, -366)
+
+[node name="RingPod2" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-291, -400, -209, -400, -203, -394, -203, -354, -209, -348, -291, -348, -297, -354, -297, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod2"]
+points = PackedVector2Array(-288, -374, -212, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod2"]
+points = PackedVector2Array(-297, -394, -203, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Polygon2D" parent="Visuals/RingPod2"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-203, -382, -197, -382, -197, -366, -203, -366)
+
+[node name="RingPod3" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-191, -400, -109, -400, -103, -394, -103, -354, -109, -348, -191, -348, -197, -354, -197, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod3"]
+points = PackedVector2Array(-188, -374, -112, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod3"]
+points = PackedVector2Array(-197, -394, -103, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Polygon2D" parent="Visuals/RingPod3"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-103, -382, -97, -382, -97, -366, -103, -366)
+
+[node name="RingPod4" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-91, -400, -9, -400, -3, -394, -3, -354, -9, -348, -91, -348, -97, -354, -97, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod4"]
+points = PackedVector2Array(-88, -374, -12, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod4"]
+points = PackedVector2Array(-97, -394, -3, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Polygon2D" parent="Visuals/RingPod4"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-3, -382, 3, -382, 3, -366, -3, -366)
+
+[node name="RingPod5" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(9, -400, 91, -400, 97, -394, 97, -354, 91, -348, 9, -348, 3, -354, 3, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod5"]
+points = PackedVector2Array(12, -374, 88, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod5"]
+points = PackedVector2Array(3, -394, 97, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Polygon2D" parent="Visuals/RingPod5"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(97, -382, 103, -382, 103, -366, 97, -366)
+
+[node name="RingPod6" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(109, -400, 191, -400, 197, -394, 197, -354, 191, -348, 109, -348, 103, -354, 103, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod6"]
+points = PackedVector2Array(112, -374, 188, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod6"]
+points = PackedVector2Array(103, -394, 197, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Polygon2D" parent="Visuals/RingPod6"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(197, -382, 203, -382, 203, -366, 197, -366)
+
+[node name="RingPod7" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(209, -400, 291, -400, 297, -394, 297, -354, 291, -348, 209, -348, 203, -354, 203, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod7"]
+points = PackedVector2Array(212, -374, 288, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod7"]
+points = PackedVector2Array(203, -394, 297, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Polygon2D" parent="Visuals/RingPod7"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(297, -382, 303, -382, 303, -366, 297, -366)
+
+[node name="RingPod8" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(309, -400, 391, -400, 397, -394, 397, -354, 391, -348, 309, -348, 303, -354, 303, -394)
+
+[node name="D0" type="Line2D" parent="Visuals/RingPod8"]
+points = PackedVector2Array(312, -374, 388, -374)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.45)
+
+[node name="D1" type="Line2D" parent="Visuals/RingPod8"]
+points = PackedVector2Array(303, -394, 397, -394)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="ModuleL" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-231, -342, -65, -342, -60, -337, -60, -223, -65, -218, -231, -218, -236, -223, -236, -337)
+
+[node name="D0" type="Polygon2D" parent="Visuals/ModuleL"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-240, -317.2, -236, -317.2, -236, -242.8, -240, -242.8)
+
+[node name="D1" type="Polygon2D" parent="Visuals/ModuleL"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-60, -317.2, -56, -317.2, -56, -242.8, -60, -242.8)
+
+[node name="D2" type="Line2D" parent="Visuals/ModuleL"]
+points = PackedVector2Array(-192, -339, -192, -221)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D3" type="Line2D" parent="Visuals/ModuleL"]
+points = PackedVector2Array(-148, -339, -148, -221)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/ModuleL"]
+points = PackedVector2Array(-104, -339, -104, -221)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="ModuleC" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-45, -338, 45, -338, 50, -333, 50, -223, 45, -218, -45, -218, -50, -223, -50, -333)
+
+[node name="D0" type="Polygon2D" parent="Visuals/ModuleC"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-30, -342, 30, -342, 30, -338, -30, -338)
+
+[node name="D1" type="Polygon2D" parent="Visuals/ModuleC"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-30, -218, 30, -218, 30, -214, -30, -214)
+
+[node name="D2" type="Line2D" parent="Visuals/ModuleC"]
+points = PackedVector2Array(-47, -308, 47, -308)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D3" type="Line2D" parent="Visuals/ModuleC"]
+points = PackedVector2Array(-47, -278, 47, -278)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/ModuleC"]
+points = PackedVector2Array(-47, -248, 47, -248)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="ModuleR" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(65, -342, 231, -342, 236, -337, 236, -223, 231, -218, 65, -218, 60, -223, 60, -337)
+
+[node name="D0" type="Polygon2D" parent="Visuals/ModuleR"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(56, -317.2, 60, -317.2, 60, -242.8, 56, -242.8)
+
+[node name="D1" type="Polygon2D" parent="Visuals/ModuleR"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(236, -317.2, 240, -317.2, 240, -242.8, 236, -242.8)
+
+[node name="D2" type="Line2D" parent="Visuals/ModuleR"]
+points = PackedVector2Array(104, -339, 104, -221)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D3" type="Line2D" parent="Visuals/ModuleR"]
+points = PackedVector2Array(148, -339, 148, -221)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/ModuleR"]
+points = PackedVector2Array(192, -339, 192, -221)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="BlockPlate" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-240, -214, 240, -214, 240, -200, -240, -200)
+
+[node name="BlockCap" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-60, -348, 60, -348, 60, -340, -60, -340)
+
+[node name="RadiatorL1" type="Polygon2D" parent="Visuals"]
+color = Color(0.58, 0.545, 0.451, 0.85)
+polygon = PackedVector2Array(-390, -340, -270, -340, -270, -312, -390, -312)
+
+[node name="D0" type="Line2D" parent="Visuals/RadiatorL1"]
+points = PackedVector2Array(-370, -340, -370, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D1" type="Line2D" parent="Visuals/RadiatorL1"]
+points = PackedVector2Array(-350, -340, -350, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D2" type="Line2D" parent="Visuals/RadiatorL1"]
+points = PackedVector2Array(-330, -340, -330, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D3" type="Line2D" parent="Visuals/RadiatorL1"]
+points = PackedVector2Array(-310, -340, -310, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D4" type="Line2D" parent="Visuals/RadiatorL1"]
+points = PackedVector2Array(-290, -340, -290, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="RadiatorL2" type="Polygon2D" parent="Visuals"]
+color = Color(0.58, 0.545, 0.451, 0.85)
+polygon = PackedVector2Array(-390, -302, -270, -302, -270, -274, -390, -274)
+
+[node name="D0" type="Line2D" parent="Visuals/RadiatorL2"]
+points = PackedVector2Array(-370, -302, -370, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D1" type="Line2D" parent="Visuals/RadiatorL2"]
+points = PackedVector2Array(-350, -302, -350, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D2" type="Line2D" parent="Visuals/RadiatorL2"]
+points = PackedVector2Array(-330, -302, -330, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D3" type="Line2D" parent="Visuals/RadiatorL2"]
+points = PackedVector2Array(-310, -302, -310, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D4" type="Line2D" parent="Visuals/RadiatorL2"]
+points = PackedVector2Array(-290, -302, -290, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="RadiatorL3" type="Polygon2D" parent="Visuals"]
+color = Color(0.58, 0.545, 0.451, 0.85)
+polygon = PackedVector2Array(-390, -264, -270, -264, -270, -236, -390, -236)
+
+[node name="D0" type="Line2D" parent="Visuals/RadiatorL3"]
+points = PackedVector2Array(-370, -264, -370, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D1" type="Line2D" parent="Visuals/RadiatorL3"]
+points = PackedVector2Array(-350, -264, -350, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D2" type="Line2D" parent="Visuals/RadiatorL3"]
+points = PackedVector2Array(-330, -264, -330, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D3" type="Line2D" parent="Visuals/RadiatorL3"]
+points = PackedVector2Array(-310, -264, -310, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D4" type="Line2D" parent="Visuals/RadiatorL3"]
+points = PackedVector2Array(-290, -264, -290, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="RadiatorMountL" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-270, -340, -240, -340, -240, -236, -270, -236)
+
+[node name="RadiatorR1" type="Polygon2D" parent="Visuals"]
+color = Color(0.58, 0.545, 0.451, 0.85)
+polygon = PackedVector2Array(270, -340, 390, -340, 390, -312, 270, -312)
+
+[node name="D0" type="Line2D" parent="Visuals/RadiatorR1"]
+points = PackedVector2Array(290, -340, 290, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D1" type="Line2D" parent="Visuals/RadiatorR1"]
+points = PackedVector2Array(310, -340, 310, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D2" type="Line2D" parent="Visuals/RadiatorR1"]
+points = PackedVector2Array(330, -340, 330, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D3" type="Line2D" parent="Visuals/RadiatorR1"]
+points = PackedVector2Array(350, -340, 350, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D4" type="Line2D" parent="Visuals/RadiatorR1"]
+points = PackedVector2Array(370, -340, 370, -312)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="RadiatorR2" type="Polygon2D" parent="Visuals"]
+color = Color(0.58, 0.545, 0.451, 0.85)
+polygon = PackedVector2Array(270, -302, 390, -302, 390, -274, 270, -274)
+
+[node name="D0" type="Line2D" parent="Visuals/RadiatorR2"]
+points = PackedVector2Array(290, -302, 290, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D1" type="Line2D" parent="Visuals/RadiatorR2"]
+points = PackedVector2Array(310, -302, 310, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D2" type="Line2D" parent="Visuals/RadiatorR2"]
+points = PackedVector2Array(330, -302, 330, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D3" type="Line2D" parent="Visuals/RadiatorR2"]
+points = PackedVector2Array(350, -302, 350, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D4" type="Line2D" parent="Visuals/RadiatorR2"]
+points = PackedVector2Array(370, -302, 370, -274)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="RadiatorR3" type="Polygon2D" parent="Visuals"]
+color = Color(0.58, 0.545, 0.451, 0.85)
+polygon = PackedVector2Array(270, -264, 390, -264, 390, -236, 270, -236)
+
+[node name="D0" type="Line2D" parent="Visuals/RadiatorR3"]
+points = PackedVector2Array(290, -264, 290, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D1" type="Line2D" parent="Visuals/RadiatorR3"]
+points = PackedVector2Array(310, -264, 310, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D2" type="Line2D" parent="Visuals/RadiatorR3"]
+points = PackedVector2Array(330, -264, 330, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D3" type="Line2D" parent="Visuals/RadiatorR3"]
+points = PackedVector2Array(350, -264, 350, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="D4" type="Line2D" parent="Visuals/RadiatorR3"]
+points = PackedVector2Array(370, -264, 370, -236)
+width = 1
+default_color = Color(0.184, 0.173, 0.145, 0.6)
+
+[node name="RadiatorMountR" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(240, -340, 270, -340, 270, -236, 240, -236)
+
+[node name="CentralHub" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-191, -192, 191, -192, 196, -187, 196, -123, 191, -118, -191, -118, -196, -123, -196, -187)
+
+[node name="D0" type="Polygon2D" parent="Visuals/CentralHub"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-200, -177.2, -196, -177.2, -196, -132.8, -200, -132.8)
+
+[node name="D1" type="Polygon2D" parent="Visuals/CentralHub"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(196, -177.2, 200, -177.2, 200, -132.8, 196, -132.8)
+
+[node name="D2" type="Line2D" parent="Visuals/CentralHub"]
+points = PackedVector2Array(-98, -189, -98, -121)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D3" type="Line2D" parent="Visuals/CentralHub"]
+points = PackedVector2Array(0, -189, 0, -121)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/CentralHub"]
+points = PackedVector2Array(98, -189, 98, -121)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="KeelUpper" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-22, -114, 22, -114, 22, -50, -22, -50)
+
+[node name="D0" type="Line2D" parent="Visuals/KeelUpper"]
+points = PackedVector2Array(-20, -114, 20, -82)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D1" type="Line2D" parent="Visuals/KeelUpper"]
+points = PackedVector2Array(-20, -82, 20, -50)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D2" type="Polygon2D" parent="Visuals/KeelUpper"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(-24, -114, 24, -114, 24, -111, -24, -111)
+
+[node name="D3" type="Polygon2D" parent="Visuals/KeelUpper"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(-24, -53, 24, -53, 24, -50, -24, -50)
+
+[node name="CentralCore" type="Polygon2D" parent="Visuals"]
 color = Color(0.216, 0.204, 0.173, 1)
-polygon = PackedVector2Array(-109, -57, 111, -57, 111, 93, -109, 93)
+polygon = PackedVector2Array(-110, -50, 110, -50, 110, 80, -110, 80)
 
-[node name="TopArm" type="Polygon2D" parent="Visuals" unique_id=1109548991]
-color = Color(0.216, 0.204, 0.173, 1)
-polygon = PackedVector2Array(-238, -408, 238, -408, 238, -197, -238, -197)
+[node name="D0" type="Polygon2D" parent="Visuals/CentralCore"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-10, -56, 10, -56, 10, -50, -10, -50)
 
-[node name="MainRing" type="Polygon2D" parent="Visuals" unique_id=1135850650]
-color = Color(0.243, 0.231, 0.192, 1)
-polygon = PackedVector2Array(-400, -499, 398, -499, 398, -399, -400, -399)
+[node name="D1" type="Polygon2D" parent="Visuals/CentralCore"]
+color = Color(0.184, 0.173, 0.145, 0.8)
+polygon = PackedVector2Array(34, 15, 31.95, 26.63, 26.05, 36.85, 17, 44.44, 5.9, 48.48, -5.9, 48.48, -17, 44.44, -26.05, 36.85, -31.95, 26.63, -34, 15, -31.95, 3.37, -26.05, -6.85, -17, -14.44, -5.9, -18.48, 5.9, -18.48, 17, -14.44, 26.05, -6.85, 31.95, 3.37)
 
-[node name="SmallModule4" type="Polygon2D" parent="Visuals" unique_id=293416300]
+[node name="FuelTankL" type="Polygon2D" parent="Visuals"]
 color = Color(0.29, 0.275, 0.231, 1)
-polygon = PackedVector2Array(-119, 74, 121, 74, 121, 124, -119, 124)
+polygon = PackedVector2Array(-155.17, -46, -146.83, -46, -126, -25.17, -126, 63.17, -146.83, 84, -155.17, 84, -176, 63.17, -176, -25.17)
 
-[node name="SmallModule5" type="Polygon2D" parent="Visuals" unique_id=955784579]
-position = Vector2(-1, 0)
+[node name="D0" type="Line2D" parent="Visuals/FuelTankL"]
+points = PackedVector2Array(-173, -20, -129, -20)
+width = 2
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D1" type="Line2D" parent="Visuals/FuelTankL"]
+points = PackedVector2Array(-173, 19, -129, 19)
+width = 2
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Line2D" parent="Visuals/FuelTankL"]
+points = PackedVector2Array(-173, 58, -129, 58)
+width = 2
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D3" type="Line2D" parent="Visuals/FuelTankL"]
+points = PackedVector2Array(-157, -36, -157, 74)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.35)
+
+[node name="TankStrutL" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-126, 6, -110, 6, -110, 30, -126, 30)
+
+[node name="TankStrutR" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(110, 6, 126, 6, 126, 30, 110, 30)
+
+[node name="CradleTop" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(122, -54, 182, -54, 182, -46, 122, -46)
+
+[node name="CradleBottom" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(122, 84, 186, 84, 186, 92, 122, 92)
+
+[node name="RefuelBoom" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(126, 92, 340, 92, 340, 108, 126, 108)
+
+[node name="D0" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(126, 94, 142.46, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D1" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(142.46, 94, 158.92, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D2" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(158.92, 94, 175.38, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D3" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(175.38, 94, 191.85, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D4" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(191.85, 94, 208.31, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D5" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(208.31, 94, 224.77, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D6" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(224.77, 94, 241.23, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D7" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(241.23, 94, 257.69, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D8" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(257.69, 94, 274.15, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D9" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(274.15, 94, 290.62, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D10" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(290.62, 94, 307.08, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D11" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(307.08, 94, 323.54, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D12" type="Line2D" parent="Visuals/RefuelBoom"]
+points = PackedVector2Array(323.54, 94, 340, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D13" type="Polygon2D" parent="Visuals/RefuelBoom"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(126, 90, 129, 90, 129, 110, 126, 110)
+
+[node name="D14" type="Polygon2D" parent="Visuals/RefuelBoom"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(337, 90, 340, 90, 340, 110, 337, 110)
+
+[node name="D15" type="Polygon2D" parent="Visuals/RefuelBoom"]
 color = Color(0.29, 0.275, 0.231, 1)
-polygon = PackedVector2Array(-56, 195, 58, 195, 58, 213, -56, 213)
+polygon = PackedVector2Array(344, 70, 370, 70, 370, 130, 344, 130)
 
-[node name="Detail2" type="Polygon2D" parent="Visuals" unique_id=71925457]
+[node name="D16" type="Polygon2D" parent="Visuals/RefuelBoom"]
 color = Color(0.58, 0.545, 0.451, 1)
-polygon = PackedVector2Array(193, -278, 203, -278, 203, -268, 193, -268)
+polygon = PackedVector2Array(370, 76, 376, 76, 376, 124, 370, 124)
 
-[node name="Detail4" type="Polygon2D" parent="Visuals" unique_id=1811953921]
-color = Color(0.58, 0.545, 0.451, 1)
-polygon = PackedVector2Array(151, -296, 161, -296, 161, -268, 151, -268)
+[node name="D17" type="Polygon2D" parent="Visuals/RefuelBoom"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(352, 88, 362, 88, 362, 112, 352, 112)
 
-[node name="Detail5" type="Polygon2D" parent="Visuals" unique_id=644877739]
-color = Color(0.58, 0.545, 0.451, 1)
-polygon = PackedVector2Array(167, -296, 187, -296, 187, -286, 167, -286)
+[node name="BellyModule" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-111, 82, 111, 82, 116, 87, 116, 115, 111, 120, -111, 120, -116, 115, -116, 87)
 
-[node name="Detail6" type="Polygon2D" parent="Visuals" unique_id=819241762]
-color = Color(0.58, 0.545, 0.451, 1)
-polygon = PackedVector2Array(167, -278, 187, -278, 187, -268, 167, -268)
+[node name="D0" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-120, 89.6, -116, 89.6, -116, 112.4, -120, 112.4)
 
-[node name="Detail7" type="Polygon2D" parent="Visuals" unique_id=2147263520]
-color = Color(0.58, 0.545, 0.451, 1)
-polygon = PackedVector2Array(-94, 36, -74, 36, -74, 46, -94, 46)
+[node name="D1" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(116, 89.6, 120, 89.6, 120, 112.4, 116, 112.4)
 
-[node name="Detail8" type="Polygon2D" parent="Visuals" unique_id=261225713]
-color = Color(0.58, 0.545, 0.451, 1)
-polygon = PackedVector2Array(-94, 51, -74, 51, -74, 59, -94, 59)
+[node name="D2" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(-58, 85, -58, 117)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
 
-[node name="Mast1Mount" type="Node2D" parent="."]
-position = Vector2(0, -82.5)
+[node name="D3" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(0, 85, 0, 117)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(58, 85, 58, 117)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D5" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(-82, 101, -83.07, 105, -86, 107.93, -90, 109, -94, 107.93, -96.93, 105, -98, 101, -96.93, 97, -94, 94.07, -90, 93, -86, 94.07, -83.07, 97)
+
+[node name="D6" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-86, 101, -87.17, 103.83, -90, 105, -92.83, 103.83, -94, 101, -92.83, 98.17, -90, 97, -87.17, 98.17)
+
+[node name="D7" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(-62, 101, -63.07, 105, -66, 107.93, -70, 109, -74, 107.93, -76.93, 105, -78, 101, -76.93, 97, -74, 94.07, -70, 93, -66, 94.07, -63.07, 97)
+
+[node name="D8" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-66, 101, -67.17, 103.83, -70, 105, -72.83, 103.83, -74, 101, -72.83, 98.17, -70, 97, -67.17, 98.17)
+
+[node name="D9" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(-42, 101, -43.07, 105, -46, 107.93, -50, 109, -54, 107.93, -56.93, 105, -58, 101, -56.93, 97, -54, 94.07, -50, 93, -46, 94.07, -43.07, 97)
+
+[node name="D10" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-46, 101, -47.17, 103.83, -50, 105, -52.83, 103.83, -54, 101, -52.83, 98.17, -50, 97, -47.17, 98.17)
+
+[node name="D11" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-22, 101, -23.07, 105, -26, 107.93, -30, 109, -34, 107.93, -36.93, 105, -38, 101, -36.93, 97, -34, 94.07, -30, 93, -26, 94.07, -23.07, 97)
+
+[node name="D12" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(-36, 96, -28, 102)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.7)
+
+[node name="D13" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(-28, 102, -25, 108)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.7)
+
+[node name="D14" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(-28, 102, -23, 98)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.7)
+
+[node name="D15" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(-2, 101, -3.07, 105, -6, 107.93, -10, 109, -14, 107.93, -16.93, 105, -18, 101, -16.93, 97, -14, 94.07, -10, 93, -6, 94.07, -3.07, 97)
+
+[node name="D16" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-6, 101, -7.17, 103.83, -10, 105, -12.83, 103.83, -14, 101, -12.83, 98.17, -10, 97, -7.17, 98.17)
+
+[node name="D17" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(18, 101, 16.93, 105, 14, 107.93, 10, 109, 6, 107.93, 3.07, 105, 2, 101, 3.07, 97, 6, 94.07, 10, 93, 14, 94.07, 16.93, 97)
+
+[node name="D18" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(14, 101, 12.83, 103.83, 10, 105, 7.17, 103.83, 6, 101, 7.17, 98.17, 10, 97, 12.83, 98.17)
+
+[node name="D19" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(38, 101, 36.93, 105, 34, 107.93, 30, 109, 26, 107.93, 23.07, 105, 22, 101, 23.07, 97, 26, 94.07, 30, 93, 34, 94.07, 36.93, 97)
+
+[node name="D20" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(34, 101, 32.83, 103.83, 30, 105, 27.17, 103.83, 26, 101, 27.17, 98.17, 30, 97, 32.83, 98.17)
+
+[node name="D21" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(58, 101, 56.93, 105, 54, 107.93, 50, 109, 46, 107.93, 43.07, 105, 42, 101, 43.07, 97, 46, 94.07, 50, 93, 54, 94.07, 56.93, 97)
+
+[node name="D22" type="Polygon2D" parent="Visuals/BellyModule"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(54, 101, 52.83, 103.83, 50, 105, 47.17, 103.83, 46, 101, 47.17, 98.17, 50, 97, 52.83, 98.17)
+
+[node name="D23" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(70, 94, 70, 108)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="D24" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(74, 94, 74, 108)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="D25" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(78, 94, 78, 108)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="D26" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(82, 94, 82, 108)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="D27" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(86, 94, 86, 108)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="D28" type="Line2D" parent="Visuals/BellyModule"]
+points = PackedVector2Array(68, 107, 88, 95)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="KeelLower" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-22, 122, 22, 122, 22, 290, -22, 290)
+
+[node name="D0" type="Line2D" parent="Visuals/KeelLower"]
+points = PackedVector2Array(-20, 122, 20, 164)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D1" type="Line2D" parent="Visuals/KeelLower"]
+points = PackedVector2Array(-20, 164, 20, 206)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D2" type="Line2D" parent="Visuals/KeelLower"]
+points = PackedVector2Array(-20, 206, 20, 248)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D3" type="Line2D" parent="Visuals/KeelLower"]
+points = PackedVector2Array(-20, 248, 20, 290)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D4" type="Polygon2D" parent="Visuals/KeelLower"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(-24, 122, 24, 122, 24, 125, -24, 125)
+
+[node name="D5" type="Polygon2D" parent="Visuals/KeelLower"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(-24, 287, 24, 287, 24, 290, -24, 290)
+
+[node name="D6" type="Line2D" parent="Visuals/KeelLower"]
+points = PackedVector2Array(-17, 290, -17, 338)
+width = 1.5
+default_color = Color(0.58, 0.545, 0.451, 0.85)
+
+[node name="D7" type="Polygon2D" parent="Visuals/KeelLower"]
+color = Color(0.58, 0.545, 0.451, 0.9)
+polygon = PackedVector2Array(-19, 337, -15, 337, -15, 341, -19, 341)
+
+[node name="D8" type="Line2D" parent="Visuals/KeelLower"]
+points = PackedVector2Array(-9, 290, -9, 318)
+width = 1.5
+default_color = Color(0.58, 0.545, 0.451, 0.85)
+
+[node name="D9" type="Polygon2D" parent="Visuals/KeelLower"]
+color = Color(0.58, 0.545, 0.451, 0.9)
+polygon = PackedVector2Array(-11, 317, -7, 317, -7, 321, -11, 321)
+
+[node name="D10" type="Line2D" parent="Visuals/KeelLower"]
+points = PackedVector2Array(14, 290, 14, 314)
+width = 2.5
+default_color = Color(0.58, 0.545, 0.451, 0.9)
+
+[node name="CommDish" type="Node2D" parent="Visuals/KeelLower"]
+position = Vector2(14, 314)
+script = ExtResource("8_dish")
+
+[node name="D0" type="Polygon2D" parent="Visuals/KeelLower/CommDish"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(8, 16, 6.47, 13.33, 5.22, 10.67, 4.25, 8, 3.56, 5.33, 3.14, 2.67, 3, 0, 3.14, -2.67, 3.56, -5.33, 4.25, -8, 5.22, -10.67, 6.47, -13.33, 8, -16, 8, -16)
+
+[node name="D1" type="Polygon2D" parent="Visuals/KeelLower/CommDish"]
+color = Color(0.58, 0.545, 0.451, 0.9)
+polygon = PackedVector2Array(8, -18, 5.56, -15, 3.56, -12, 2, -9, 0.89, -6, 0.22, -3, 0, 0, 0.22, 3, 0.89, 6, 2, 9, 3.56, 12, 5.56, 15, 8, 18, 8, 18, 8, 16, 8, 16, 6.47, 13.33, 5.22, 10.67, 4.25, 8, 3.56, 5.33, 3.14, 2.67, 3, 0, 3.14, -2.67, 3.56, -5.33, 4.25, -8, 5.22, -10.67, 6.47, -13.33, 8, -16, 8, -16)
+
+[node name="D2" type="Line2D" parent="Visuals/KeelLower/CommDish"]
+points = PackedVector2Array(7, 15, 23, 0)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.6)
+
+[node name="D3" type="Line2D" parent="Visuals/KeelLower/CommDish"]
+points = PackedVector2Array(7, -15, 23, 0)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.6)
+
+[node name="D4" type="Line2D" parent="Visuals/KeelLower/CommDish"]
+points = PackedVector2Array(3, 0, 23, 0)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.8)
+
+[node name="D5" type="Polygon2D" parent="Visuals/KeelLower/CommDish"]
+color = Color(0.58, 0.545, 0.451, 0.9)
+polygon = PackedVector2Array(22, -2.5, 26, -2.5, 26, 2.5, 22, 2.5)
+
+[node name="KeelHub" type="Polygon2D" parent="Visuals"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-30, 176, 30, 176, 30, 194, -30, 194)
+
+[node name="FuelTank" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(146.83, -46, 155.17, -46, 176, -25.17, 176, 63.17, 155.17, 84, 146.83, 84, 126, 63.17, 126, -25.17)
+
+[node name="D0" type="Line2D" parent="Visuals/FuelTank"]
+points = PackedVector2Array(129, -20, 173, -20)
+width = 2
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D1" type="Line2D" parent="Visuals/FuelTank"]
+points = PackedVector2Array(129, 19, 173, 19)
+width = 2
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D2" type="Line2D" parent="Visuals/FuelTank"]
+points = PackedVector2Array(129, 58, 173, 58)
+width = 2
+default_color = Color(0.184, 0.173, 0.145, 0.8)
+
+[node name="D3" type="Line2D" parent="Visuals/FuelTank"]
+points = PackedVector2Array(145, -36, 145, 74)
+width = 2
+default_color = Color(0.58, 0.545, 0.451, 0.35)
+
+[node name="SolarArray" type="Polygon2D" parent="Visuals"]
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(-180, 160, -30, 160, -30, 210, -180, 210)
+
+[node name="D0" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-166.36, 160, -166.36, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D1" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-152.73, 160, -152.73, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D2" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-139.09, 160, -139.09, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D3" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-125.45, 160, -125.45, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-111.82, 160, -111.82, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D5" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-98.18, 160, -98.18, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D6" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-84.55, 160, -84.55, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D7" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-70.91, 160, -70.91, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D8" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-57.27, 160, -57.27, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D9" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-43.64, 160, -43.64, 210)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D10" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-180, 185, -30, 185)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D11" type="Line2D" parent="Visuals/SolarArray"]
+points = PackedVector2Array(-180, 185, -30, 185)
+width = 1.5
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="DorsalArm" type="Polygon2D" parent="Visuals"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-29, -548, 29, -548, 34, -543, 34, -433, 29, -428, -29, -428, -34, -433, -34, -543)
+
+[node name="D0" type="Polygon2D" parent="Visuals/DorsalArm"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-20.4, -552, 20.4, -552, 20.4, -548, -20.4, -548)
+
+[node name="D1" type="Polygon2D" parent="Visuals/DorsalArm"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-20.4, -428, 20.4, -428, 20.4, -424, -20.4, -424)
+
+[node name="D2" type="Line2D" parent="Visuals/DorsalArm"]
+points = PackedVector2Array(-31, -518, 31, -518)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D3" type="Line2D" parent="Visuals/DorsalArm"]
+points = PackedVector2Array(-31, -488, 31, -488)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/DorsalArm"]
+points = PackedVector2Array(-31, -458, 31, -458)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D5" type="Polygon2D" parent="Visuals/DorsalArm"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(8, -534, 5.66, -528.34, 0, -526, -5.66, -528.34, -8, -534, -5.66, -539.66, 0, -542, 5.66, -539.66)
+
+[node name="ArrayNudge" type="AnimatableBody2D" parent="."]
+position = Vector2(30, 185)
+sync_to_physics = false
+script = ExtResource("7_nudge")
+
+[node name="Collision" type="CollisionPolygon2D" parent="ArrayNudge"]
+polygon = PackedVector2Array(0, -25, 150, -25, 150, 25, 0, 25)
+
+[node name="Visual" type="Polygon2D" parent="ArrayNudge"]
+z_index = 1
+color = Color(0.18, 0.165, 0.125, 1)
+polygon = PackedVector2Array(0, -25, 150, -25, 150, 25, 0, 25)
+
+[node name="D0" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(15, -25, 15, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D1" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(30, -25, 30, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D2" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(45, -25, 45, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D3" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(60, -25, 60, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D4" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(75, -25, 75, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D5" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(90, -25, 90, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D6" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(105, -25, 105, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D7" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(120, -25, 120, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D8" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(135, -25, 135, 25)
+width = 1
+default_color = Color(0.29, 0.275, 0.231, 0.9)
+
+[node name="D9" type="Line2D" parent="ArrayNudge/Visual"]
+points = PackedVector2Array(0, 0, 150, 0)
+width = 1.5
+default_color = Color(0.58, 0.545, 0.451, 0.5)
+
+[node name="FuelTankMount" type="Node2D" parent="."]
+position = Vector2(151, 19)
+rotation = 1.5707964
 script = ExtResource("6_mount")
-part = NodePath("../Visuals/Tower1")
+section = "fuel_tank"
+part = NodePath("../Visuals/FuelTank")
 collision = NodePath("../CollisionShape2D")
+section_start_offset = Vector2(-2500, 40)
+section_start_rotation = 0.6
+start_on_planet = true
+
+[node name="SolarArrayMount" type="Node2D" parent="."]
+position = Vector2(-105, 185)
+script = ExtResource("6_mount")
+section = "solar_array"
+part = NodePath("../Visuals/SolarArray")
+collision = NodePath("../CollisionShape2D")
+section_start_offset = Vector2(-4300, 60)
+section_start_rotation = -0.3
+start_on_planet = true
+
+[node name="DorsalArmMount" type="Node2D" parent="."]
+position = Vector2(0, -488)
+rotation = 1.5707964
+script = ExtResource("6_mount")
+section = "dorsal_arm"
+part = NodePath("../Visuals/DorsalArm")
+collision = NodePath("../CollisionShape2D")
+section_start_offset = Vector2(-3400, -120)
+section_start_rotation = 1.1
+start_on_planet = true
 
 [node name="SpacePort" parent="." unique_id=1193258047 instance=ExtResource("5")]
-position = Vector2(118, 10)
+position = Vector2(382, 100)
 rotation = 1.5707964
-
-[node name="SpacePort2" parent="." unique_id=1954255124 instance=ExtResource("5")]
-position = Vector2(-116, 10)
-rotation = 4.712389
+scale = Vector2(0.6, 0.6)
+dock_offset = Vector2(0, -10)
 
 [node name="TractorBeamArea" type="Area2D" parent="." unique_id=1581157943]
 collision_layer = 0

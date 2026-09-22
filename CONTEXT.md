@@ -84,7 +84,7 @@ One of SR-7's missing structural parts (its ring, dorsal arm and mast), recovere
 _Avoid_: component, station part, piece
 
 **Mount**:
-The torn place on SR-7 where a **Section** belongs — sheared brackets and broken strut stubs around a gap in the silhouette. Each Mount takes exactly one Section.
+The cut place on SR-7 where a **Section** belongs — a straight torch line, emptied bolt holes and squared-off bracket stubs around a gap in the silhouette (SR-7 was taken apart, not broken). Each Mount takes exactly one Section.
 _Avoid_: socket, slot, dock, marker
 
 **Cradle**:
