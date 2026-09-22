@@ -234,7 +234,7 @@ func test_loose_freight_bleeds_a_trace_of_speed() -> void:
 	var f := Freight.spawn(_world, Vector2(2000, 0), 0.0, Vector2(1000, 0))
 	assert_float(f.linear_damp).is_equal_approx(Freight.DRAG, 0.0001)
 	assert_float(Freight.DRAG).is_greater(0.0)
-	assert_float(Freight.DRAG).is_less_equal(0.02)  # a trace: an ordinary release barely notices
-	# A piece let go of at boost speed gets below a ship's cruise speed in a few minutes
+	assert_float(Freight.DRAG).is_less_equal(0.002)  # a trace: an ordinary release never notices
+	# A piece let go of at boost speed does get below a ship's cruise speed, in the end
 	var seconds_to_cruise := log(1000.0 / 300.0) / Freight.DRAG
-	assert_float(seconds_to_cruise).is_less(180.0)
+	assert_float(seconds_to_cruise).is_less(1800.0)

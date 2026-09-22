@@ -22,7 +22,7 @@ const SEAT_ANGLE := 0.08
 ## Loose Freight bleeds off speed at this rate (per second): a trace of drag, far too
 ## little to notice on an ordinary release, but enough that a piece let go of after a
 ## long boost slows below the ship's cruise speed in time and can be caught again.
-const DRAG := 0.01
+const DRAG := 0.001
 ## Bumping into a loose piece only hurts the hull above this closing speed (px/s); the
 ## ship's ordinary knock threshold is far lower. Nudging Freight around is expected.
 const KNOCK_DAMAGE_SPEED := 250.0
