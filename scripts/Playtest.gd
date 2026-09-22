@@ -915,7 +915,7 @@ func freight() -> Array:
 func test_freight() -> Array:
 	return freight().filter(func(f): return f.section == "")
 
-## Section `id`'s Freight, wherever it is (Sections.MAST_1 is "mast_1"); null once seated.
+## Section `id`'s Freight, wherever it is (Sections.FUEL_TANK is "fuel_tank"); null once seated.
 func section(id: String) -> Freight:
 	for f in freight():
 		if f.section == id:
@@ -944,6 +944,26 @@ func stage_at_mount(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, station.linear_velocity)
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
 	ship.global_transform = ship_xf
+	ship.linear_velocity = station.linear_velocity
+
+## SR-7's hanging solar wing (ArrayNudge).
+func nudge() -> ArrayNudge:
+	return get_tree().get_first_node_in_group("nudges") as ArrayNudge
+
+## Put the ship `gap` px off the underside of the hanging wing, `along` px out from its
+## hinge, nose up against it the way that turns it back true, moving with the station:
+## ready to thrust into it.
+func stage_nudge(along := 125.0, gap := 18.0) -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var wing := nudge()
+	var station := wing.get_parent() as RigidBody2D
+	var pos := wing.to_global(Vector2(along, 25.0 + gap))
+	var up := wing.global_transform.basis_xform(Vector2.UP).angle()
+	var rid := ship.get_rid()
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(up, pos))
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, station.linear_velocity)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_transform = Transform2D(up, pos)
 	ship.linear_velocity = station.linear_velocity
 
 ## The pieces within `radius` px of `pos` (scenario expressions can't hold a lambda).

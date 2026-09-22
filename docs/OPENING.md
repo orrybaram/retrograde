@@ -26,13 +26,9 @@ perform it on everything else. **The con is self-administered.**
 `scenes/HomeSystem.tscn` parents `OrbitalRingSpawner` to **Rook**, alongside
 `SpaceStation`. The debris is already in the right place.
 
-`entities/structures/SpaceStation.tscn` is already a kit of named parts under `Visuals`:
-
-```
-MainRing   CentralHub   CentralCore   TopArm
-Tower1  Tower2  Tower4  ExtraModule3
-SmallModule3/4/5   Detail2/4/5/6/7/8
-```
+`entities/structures/SpaceStation.tscn` is a kit of named parts under `Visuals` - one
+polygon per piece of the station (`RingPod1-8`, `ModuleL/C/R`, `CentralHub`, `CentralCore`,
+`FuelTankL`, `RefuelBoom`, `KeelLower`, ...), each carrying its own detail as children.
 
 So a broken station is that scene with parts hidden, and a repair is a polygon appearing.
 **The silhouette of the player's house is the progress bar** - no UI, visible from anywhere
@@ -46,10 +42,12 @@ from the station's menus once docked. One delivery gesture for all Freight.
 
 ### Seating a Section
 
-- **The Mount shows the tear, not the answer.** Where each Section belongs, the station
-  draws sheared brackets and broken strut stubs in its own shape language. A gap in a
-  silhouette does not read as a hole; a torn edge does. No ghost outline, no glowing socket.
-- **One Section, one Mount.** The mast only goes where `Tower1` was.
+- **The Mount shows the cut, not the answer.** Where each Section belongs, the station
+  draws the edge it was cut from: a straight torch line, a row of empty bolt holes, a few
+  beads of slag. A gap in a silhouette does not read as a hole; a cut edge does. No ghost
+  outline, no glowing socket. It is a *cut* and never a tear because SR-7 was not damaged,
+  it was taken apart (§2, "Why it is broken").
+- **One Section, one Mount.** The tank only goes in the empty tank cradle.
 - **The flying is the hard part; the last few pixels are free.** Within about 40 px of its
   Mount and 30° of its rotation (the docking tolerance), the action prompt reads
   **RELEASE**. On release the Mount pulls it home over half a second, with a clunk, and the
@@ -57,6 +55,55 @@ from the station's menus once docked. One delivery gesture for all Freight.
 - **Miss and nothing is lost.** Released outside tolerance, a Section just floats, still
   clampable. It is a physics body: a bad approach bumps and bounces off the station, which
   is feedback, and never damage.
+
+### SR-7's layout (locked 2026-09-21)
+
+Chosen from the silhouette lab (claude.ai/artifact/CCVHLMG6SyGxY5Shks5aSG, round 5,
+**CYLINDERS**). Top to bottom:
+
+- **Twin masts** on the top bar, a dish on each. Both stand; neither is a Section.
+- **Container strip**, and standing up off its middle like a fin, the **DORSAL ARM**.
+- **Ring pods**: eight habitat pods with berthing collars between them. Permanent, not a
+  Section.
+- **Arm block**: three pressurised modules, flanked by cold scissor **radiator fans**.
+- **Hub** with a docking port at each end.
+- **Core** in the middle, with a **long cylindrical tank** on each side of it. The right
+  one is the **FUEL TANK** Section; its empty cradle is where the **refuel boom** comes off.
+- **Refuel boom**: a truss out to the right ending in a docking head. **The ship docks
+  here** (replacing the `SpacePort` docking). Its tank is gone, so the player's own dock
+  is dry: the no-fuel opening, shown in the station itself.
+- **Belly module**: the clone vats, legible through the hull. One vat is empty and cracked,
+  and there is a tally scratched beside the row.
+- **Truss keel** below, carrying two **solar wings**. The left wing is the **SOLAR ARRAY**
+  Section. The right wing is still on its hinge but hangs 22° out of true
+  (`ArrayNudge`): it is nudged home, not fetched. Pressed against it and moving or
+  thrusting so as to turn it back, the ship's hull turns it; it only ever turns toward
+  true, and within 3° it swings home and locks with the seating clunk.
+
+Art direction for all of it: flat polygons in the three hull tones, one motif (45° corner
+chamfers and a light edge band on the outward face), real station parts (truss lattice,
+berthing collars, radiators, tanks), and no decorative clutter. Sections are the clean,
+machined pieces; the scrap around them is irregular and has no Lug.
+
+### Why it is broken
+
+**Never stated. Only clued.** A previous clone worked out what the cycle is and tried to end
+it by taking SR-7 apart. Everything in the opening is consistent with that, and nothing says
+it. Clues, in the art and the text:
+
+- **Cut, not torn.** Every Mount is a clean torch line with its bolts removed. There is no
+  war damage anywhere on SR-7 ("nothing important happened here during the war").
+- **One direction.** `LAST VECTOR: LOCAL DEBRIS`: the Sections were cut free and pushed out
+  along roughly one heading, so they lie on a line, not scattered.
+- **The tank went first.** Cutting the tank that feeds the dock meant no clone could fly
+  out and do what the player is about to do.
+- **The core is seated wrong** (§5). Somebody unseated it by hand; the cold start undoes
+  their work.
+- **The right solar wing** is pushed out of true but not thrown clear. They ran out of
+  time, or were stopped.
+- **The clone vats**: one empty and cracked, and a tally beside the row. Somebody was
+  counting.
+- **`0347 CYCLES SINCE EVENT`**: the event was not an accident.
 
 Because the game is top-down, the station's interior is legible from outside by default.
 `CentralCore` is a polygon at the middle of the station. The player can see it. They never
@@ -72,9 +119,9 @@ machine doing inventory:
 SR-7 / AUXILIARY BUS
 DAMAGE REPORT — 0347 CYCLES SINCE EVENT
 
-  MAIN RING .......... BREACHED
+  FUEL TANK .......... ABSENT
+  SOLAR ARRAY ........ ABSENT / 1 OF 2 MISALIGNED
   DORSAL ARM ......... ABSENT
-  MAST 1 ............. ABSENT
   CORE ............... PRESENT / NO DRAW
 
   3 SECTIONS UNACCOUNTED FOR
@@ -94,24 +141,37 @@ Three things it is doing quietly:
 - **`0347 CYCLES SINCE EVENT`** means nothing in hour one and something else entirely once
   the player knows about the clone system. Leave it ambiguous deliberately, not by accident.
 
-**The manifest updates.** Re-dock after a repair and the line reads `MAIN RING …
+**The manifest updates.** Re-dock after a repair and the line reads `FUEL TANK …
 RESTORED`. Completion tracking that lives in the fiction and that the player has to choose
 to look at.
 
 ## 4. The Three Sections
 
-| Manifest line | Node | Teaches |
+| Manifest line | Section | Teaches |
 |---|---|---|
-| `MAIN RING — BREACHED` | `MainRing` | flight; the harvest Sweep (it is fused into a rock) |
-| `DORSAL ARM — ABSENT` | `TopArm` | debris is not scrap - it is tangled in things that hurt |
-| `MAST 1 — ABSENT` | `Tower1` | the Sweep as a **search** tool - it is dark and beyond visual range |
+| `FUEL TANK — ABSENT` | right cylindrical tank | flight under load; the harvest Sweep (it is fused into a rock) |
+| `DORSAL ARM — ABSENT` | the fin on the container strip | debris is not scrap - it is tangled in things that hurt |
+| `SOLAR ARRAY — ABSENT` | left keel wing | the Sweep as a **search** tool - it is dark and beyond visual range |
+
+| Section | Size (px) | Mass | Accel | Lug |
+|---|---|---|---|---|
+| FUEL TANK | 130 × 50 capsule | 3.0 (full - fuel is heavy) | ×0.50 | middle of the outer flank, facing out; slides in sideways from the boom side |
+| DORSAL ARM | 120 × 68 module | 2.0 | ×0.60 | top end, facing up; goes in nose-first from above |
+| SOLAR ARRAY | 150 × 50 wing | 1.0 | ×0.75 | outer tip, facing out; light but long, so it swings like a lance |
+| right wing (nudge) | 150 × 50 | - | push | none: it is still attached, and pushed home |
+
+Placement: out in Rook's debris on one line - the sabotage vector - running from where
+the station starts toward Rook. Nearest the station, just outside the ring, is the array
+(4300 px from Rook); then the arm, mid-field (3400); deepest is the tank at the ring's inner
+edge (2500). Each hangs dead in Rook's frame (`Mount.start_on_planet`) until the magnet
+first takes it.
 
 Each is a single object, recovered and fitted - the same verb as every upgrade in the game
 (ADR 0007), taught before the player has bolted anything to their own ship.
 
-### The mast is the important one
+### The array is the important one
 
-The first two can be found by looking. The mast cannot: it is dark, it is outside visual
+The first two can be found by looking. The array cannot: it is dark, it is outside visual
 range, and in a debris field it looks like every other piece of junk.
 
 It is found by **sweeping and listening for what answers**. In one gesture, with no words:
@@ -125,13 +185,13 @@ That last line is the rule the entire game runs on, taught in minute four as a w
 finding your own front door. It is also the first time the game asks the player to trust an
 instrument over their eyes, which is the habit every later discovery depends on.
 
-### The mast is the pointer, not a clock
+### The array is the pointer, not a clock
 
 The opening has no clock. The Aux never runs out (ADR 0010), so nothing is draining
-and nothing is urging. A player who cannot find the mast must not be *hurried*; they must
+and nothing is urging. A player who cannot find the array must not be *hurried*; they must
 be *pointed*.
 
-So the mast answers from further off than anything else. At the edge of its range a Sweep
+So the array answers from further off than anything else. At the edge of its range a Sweep
 gets back something faint and broken - a partial ring, a stutter - and the answer firms up
 the closer the ship gets. Warmer, colder, entirely through the instrument. No timer, no
 marker, no text.
@@ -311,14 +371,15 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > **TODO**: Place the survey marker as an actual coordinate relative to `SpaceStation` and
 > `OrbitalRingSpawner` on Rook, and check it sits in frame on the common run without being
 > a collision hazard.
-> **TODO**: Decide which `Polygon2D` parts are hidden at start. Three named Sections are
-> specified; the `Detail*` and `SmallModule*` parts probably stay present so the wreck still
-> reads as a station rather than as a frame.
+> **TODO**: The tank is meant to be *fused into a rock* (§4, the harvest Sweep). Today it
+> hangs free at the ring's inner edge; the rock and the Sweep that frees it are not built.
+> **TODO**: The DORSAL ARM is meant to be snarled in things that hurt (§4). Today it hangs
+> in ordinary debris.
 > **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
 > dock without ever reading as a tutorial popup.
 > **TODO**: Gate `SpacePortDialogue` on UNIT-7 being awake; the dead station shows the
 > manifest terminal instead.
-> **TODO**: Playtest the opening for wandering. There is no clock by design; the mast's
+> **TODO**: Playtest the opening for wandering. There is no clock by design; the array's
 > long-range answer (§4) is the only pointer. Tune its range until a lost player picks it
 > up without being led by the hand.
 > **TODO**: Range separates "answers" from "harvestable" (§4). Still decide how the

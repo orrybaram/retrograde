@@ -13,6 +13,9 @@ signal ship_took_off(ship: Ship)
 @export var landing_pad_size: Vector2 = Vector2(100, 20)
 @export var light_blink_rate: float = 1.0  # Blink rate in seconds
 @export var landing_lock_distance: float = 60.0  # Distance threshold for landing lock (pixels above pad)
+## Where a docked ship's centre sits, in the port's own space: out along the pad's face far
+## enough that the whole ship clears the pad, rather than its tail sunk into it.
+@export var dock_offset := Vector2.ZERO
 
 var _landing_area: Area2D = null
 var _ship_on_pad: Ship = null
@@ -97,7 +100,7 @@ func get_landing_pad_position() -> Vector2:
 
 ## Dockable interface implementation
 func get_dock_position() -> Vector2:
-	return get_landing_pad_position()
+	return to_global(dock_offset)
 
 func get_dock_rotation() -> float:
 	return global_rotation

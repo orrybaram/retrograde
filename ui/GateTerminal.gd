@@ -395,7 +395,7 @@ func _run_boot_log() -> void:
 	_show_hub(false)
 	_clear(_log)
 	_log.visible = true
-	_frame.set_hint(EventBus.action_prompt("SKIP"))
+	_frame.set_hint(EventBus.inline_key_prompt("action", "SKIP"))
 
 	var lines := [
 		{"text": "POWER ........ OK", "color": Colors.PRIMARY},

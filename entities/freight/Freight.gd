@@ -59,6 +59,8 @@ var handled := false
 ## Which Section of SR-7 this is (Sections.gd), or "" for any other Freight. A Section
 ## goes into the Mount with the same id and nowhere else.
 var section := ""
+## How a Section is drawn over its body (Sections.detail): "" for plain Freight.
+var art := ""
 
 ## Lodged: held at `lodged_offset` in `lodged_in`'s frame (a new game's Section, floating
 ## dead beside SR-7) so it keeps pace with it instead of being left behind as it moves on
@@ -136,13 +138,13 @@ func flash_clamped() -> void:
 		_clamp_flash.kill()
 	if _lug_glow:
 		_lug_glow.kill()
-	_body.color = Colors.HULL_MID.lerp(Colors.PRIMARY, 0.65)
+	_body.color = Sections.body_color(art).lerp(Colors.PRIMARY, 0.65)
 	_edge.default_color = Colors.CREAM
 	_edge.width = 2.0
 	_lug_line.default_color = Colors.CREAM
 	_lug_line.width = 5.5
 	_clamp_flash = _visual.create_tween().set_parallel().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	_clamp_flash.tween_property(_body, "color", Colors.HULL_MID, CLAMP_FLASH_TIME)
+	_clamp_flash.tween_property(_body, "color", Sections.body_color(art), CLAMP_FLASH_TIME)
 	_clamp_flash.tween_property(_edge, "default_color", Colors.HULL_LIGHT, CLAMP_FLASH_TIME)
 	_clamp_flash.tween_property(_edge, "width", 1.0, CLAMP_FLASH_TIME)
 	_clamp_flash.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, CLAMP_FLASH_TIME * 1.4)
@@ -315,6 +317,11 @@ static func restore_all(world: Node, rows: Array) -> Freight:
 	for row in rows:
 		if not row is Dictionary:
 			continue
+		# A Section SR-7 no longer has (MAST 1, from before the station was rebuilt) is
+		# not put back: its Mount is gone, and so is it
+		var id := str(row.get("section", ""))
+		if id != "" and not Sections.exists(id):
+			continue
 		var f := from_row(world, row)
 		if bool(row.get("clamped", false)) and clamped == null:
 			clamped = f
@@ -403,9 +410,11 @@ func _build_visual() -> Node2D:
 	root.name = "Visual"
 	var body := Polygon2D.new()
 	body.polygon = outline
-	body.color = Colors.HULL_MID
+	body.color = Sections.body_color(art)
 	root.add_child(body)
 	_body = body
+	for line in Sections.detail(art, outline):
+		root.add_child(line)
 	var edge := Line2D.new()
 	edge.points = outline
 	edge.closed = true

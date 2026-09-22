@@ -1,13 +1,15 @@
 extends Node2D
 class_name Mount
 
-## The torn place on SR-7 where one Section belongs (docs/adr/0012, docs/OPENING.md §2).
+## The cut place on SR-7 where one Section belongs (docs/adr/0012, docs/OPENING.md §2).
 ## Until the Section is seated, the station's `part` polygon is hidden, the parts of it
-## that showed are cut out of the station's collision, and their torn edges are drawn
-## as sheared brackets and broken strut stubs - never a ghost outline or a socket.
+## that showed are cut out of the station's collision, and the edges it was cut from are
+## drawn as they were left: a straight torch line, empty bolt holes, a few beads of slag,
+## squared-off bracket stubs. SR-7 was taken apart, not broken, so nothing here is torn -
+## and it is never a ghost outline or a socket.
 ##
-## The Section goes home into any of the part's gaps - wherever the tear shows - pushed in
-## from either side: a strut has no front. Released within SEAT_RANGE px and SEAT_ANGLE
+## The Section goes home into any of the part's gaps - wherever the cut shows - either way
+## round: turned end for end it still fits. Released within SEAT_RANGE px and SEAT_ANGLE
 ## of a seat, it is pulled home over SEAT_TIME with a clunk, the Freight is gone, and
 ## `part` is the station again. The Mount's own transform is its main seat (and what the
 ## tracker points at). Only the Section with
@@ -25,28 +27,34 @@ const CLUNK_DENSITY := 3.0
 const CLUNK_SHAKE_INTENSITY := 2.5
 const CLUNK_SHAKE_DURATION := 0.4
 const CLUNK_FELT_WITHIN := 1500.0
-## How deep the torn edge's teeth run into the gap, cycling along the edge (px), and how
-## far apart they are. Shallow, so the gap still reads as wide enough for the Section.
-const TEAR_TEETH := [3.0, 6.0, 2.0, 5.0, 2.0, 7.0, 4.0, 3.0]
-const TEAR_TOOTH_WIDTH := 7.0
+## The cut edge: the lip of plate left standing (px deep), the spacing of the emptied
+## bolt holes along it and how far in from the cut they sit, and every how-many holes a
+## bead of slag hangs off the line.
+const CUT_LIP := 3.0
+const BOLT_PITCH := 10.0
+const BOLT_INSET := 6.0
+const SLAG_EVERY := 3
+## How far past the gap the station's collision is cut back, so no sliver of wall is
+## left standing where the part's edge met the hull's outline.
+const COLLISION_CLEARANCE := 2.0
 
 ## Which Section fits here (Sections.gd).
-@export var section := Sections.MAST_1
+@export var section := Sections.FUEL_TANK
 ## The station polygon the Section becomes once seated.
 @export var part: NodePath
 ## The station's collision, which loses the part's exposed pieces while it is missing.
 @export var collision: NodePath
-## Where a new game leaves the Section: floating dead this far from the station (in the
-## station's frame), turned this much.
+## Where a new game leaves the Section: floating dead at this offset, turned this much.
+## The offset is in the frame of the planet the station orbits when `start_on_planet`
+## (out in its debris, fixed there as the station moves on), else in the station's own.
 @export var section_start_offset := Vector2(-460, 110)
 @export var section_start_rotation := 0.25
+@export var start_on_planet := false
 
 var seated := false
 var _part: Polygon2D
 var _collision: CollisionPolygon2D
-var _cut_pieces: Array[CollisionPolygon2D] = []
-var _is_cut := false
-## The part's exposed pieces, in the part's own space, and which of their edges are torn.
+## The part's exposed pieces, in the part's own space, and which of their edges were cut.
 var _gaps: Array[PackedVector2Array] = []
 var _tracking: NodeTrackingTarget
 var _seating: Tween
@@ -114,7 +122,7 @@ func tracking_target() -> NodeTrackingTarget:
 		_tracking = NodeTrackingTarget.new(self, "MOUNT", 60.0)
 	return _tracking
 
-## Match the saved or new game: seated or torn, and a missing Section somewhere in the
+## Match the saved or new game: seated or cut away, and a missing Section somewhere in the
 ## world. Runs on every new game and load (planets_restored).
 func refresh() -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
@@ -132,16 +140,24 @@ func ensure_section() -> void:
 			piece.remove_from_group("freight")
 			piece.queue_free()
 		return
-	var anchor := get_parent() as Node2D
+	var anchor := start_anchor()
 	if piece == null:
 		if anchor == null:
 			return
 		var world := get_tree().get_first_node_in_group("ship")
-		world = world.get_parent() if world else anchor
+		world = world.get_parent() if world else get_parent()
 		piece = Freight.spawn_section(world, section, anchor.to_global(section_start_offset), anchor.global_rotation + section_start_rotation)
 		piece.lodge_in(anchor, section_start_offset)
 	elif piece.lodged and anchor:
 		piece.lodge_in(anchor, piece.lodged_offset)
+
+## What a new game's Section hangs in: the planet the station orbits when `start_on_planet`
+## and there is one, else the station.
+func start_anchor() -> Node2D:
+	var station := get_parent() as Node2D
+	if start_on_planet and station and station.get_parent() is Planet:
+		return station.get_parent() as Node2D
+	return station
 
 ## Pull `f` home and seat it. `f` has just been let go of, within tolerance.
 func seat(f: Freight) -> void:
@@ -163,7 +179,7 @@ func seat(f: Freight) -> void:
 	_seating = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	_seating.tween_property(f, "transform", global_transform.affine_inverse() * home, SEAT_TIME)
 	_seating.tween_callback(func() -> void:
-		_clunk()
+		Mount.clunk(self)
 		f.queue_free()
 		_show_seated(true))
 
@@ -174,43 +190,51 @@ func _show_seated(on: bool) -> void:
 	seated = on
 	if _part:
 		_part.visible = on
-	_set_cut.call_deferred(not on)
+	Mount.recut.call_deferred(_collision, get_tree())
 	queue_redraw()
 
-## The station's collision with the part's exposed pieces cut out (a missing part is
-## not a wall), or whole again. Deferred: shapes can't change mid physics step.
-func _set_cut(cut: bool) -> void:
-	if _collision == null or cut == _is_cut:
+## Rebuild the station's `collision` with the gaps of every empty Mount on it cut out (a
+## missing part is not a wall), or whole again once all are seated. The Mounts share the
+## one hull, so it is always cut for all of them at once. Deferred by callers: shapes
+## can't change mid physics step.
+static func recut(collision: CollisionPolygon2D, tree: SceneTree) -> void:
+	if collision == null or not is_instance_valid(collision) or tree == null:
 		return
-	_is_cut = cut
-	for piece in _cut_pieces:
-		piece.queue_free()
-	_cut_pieces.clear()
-	_collision.disabled = cut
-	if not cut:
-		return
-	var to_collision := _collision.transform.affine_inverse() * _part_to_station()
+	for piece in collision.get_meta("cut_pieces", []):
+		if is_instance_valid(piece):
+			piece.queue_free()
 	var holes: Array[PackedVector2Array] = []
-	for gap in _gaps:
-		holes.append(to_collision * gap)
-	for poly in cut_polygon(_collision.polygon, holes):
-		var piece := CollisionPolygon2D.new()
-		piece.name = "TornCollision"
-		piece.polygon = poly
-		piece.transform = _collision.transform
-		_collision.get_parent().add_child(piece)
-		_cut_pieces.append(piece)
+	for node in tree.get_nodes_in_group("mounts"):
+		var m := node as Mount
+		if m and m._collision == collision and not m.seated and m._part:
+			var to_collision := collision.transform.affine_inverse() * m._part_to_station()
+			for gap in m._gaps:
+				holes.append(to_collision * gap)
+	collision.disabled = not holes.is_empty()
+	var pieces: Array[CollisionPolygon2D] = []
+	if not holes.is_empty():
+		for poly in cut_polygon(collision.polygon, holes):
+			var piece := CollisionPolygon2D.new()
+			piece.name = "CutCollision"
+			piece.polygon = poly
+			piece.transform = collision.transform
+			collision.get_parent().add_child(piece)
+			pieces.append(piece)
+	collision.set_meta("cut_pieces", pieces)
 
 ## `poly` with every one of `holes` cut out of it: the pieces left.
 static func cut_polygon(poly: PackedVector2Array, holes: Array[PackedVector2Array]) -> Array[PackedVector2Array]:
 	var pieces: Array[PackedVector2Array] = [poly]
 	for hole in holes:
-		# A hair wider, so edges that line up exactly leave no slivers behind
-		var grown := Geometry2D.offset_polygon(hole, 0.5)
+		# A little wider, so edges that line up with the hull leave no slivers behind
+		var grown := Geometry2D.offset_polygon(hole, COLLISION_CLEARANCE)
 		var cutter: PackedVector2Array = grown[0] if not grown.is_empty() else hole
 		var next: Array[PackedVector2Array] = []
 		for p in pieces:
-			next.append_array(Geometry2D.clip_polygons(p, cutter))
+			# A hole wholly inside comes back as a clockwise outline of itself: a collision
+			# polygon can't hold a hole, so it is dropped rather than walled in solid
+			next.append_array(Geometry2D.clip_polygons(p, cutter).filter(
+				func(q: PackedVector2Array) -> bool: return not Geometry2D.is_polygon_clockwise(q)))
 		pieces = next
 	return pieces
 
@@ -249,19 +273,21 @@ func _find_section() -> Freight:
 			return f
 	return null
 
-func _clunk() -> void:
-	var world := get_tree().get_first_node_in_group("ship")
-	var ship := world as Ship
-	var parent := ship.get_parent() if ship else get_parent()
-	var velocity := (get_parent() as RigidBody2D).linear_velocity if get_parent() is RigidBody2D else Vector2.ZERO
-	ClampFX.burst(parent, global_position, velocity, CLUNK_BURST, CLUNK_DENSITY)
-	HarvestJuice.ring(parent, global_position, Color(Colors.CREAM, Ship.CLAMP_RING_ALPHA), 70.0, velocity)
-	HarvestJuice.ring(parent, global_position, Color(Colors.PRIMARY, Ship.CLAMP_RING_ALPHA), 120.0, velocity)
-	if ship and ship.global_position.distance_to(global_position) <= CLUNK_FELT_WITHIN:
+## The clunk of something going home on SR-7 at `at`: sparks, two rings, and a bump the
+## ship feels if it is near. Shared with the nudged solar wing (ArrayNudge).
+static func clunk(at: Node2D) -> void:
+	var ship := at.get_tree().get_first_node_in_group("ship") as Ship
+	var parent := ship.get_parent() if ship else at.get_parent()
+	var station := at.get_parent() as RigidBody2D
+	var velocity := station.linear_velocity if station else Vector2.ZERO
+	ClampFX.burst(parent, at.global_position, velocity, CLUNK_BURST, CLUNK_DENSITY)
+	HarvestJuice.ring(parent, at.global_position, Color(Colors.CREAM, Ship.CLAMP_RING_ALPHA), 70.0, velocity)
+	HarvestJuice.ring(parent, at.global_position, Color(Colors.PRIMARY, Ship.CLAMP_RING_ALPHA), 120.0, velocity)
+	if ship and ship.global_position.distance_to(at.global_position) <= CLUNK_FELT_WITHIN:
 		ship.damage_shake_time = CLUNK_SHAKE_DURATION
 		ship.damage_shake_current_intensity = CLUNK_SHAKE_INTENSITY
 
-# --- the tear ---
+# --- the cut ---
 
 func _draw() -> void:
 	if seated or _part == null:
@@ -270,12 +296,12 @@ func _draw() -> void:
 	var covers := _covers()
 	for gap in _gaps:
 		var box := Freight.bounds(gap)
-		for edge in torn_edges(box, covers):
-			_draw_torn_edge(to_me, edge[0], edge[1], edge[2])
+		for edge in cut_edges(box, covers):
+			_draw_cut_edge(to_me, edge[0], edge[1], edge[2])
 
-## The edges of `box` that the part was torn from - where another station polygon is on
-## the far side - as [from, to, inward] in the part's space (inward points into the gap).
-static func torn_edges(box: Rect2, covers: Array[PackedVector2Array]) -> Array:
+## The edges of `box` the part was cut from - where another station polygon is on the
+## far side - as [from, to, inward] in the part's space (inward points into the gap).
+static func cut_edges(box: Rect2, covers: Array[PackedVector2Array]) -> Array:
 	var tl := box.position
 	var br := box.end
 	var tr := Vector2(br.x, tl.y)
@@ -293,33 +319,42 @@ static func torn_edges(box: Rect2, covers: Array[PackedVector2Array]) -> Array:
 				break
 	return out
 
-## Sheared plating along one torn edge - a ragged strip of the lost part still hanging on
-## - with bent bracket stubs sticking out of it.
-func _draw_torn_edge(to_me: Transform2D, from: Vector2, to: Vector2, inward: Vector2) -> void:
-	var length := from.distance_to(to)
+## Where the emptied bolt holes sit along a cut edge `length` px long: every BOLT_PITCH,
+## never closer than half a pitch to either end.
+static func bolt_stations(length: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	var count := int(floor(length / BOLT_PITCH))
+	if count < 1:
+		return out
+	var start := (length - (count - 1) * BOLT_PITCH) * 0.5
+	for i in count:
+		out.append(start + i * BOLT_PITCH)
+	return out
+
+## One cut edge: a lip of plate with a straight torch line along it, the holes its bolts
+## came out of, slag hanging off the line, and two bracket stubs cut square.
+func _draw_cut_edge(to_me: Transform2D, from: Vector2, to: Vector2, inward: Vector2) -> void:
 	var along := (to - from).normalized()
-	var teeth := PackedVector2Array([from])
-	var steps := maxi(int(length / TEAR_TOOTH_WIDTH), 2)
-	for i in steps + 1:
-		var t := float(i) / steps
-		var depth: float = TEAR_TEETH[i % TEAR_TEETH.size()]
-		teeth.append(from + along * length * t + inward * depth)
-	teeth.append(to)
-	var ragged := to_me * teeth
-	draw_colored_polygon(ragged, Colors.HULL_DARK)
-	draw_polyline(to_me * teeth.slice(1, teeth.size() - 1), Colors.HULL_LIGHT, 1.0)
-	# Broken strut stubs: short bars bent off the edge, sheared at a slant
-	for f: float in [0.2, 0.55, 0.85]:
-		var base := from + along * length * f
-		var bend := inward.rotated(0.35 if f < 0.5 else -0.3)
-		var reach := 7.0 + 4.0 * f
-		var tip := base + bend * reach
-		var sheared := tip + along * 4.0 - bend * 3.0
+	var length := from.distance_to(to)
+	var lip := PackedVector2Array([from, to, to + inward * CUT_LIP, from + inward * CUT_LIP])
+	draw_colored_polygon(to_me * lip, Colors.HULL_DARK)
+	draw_line(to_me * (from + inward * CUT_LIP), to_me * (to + inward * CUT_LIP), Colors.HULL_LIGHT, 1.0)
+	var stations := bolt_stations(length)
+	for i in stations.size():
+		var at := from + along * stations[i] - inward * (BOLT_INSET - CUT_LIP)
+		draw_circle(to_me * at, 1.8, Colors.SPACE_BG)
+		draw_arc(to_me * at, 1.8, 0.0, TAU, 8, Colors.HULL_LIGHT, 1.0)
+		if i % SLAG_EVERY == 1:
+			draw_circle(to_me * (from + along * (stations[i] + 3.0) + inward * (CUT_LIP + 1.5)), 1.4, Color(Colors.CREAM, 0.55))
+	# Bracket stubs: short bars standing into the gap, cut off square
+	for f: float in [0.25, 0.75]:
+		var base := from + along * length * f + inward * CUT_LIP
 		var stub := PackedVector2Array([
-			base - along * 2.5, base + along * 2.5, sheared, tip - along * 2.5,
+			base - along * 2.5, base + along * 2.5,
+			base + along * 2.5 + inward * 7.0, base - along * 2.5 + inward * 7.0,
 		])
 		draw_colored_polygon(to_me * stub, Colors.HULL_MID)
-		draw_polyline(to_me * PackedVector2Array([base - along * 2.5, tip - along * 2.5, sheared, base + along * 2.5]), Colors.HULL_LIGHT, 1.0)
+		draw_line(to_me * (base - along * 2.5 + inward * 7.0), to_me * (base + along * 2.5 + inward * 7.0), Colors.HULL_LIGHT, 1.0)
 
 static func _area(poly: PackedVector2Array) -> float:
 	var a := 0.0

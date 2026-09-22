@@ -34,6 +34,8 @@ func _ready() -> void:
 	_prompt.add_theme_color_override("font_color", Colors.PRIMARY)
 	_prompt.add_theme_color_override("font_outline_color", Colors.SPACE_BG)
 	_prompt.add_theme_constant_override("outline_size", PROMPT_OUTLINE)
+	# Prompts are the word over its key: centre each line so the key sits under the word
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_prompt.visible = false
 	add_child(_prompt)
 	EventBus.action_message_changed.connect(_on_action_message_changed)
