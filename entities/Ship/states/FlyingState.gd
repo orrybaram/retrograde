@@ -356,7 +356,7 @@ func freight_in_reach() -> Freight:
 	var best_d := INF
 	for node in ship.get_tree().get_nodes_in_group("freight"):
 		var f := node as Freight
-		if f == null or f == ship.freight:
+		if f == null or not f.is_loose():
 			continue
 		var d := nose.distance_to(f.lug_global())
 		if d <= Freight.MAGNET_RANGE and d < best_d:

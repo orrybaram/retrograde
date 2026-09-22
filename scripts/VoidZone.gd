@@ -148,9 +148,10 @@ func _is_flying() -> bool:
 	return sm != null and (sm.current_state is FlyingState or sm.current_state is HarvestingState)
 
 func _distance_from_sun() -> float:
-	return _ship.global_position.distance_to(_sun_position())
+	return _ship.global_position.distance_to(sun_position())
 
-func _sun_position() -> Vector2:
+## The middle of the system, which EDGE_RADIUS is measured from (the origin with no sun).
+func sun_position() -> Vector2:
 	if not is_instance_valid(_sun):
 		_sun = null
 		for node in get_tree().get_nodes_in_group("planets"):

@@ -21,6 +21,10 @@ const SEAT_ANGLE := 0.08
 ## Bumping into a loose piece only hurts the hull above this closing speed (px/s); the
 ## ship's ordinary knock threshold is far lower. Nudging Freight around is expected.
 const KNOCK_DAMAGE_SPEED := 250.0
+## The Void cannot take Freight: loose, it is stopped this far (px) inside VoidZone.EDGE_RADIUS.
+const VOID_MARGIN := 8.0
+const _VOID := preload("res://scripts/VoidZone.gd")
+const VOID_STOP_RADIUS := _VOID.EDGE_RADIUS - VOID_MARGIN
 
 ## A test piece: a long mast-like bar with its Lug on one end.
 const TEST_OUTLINE := [
@@ -39,7 +43,12 @@ const LUG_GLOW_TIME := 0.6
 ## How long the whole piece takes to fade from lit back to its own colours once clamped.
 const CLAMP_FLASH_TIME := 0.35
 
+## The ship has had hold of this piece. From then on it is never lost from view: let go,
+## it is marked on the Chart and tracked (docs/adr/0012). Never touched, it has no mark.
+var handled := false
+
 var _collider: CollisionPolygon2D
+var _tracking: NodeTrackingTarget
 var _visual: Node2D
 var _lug_line: Line2D
 var _body: Polygon2D
@@ -153,6 +162,128 @@ static func spawn_ahead_of(ship: Ship, gap := 6.0) -> Freight:
 	f.global_rotation = rot
 	f.linear_velocity = ship.linear_velocity
 	return f
+
+## Riding on a ship's nose.
+func is_clamped() -> bool:
+	return get_parent() is Ship
+
+## Left clamped to an abandoned hull.
+func is_aboard_derelict() -> bool:
+	return get_parent() is DerelictShip
+
+## A body of its own, out in space: the only kind the magnet can take.
+func is_loose() -> bool:
+	return not is_clamped() and not is_aboard_derelict()
+
+## Handled and let go: drawn on the Chart as the ship's own mark.
+func is_marked() -> bool:
+	return handled and is_loose()
+
+## This piece, as something to steer toward. One per piece, so NavSystem can tell it is
+## still the one being tracked.
+func tracking_target() -> NodeTrackingTarget:
+	if _tracking == null:
+		_tracking = NodeTrackingTarget.new(self, label, 60.0)
+	return _tracking
+
+## Where a clamped piece is headed: its Mount, or the Cradle. Until those exist, home.
+func destination() -> TrackingTarget:
+	return NavSystem.home_target()
+
+## Don't collide with `body` for `seconds`: they were touching when they parted.
+func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
+	add_collision_exception_with(body)
+	get_tree().create_timer(seconds).timeout.connect(func() -> void:
+		if is_instance_valid(self) and is_instance_valid(body):
+			remove_collision_exception_with(body))
+
+## The Void stops loose Freight just inside its edge.
+func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	var held := held_at_edge(state.transform.origin, state.linear_velocity, VoidZone.sun_position())
+	if held.is_empty():
+		return
+	var t := state.transform
+	t.origin = held[0]
+	state.transform = t
+	state.linear_velocity = Vector2.ZERO
+	state.angular_velocity = 0.0
+
+## Where a piece at `pos` moving at `velocity` is held by the Void's edge: [position] if it
+## has to be stopped (reaching the stop radius outward bound, or already past the edge),
+## [] if it is free to go on.
+static func held_at_edge(pos: Vector2, velocity: Vector2, sun: Vector2) -> Array:
+	var out := pos - sun
+	var d := out.length()
+	if d < VOID_STOP_RADIUS:
+		return []
+	if d <= _VOID.EDGE_RADIUS and velocity.dot(out) <= 0.0:
+		return []
+	return [sun + out / d * VOID_STOP_RADIUS]
+
+## Should a load clamped to a ship at `ship_pos` (its middle at `load_pos`) fault and let go?
+## As either crosses the Void's edge.
+static func faults_at_edge(ship_pos: Vector2, load_pos: Vector2, sun: Vector2) -> bool:
+	return ship_pos.distance_to(sun) >= _VOID.EDGE_RADIUS or load_pos.distance_to(sun) >= _VOID.EDGE_RADIUS
+
+# --- saving (docs/adr/0012: saved where it is, never respawned or despawned) ---
+
+## This piece as plain data: where it is, how it is moving, and whether it is clamped.
+func to_row() -> Dictionary:
+	var v := linear_velocity
+	var ship := get_parent() as Ship
+	if ship:
+		v = ship.linear_velocity
+	return {
+		"x": global_position.x, "y": global_position.y, "rot": global_rotation,
+		"vx": v.x, "vy": v.y, "spin": angular_velocity if is_loose() else 0.0,
+		"label": label, "handled": handled, "clamped": is_clamped(),
+	}
+
+static func from_row(world: Node, row: Dictionary) -> Freight:
+	var f := Freight.new()
+	f.label = str(row.get("label", f.label))
+	f.handled = bool(row.get("handled", false))
+	world.add_child(f)
+	f.global_position = Vector2(float(row.get("x", 0.0)), float(row.get("y", 0.0)))
+	f.global_rotation = float(row.get("rot", 0.0))
+	f.linear_velocity = Vector2(float(row.get("vx", 0.0)), float(row.get("vy", 0.0)))
+	f.angular_velocity = float(row.get("spin", 0.0))
+	return f
+
+## Every piece not aboard a derelict (those are saved with their derelict), for saving.
+static func snapshot_all(tree: SceneTree) -> Array:
+	var rows := []
+	for node in tree.get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f and not f.is_aboard_derelict() and not f.is_queued_for_deletion():
+			rows.append(f.to_row())
+	return rows
+
+## Put saved pieces back into `world`. Returns the one that was clamped (not yet on any
+## ship: the caller clamps it once the ship is in place), or null.
+static func restore_all(world: Node, rows: Array) -> Freight:
+	var clamped: Freight = null
+	for row in rows:
+		if not row is Dictionary:
+			continue
+		var f := from_row(world, row)
+		if bool(row.get("clamped", false)) and clamped == null:
+			clamped = f
+			f.process_mode = Node.PROCESS_MODE_DISABLED  # waits, out of physics, for its ship
+	return clamped
+
+## Take every piece out of the world, including one on the ship's nose: a load or a new
+## game replaces them all.
+static func clear_all(tree: SceneTree) -> void:
+	for node in tree.get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f == null:
+			continue
+		var ship := f.get_parent() as Ship
+		if ship:
+			ship.discard_freight()
+		f.remove_from_group("freight")  # gone for saves this frame, not just at free
+		f.queue_free()
 
 func lug_global() -> Vector2:
 	return to_global(lug_position)

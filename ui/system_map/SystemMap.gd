@@ -74,6 +74,7 @@ const REVEAL_SPAN := REVEAL_TIME + REVEAL_STAGGER * float(Reveal.GATE)
 @export var space_station_color: Color = Colors.HULL_LIGHT
 @export var nav_color: Color = Colors.NAV
 @export var gate_color: Color = Colors.TITAN
+@export var freight_color: Color = Colors.PRIMARY
 @export var void_color: Color = Colors.DANGER
 
 @export_group("Display")
@@ -623,6 +624,7 @@ func draw_chart(c: Control) -> void:
 	_draw_planets(c, rect)
 	_draw_stations(c, rect)
 	_draw_gates(c, rect)
+	_draw_freight_marks(c, rect)
 	_draw_nav_target(c, rect)
 	_draw_ship(c)
 	_draw_cursor(c)
@@ -975,6 +977,38 @@ func _draw_gate_links(c: Control, rect: Rect2, powered: Array[Gate]) -> void:
 func _gate_label(gate: Gate) -> String:
 	var planet := gate.parent_planet
 	return "%s GATE" % (planet.planet_name if planet else gate.save_key()).to_upper()
+
+## The ship's own marks (docs/adr/0012): Freight it has handled and let go of, and hulls
+## abandoned with Freight still clamped, labelled with what they hold. Each is
+## {"position", "label", "hull"}. They are the ship's, not the Titan's, so they are drawn
+## over uncharted space too. Untouched Freight and empty derelicts have none.
+static func freight_marks(tree: SceneTree) -> Array[Dictionary]:
+	var marks: Array[Dictionary] = []
+	for node in tree.get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f and f.is_marked() and not f.is_queued_for_deletion():
+			marks.append({"position": f.global_position, "label": f.label, "hull": false})
+	for node in tree.get_nodes_in_group("derelicts"):
+		var d := node as DerelictShip
+		if d and d.is_holding_freight() and not d.is_queued_for_deletion():
+			marks.append({"position": d.global_position, "label": d.chart_label(), "hull": true})
+	return marks
+
+## A hollow square for a piece of Freight; a hull holding one gets a chevron over it.
+func _draw_freight_marks(c: Control, rect: Rect2) -> void:
+	for mark in freight_marks(get_tree()):
+		var pos := _map_pos(mark["position"])
+		if not rect.grow(20.0).has_point(pos):
+			continue
+		var r := 3.5
+		var box := Rect2(pos - Vector2(r, r), Vector2(r, r) * 2.0)
+		c.draw_rect(box, Color(Colors.SPACE_BG, 0.9))
+		c.draw_rect(box, freight_color, false, 1.2)
+		if mark["hull"]:
+			c.draw_polyline(PackedVector2Array([
+				pos + Vector2(-r - 2.0, -r - 2.0), pos + Vector2(0.0, -r - 5.0), pos + Vector2(r + 2.0, -r - 2.0)
+			]), freight_color, 1.2, true)
+		_draw_body_label(c, pos, r + 2.0, mark["label"], Color(freight_color, 0.8))
 
 func _draw_nav_target(c: Control, rect: Rect2) -> void:
 	var target := NavSystem.get_target()

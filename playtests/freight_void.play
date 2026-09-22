@@ -1,0 +1,51 @@
+# The Void cannot take Freight (docs/adr/0012): crossing EDGE_RADIUS with a load on the
+# nose faults the clamp and lets it go at the edge, and loose Freight is stopped just
+# inside it, however hard it is sent.
+# Run: PLAYTEST_PORT=7791 tools/play.sh --headless playtests/freight_void.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+
+# Nose-out, 1500 px inside the edge, at rest
+eval pt.remember("sun", get_node("/root/VoidZone").sun_position())
+eval ship.set("rotation", 0.0)
+eval pt.warp_to(pt.recall("sun") + Vector2(get_node("/root/VoidZone").EDGE_RADIUS - 1500.0, 0))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+frames 3
+eval pt.remember("piece", pt.stage_freight())
+frames 3
+hold action 0.6
+wait 0.1
+assert pt.state_name() == "CarryingState" "clamped"
+
+# Out through the edge at 400 px/s
+eval ship.set("linear_velocity", Vector2(400, 0))
+wait_until not ship.is_carrying() 8
+wait 0.1
+assert ship.global_position.distance_to(pt.recall("sun")) > get_node("/root/VoidZone").EDGE_RADIUS - 200.0 "the clamp faults at the edge, not before"
+assert pt.state_name() == "FlyingState" "the ship flies on, unladen"
+assert ship.mass < 3.1 "the mass drops away"
+wait 2
+assert pt.recall("piece").global_position.distance_to(pt.recall("sun")) < get_node("/root/VoidZone").EDGE_RADIUS "the load stays inside the edge"
+assert pt.recall("piece").linear_velocity.length() < 1.0 "stopped there"
+assert pt.recall("piece").is_marked() "and marked, since the ship let go of it"
+
+# Loose Freight flung at the edge is stopped just inside it
+eval ship.set("linear_velocity", Vector2(0, 0))
+eval pt.warp_to(pt.recall("sun") + Vector2(0, get_node("/root/VoidZone").EDGE_RADIUS - 3000.0))
+frames 3
+eval pt.remember("flung", pt.spawn_freight(pt.recall("sun") + Vector2(0, get_node("/root/VoidZone").EDGE_RADIUS - 400.0), 0.0, Vector2(0, 600)))
+wait 3
+assert pt.recall("flung").global_position.distance_to(pt.recall("sun")) < get_node("/root/VoidZone").EDGE_RADIUS "loose Freight never crosses the edge"
+assert pt.recall("flung").global_position.distance_to(pt.recall("sun")) > get_node("/root/VoidZone").EDGE_RADIUS - 20.0 "it stops just inside it"
+assert pt.recall("flung").linear_velocity.length() < 1.0 "and stays stopped"
+quit

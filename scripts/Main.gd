@@ -286,6 +286,7 @@ func start_game() -> void:
 		start_menu.visible = false
 	Gem.clear_all()
 	DerelictShip.clear_all(get_tree())
+	Freight.clear_all(get_tree())
 
 	# Reset all game state for new game
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
@@ -369,13 +370,16 @@ func load_game() -> void:
 
 	# Load game state (credits, ship stats, inventory, upgrades)
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
+	var clamped: Freight = null
 	if gs and ship:
 		Save.load_into(gs, ship)
 		# Swap in the saved wrecks in one step, so no save in between can drop them
 		Gem.clear_all()
 		DerelictShip.clear_all(get_tree())
+		Freight.clear_all(get_tree())
 		Save.restore_wreck_gems(ship.get_parent())
 		Save.restore_derelicts(ship.get_parent(), ship.ship_polygon)
+		clamped = Save.restore_freight(ship.get_parent())
 
 	if encounter_field:
 		encounter_field.restore(Save.load_encounters())
@@ -388,8 +392,14 @@ func load_game() -> void:
 
 	await get_tree().physics_frame
 
-	# Spawn ship at saved dock, or default if not found
-	if ship_spawner:
+	# Saved with a load clamped: back in flight where it was, with the load on the nose.
+	# Otherwise, spawn ship at saved dock, or default if not found
+	if ship_spawner and clamped:
+		await ship_spawner.spawn_in_flight(Save.load_spawn_position(), Save.load_spawn_rotation(), Save.load_spawn_velocity())
+		if is_instance_valid(clamped):
+			ship.clamp_freight(clamped, true)
+			ship.state_machine.change_state("CarryingState")
+	elif ship_spawner:
 		var dock = await ship_spawner.find_saved_dock()
 		if not dock:
 			dock = await ship_spawner.find_default_dock()
@@ -447,6 +457,9 @@ func show_game_over(reason: String) -> void:
 
 func reset_game() -> void:
 	game_over_pending = false
+	# Towed home with a load still on the nose: it stays out here, where the ship was
+	if ship and ship.is_carrying():
+		ship.release_freight()
 	Gem.clear_all(true)  # wreck gems stay where the ship blew up
 
 	# A relaunch is another clone coming up, so it boots the same way a new game does

@@ -1,0 +1,112 @@
+# Abandoning while carrying (docs/adr/0011, 0012): the Freight stays clamped to the
+# abandoned hull, which damps to a full stop and is marked on the Chart with what it
+# holds, and is tracked. All of it survives respawn and a reload. Salvaging the hull
+# frees the Freight beside the wreck, marked and tracked.
+# Run: PLAYTEST_PORT=7791 tools/play.sh --headless playtests/freight_abandon.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+eval pt.warp_to(ship.global_position + Vector2(0, -30000))
+frames 5
+assert not main.is_within_tractor_beam() "clear of the tractor beam"
+eval ship.set("linear_velocity", Vector2(0, 0))
+wait 0.1
+
+# An empty derelict elsewhere gets no mark (the Predecessor Trail)
+eval pt.remember("piece", pt.stage_freight())
+frames 3
+hold action 0.6
+wait 0.1
+assert pt.state_name() == "CarryingState" "clamped"
+eval ship.set("linear_velocity", Vector2(120, 40))
+wait 0.1
+
+# Out of power with a load on: it stays on
+eval ship.consume_fuel(ship.fuel + 1.0)
+eval ship.state_machine.change_state("StrandedState")
+wait_until pt.state_name() == "StrandedState" 2
+assert ship.is_carrying() "a stranded ship keeps its load"
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 2
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+press action
+frames 2
+assert pt.derelict_count() == 1 "ship left adrift"
+assert pt.abandoned_ship().is_holding_freight() "the load stays clamped to the abandoned hull"
+assert not ship.is_carrying() "and is off the ship"
+assert pt.chart_marks().size() == 1 and pt.chart_marks()[0].hull "the hull is marked on the Chart"
+assert pt.chart_marks()[0].label.contains("FREIGHT") "labelled with what it holds"
+assert get_node("/root/NavSystem").get_target().node == pt.abandoned_ship() "and tracked"
+
+# Relaunch: the hull and its load are still out there
+wait_until main.current_game_state == 2 10
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
+press action
+frames 2
+press action
+wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
+wait_until not pt.node("radio_panel").is_typing() 5
+press enter
+wait_until main.current_game_state == 1 30
+wait_until pt.state_name() == "LandedState" 5
+assert pt.abandoned_ship().is_holding_freight() "the load survives the respawn"
+assert not ship.is_carrying() "the new ship starts unladen"
+assert pt.freight().size() == 1 "one piece, no copies"
+wait 10
+assert pt.abandoned_ship().drift.length() == 0.0 "a hull holding Freight damps to a full stop"
+assert absf(pt.abandoned_ship().spin) < 0.05 "and stops turning"
+
+# Reload: still on the hull, still marked
+reload
+assert pt.derelict_count() == 1 "hull restored from the save"
+assert pt.abandoned_ship().is_holding_freight() "its load restored with it"
+assert pt.freight().size() == 1 "still one piece"
+assert pt.chart_marks().size() == 1 and pt.chart_marks()[0].hull "still marked"
+eval pt.remember("hull_at", pt.abandoned_ship().global_position)
+
+# Salvage it: the Freight comes loose beside the wreck
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.3
+wait_until pt.state_name() == "FlyingState" 3
+eval pt.warp_to(pt.abandoned_ship().global_position + Vector2(-60, 0))
+# A sleeping node only checks for the ship every 180 frames: give the hull a moment to come into range
+wait 3.5
+stage_harvest 40 kind:Derelict
+assert pt.staged == pt.abandoned_ship() "staged the abandoned hull"
+# An empty hold: the bare hull salvages in three hits, like scrap
+assert pt.staged.max_hits() == 3 "a bare hull"
+wait 0.2
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged.hits_left == 2 2
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.staged.hits_left == 1 2
+down action
+wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
+up action
+wait_until pt.derelict_count() == 0 3
+wait 0.5
+assert pt.freight().size() == 1 "salvage frees the Freight"
+assert pt.freight()[0].is_loose() "loose now"
+assert pt.freight()[0].global_position.distance_to(pt.recall("hull_at")) < 150.0 "parked beside the wreck"
+assert pt.chart_marks().size() == 1 and not pt.chart_marks()[0].hull "the mark moves to the piece"
+assert get_node("/root/NavSystem").get_target().node == pt.freight()[0] "and it is tracked"
+quit

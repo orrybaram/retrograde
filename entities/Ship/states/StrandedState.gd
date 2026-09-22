@@ -15,6 +15,10 @@ var _derelict: DerelictShip = null
 func allows_sonar() -> bool:
 	return false
 
+## A load on the nose stays there: abandoned, the hull keeps it.
+func holds_freight() -> bool:
+	return true
+
 func enter() -> void:
 	super.enter()
 
@@ -37,6 +41,7 @@ func enter() -> void:
 	_offer_rescue()
 
 func exit() -> void:
+	let_go_of_freight()
 	super.exit()
 	_requested = false
 	_derelict = null

@@ -5,7 +5,8 @@ class_name Save
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, Visited and scanned Bodies, dug-out ore seams
 ## (seconds until they refill), powered and identified Gates, the Automatons the player
-## has met, and which radio tips were seen.
+## has met, which radio tips were seen, and every piece of Freight, where it is (a load
+## clamped to the ship puts the ship back in flight with it on the nose, see load_game).
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
@@ -39,6 +40,8 @@ static func save(gs: GameState, ship: Ship) -> void:
 		cfg.set_value("stats", "spawn_position_x", ship.global_position.x)
 		cfg.set_value("stats", "spawn_position_y", ship.global_position.y)
 		cfg.set_value("stats", "spawn_rotation", ship.rotation)
+		cfg.set_value("stats", "spawn_velocity_x", ship.linear_velocity.x)
+		cfg.set_value("stats", "spawn_velocity_y", ship.linear_velocity.y)
 		
 		# Save dockable identifier if ship is docked
 		var dockable_key = _get_dockable_key_from_ship(ship)
@@ -56,6 +59,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value("wreck", "gems", Gem.wreck_rows())
 	if ship and ship.is_inside_tree():
 		cfg.set_value("wreck", "derelicts", DerelictShip.snapshot_all(ship.get_tree()))
+		cfg.set_value("wreck", "freight", Freight.snapshot_all(ship.get_tree()))
 
 	# Save upgrades
 	for upgrade_path in gs.upgrade_levels.keys():
@@ -329,6 +333,22 @@ static func restore_derelicts(world: Node, hull: Node2D) -> void:
 	if cfg.load(Playtest.save_path()) != OK:
 		return
 	DerelictShip.restore_all(world, hull, cfg.get_value("wreck", "derelicts", []))
+
+## Put saved Freight back into `world` (pieces left on derelicts come back with those).
+## Returns the piece that was clamped to the ship, for the caller to clamp again, or null.
+static func restore_freight(world: Node) -> Freight:
+	var cfg := ConfigFile.new()
+	if cfg.load(Playtest.save_path()) != OK:
+		return null
+	return Freight.restore_all(world, cfg.get_value("wreck", "freight", []))
+
+## The ship's velocity when it was saved (it only matters for a ship saved in flight).
+static func load_spawn_velocity() -> Vector2:
+	var cfg := ConfigFile.new()
+	if cfg.load(Playtest.save_path()) != OK:
+		return Vector2.ZERO
+	return Vector2(float(cfg.get_value("stats", "spawn_velocity_x", 0.0)),
+		float(cfg.get_value("stats", "spawn_velocity_y", 0.0)))
 
 ## Load planet orbital angles into a dictionary
 ## Returns a dictionary mapping planet keys to orbital angles
