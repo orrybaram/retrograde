@@ -86,7 +86,7 @@ const REVEAL_SPAN := REVEAL_TIME + REVEAL_STAGGER * float(Reveal.GATE)
 @export_group("Zoom and Pan")
 @export var default_zoom_level: float = 25.0  ## Default zoom multiplier
 @export var min_zoom_level: float = 1.0  ## Minimum zoom level (1.0 fits the whole system)
-@export var max_zoom_level: float = 50.0  ## Maximum zoom level
+@export var max_zoom_level: float = 100.0  ## Maximum zoom level
 @export var zoom_speed: float = 1.5  ## Zoom multiplier per key press
 @export var pan_speed: float = 500.0  ## Pixels per second panning speed
 @export var cursor_speed: float = 420.0  ## Pixels per second the mark travels across the chart
@@ -1206,8 +1206,7 @@ func _draw_readout(c: Control, alpha: float) -> void:
 		c.draw_string(_font, Vector2(READOUT_INSET + 52.0, y), row[1], HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, value_color)
 		y += _font.get_height(TEXT_SIZE) + 3.0
 
-	# The chart is the one instrument the void leaves half-working, so how much
-	# further out the ship can go lives here, not on the dashboard falling apart.
+	# How much further out the ship can go before the dark takes it.
 	if VoidZone.is_inside():
 		var left := VoidZone.distance_left()
 		c.draw_string(_font, Vector2(READOUT_INSET, y), "VOID", HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(void_color, 0.6 * alpha))

@@ -117,3 +117,15 @@ func test_push_rect_out_of_blocker_follows_shorter_slide() -> void:
 	# Clear of it: untouched.
 	var clear := TrackingIndicator.push_rect_out_of(Rect2(400, 600, 100, 40), blocker)
 	assert_vector(clear.position).is_equal(Vector2(400, 600))
+
+
+func test_a_waypoint_is_done_with_once_the_ship_reaches_it() -> void:
+	var waypoint := PointTrackingTarget.new(Vector2(1000, 0))
+	assert_bool(NavSystem.waypoint_reached(waypoint, Vector2(0, 0))).is_false()
+	assert_bool(NavSystem.waypoint_reached(waypoint, Vector2(1000 - waypoint.get_arrival_radius() + 1.0, 0))).is_true()
+
+
+func test_a_body_stays_tracked_when_the_ship_reaches_it() -> void:
+	var body := auto_free(Node2D.new()) as Node2D
+	add_child(body)
+	assert_bool(NavSystem.waypoint_reached(NodeTrackingTarget.new(body, "ROOK"), Vector2.ZERO)).is_false()

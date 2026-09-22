@@ -23,7 +23,7 @@ signal consumed()
 ## the edge has to sit well clear of that, or the dock itself is in the dark.
 const EDGE_RADIUS := 340_000.0
 ## Where there is nothing left to see, and the dark takes the ship.
-const DEEP_RADIUS := 380_000.0
+const DEEP_RADIUS := 360_000.0
 ## Once past the edge, the ship has to come back this far inside before the void
 ## lets go. Without it a ship flying the boundary flickers in and out of the dark
 ## and retriggers the warning every few frames.

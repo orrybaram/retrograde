@@ -44,6 +44,8 @@ func _ready() -> void:
 	_readout_detail = _make_label(READOUT_DETAIL_FONT_SIZE, Color(color, READOUT_ALPHA * 0.85), _readout)
 	_marker_label = _make_label(LABEL_FONT_SIZE, color)
 	_set_active(false)
+	# Out in the Void the tracker goes the way of the rest of the HUD
+	add_child(VoidGlitch.new())
 
 func _process(_delta: float) -> void:
 	var target := NavSystem.get_target()

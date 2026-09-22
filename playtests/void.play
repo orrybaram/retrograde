@@ -28,7 +28,7 @@ wait 0.4
 # Out past the edge. warp_to lands at rest, so the run is about the clock, not drift.
 hold thrust 1.2
 wait_until pt.state_name() == "FlyingState" 3
-eval pt.warp_to(Vector2(345000, 0))
+eval pt.warp_to(Vector2(342000, 0))
 wait 0.5
 assert get_node("/root/VoidZone").is_inside() "past the edge"
 assert get_node("/root/VoidZone").depth > 0.0 "depth reads past the edge"
@@ -47,20 +47,31 @@ wait 30
 assert pt.state_name() == "FlyingState" "loitering at the fringe never takes the ship"
 
 # Deeper, the dark takes hold
-eval pt.warp_to(Vector2(365000, 0))
+eval pt.warp_to(Vector2(352000, 0))
 wait 0.5
 assert get_node("/root/VoidZone").shroud > 0.5 "half swallowed"
+assert main.get_node("CanvasLayer/HUD/TrackingIndicator/VoidGlitch")._dirty "the waypoint tracker glitches with the HUD"
 screenshot void_3_dark
+# The Log and its chart glitch too
+press m
+wait 0.6
+assert pt.node("log_ui").get_node("VoidGlitch")._dirty "the Log glitches out here"
+screenshot void_3_chart
+press m
+wait 0.3
 
 # Turn back: everything comes home at once
 eval pt.warp_to(Vector2(200000, 0))
 wait_until not get_node("/root/VoidZone").is_inside() 3
 assert get_node("/root/VoidZone").shroud == 0.0 "sky is back"
+wait 0.2
+assert not main.get_node("CanvasLayer/HUD/TrackingIndicator/VoidGlitch")._dirty "the tracker is handed back clean"
+assert main.get_node("CanvasLayer/HUD/TrackingIndicator").modulate.a == 1.0 "lit"
 wait 2
 screenshot void_4_recovered
 
 # Now go all the way: at the deep line the dark takes the ship
-eval pt.warp_to(Vector2(379000, 0))
+eval pt.warp_to(Vector2(359000, 0))
 eval ship.set("linear_velocity", Vector2(400, 0))
 wait_until main.current_game_state == 2 40
 assert pt.state_name() == "ConsumedState" "taken, not exploded"

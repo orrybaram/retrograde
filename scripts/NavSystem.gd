@@ -1,7 +1,8 @@
 extends Node
 
 ## Player navigation. Owns the player's Tracker (one target at a time) and
-## falls back to tracking home base whenever nothing else is selected.
+## falls back to tracking home base whenever nothing else is selected - including the
+## moment the ship reaches a waypoint, which has done its job.
 ##
 ##   NavSystem.track_point(pos, "WAYPOINT")
 ##   NavSystem.track(NodeTrackingTarget.new(planet))
@@ -20,6 +21,16 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not player_tracker.has_target():
 		track_home()
+		return
+	var ship := get_tree().get_first_node_in_group("ship") as Node2D
+	if ship and waypoint_reached(player_tracker.target, ship.global_position):
+		track_home()
+
+## A waypoint (a bare point in space, not a body) is done with once the ship is inside
+## its arrival radius. Bodies, stations and Freight stay tracked until something else is.
+static func waypoint_reached(target: TrackingTarget, ship_position: Vector2) -> bool:
+	return target is PointTrackingTarget \
+		and ship_position.distance_to(target.get_position()) <= target.get_arrival_radius()
 
 func get_target() -> TrackingTarget:
 	return player_tracker.target if player_tracker.has_target() else null

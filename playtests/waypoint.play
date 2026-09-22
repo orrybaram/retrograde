@@ -81,3 +81,14 @@ press enter
 wait_until main.current_game_state == 1 30
 assert not get_tree().paused "the pause clears once the call is answered"
 state
+
+# Reaching a waypoint clears it: tracking falls back to home
+wait_until pt.state_name() == "LandedState" 10
+hold thrust 1.2
+wait_until pt.state_name() == "FlyingState" 3
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(0, -3000), "WAYPOINT")
+wait 0.1
+assert get_node("/root/NavSystem").get_target().get_label() == "WAYPOINT" "a waypoint set out ahead"
+eval pt.warp_to(get_node("/root/NavSystem").get_target().get_position() + Vector2(20, 0))
+wait 0.2
+assert get_node("/root/NavSystem").is_tracking_home() "arriving at the waypoint clears it, back to home"
