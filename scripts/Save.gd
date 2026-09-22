@@ -5,8 +5,9 @@ class_name Save
 ## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, Visited and scanned Bodies, dug-out ore seams
 ## (seconds until they refill), powered and identified Gates, the Automatons the player
-## has met, which radio tips were seen, and every piece of Freight, where it is (a load
-## clamped to the ship puts the ship back in flight with it on the nose, see load_game).
+## has met, which radio tips were seen, which Sections are seated in their Mounts, and every
+## piece of Freight, where it is (a load clamped to the ship puts the ship back in flight
+## with it on the nose, see load_game).
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
@@ -25,6 +26,8 @@ const GATE_POWERED_KEY := "powered"
 const GATE_IDENTIFIED_KEY := "identified"
 const AUTOMATON_SECTION := "automatons"
 const AUTOMATON_MET_KEY := "met"
+const SECTION_SECTION := "sections"
+const SECTION_SEATED_KEY := "seated"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -85,6 +88,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
 	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray(gs.identified_gates.keys()))
 	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray(gs.met_automatons.keys()))
+	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray(gs.seated_sections.keys()))
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -239,6 +243,27 @@ static func load_met_automatons(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray()))
 
+## Writes a Section seated into an existing save the moment it happens, in flight with no
+## dock to hang a full save off: the seated list, and the saved Freight without that
+## Section, so a reload never brings the piece back as well as the seated Section.
+## With no save yet this does nothing; the next full save() writes it.
+static func save_seated_section(id: String, seated: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, seated)
+	var rows: Array = cfg.get_value("wreck", "freight", [])
+	cfg.set_value("wreck", "freight", rows.filter(func(row): return not (row is Dictionary and row.get("section", "") == id)))
+	cfg.save(file)
+
+## The Sections seated back in their Mounts. A save from before this has none.
+static func load_seated_sections(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray()))
+
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
 static func _get_planet_key(planet: Planet) -> String:
@@ -283,6 +308,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.met_automatons.clear()
 	for designation in load_met_automatons():
 		gs.mark_automaton_met(designation)
+	gs.seated_sections.clear()
+	for id in load_seated_sections():
+		gs.mark_section_seated(id)
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}

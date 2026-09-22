@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://c6x45wnjj471j" path="res://entities/structures/SpaceStation.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bk33hils8ufhh" path="res://entities/structures/SpacePort.tscn" id="5"]
+[ext_resource type="Script" path="res://entities/structures/Mount.gd" id="6_mount"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
@@ -91,6 +92,12 @@ polygon = PackedVector2Array(-94, 36, -74, 36, -74, 46, -94, 46)
 [node name="Detail8" type="Polygon2D" parent="Visuals" unique_id=261225713]
 color = Color(0.58, 0.545, 0.451, 1)
 polygon = PackedVector2Array(-94, 51, -74, 51, -74, 59, -94, 59)
+
+[node name="Mast1Mount" type="Node2D" parent="."]
+position = Vector2(0, -82.5)
+script = ExtResource("6_mount")
+part = NodePath("../Visuals/Tower1")
+collision = NodePath("../CollisionShape2D")
 
 [node name="SpacePort" parent="." unique_id=1193258047 instance=ExtResource("5")]
 position = Vector2(118, 10)

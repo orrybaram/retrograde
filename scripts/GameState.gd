@@ -41,6 +41,9 @@ var identified_gates: Dictionary = {}
 ## one earns its Record in the Log, and the Log only ever gains Records. Permanent.
 var met_automatons: Dictionary = {}
 
+## Sections of SR-7 seated back in their Mounts, keyed by Sections id. Permanent.
+var seated_sections: Dictionary = {}
+
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
 
@@ -91,6 +94,12 @@ func has_met_automaton(designation: String) -> bool:
 func mark_automaton_met(designation: String) -> void:
 	met_automatons[designation] = true
 
+func is_section_seated(id: String) -> bool:
+	return seated_sections.has(id)
+
+func mark_section_seated(id: String) -> void:
+	seated_sections[id] = true
+
 func is_gate_identified(key: String) -> bool:
 	return identified_gates.has(key)
 
@@ -138,6 +147,7 @@ func reset_all_state() -> void:
 	powered_gates.clear()
 	identified_gates.clear()
 	met_automatons.clear()
+	seated_sections.clear()
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()

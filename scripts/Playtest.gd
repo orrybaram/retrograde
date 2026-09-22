@@ -50,7 +50,9 @@ extends Node
 ##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
 ##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.seam(),
 ##       pt.stage_freight([gap]) (test Freight on the nose, ready to clamp), pt.spawn_freight(pos, [rot], [vel]),
-##       pt.freight() (every piece), pt.freight_near(pos, [radius]), pt.chart_marks() (the ship's own marks on the Chart),
+##       pt.freight() (every piece), pt.test_freight() (every piece that is not a Section), pt.freight_near(pos, [radius]),
+##       pt.chart_marks() (the ship's own marks on the Chart), pt.section(id) (a Section's Freight), pt.mount(id),
+##       pt.stage_at_mount(id, [offset], [turn_deg]) (the ship carrying the Section, placed at its Mount),
 ##       pt.caption(text) (on-screen caption for recorded videos))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
@@ -908,6 +910,41 @@ func stage_freight(gap := 6.0) -> Freight:
 ## Every piece of Freight in the world: loose, clamped, or aboard a derelict.
 func freight() -> Array:
 	return get_tree().get_nodes_in_group("freight").filter(func(n): return not n.is_queued_for_deletion())
+
+## Every piece that is not a Section of SR-7 (a new game already has those out there).
+func test_freight() -> Array:
+	return freight().filter(func(f): return f.section == "")
+
+## Section `id`'s Freight, wherever it is (Sections.MAST_1 is "mast_1"); null once seated.
+func section(id: String) -> Freight:
+	for f in freight():
+		if f.section == id:
+			return f
+	return null
+
+func mount(id: String) -> Mount:
+	return Mount.for_section(get_tree(), id)
+
+## Put the ship, carrying Section `id` (clamped first if it isn't), where the Section
+## sits `offset` px from its Mount (in the Mount's frame) turned `turn_deg` off its
+## heading, moving with the station: the last moment of an approach.
+func stage_at_mount(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var m := mount(id)
+	var f := section(id)
+	if not ship.is_carrying():
+		ship.clamp_freight(f, true)
+		ship.state_machine.change_state("CarryingState")
+	var seat := m.global_transform * Transform2D(deg_to_rad(turn_deg), offset)
+	# The ship's transform that puts its load exactly there
+	var ship_xf := seat * f.transform.affine_inverse()
+	var rid := ship.get_rid()
+	var station := m.get_parent() as RigidBody2D
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, ship_xf)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, station.linear_velocity)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_transform = ship_xf
+	ship.linear_velocity = station.linear_velocity
 
 ## The pieces within `radius` px of `pos` (scenario expressions can't hold a lambda).
 func freight_near(pos: Vector2, radius := 20.0) -> Array:

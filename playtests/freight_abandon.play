@@ -62,7 +62,7 @@ wait_until main.current_game_state == 1 30
 wait_until pt.state_name() == "LandedState" 5
 assert pt.abandoned_ship().is_holding_freight() "the load survives the respawn"
 assert not ship.is_carrying() "the new ship starts unladen"
-assert pt.freight().size() == 1 "one piece, no copies"
+assert pt.test_freight().size() == 1 "one piece, no copies"
 wait 10
 assert pt.abandoned_ship().drift.length() == 0.0 "a hull holding Freight damps to a full stop"
 assert absf(pt.abandoned_ship().spin) < 0.05 "and stops turning"
@@ -71,7 +71,7 @@ assert absf(pt.abandoned_ship().spin) < 0.05 "and stops turning"
 reload
 assert pt.derelict_count() == 1 "hull restored from the save"
 assert pt.abandoned_ship().is_holding_freight() "its load restored with it"
-assert pt.freight().size() == 1 "still one piece"
+assert pt.test_freight().size() == 1 "still one piece"
 assert pt.chart_marks().size() == 1 and pt.chart_marks()[0].hull "still marked"
 eval pt.remember("hull_at", pt.abandoned_ship().global_position)
 
@@ -107,9 +107,9 @@ wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
 up action
 wait_until pt.derelict_count() == 0 3
 wait 0.5
-assert pt.freight().size() == 1 "salvage frees the Freight"
-assert pt.freight()[0].is_loose() "loose now"
-assert pt.freight()[0].global_position.distance_to(pt.recall("hull_at")) < 150.0 "parked beside the wreck"
+assert pt.test_freight().size() == 1 "salvage frees the Freight"
+assert pt.test_freight()[0].is_loose() "loose now"
+assert pt.test_freight()[0].global_position.distance_to(pt.recall("hull_at")) < 150.0 "parked beside the wreck"
 assert pt.chart_marks().size() == 1 and not pt.chart_marks()[0].hull "the mark moves to the piece"
-assert get_node("/root/NavSystem").get_target().node == pt.freight()[0] "and it is tracked"
+assert get_node("/root/NavSystem").get_target().node == pt.test_freight()[0] "and it is tracked"
 quit
