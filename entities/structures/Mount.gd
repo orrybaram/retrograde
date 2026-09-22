@@ -37,6 +37,16 @@ const SLAG_EVERY := 3
 ## How far past the gap the station's collision is cut back, so no sliver of wall is
 ## left standing where the part's edge met the hull's outline.
 const COLLISION_CLEARANCE := 2.0
+## How much of a buried Section sticks out of the ground (px, along its length).
+const BURIED_EXPOSED := 62.0
+## The scrap left beside a Section adrift in a ring sits this far (px) behind it round
+## the orbit, and a Section with scrap already this near is left as it is.
+const SCRAP_BESIDE := 130.0
+const SCRAP_NEAR := 260.0
+## How often (s) a Section adrift beside scrap checks it still has some.
+const SCRAP_CHECK_TIME := 1.0
+## How far back from the cut, onto the hull, the red emergency lamp sits (px).
+const ALARM_LAMP_SETBACK := 7.0
 
 ## Which Section fits here (Sections.gd).
 @export var section := Sections.FUEL_TANK
@@ -50,6 +60,16 @@ const COLLISION_CLEARANCE := 2.0
 @export var section_start_offset := Vector2(-460, 110)
 @export var section_start_rotation := 0.25
 @export var start_on_planet := false
+## With `start_on_planet`: adrift in the planet's debris ring, going round with it at the
+## ring's speed for its distance (OrbitalRingSpawner), instead of hanging still.
+@export var start_in_orbit := false
+## With `start_in_orbit`: a piece of scrap is left going round just beside it, so the Sweep
+## that finds the Section is likely to find the scrap too.
+@export var start_beside_scrap := false
+## With `start_on_planet`: buried in the planet's ground on its sunlit face, the Lug end
+## sticking out, taking Freight.BURY_TUGS tugs to pull free. `section_start_offset` is
+## ignored; `section_start_rotation` leans it off straight up.
+@export var start_buried := false
 
 var seated := false
 var _part: Polygon2D
@@ -58,6 +78,8 @@ var _collision: CollisionPolygon2D
 var _gaps: Array[PackedVector2Array] = []
 var _tracking: NodeTrackingTarget
 var _seating: Tween
+## Sparks along the cut and a red strobe beside it, while the Section is missing.
+var alarm: CutAlarm
 
 func _ready() -> void:
 	add_to_group("mounts")
@@ -66,7 +88,16 @@ func _ready() -> void:
 	_collision = get_node_or_null(collision) as CollisionPolygon2D
 	if _part:
 		_gaps = exposed_regions(_part.polygon, _covers())
+		_build_alarm()
 	EventBus.planets_restored.connect(refresh)
+	if start_beside_scrap:
+		# The ring clears and respawns its scrap on its own schedule (a new game, a load,
+		# a harvest): keep checking the Section still has its companion while it waits
+		var check := Timer.new()
+		check.wait_time = SCRAP_CHECK_TIME
+		check.autostart = true
+		check.timeout.connect(_check_scrap_beside)
+		add_child(check)
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	_show_seated(gs != null and gs.is_section_seated(section))
 
@@ -146,10 +177,19 @@ func ensure_section() -> void:
 			return
 		var world := get_tree().get_first_node_in_group("ship")
 		world = world.get_parent() if world else get_parent()
-		piece = Freight.spawn_section(world, section, anchor.to_global(section_start_offset), anchor.global_rotation + section_start_rotation)
-		piece.lodge_in(anchor, section_start_offset)
+		var offset := start_offset(anchor)
+		var turn := section_start_rotation
+		if start_buried and anchor is Planet:
+			turn += offset.angle() + PI  # standing out of the ground, Lug end up
+		piece = Freight.spawn_section(world, section, anchor.to_global(offset), anchor.global_rotation + turn)
+		piece.lodge_in(anchor, offset, start_spin(anchor, offset))
+		if start_buried and anchor is Planet:
+			piece.bury_in(anchor, Freight.BURY_TUGS)
 	elif piece.lodged and anchor:
-		piece.lodge_in(anchor, piece.lodged_offset)
+		piece.lodge_in(anchor, piece.lodged_offset, piece.lodged_spin)
+		piece.bury_in(anchor)
+	if start_beside_scrap and piece and piece.lodged and not piece.handled and not piece.beside_spent:
+		_leave_scrap_beside.call_deferred(piece)
 
 ## What a new game's Section hangs in: the planet the station orbits when `start_on_planet`
 ## and there is one, else the station.
@@ -158,6 +198,85 @@ func start_anchor() -> Node2D:
 	if start_on_planet and station and station.get_parent() is Planet:
 		return station.get_parent() as Node2D
 	return station
+
+## Where a new game leaves the Section in `anchor`'s frame.
+func start_offset(anchor: Node2D) -> Vector2:
+	var planet := anchor as Planet
+	if start_buried and planet:
+		var sun_dir := (VoidZone.sun_position() - planet.global_position).normalized()
+		var local_dir := planet.global_transform.basis_xform_inv(sun_dir).normalized()
+		var half_length := Freight.bounds(PackedVector2Array(Sections.DATA[section]["outline"])).size.x * 0.5
+		return local_dir * (ground_radius(planet) + half_length - BURIED_EXPOSED)
+	return section_start_offset
+
+## How far out a planet's ground is: its collision, or its disc if that is bigger.
+static func ground_radius(planet: Planet) -> float:
+	return planet.radius * maxf(planet.collision_radius_ratio, 1.0)
+
+## How fast a new game's Section goes round `anchor` from `offset`: the debris ring's own
+## speed at that distance when `start_in_orbit`, else still.
+func start_spin(anchor: Node2D, offset: Vector2) -> float:
+	if not start_in_orbit:
+		return 0.0
+	for child in anchor.get_children():
+		var ring := child as OrbitalRingSpawner
+		if ring:
+			return OrbitalRingSpawner.angular_speed(ring.orbital_speed, offset.length())
+	return 0.0
+
+## Put a piece of scrap going round beside `piece` in the ring, unless one already is.
+## Deferred a frame: a load clears and respawns the ring on the same signal that brings
+## the piece back, and the scrap must land after that, not be swept away by it.
+func _leave_scrap_beside(piece: Freight) -> void:
+	await get_tree().process_frame
+	if not is_instance_valid(piece) or not piece.lodged or piece.lodged_in == null or piece.beside_spent:
+		return
+	var ring: OrbitalRingSpawner = null
+	for child in piece.lodged_in.get_children():
+		if child is OrbitalRingSpawner:
+			ring = child
+	if ring == null:
+		return
+	var scrap := _scrap_near(piece)
+	if scrap == null:
+		var r := piece.lodged_offset.length()
+		scrap = ring.spawn_scrap_at(r, piece.lodged_offset.angle() - SCRAP_BESIDE / maxf(r, 1.0))
+	if scrap and scrap._orbital_motion:
+		var world_angle := piece.lodged_in.global_transform.basis_xform(piece.lodged_offset).angle()
+		piece.lodge_beside(scrap, angle_difference(scrap._orbital_motion.angle_now(), world_angle))
+		# Harvested, it is gone for good: the Section is not given another
+		var on_harvest := _on_companion_harvested.bind(scrap)
+		if not scrap.resource_depleted.is_connected(on_harvest):
+			scrap.resource_depleted.connect(on_harvest)
+
+## A pooled scrap is reused elsewhere later, so it only counts while it is still this
+## Section's companion.
+func _on_companion_harvested(scrap: Node2D) -> void:
+	var piece := _find_section()
+	if piece and piece.lodged_beside == scrap:
+		piece.beside_spent = true
+		piece.lodged_beside = null
+
+## The ring clears and respawns its scrap on a new game or a load, which can take the
+## companion away; put it back then - but never once the player has harvested it.
+func _check_scrap_beside() -> void:
+	var piece := _find_section()
+	if piece and piece.lodged and not piece.handled and not piece.beside_spent and not piece._beside_valid():
+		_leave_scrap_beside(piece)
+
+## Scrap already going round close beside `piece`, on its own orbit (so the two keep
+## together), or null.
+func _scrap_near(piece: Freight) -> ScrapNode:
+	var r := piece.lodged_offset.length()
+	for node in get_tree().get_nodes_in_group("resource_nodes"):
+		var s := node as ScrapNode
+		if s == null or not s.is_inside_tree() or s.amount <= 0:
+			continue
+		if s._orbital_motion and s._orbital_motion.orbital_body == piece.lodged_in \
+				and s.global_position.distance_to(piece.global_position) <= SCRAP_NEAR \
+				and absf(s._orbital_motion.orbital_distance - r) < 20.0:
+			return s
+	return null
 
 ## Pull `f` home and seat it. `f` has just been let go of, within tolerance.
 func seat(f: Freight) -> void:
@@ -181,7 +300,8 @@ func seat(f: Freight) -> void:
 	_seating.tween_callback(func() -> void:
 		Mount.clunk(self)
 		f.queue_free()
-		_show_seated(true))
+		_show_seated(true)
+		EventBus.section_seated.emit(section))
 
 func is_seating() -> bool:
 	return _seating != null and _seating.is_running()
@@ -190,6 +310,8 @@ func _show_seated(on: bool) -> void:
 	seated = on
 	if _part:
 		_part.visible = on
+	if alarm:
+		alarm.active = not on
 	Mount.recut.call_deferred(_collision, get_tree())
 	queue_redraw()
 
@@ -288,6 +410,26 @@ static func clunk(at: Node2D) -> void:
 		ship.damage_shake_current_intensity = CLUNK_SHAKE_INTENSITY
 
 # --- the cut ---
+
+## The alarm at the cut: sparks off every cut edge, spraying into the gap, and a red lamp
+## on the hull just behind the longest edge of each gap.
+func _build_alarm() -> void:
+	alarm = CutAlarm.new()
+	alarm.name = "Alarm"
+	var to_me := global_transform.affine_inverse() * _part.global_transform
+	var covers := _covers()
+	for gap in _gaps:
+		var longest: Array = []
+		for edge in cut_edges(Freight.bounds(gap), covers):
+			var from: Vector2 = to_me * edge[0]
+			var to: Vector2 = to_me * edge[1]
+			var inward := to_me.basis_xform(edge[2]).normalized()
+			alarm.segments.append([from + inward * CUT_LIP, to + inward * CUT_LIP, inward])
+			if longest.is_empty() or from.distance_to(to) > longest[0].distance_to(longest[1]):
+				longest = [from, to, inward]
+		if not longest.is_empty():
+			alarm.lamps.append((longest[0] + longest[1]) * 0.5 - longest[2] * ALARM_LAMP_SETBACK)
+	add_child(alarm)
 
 func _draw() -> void:
 	if seated or _part == null:

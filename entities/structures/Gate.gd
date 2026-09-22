@@ -137,6 +137,7 @@ func _setup_orbital_motion(body: Node2D) -> void:
 	_orbital_motion.update_velocity = true
 	add_child(_orbital_motion)
 	_orbital_motion.initialize(body)
+	add_to_group("orbiting_bodies")
 	# Deferred: the body being followed has to have built its own orbit first, and the
 	# scene makes no promise about which of two siblings is ready before the other.
 	_lock_to_geosync.call_deferred()
@@ -524,3 +525,11 @@ func _draw_blinker() -> void:
 	var lit := fmod(_clock, BLINK_PERIOD) < BLINK_PERIOD * BLINK_DUTY
 	draw_circle(at, 4.0, Color(Colors.PRIMARY, 0.25 if lit else 0.06))
 	draw_circle(at, 2.0, Colors.PRIMARY if lit else Colors.PRIMARY_DIM)
+
+## A new game: back to where the scene starts this orbit, on a fresh clock. Orbits run on
+## wall-clock time and a load re-bases them on the saved angle, so without this a new game
+## started after any play finds the system wherever it had got to.
+func reset_orbit() -> void:
+	if _orbital_motion:
+		_orbital_motion.initialize(null, initial_angle)
+		_orbital_motion.update_orbit()

@@ -6,27 +6,12 @@
 # through it rather than by writing GameState directly.
 # Run: tools/play.sh playtests/notes.play   (frames land in .playtest/notes_*.png)
 
-# The driver suppresses waking up by default, and the wake-up call is the meeting
-# that earns the Guide its Record, so this scenario asks for it (playtests/intro.play).
-eval main.set("force_wake_sequence", true)
+# UNIT-7 is off when the game opens (docs/OPENING.md §5) and nothing wakes it yet, so
+# this scenario hands the player its Record directly rather than meeting it on the radio.
 press enter
 wait_until main.current_game_state == 1 15
-wait_until pt.node("radio_panel").visible 15
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_wake" "the wake-up call is on air"
-assert gs.has_met_automaton("UNIT-7") "the first transmission is the meeting"
+eval gs.mark_automaton_met("UNIT-7")
 
-# Click the transmission through, one press per line once the speech is out
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait_until not get_tree().paused 10
 # The rest of the tutorial transmissions pause the game; this scenario isn't about them
 eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")

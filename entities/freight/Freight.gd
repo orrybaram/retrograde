@@ -69,6 +69,28 @@ var art := ""
 var lodged := false
 var lodged_offset := Vector2.ZERO
 var lodged_in: Node2D = null
+## Radians/s the lodged spot turns round `lodged_in`: a piece adrift in a debris ring goes
+## round with the ring (and turns with it) rather than hanging still in it. 0 hangs still.
+var lodged_spin := 0.0
+## Lodged beside this piece of scrap, `lodged_beside_turn` radians further round
+## `lodged_in` than it: it goes round with the scrap exactly, so the two are always found
+## together. Not saved - Mount finds it a companion again after a load. Falls back to
+## `lodged_spin` once the scrap is gone.
+var lodged_beside: Node2D = null
+var lodged_beside_turn := 0.0
+## The scrap it was left beside has been harvested: it is not given another. Saved.
+var beside_spent := false
+var _beside_radius := 0.0
+
+## Buried in a planet's ground (the SOLAR ARRAY, lying in Rook). The magnet reaches it but
+## can't pull it: each hold of `action` that finds it is one tug, and the BURY_TUGS-th rips
+## it out (tug). This many tugs are still to go; 0 is not buried. Saved.
+const BURY_TUGS := 3
+var buried_tugs_left := 0
+## A tug that doesn't free it knocks the ship back this hard (px/s), and shakes the camera.
+const TUG_KICK := 55.0
+const TUG_SHAKE := 3.0
+const BREAK_SHAKE := 7.0
 
 var _collider: CollisionPolygon2D
 var _tracking: NodeTrackingTarget
@@ -102,16 +124,23 @@ func _ready() -> void:
 	_visual.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(_visual)
 
+## Hitstop slows physics, but orbits keep wall-clock time: a lodged piece rides its
+## planet's orbit, so while time is slowed it is put straight on its spot rather than left
+## trailing behind (the ship keeps pace the same way - Ship._process).
+func _process(_delta: float) -> void:
+	if lodged and is_instance_valid(lodged_in) and HarvestJuice.is_hitstopped():
+		global_position = lodged_in.to_global(lodged_offset)
+
 ## A Sweep ring reaches the Lug (not the middle of the piece): that is the part that answers.
 func sonar_point() -> Vector2:
 	return lug_global()
 
-## The Lug answers as the ring passes: it lights up in the Titan's purple, sends small rings
-## back out, and fades.
-func on_sonar_touched() -> void:
+## The Lug answers as the ring passes: it lights up in the Titan's purple, pings back with
+## a ring as strong as the one that reached it, and fades.
+func on_sonar_touched(strength := 1.0) -> void:
 	if not _lug_line:
 		return
-	SonarEcho.answer(_visual, lug_position)
+	SonarEcho.answer_ping(_visual, lug_position, strength)
 	if _lug_glow:
 		_lug_glow.kill()
 	_lug_line.default_color = Colors.TITAN
@@ -181,10 +210,112 @@ static func spawn_section(world: Node, id: String, pos: Vector2, rot := 0.0) -> 
 	return f
 
 ## Hold this piece `offset` from `body` from now on, until the magnet takes it.
-func lodge_in(body: Node2D, offset: Vector2) -> void:
+func lodge_in(body: Node2D, offset: Vector2, spin := 0.0) -> void:
 	lodged = true
 	lodged_in = body
 	lodged_offset = offset
+	lodged_spin = spin
+
+## Lodge beside `scrap`, `turn` radians further round the anchor than it.
+func lodge_beside(scrap: Node2D, turn: float) -> void:
+	lodged_beside = scrap
+	lodged_beside_turn = turn
+	var motion = scrap.get("_orbital_motion")
+	_beside_radius = motion.orbital_distance if motion else 0.0
+
+## The scrap it rides beside is still out there, still where it was: not harvested, not
+## handed back to the pool and reused on some other orbit.
+func _beside_valid() -> bool:
+	if lodged_beside == null or not is_instance_valid(lodged_beside) or not lodged_beside.is_inside_tree():
+		return false
+	var scrap := lodged_beside as ScrapNode
+	if scrap == null or scrap.amount <= 0 or not scrap.is_in_group("resource_nodes"):
+		return false
+	# Handed back to the pool and reused on another orbit is not the same scrap
+	var motion := scrap._orbital_motion as OrbitalMotion
+	return motion != null and motion.orbital_body == lodged_in \
+		and absf(motion.orbital_distance - _beside_radius) < 1.0
+
+# --- buried ---
+
+func is_buried() -> bool:
+	return buried_tugs_left > 0
+
+## Sunk into `planet`'s ground: drawn under the planet's disc, so only what sticks out of
+## the ground shows, and never pushing on the planet it is inside.
+func bury_in(planet: Node2D, tugs := -1) -> void:
+	if tugs >= 0:
+		buried_tugs_left = tugs
+	if not is_buried():
+		return
+	z_index = 0
+	var body := planet as PhysicsBody2D
+	if body:
+		add_collision_exception_with(body)
+
+## Where it goes into the ground (global): the ground point under the middle of the piece.
+func ground_point() -> Vector2:
+	var planet := lodged_in as Planet
+	if planet == null:
+		return global_position
+	var dir := (global_position - planet.global_position).normalized()
+	return planet.global_position + dir * Mount.ground_radius(planet)
+
+## A coupled ship straining at it, `amount` 0..1: it trembles in the ground, harder the
+## closer the coupling is to giving.
+func strain(amount: float) -> void:
+	if not _visual:
+		return
+	var k := amount * amount * 1.8
+	var t := Time.get_ticks_msec() / 1000.0
+	_visual.position = Vector2(sin(t * 91.0), cos(t * 77.0)) * k if amount > 0.05 else Vector2.ZERO
+
+## One pull by a ship coupled on, at full strain. Short of the last, the coupling snaps:
+## grit and dust at the ground, the ship flung back; the last rips it out of the ground.
+## True once it is free.
+func tug(ship: Ship) -> bool:
+	if not is_buried():
+		return true
+	buried_tugs_left -= 1
+	if _visual:
+		_visual.position = Vector2.ZERO
+	var planet := lodged_in
+	var ground := ground_point()
+	var outward := (ground - planet.global_position).normalized() if planet else Vector2.UP
+	if buried_tugs_left > 0:
+		if planet:
+			GroundBreakFX.tug(planet, ground, outward)
+		_shudder(0.5 + 0.25 * (BURY_TUGS - buried_tugs_left))
+		if ship:
+			var back := (ship.global_position - lug_global()).normalized()
+			ship.linear_velocity += back * TUG_KICK
+			_shake(ship, TUG_SHAKE)
+		return false
+	if planet:
+		GroundBreakFX.break_free(planet, ground, outward)
+	z_index = 1
+	punch(0.15)
+	if ship:
+		_shake(ship, BREAK_SHAKE)
+	# It is still half inside the planet: let it clear before they can touch again
+	var body := planet as PhysicsBody2D
+	if body:
+		part_from(body, 2.5)
+	return true
+
+## A strained jolt in place: the piece twitches against the ground, `amount` px.
+func _shudder(amount: float) -> void:
+	if not _visual:
+		return
+	var t := _visual.create_tween()
+	for i in 6:
+		var k := amount * (1.0 - i / 6.0) * 4.0
+		t.tween_property(_visual, "position", Vector2(k if i % 2 == 0 else -k, 0.0), 0.035)
+	t.tween_property(_visual, "position", Vector2.ZERO, 0.05)
+
+static func _shake(ship: Ship, intensity: float) -> void:
+	ship.damage_shake_time = 0.35
+	ship.damage_shake_current_intensity = intensity
 
 ## Spawn a piece with its Lug `gap` px ahead of `ship`'s nose, facing it, moving with it:
 ## a moment's hold of `action` from clamped.
@@ -240,9 +371,18 @@ func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if lodged and is_instance_valid(lodged_in):
 		# Keep pace: close on the lodged spot within the step
+		if _beside_valid():
+			# Off the scrap's orbit clock, not its position: far from the ship scrap only
+			# moves every few frames, and the piece must not stutter along with it
+			var motion: OrbitalMotion = lodged_beside._orbital_motion
+			var world_dir := Vector2.from_angle(motion.angle_now() + lodged_beside_turn)
+			lodged_offset = lodged_in.global_transform.basis_xform_inv(world_dir).normalized() * _beside_radius
+		else:
+			lodged_beside = null
+			lodged_offset = lodged_offset.rotated(lodged_spin * state.step)
 		var spot := lodged_in.to_global(lodged_offset)
 		state.linear_velocity = (spot - state.transform.origin) / maxf(state.step, 0.0001)
-		state.angular_velocity = 0.0
+		state.angular_velocity = lodged_spin
 		return
 	var held := held_at_edge(state.transform.origin, state.linear_velocity, VoidZone.sun_position())
 	if held.is_empty():
@@ -285,6 +425,7 @@ func to_row() -> Dictionary:
 		"vx": v.x, "vy": v.y, "spin": angular_velocity if is_loose() else 0.0,
 		"label": label, "handled": handled, "clamped": is_clamped(),
 		"section": section, "lodged": lodged, "lodged_x": lodged_offset.x, "lodged_y": lodged_offset.y,
+		"lodged_spin": lodged_spin, "buried": buried_tugs_left, "beside_spent": beside_spent,
 	}
 
 static func from_row(world: Node, row: Dictionary) -> Freight:
@@ -293,6 +434,9 @@ static func from_row(world: Node, row: Dictionary) -> Freight:
 	f.label = str(row.get("label", f.label))
 	f.lodged = bool(row.get("lodged", false))
 	f.lodged_offset = Vector2(float(row.get("lodged_x", 0.0)), float(row.get("lodged_y", 0.0)))
+	f.lodged_spin = float(row.get("lodged_spin", 0.0))
+	f.buried_tugs_left = int(row.get("buried", 0))
+	f.beside_spent = bool(row.get("beside_spent", false))
 	f.handled = bool(row.get("handled", false))
 	world.add_child(f)
 	f.global_position = Vector2(float(row.get("x", 0.0)), float(row.get("y", 0.0)))

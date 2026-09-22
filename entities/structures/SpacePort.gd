@@ -22,6 +22,8 @@ var _ship_on_pad: Ship = null
 var _left_light: Polygon2D = null
 var _right_light: Polygon2D = null
 var _blink_tween: Tween = null
+## How an unlit lamp shows: its glass, dark (a tint over the lamp's own colour).
+const UNLIT := Colors.HULL_MID
 
 func _ready() -> void:
 	add_to_group("space_ports")
@@ -93,6 +95,23 @@ func _start_blink_animation() -> void:
 	
 	_blink_tween.tween_property(_right_light, "modulate:a", 0.3, half_duration)
 	_blink_tween.tween_property(_right_light, "modulate:a", 1.0, half_duration).set_delay(half_duration)
+
+## Lamps on or off. A dead station's dock (SR-7 before power, StationPower) is dark: the
+## lamps stop blinking and go to unlit glass.
+func set_lit(on: bool) -> void:
+	if not _left_light or not _right_light:
+		return
+	if on:
+		_left_light.modulate = Color.WHITE
+		_right_light.modulate = Color.WHITE
+		if _blink_tween == null or not _blink_tween.is_valid():
+			_start_blink_animation()
+		return
+	if _blink_tween:
+		_blink_tween.kill()
+		_blink_tween = null
+	_left_light.modulate = UNLIT
+	_right_light.modulate = UNLIT
 
 ## Get the landing pad position in world space
 func get_landing_pad_position() -> Vector2:

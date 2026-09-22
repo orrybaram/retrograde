@@ -207,17 +207,35 @@ func test_an_empty_mount_leaves_its_section_floating_dead() -> void:
 	assert_object(array.lodged_in).is_same(_station)
 	assert_vector(array.global_position).is_equal_approx(_station.to_global(m.section_start_offset), Vector2(0.1, 0.1))
 
-func test_the_sections_start_out_in_rooks_debris_along_one_line() -> void:
-	# In the planet's frame, all on the far side from the station's start, one behind the other
-	var offsets: Array = ALL.map(func(id): return _mount(id).section_start_offset)
-	for id in ALL:
-		assert_bool(_mount(id).start_on_planet).is_true()
-	for o: Vector2 in offsets:
-		assert_float(absf(o.angle())).is_greater(deg_to_rad(170))
-		assert_float(o.length()).is_between(2400.0, 4500.0)  # the ring runs ~2400-3600 from Rook
-	var by_distance: Array = ALL.duplicate()
-	by_distance.sort_custom(func(a, b): return _mount(a).section_start_offset.length() > _mount(b).section_start_offset.length())
-	assert_array(by_distance).is_equal([Sections.SOLAR_ARRAY, Sections.DORSAL_ARM, Sections.FUEL_TANK])
+func test_each_section_starts_somewhere_of_its_own() -> void:
+	# The tank hangs just past the dock, keeping pace with SR-7
+	var tank := _mount(Sections.FUEL_TANK)
+	assert_bool(tank.start_on_planet).is_false()
+	assert_float(tank.section_start_offset.x).is_greater(1000.0)
+	# The arm is adrift in Rook's ring (~2400-3600 out), going round with it
+	var arm := _mount(Sections.DORSAL_ARM)
+	assert_bool(arm.start_on_planet and arm.start_in_orbit and arm.start_beside_scrap).is_true()
+	assert_float(arm.section_start_offset.length()).is_between(2400.0, 3600.0)
+	# The array is buried in Rook's sunlit ground
+	var array := _mount(Sections.SOLAR_ARRAY)
+	assert_bool(array.start_on_planet and array.start_buried).is_true()
+
+func test_the_ring_turns_faster_nearer_in() -> void:
+	assert_float(OrbitalRingSpawner.angular_speed(10.0, 2500.0)).is_greater(OrbitalRingSpawner.angular_speed(10.0, 3500.0))
+	assert_float(OrbitalRingSpawner.angular_speed(10.0, 1000.0)).is_equal_approx(0.1, 0.0001)
+
+func test_a_section_adrift_in_a_ring_goes_round_with_it() -> void:
+	_mount(Sections.DORSAL_ARM).ensure_section()
+	var arm: Freight = _sections(Sections.DORSAL_ARM)[0]
+	var anchor := Node2D.new()
+	_world.add_child(anchor)
+	anchor.global_position = Vector2(5000, 0)  # well clear of the station's hull
+	arm.lodge_in(anchor, Vector2(300, 0), 1.0)
+	for i in 30:
+		await get_tree().physics_frame
+	assert_float(arm.lodged_offset.angle()).is_greater(0.1)  # the ring's way round
+	assert_float(arm.lodged_offset.length()).is_equal_approx(300.0, 0.5)
+	assert_float(arm.global_position.distance_to(anchor.to_global(arm.lodged_offset))).is_less(12.0)
 
 func test_the_section_is_never_left_twice() -> void:
 	var m := _mount(Sections.FUEL_TANK)

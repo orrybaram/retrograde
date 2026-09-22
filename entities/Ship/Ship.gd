@@ -424,7 +424,7 @@ func clamp_freight(f: Freight, quiet := false) -> void:
 	linear_velocity = shared
 	NavSystem.track(f.destination())
 	if not quiet:
-		_clamp_fx(f)
+		clamp_fx(f)
 
 ## Let go of whatever is clamped, where it is. It carries on as the ship was moving - the
 ## ship's velocity, the ship's heading, no spin - plus a nudge of RELEASE_DRIFT straight off
@@ -448,7 +448,7 @@ func release_freight() -> Freight:
 	linear_velocity = hull_velocity
 	# It was touching the nose: let the two drift apart before they can collide again.
 	f.part_from(self)
-	_release_fx(f)
+	release_fx(f)
 	NavSystem.track(f.tracking_target())
 	return f
 
@@ -496,7 +496,7 @@ func _detach_freight() -> void:
 
 ## Letting go: smoke and sparks where the Lug leaves the nose, one cream ring, the Lug
 ## glints and the piece jolts, and the camera takes a small bump.
-func _release_fx(f: Freight) -> void:
+func release_fx(f: Freight) -> void:
 	var nose := to_global(NOSE)
 	ClampFX.burst(get_parent(), nose, linear_velocity, RELEASE_BURST, RELEASE_DENSITY)
 	HarvestJuice.ring(get_parent(), nose, Color(Colors.CREAM, CLAMP_RING_ALPHA), 50.0, linear_velocity)
@@ -508,13 +508,16 @@ func _release_fx(f: Freight) -> void:
 ## Taking hold is the big moment, bigger than letting go: a beat of hitstop, two
 ## shockwaves off the nose, a heavier spray of sparks, a harder camera bump, and the piece
 ## lights up and jolts.
-func _clamp_fx(f: Freight) -> void:
+## `hitstop` off for a latch onto something riding an orbit (a buried Section): orbits keep
+## wall-clock time through a hitstop, and the pair would be torn apart for its length.
+func clamp_fx(f: Freight, hitstop := true) -> void:
 	var nose := to_global(NOSE)
 	var world := get_parent()
 	ClampFX.burst(world, nose, linear_velocity, CLAMP_BURST, CLAMP_DENSITY)
 	HarvestJuice.ring(world, nose, Color(Colors.CREAM, CLAMP_RING_ALPHA), 45.0, linear_velocity)
 	HarvestJuice.ring(world, nose, Color(Colors.PRIMARY, CLAMP_RING_ALPHA), 80.0, linear_velocity)
-	HarvestJuice.hitstop(get_tree(), CLAMP_HITSTOP)
+	if hitstop:
+		HarvestJuice.hitstop(get_tree(), CLAMP_HITSTOP)
 	f.punch(0.14)
 	f.flash_clamped()
 	damage_shake_time = CLAMP_SHAKE_DURATION

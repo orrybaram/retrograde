@@ -1,6 +1,5 @@
-# The first minute: a boot terminal you can read, a beat in the dark, then the guide
-# talking. The opening transmission is the whole tutorial now, and it waits for the
-# player: SPACE (TAB/ENTER aliases) finishes the speech, then moves on.
+# The first minute: a boot terminal you can read, a beat in the dark, then a dead
+# station and silence. UNIT-7 is off: nothing radios the player on waking.
 # The driver suppresses waking up by default, so this is the one scenario that asks for it.
 # Boot lines themselves are pinned in test/LoadingScreenTest.gd.
 # Run: tools/play.sh playtests/intro.play
@@ -24,74 +23,12 @@ wait_until not main.get_node("FadeLayer/FadeRect").visible 8
 assert pt.state_name() == "LandedState" "the fade leaves the ship docked, not adrift"
 screenshot 03_awake
 
-# The guide opens the game talking, and holds the game while it does
-wait_until pt.node("radio_panel").visible 5
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_wake" "wake-up call on air"
-assert get_tree().paused "the opening transmission pauses the game"
-wait 0.6
-assert pt.node("radio_panel").is_typing() "message types out"
-assert pt.node("radio_panel").robot.expression == "hello" "line sets the robot's face"
-screenshot 04_transmission
-
-# It never plays itself: SPACE finishes the speech, then moves on
-press space
-frames 2
-assert not pt.node("radio_panel").is_typing() "first SPACE finishes the speech"
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "first SPACE doesn't skip the line"
-assert pt.node("radio_panel").message_text().contains("Took a while this time") "the guide has done this before"
-wait 10
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "a paused transmission never times out"
-press space
-wait 0.3
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "second SPACE moves on"
-press radio_next
-frames 2
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 and not pt.node("radio_panel").is_typing() "TAB is an alias: finishes the speech"
-press enter
-wait 0.3
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 2 "ENTER is an alias: moves on"
-
-# Click through the rest of it, one press per line once the speech is out
-wait_until not pt.node("radio_panel").is_typing() 5
-press space
-wait 0.3
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 3 "one press, one line"
-wait_until not pt.node("radio_panel").is_typing() 5
-press space
-wait 0.3
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 4 "on the last line"
-wait_until not pt.node("radio_panel").is_typing() 5
-press space
-wait 0.3
-assert not get_tree().root.get_node("RobotRadio").is_active() "SPACE on the last line closes"
-assert not get_tree().paused "closing the transmission unpauses"
-frames 5
-assert pt.state_name() == "LandedState" "the closing SPACE doesn't undock the ship"
-assert pt.visible_ui().is_empty() "no dock menu from the closing SPACE"
-assert get_tree().root.get_node("RobotRadio").has_seen("first_wake") "the wake-up call is show-once"
-screenshot 05_done
-
-# Meeting the Guide is what earns its Record, so the Records tab is never empty
-assert gs.has_met_automaton("UNIT-7") "the first transmission earns UNIT-7's Record"
-press i
-wait_until pt.visible_ui().has("LogUI") 2
-press tab
-frames 2
-assert pt.node("log_ui").active_tab_title() == "RECORDS" "TAB moves to Records"
-wait 0.4
-screenshot 06_records
-assert str(pt.screen_text()["LogUI"]).contains("A U T O M A T O N S") "Records holds an Automatons section"
-assert str(pt.screen_text()["LogUI"]).contains("UNIT-7") "UNIT-7 has a Record"
-assert str(pt.screen_text()["LogUI"]).contains("SR-7") "the Record says which station it is found at"
-assert not str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "a held Record replaces the empty state"
-assert not str(pt.screen_text()["LogUI"]).contains("? ? ?") "the Log never shows ? ? ?"
-press escape
-wait_until not pt.visible_ui().has("LogUI") 2
-
-# A Record is permanent: it comes back with the save
-eval pt.save_now()
-reload
-wait_until main.current_game_state == 1 15
-assert gs.has_met_automaton("UNIT-7") "the Record survives a save and a load"
-
-state
+# Nobody is on the comms: UNIT-7 is off until the core's cold start (docs/OPENING.md §5)
+wait 3
+assert not pt.node("radio_panel").visible "no transmission on waking"
+assert not get_tree().root.get_node("RobotRadio").is_active() "the radio is quiet"
+assert not get_tree().paused "nothing holds the game"
+assert not get_tree().root.get_node("RobotRadio").has_seen("first_wake") "the wake-up call is parked"
+assert not gs.has_met_automaton("UNIT-7") "the Guide is not met on a new game"
+assert pt.state_name() == "LandedState" "still docked"
+screenshot 04_quiet

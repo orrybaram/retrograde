@@ -9,8 +9,12 @@ class_name ArrayNudge
 ## meets a wing that will not give. The node's own transform is the wing seated; its
 ## rotation is how far off true it hangs. Seated state: GameState.seated_sections.
 
-## How far off true a new game leaves it.
-const HANG_ANGLE := deg_to_rad(22.0)
+## How far off true a new game leaves it: well down, so it plainly hangs.
+const HANG_ANGLE := deg_to_rad(50.0)
+## Hanging, the wing sways limply on its hinge, this much either way, this slowly. Looks
+## only: the push and the lock work on where it hangs, not the sway.
+const SWAY := deg_to_rad(2.5)
+const SWAY_PERIOD := 4.2
 ## Close enough to true to swing home.
 const SNAP_ANGLE := deg_to_rad(3.0)
 ## The ship counts as pressing on the wing with its centre this close to it (px).
@@ -31,6 +35,9 @@ var seated := false
 var _home: Transform2D
 var _reach: PackedVector2Array
 var _locking: Tween
+var _sway_clock := 0.0
+## Sparks at the hinge and a red strobe on the keel beside it, while the wing hangs.
+var alarm: CutAlarm
 
 func _ready() -> void:
 	add_to_group("nudges")
@@ -42,6 +49,7 @@ func _ready() -> void:
 	if shape:
 		var grown := Geometry2D.offset_polygon(shape.polygon, REACH)
 		_reach = grown[0] if not grown.is_empty() else shape.polygon
+	_build_alarm()
 	EventBus.planets_restored.connect(refresh)
 	refresh()
 
@@ -54,11 +62,27 @@ func _show_seated(on: bool) -> void:
 	if _locking:
 		_locking.kill()
 	seated = on
+	if alarm:
+		alarm.active = not on
 	transform = _home * Transform2D(0.0 if on else hang_angle, Vector2.ZERO)
 
 ## How far off true it hangs right now (radians, clockwise on screen).
 func off_true() -> float:
 	return angle_difference(_home.get_rotation(), rotation)
+
+func _process(delta: float) -> void:
+	var visual := get_node_or_null("Visual") as Node2D
+	if visual == null:
+		return
+	if seated:
+		visual.rotation = 0.0
+		return
+	_sway_clock += delta
+	visual.rotation = sway_at(_sway_clock)
+
+## The limp sway `t` s in, round the hinge.
+static func sway_at(t: float) -> float:
+	return sin(t * TAU / SWAY_PERIOD) * SWAY
 
 func _physics_process(delta: float) -> void:
 	if seated:
@@ -113,7 +137,25 @@ func lock() -> void:
 		Save.save_seated_section(section, PackedStringArray(gs.seated_sections.keys()))
 	_locking = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_locking.tween_property(self, "transform", _home, LOCK_TIME)
-	_locking.tween_callback(func() -> void: Mount.clunk(self))
+	_locking.tween_callback(func() -> void:
+		Mount.clunk(self)
+		if alarm:
+			alarm.active = false
+		EventBus.section_seated.emit(section))
+
+## On the station, not the wing, so it stays put while the wing turns: the hinge's torn
+## lines spark out along the wing's root, and a lamp sits on the keel beside it.
+func _build_alarm() -> void:
+	var station := get_parent() as Node2D
+	if station == null:
+		return
+	alarm = CutAlarm.new()
+	alarm.name = "NudgeAlarm"
+	alarm.z_index = 2
+	alarm.transform = _home
+	alarm.segments = [[Vector2(0, -20), Vector2(0, 20), Vector2.RIGHT]]
+	alarm.lamps = PackedVector2Array([Vector2(-10, -14)])
+	station.add_child.call_deferred(alarm)
 
 func is_locking() -> bool:
 	return _locking != null and _locking.is_running()

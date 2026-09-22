@@ -23,7 +23,22 @@ func _conv(id: StringName, priority: Priority = Priority.HINT, line_count: int =
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
 	radio.persist = false
+	# Most of these are about the tips, which only an awake guide gives
+	radio.guide_awake = true
 	return radio
+
+
+func test_a_sleeping_guide_gives_no_tips() -> void:
+	# UNIT-7 is off when the game opens (docs/OPENING.md §5): nobody is on the comms.
+	var radio := _radio()
+	radio.guide_awake = false
+	radio.check_fuel(1.0, 100.0)
+	radio.check_hull(10.0, 100.0)
+	radio.check_cargo(50.0, 50.0)
+	radio._on_harvest_available_changed(true)
+	radio.watch_for_boost()
+	radio.tick_boost_watch(radio.BOOST_HINT_AFTER + 1.0, false, true)
+	assert_bool(radio.is_active()).is_false()
 
 
 # --- RadioQueue ------------------------------------------------------------------

@@ -122,6 +122,9 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if ship.want_reverse_thrust:
 		_apply_thrust(state, Vector2.LEFT)
 
+	if _coupled and is_instance_valid(_coupled):
+		_hold_coupled(state)
+
 ## The closing speed above which bumping into `collider` hurts the hull: the ship's own
 ## threshold, or far higher for loose Freight, which the player is meant to nudge about.
 static func knock_threshold(collider: Object, ship_threshold: float) -> float:
@@ -313,13 +316,49 @@ func _update_action() -> void:
 		_attempt_dock()
 
 var _magnet_target: Freight = null
+## This hold of `action` has already coupled onto a buried piece: one pull per hold.
+var _tugged := false
+## Coupled onto a buried piece's Lug (Freight.is_buried): the magnet has hold of it but it
+## won't come. A hold of `action` couples on, like any clamp, and it stays coupled with the
+## key let go. Thrusting away from the ground strains it; at full strain the coupling snaps,
+## and the last time it rips the piece out instead. A fresh press of `action` lets go.
+var _coupled: Freight = null
+## 0..1: how far this pull has got. Pulling fills it over STRAIN_TIME; easing off drains it.
+var _strain := 0.0
+var _strain_peak := 0.0
+## Ripped free of the ground: the magnet keeps pulling it in without the key held.
+var _magnet_locked := false
+var _was_holding := false
+var _couple_base := Vector2.ZERO
+## The nose has closed onto the Lug and taken hold: only now does pulling strain it.
+var _latched := false
+## Seconds of hard pulling away to snap the coupling.
+const STRAIN_TIME := 1.3
+## How far (px) one full pull draws the piece up out of the ground.
+const EXTRACT_PER_PULL := 9.0
+## Coupling, the ship is drawn nose-onto the Lug this stiffly; once it is on, it latches
+## with the same clunk as any clamp and is held there, rigid, until it lets go.
+const COUPLE_GAIN := 9.0
+## Counts as pulling when the thrust points at least this much away from the ground.
+const PULL_DOT := 0.3
 
 func _update_magnet() -> void:
 	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available()
+	var fresh_press := holding and not _was_holding
+	_was_holding = holding
+	if not holding:
+		_tugged = false
+	if _coupled:
+		if not is_instance_valid(_coupled) or not _coupled.is_buried():
+			_decouple()
+		elif fresh_press and not _tugged:
+			_decouple()  # a fresh press lets go
+			_tugged = true  # and doesn't couple straight back on
+		return
 	if _magnet_target and not is_instance_valid(_magnet_target):
 		_magnet_target = null
 	var nose := ship.to_global(Ship.NOSE)
-	if _magnet_target and (not holding or not Freight.in_reach(nose, _magnet_target.lug_global(), Freight.MAGNET_HOLD_RANGE)):
+	if _magnet_target and (not (holding or _magnet_locked) or not Freight.in_reach(nose, _magnet_target.lug_global(), Freight.MAGNET_HOLD_RANGE)):
 		_drop_magnet()
 	if _magnet_target == null:
 		var near := freight_in_reach()
@@ -327,20 +366,116 @@ func _update_magnet() -> void:
 			return
 		if not holding:
 			return
+		if near.is_buried():
+			# Stuck in the ground: a hold couples on for one pull
+			if not _tugged:
+				_couple(near)
+			return
 		_magnet_target = near
 		near.add_collision_exception_with(ship)
 	var pose := ship.global_transform * Freight.clamped_pose(_magnet_target.lug_position, _magnet_target.lug_facing, Ship.NOSE)
 	if _magnet_target.magnet_step(pose, ship.linear_velocity):
 		var f := _magnet_target
 		_magnet_target = null
+		_magnet_locked = false
 		ship.set_meta("pending_freight", f)
 		ship.state_machine.change_state("CarryingState")
+
+## A hold of `action` that is working the magnet - pulling a piece in, coupled onto a
+## buried one, or the press that coupled on or let go - belongs to that, not the Sweep:
+## the same as a clamp, where CarryingState takes the key.
+func allows_sonar() -> bool:
+	return _coupled == null and _magnet_target == null and not _tugged
+
+## Take hold of a buried piece's Lug: a clunk, and the ship is held off it from here.
+func _couple(f: Freight) -> void:
+	_tugged = true  # the press that coupled on is not also the press that lets go
+	_coupled = f
+	_latched = false
+	_strain = 0.0
+	_strain_peak = 0.0
+	_couple_base = f.lodged_offset
+	f.add_collision_exception_with(ship)
+
+## Let go of the Lug without a snap: the key came up. What the pull won stays won.
+func _decouple() -> void:
+	var f := _coupled
+	_coupled = null
+	_strain = 0.0
+	if is_instance_valid(f) and _latched:
+		ship.release_fx(f)
+	_latched = false
+	if is_instance_valid(f):
+		ship.get_tree().create_timer(0.6).timeout.connect(func() -> void:
+			if is_instance_valid(f) and is_instance_valid(ship):
+				f.remove_collision_exception_with(ship))
+
+## One physics step coupled: the ship is held off the Lug, nose on it; thrust away from the
+## ground strains the coupling, leans the ship back and draws the piece up a little.
+func _hold_coupled(state: PhysicsDirectBodyState2D) -> void:
+	var f := _coupled
+	var planet := f.lodged_in as RigidBody2D
+	if planet == null:
+		return
+	var outward := (f.ground_point() - planet.global_position).normalized()
+	var heading := Vector2.RIGHT.rotated(ship.rotation)
+	var push := (1.0 if ship.want_thrust else 0.0) - (1.0 if ship.want_reverse_thrust else 0.0)
+	var pulling := _latched and push != 0.0 and (heading * push).dot(outward) > PULL_DOT
+	if pulling:
+		_strain = minf(_strain + state.step / STRAIN_TIME * (1.5 if _boosting() else 1.0), 1.0)
+	else:
+		_strain = maxf(_strain - state.step / STRAIN_TIME * 0.6, 0.0)
+	_strain_peak = maxf(_strain_peak, _strain)
+	f.lodged_offset = _couple_base + planet.global_transform.basis_xform_inv(outward) * _strain_peak * EXTRACT_PER_PULL
+	f.strain(_strain)
+	# The ship's pose on the Lug, the same pose a clamped piece takes on the nose
+	var face := (-f.lug_facing_global()).angle()
+	var nose := ship.to_global(Ship.NOSE)
+	var gap := f.lug_global() - nose
+	var turn := angle_difference(ship.rotation, face)
+	if not _latched:
+		state.linear_velocity = planet.linear_velocity + (gap * COUPLE_GAIN * 1.5).limit_length(Freight.MAGNET_SPEED)
+		state.angular_velocity = clampf(turn * Freight.MAGNET_GAIN, -Freight.MAGNET_SPIN, Freight.MAGNET_SPIN)
+		if Freight.is_seated(gap, turn):
+			_latched = true
+			_latch_fx.call_deferred(f)
+		return
+	state.linear_velocity = planet.linear_velocity + gap / maxf(state.step, 0.0001) * 0.5
+	state.angular_velocity = turn / maxf(state.step, 0.0001) * 0.5
+	if _strain >= 1.0:
+		_snap.call_deferred()
+
+## The nose takes hold of the Lug: the clamp's own clunk, hitstop and all.
+func _latch_fx(f: Freight) -> void:
+	if is_instance_valid(f) and f == _coupled:
+		ship.clamp_fx(f, false)
+
+## Full strain: the coupling gives. Short of the last pull it snaps and the ship is flung
+## back; the last one tears the piece out of the ground and the magnet takes it.
+func _snap() -> void:
+	var f := _coupled
+	if f == null or not is_instance_valid(f):
+		return
+	_coupled = null
+	_strain = 0.0
+	_latched = false
+	ship.release_fx(f)
+	ClampFX.burst(ship.get_parent(), f.lug_global(), ship.linear_velocity, 1.6, 2.0)
+	if f.tug(ship):
+		# Free: the magnet that had hold of it pulls it straight onto the nose
+		_magnet_target = f
+		_magnet_locked = true
+		return
+	ship.get_tree().create_timer(0.6).timeout.connect(func() -> void:
+		if is_instance_valid(f) and is_instance_valid(ship):
+			f.remove_collision_exception_with(ship))
 
 ## Let go of a piece mid-pull: it stops closing and moves with the ship, and the two can
 ## touch again once it has had a moment to clear.
 func _drop_magnet() -> void:
 	var f := _magnet_target
 	_magnet_target = null
+	_magnet_locked = false
 	if not is_instance_valid(f):
 		return
 	f.linear_velocity = ship.linear_velocity
@@ -367,6 +502,8 @@ func freight_in_reach() -> Freight:
 func exit() -> void:
 	if _magnet_target:
 		_drop_magnet()
+	if _coupled:
+		_decouple()
 	super.exit()
 
 func _check_dockable_proximity() -> void:

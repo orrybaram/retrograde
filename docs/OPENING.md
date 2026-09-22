@@ -75,7 +75,7 @@ Chosen from the silhouette lab (claude.ai/artifact/CCVHLMG6SyGxY5Shks5aSG, round
 - **Belly module**: the clone vats, legible through the hull. One vat is empty and cracked,
   and there is a tally scratched beside the row.
 - **Truss keel** below, carrying two **solar wings**. The left wing is the **SOLAR ARRAY**
-  Section. The right wing is still on its hinge but hangs 22° out of true
+  Section. The right wing is still on its hinge but hangs 50° out of true, swaying limply
   (`ArrayNudge`): it is nudged home, not fetched. Pressed against it and moving or
   thrusting so as to turn it back, the ship's hull turns it; it only ever turns toward
   true, and within 3° it swings home and locks with the seating clunk.
@@ -99,7 +99,8 @@ it. Clues, in the art and the text:
   out and do what the player is about to do.
 - **The core is seated wrong** (§5). Somebody unseated it by hand; the cold start undoes
   their work.
-- **The right solar wing** is pushed out of true but not thrown clear. They ran out of
+- **The right solar wing** is wrenched 50° out of true, hanging limp off its hinge, but not
+  thrown clear. They ran out of
   time, or were stopped.
 - **The clone vats**: one empty and cracked, and a tally beside the row. Somebody was
   counting.
@@ -109,45 +110,34 @@ Because the game is top-down, the station's interior is legible from outside by 
 `CentralCore` is a polygon at the middle of the station. The player can see it. They never
 enter, and they never stop being the ship.
 
-## 3. The Manifest
+## 3. The Dead Station
 
-The ship spawns docked, as it does today. Docking a dead station gives the damage report,
-not the store. The emergency bus prints a parts list - not advice, not a character, a
-machine doing inventory:
+The ship spawns docked, as it does today. Nothing is on the comms: UNIT-7 is off until the
+wake (§5), so the game opens in silence. There is no damage report and no parts list -
+**the station says what is wrong by how it looks** (decided 2026-09-22, replacing the
+manifest):
 
-```
-SR-7 / AUXILIARY BUS
-DAMAGE REPORT — 0347 CYCLES SINCE EVENT
+- **No power.** Every light on SR-7 is out: dark glass in the windows, dead lenses on the
+  beacons, the dock's lamps unlit. Power needs both solar wings home - the SOLAR ARRAY
+  fetched and seated, and the right wing pushed true (`StationPower`).
+- **The dish hangs limp.** The comm dish below the keel has no drive: bowl down, swaying
+  a little on its post. Power back, it swings up and finds the Sun.
+- **Every wound is alarmed.** At each empty Mount, and at the hanging wing's hinge, the
+  severed lines along the cut spit sparks and a red emergency lamp pulses slowly beside it
+  (`CutAlarm`). Each stops as its piece goes home, so the alarms are the to-do list.
+- **Power comes on while the player watches.** Seating the second wing lights the station
+  slowly, one light at a time outward from the keel, then the dock's lamps; only then does
+  the dish strain up off its post, find the Sun, and send out one great ping in the Titan's purple - SR-7 back
+  on the air, and every piece of scrap across the ring lights up at once. From then on,
+  with the power on, a Sweep that reaches the dish is answered with the same purple ping.
 
-  FUEL TANK .......... ABSENT
-  SOLAR ARRAY ........ ABSENT / 1 OF 2 MISALIGNED
-  DORSAL ARM ......... ABSENT
-  CORE ............... PRESENT / NO DRAW
-
-  3 SECTIONS UNACCOUNTED FOR
-  LAST VECTOR: LOCAL DEBRIS
-```
-
-Four lines of objective and zero instruction, in exactly what `TerminalWindow` and
-`Typewriter` already do.
-
-Three things it is doing quietly:
-
-- **The count says 3, not 4.** When the player returns three Sections and the station
-  still is not right, the answer has been in the manifest the whole time. They have to go
-  and read it again. Pull, never push.
-- **`CORE — PRESENT / NO DRAW` is the only asymmetric line.** Three things are gone; one
-  is here and not working. That is the entire pointer to the wake, phrased as inventory.
-- **`0347 CYCLES SINCE EVENT`** means nothing in hour one and something else entirely once
-  the player knows about the clone system. Leave it ambiguous deliberately, not by accident.
-
-**The manifest updates.** Re-dock after a repair and the line reads `FUEL TANK …
-RESTORED`. Completion tracking that lives in the fiction and that the player has to choose
-to look at.
+The emergency lamps are the only red on SR-7 (`Colors.DANGER`), and the pull still holds:
+nothing is marked, nothing counts. Three red lights and a dark dish are four lines of
+objective with zero instruction.
 
 ## 4. The Three Sections
 
-| Manifest line | Section | Teaches |
+| Missing | Section | Teaches |
 |---|---|---|
 | `FUEL TANK — ABSENT` | right cylindrical tank | flight under load; the harvest Sweep (it is fused into a rock) |
 | `DORSAL ARM — ABSENT` | the fin on the container strip | debris is not scrap - it is tangled in things that hurt |
@@ -160,11 +150,22 @@ to look at.
 | SOLAR ARRAY | 150 × 50 wing | 1.0 | ×0.75 | outer tip, facing out; light but long, so it swings like a lance |
 | right wing (nudge) | 150 × 50 | - | push | none: it is still attached, and pushed home |
 
-Placement: out in Rook's debris on one line - the sabotage vector - running from where
-the station starts toward Rook. Nearest the station, just outside the ring, is the array
-(4300 px from Rook); then the arm, mid-field (3400); deepest is the tank at the ring's inner
-edge (2500). Each hangs dead in Rook's frame (`Mount.start_on_planet`) until the magnet
-first takes it.
+Placement (revised 2026-09-22), nearest first:
+
+- **FUEL TANK**: adrift just off screen to the right of the dock, keeping pace with SR-7
+  (not Rook). The first thing found by simply flying out.
+- **DORSAL ARM**: adrift in Rook's debris ring (3000 px out), going round with the ring
+  at the ring's own speed for that distance (`Mount.start_in_orbit`), so it has to be
+  caught up with rather than flown to. A piece of scrap always goes round right beside it
+  (`Mount.start_beside_scrap`), so the Sweep that finds the arm finds scrap too - the
+  harvest is met by accident, on the way to something else.
+- **SOLAR ARRAY**: buried in Rook's ground on its sunlit face - the far side of Rook from
+  where SR-7 starts - with only its Lug end sticking out (`Mount.start_buried`). The
+  magnet reaches it but can't lift it: each hold of the key is one tug that shudders it
+  and knocks the ship back, and the third rips it out of the ground in a burst of dust,
+  rock and sparks, leaving a scar (`Freight.tug`, `GroundBreakFX`).
+
+Each hangs dead in its frame until the magnet first takes it.
 
 Each is a single object, recovered and fitted - the same verb as every upgrade in the game
 (ADR 0007), taught before the player has bolted anything to their own ship.
@@ -269,14 +270,14 @@ things mean. The rat knows the way home; it has no idea what a subway is.
 | Channel | Cost | Carries |
 |---|---|---|
 | Ship's cold-start boot text | free | the controls, literally, diegetically |
-| The manifest | one `.tres` | objectives |
+| The dead station | art | objectives: dark lights, a limp dish, a red alarm at every cut |
 | Station silhouette | already built | progress |
 | Shape language | art | Sections look like they belong to the station; scrap does not |
 | `EventBus.action_message_changed` | already built | contextual verbs (HARVEST / DOCK) |
 
 **Anti-patterns:** no Titan-drawn markers on the Chart, no "press X to Y" popups, no
-completion percentage anywhere. The manifest is the only list and it is a diegetic object
-the player has to travel to.
+completion percentage anywhere. The only list is the station itself: its alarms go quiet
+one by one as the pieces go home.
 
 **The ship's own marks are the exception, because they are the ship's.** The Chart's
 regions are the Titan's; laid over them are marks the ship made itself - the player's
@@ -377,8 +378,11 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > in ordinary debris.
 > **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
 > dock without ever reading as a tutorial popup.
-> **TODO**: Gate `SpacePortDialogue` on UNIT-7 being awake; the dead station shows the
-> manifest terminal instead.
+> **TODO**: Gate `SpacePortDialogue` on UNIT-7 being awake; decide what docking at the
+> dead station offers instead (no manifest - §3).
+> **TODO**: UNIT-7's tutorial tips are parked behind `RobotRadio.guide_awake`, which
+> nothing sets yet. The core's cold start (§5) should. Its functional calls (relaunch,
+> tow, the Void) still come from UNIT-7 on a new game and need a speaker of their own.
 > **TODO**: Playtest the opening for wandering. There is no clock by design; the array's
 > long-range answer (§4) is the only pointer. Tune its range until a lost player picks it
 > up without being led by the hand.

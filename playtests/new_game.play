@@ -1,0 +1,20 @@
+# A new game puts the whole system back where the scene starts it, however long the last
+# game ran or wherever a load had re-based the orbits: orbits keep wall-clock time, so
+# without the reset a second NEW GAME finds the planets wherever they had got to.
+# Run: PLAYTEST_PORT=7813 tools/play.sh --headless playtests/new_game.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval pt.remember("rook", pt.planet("Rook").global_position)
+eval pt.remember("veld", pt.planet("Veld").global_position)
+timescale 4
+wait 20
+timescale 1
+assert pt.planet("Rook").global_position.distance_to(pt.recall("rook")) > 150.0 "the system has moved on"
+eval main.call_deferred("start_game")
+wait 0.5
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+assert pt.planet("Rook").global_position.distance_to(pt.recall("rook")) < 60.0 "a new game puts Rook back where it starts"
+assert pt.planet("Veld").global_position.distance_to(pt.recall("veld")) < 60.0 "and Veld"
+assert pt.state_name() == "LandedState" "docked at SR-7"
+quit

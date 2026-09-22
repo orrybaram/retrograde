@@ -903,6 +903,19 @@ func abandoned_ship() -> DerelictShip:
 ## Drop a loose gem `offset` px from the ship, moving at the ship's velocity plus `rel_velocity`.
 ## A test piece of Freight with its Lug `gap` px ahead of the nose, lined up and moving
 ## with the ship: one press of `action` from clamped.
+## Hand every ring node (scrap and debris) within `radius` px of `keep` back to the pool,
+## `keep` excepted: a scenario that rams one piece of scrap mustn't clip whatever else
+## the ring happened to leave beside it.
+func clear_around(keep: Node2D, radius := 500.0) -> int:
+	var cleared := 0
+	for group in ["resource_nodes", "debris_nodes"]:
+		for n in get_tree().get_nodes_in_group(group):
+			var o := n as OrbitalNode
+			if o and o != keep and o.global_position.distance_to(keep.global_position) <= radius:
+				ResourceNodePool.return_instance(o)
+				cleared += 1
+	return cleared
+
 func stage_freight(gap := 6.0) -> Freight:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	return Freight.spawn_ahead_of(ship, gap)

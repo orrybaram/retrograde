@@ -48,6 +48,8 @@ wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
 press enter
 wait_until pt.visible_ui().is_empty() 2
+# UNIT-7 is off on a new game (docs/OPENING.md §5); wake it by hand for its briefing
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 
