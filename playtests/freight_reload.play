@@ -37,13 +37,13 @@ eval pt.save_now()
 
 # --- Reload: both come back where they were, and only once ---
 reload
-assert pt.freight().size() == 2 "both pieces restored, no copies"
+assert pt.test_freight().size() == 2 "both pieces restored, no copies"
 assert pt.freight_near(pt.recall("dropped_at")).size() == 1 and pt.freight_near(pt.recall("dropped_at"))[0].handled "the dropped piece is back where it was, still handled"
 assert pt.freight_near(pt.recall("untouched_at")).size() == 1 and not pt.freight_near(pt.recall("untouched_at"))[0].handled "the untouched piece is back where it was, still untouched"
 assert pt.chart_marks().size() == 1 "only the handled piece is marked"
 reload
 reload
-assert pt.freight().size() == 2 "repeated reloads never duplicate or lose a piece"
+assert pt.test_freight().size() == 2 "repeated reloads never duplicate or lose a piece"
 
 # --- Saved carrying: back in flight with the load clamped ---
 press action
@@ -68,10 +68,10 @@ reload
 wait_until pt.state_name() == "CarryingState" 3
 assert ship.is_carrying() "reloaded with the load still clamped"
 assert ship.global_position.distance_to(pt.recall("ship_at")) < 50.0 "back in flight where it was saved, not at a dock"
-assert pt.freight().size() == 3 "three pieces, no copies"
+assert pt.test_freight().size() == 3 "three pieces, no copies"
 assert ship.mass > 5.9 "the load's mass is the ship's again"
 screenshot freight_reload_carrying
 reload
 wait_until pt.state_name() == "CarryingState" 3
-assert pt.freight().size() == 3 "still three after another reload"
+assert pt.test_freight().size() == 3 "still three after another reload"
 quit

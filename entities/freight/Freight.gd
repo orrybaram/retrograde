@@ -56,6 +56,18 @@ const CLAMP_FLASH_TIME := 0.35
 ## it is marked on the Chart and tracked (docs/adr/0012). Never touched, it has no mark.
 var handled := false
 
+## Which Section of SR-7 this is (Sections.gd), or "" for any other Freight. A Section
+## goes into the Mount with the same id and nowhere else.
+var section := ""
+
+## Lodged in a debris field: held at `lodged_offset` from `lodged_in` (the body the
+## debris circles) so it stays among the debris instead of being left behind as that body
+## moves on. The magnet breaks it free. `lodged_in` is set by whoever placed it there
+## (Mount.ensure_section), and is not saved; `lodged` and the offset are.
+var lodged := false
+var lodged_offset := Vector2.ZERO
+var lodged_in: Node2D = null
+
 var _collider: CollisionPolygon2D
 var _tracking: NodeTrackingTarget
 var _visual: Node2D
@@ -157,6 +169,21 @@ static func spawn(world: Node, pos: Vector2, rot := 0.0, velocity := Vector2.ZER
 	f.linear_velocity = velocity
 	return f
 
+## Spawn Section `id` into `world` at `pos`, turned to `rot`.
+static func spawn_section(world: Node, id: String, pos: Vector2, rot := 0.0) -> Freight:
+	var f := Freight.new()
+	Sections.apply(f, id)
+	world.add_child(f)
+	f.global_position = pos
+	f.global_rotation = rot
+	return f
+
+## Hold this piece `offset` from `body` from now on, until the magnet takes it.
+func lodge_in(body: Node2D, offset: Vector2) -> void:
+	lodged = true
+	lodged_in = body
+	lodged_offset = offset
+
 ## Spawn a piece with its Lug `gap` px ahead of `ship`'s nose, facing it, moving with it:
 ## a moment's hold of `action` from clamped.
 static func spawn_ahead_of(ship: Ship, gap := 6.0) -> Freight:
@@ -195,9 +222,10 @@ func tracking_target() -> NodeTrackingTarget:
 		_tracking = NodeTrackingTarget.new(self, label, 60.0)
 	return _tracking
 
-## Where a clamped piece is headed: its Mount, or the Cradle. Until those exist, home.
+## Where a clamped piece is headed: a Section's Mount, or (until the Cradle exists) home.
 func destination() -> TrackingTarget:
-	return NavSystem.home_target()
+	var mount := Mount.for_section(get_tree(), section) if section != "" else null
+	return mount.tracking_target() if mount else NavSystem.home_target()
 
 ## Don't collide with `body` for `seconds`: they were touching when they parted.
 func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
@@ -208,6 +236,12 @@ func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
 
 ## The Void never draws loose Freight in: headed out, it stops at the edge.
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	if lodged and is_instance_valid(lodged_in):
+		# Keep pace with the debris: close on the lodged spot within the step
+		var spot := lodged_in.global_position + lodged_offset
+		state.linear_velocity = (spot - state.transform.origin) / maxf(state.step, 0.0001)
+		state.angular_velocity = 0.0
+		return
 	var held := held_at_edge(state.transform.origin, state.linear_velocity, VoidZone.sun_position())
 	if held.is_empty():
 		return
@@ -248,11 +282,15 @@ func to_row() -> Dictionary:
 		"x": global_position.x, "y": global_position.y, "rot": global_rotation,
 		"vx": v.x, "vy": v.y, "spin": angular_velocity if is_loose() else 0.0,
 		"label": label, "handled": handled, "clamped": is_clamped(),
+		"section": section, "lodged": lodged, "lodged_x": lodged_offset.x, "lodged_y": lodged_offset.y,
 	}
 
 static func from_row(world: Node, row: Dictionary) -> Freight:
 	var f := Freight.new()
+	Sections.apply(f, str(row.get("section", "")))
 	f.label = str(row.get("label", f.label))
+	f.lodged = bool(row.get("lodged", false))
+	f.lodged_offset = Vector2(float(row.get("lodged_x", 0.0)), float(row.get("lodged_y", 0.0)))
 	f.handled = bool(row.get("handled", false))
 	world.add_child(f)
 	f.global_position = Vector2(float(row.get("x", 0.0)), float(row.get("y", 0.0)))
@@ -310,6 +348,8 @@ static func in_reach(nose: Vector2, lug: Vector2, reach := MAGNET_RANGE) -> bool
 ## rides once clamped) on a carrier moving at `carrier_velocity`. Returns true once it is
 ## seated and can be clamped.
 func magnet_step(target: Transform2D, carrier_velocity: Vector2) -> bool:
+	lodged = false
+	lodged_in = null
 	var gap := target.origin - global_position
 	var turn := wrapf(target.get_rotation() - global_rotation, -PI, PI)
 	if is_seated(gap, turn):
