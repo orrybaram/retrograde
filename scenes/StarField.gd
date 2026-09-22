@@ -40,6 +40,7 @@ func _ready() -> void:
 	
 	# Listen for ship respawn to reset parallax
 	EventBus.ship_respawned.connect(_on_ship_respawned)
+	add_to_group("screen_effects")
 
 
 func _find_ship() -> void:
@@ -48,6 +49,12 @@ func _find_ship() -> void:
 	if ships.size() > 0:
 		_ship = ships[0] as RigidBody2D
 
+
+## The stars back on at once (the Void puts them out), for a relaunch or a load.
+func clear_now() -> void:
+	_star_fade = 1.0
+	if _material:
+		_material.set_shader_parameter("star_fade", 1.0)
 
 func _on_ship_respawned() -> void:
 	# Reset accumulated offset when ship respawns

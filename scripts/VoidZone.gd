@@ -70,6 +70,11 @@ func distance_left() -> float:
 		return INF
 	return maxf(DEEP_RADIUS - _distance_from_sun(), 0.0)
 
+## Back to a clean sky, at once: every screen effect goes with it (Main calls this as
+## a relaunch, a load or a new game begins, so the boot screen comes up clean).
+func clear_now() -> void:
+	reset()
+
 ## Back to a clean sky: called on respawn, and by tests.
 func reset() -> void:
 	depth = 0.0

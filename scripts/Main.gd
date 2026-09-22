@@ -276,12 +276,21 @@ func _wake_from_black() -> void:
 
 func _on_quit_to_menu() -> void:
 	current_game_state = MainGameState.MENU
+	clear_screen_effects()
 	RobotRadio.silence()
 	if start_menu:
 		start_menu.show_menu()
 	get_tree().paused = true
 
+## Every full-screen effect off at once - the Void's dark and static, the stars it put
+## out, the hull alarm, the dashboard glitch - so a relaunch, a load or a new game boots
+## onto a clean screen instead of easing out of the last one.
+func clear_screen_effects() -> void:
+	VoidZone.clear_now()
+	get_tree().call_group("screen_effects", "clear_now")
+
 func start_game() -> void:
+	clear_screen_effects()
 	if start_menu:
 		start_menu.visible = false
 	Gem.clear_all()
@@ -351,6 +360,7 @@ func start_game() -> void:
 		RobotRadio.request(RobotRadio.MSG_WAKE)
 
 func load_game() -> void:
+	clear_screen_effects()
 	if start_menu:
 		start_menu.visible = false
 
@@ -457,6 +467,7 @@ func show_game_over(reason: String) -> void:
 
 func reset_game() -> void:
 	game_over_pending = false
+	clear_screen_effects()
 	# Towed home with a load still on the nose: it stays out here, where the ship was
 	if ship and ship.is_carrying():
 		ship.release_freight()

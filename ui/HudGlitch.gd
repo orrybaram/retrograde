@@ -60,6 +60,7 @@ var _rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	_rng.randomize()
 	hud = get_parent() as Control
+	add_to_group("screen_effects")
 	EventBus.ship_respawned.connect(_on_respawned)
 	EventBus.ship_damaged.connect(_on_ship_damaged)
 
@@ -226,6 +227,11 @@ static func corrupt(text: String, amount: float, rng: RandomNumberGenerator) -> 
 		else:
 			out += c
 	return out
+
+## Every glitch off at once, for a relaunch or a load.
+func clear_now() -> void:
+	_hit = 0.0
+	restore()
 
 func _on_respawned() -> void:
 	_hit = 0.0

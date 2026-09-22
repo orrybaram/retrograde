@@ -24,6 +24,7 @@ var _dread: float = 0.0
 
 func _ready() -> void:
 	add_to_group("void_shroud")
+	add_to_group("screen_effects")
 	layer = LAYER
 	# Menus pause the tree; the overlay still has to ease itself out of the way.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -59,6 +60,14 @@ func _process(delta: float) -> void:
 		return
 	_material.set_shader_parameter("shroud", _shroud)
 	_material.set_shader_parameter("dread", _dread)
+
+## Gone at once, not eased out: a relaunch or a load boots onto a clean screen.
+func clear_now() -> void:
+	_shroud = 0.0
+	_dread = 0.0
+	visible = false
+	_material.set_shader_parameter("shroud", 0.0)
+	_material.set_shader_parameter("dread", 0.0)
 
 func _ease(current: float, target: float, delta: float) -> float:
 	var speed := DARKEN_SPEED if target > current else LIGHTEN_SPEED
