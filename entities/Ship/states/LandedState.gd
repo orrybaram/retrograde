@@ -70,11 +70,15 @@ func enter() -> void:
 
 	# Space ports: refuel over time, fly the hold into the port as credits, refresh resources
 	var at_port := locked_dockable.is_in_group("space_ports")
+	# A port nobody runs takes no delivery: the hold keeps what it carries until someone
+	# is awake to receive it (docs/OPENING.md §3, SpacePort.is_open).
+	var port_open := at_port and _port_is_open()
 	if at_port:
 		_refueling = true
-		_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
-		if _cash_in:
-			_cash_in.finished.connect(_on_cash_in_finished)
+		if port_open:
+			_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
+			if _cash_in:
+				_cash_in.finished.connect(_on_cash_in_finished)
 		EventBus.resources_refresh_requested.emit()
 
 	# Auto-save on landing (wait a frame to ensure position is set)
@@ -82,13 +86,14 @@ func enter() -> void:
 	_autosave()
 
 	# Automatically open SpacePort dialogue if docked to a SpacePort (but not on spawn),
-	# once the cash-in has played out.
-	if not instant_dock and at_port:
+	# once the cash-in has played out. A closed port opens nothing and prompts nothing:
+	# the dock is a perch, and thrust is the way off it.
+	if not instant_dock and port_open:
 		if is_instance_valid(_cash_in):
 			await _cash_in.finished
 		if locked_dockable and is_instance_valid(locked_dockable):
 			_open_spaceport_dialogue()
-	elif instant_dock and locked_dockable and is_instance_valid(locked_dockable) and locked_dockable.is_in_group("space_ports"):
+	elif instant_dock and port_open:
 		_show_enter_spaceport_message()
 
 func exit() -> void:
@@ -223,15 +228,21 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = target_vel
 	state.angular_velocity = 0.0
 
-func _open_spaceport_dialogue() -> void:
-	# Only allow dialogue if docked to a SpacePort
+## Whether the port the ship is docked to is open for business. A dockable that is not a
+## port at all is not, and neither is a port with nobody awake to run it.
+func _port_is_open() -> bool:
 	if not locked_dockable or not is_instance_valid(locked_dockable):
-		return
-	
-	# Check if dockable is a SpacePort by checking if it's in the space_ports group
+		return false
 	if not locked_dockable.is_in_group("space_ports"):
+		return false
+	var port := locked_dockable as SpacePort
+	return port != null and port.is_open()
+
+func _open_spaceport_dialogue() -> void:
+	# Only allow dialogue if docked to an open SpacePort
+	if not _port_is_open():
 		return
-	
+
 	# Find the SpacePort from the group (locked_dockable IS the SpacePort node)
 	var space_ports = ship.get_tree().get_nodes_in_group("space_ports")
 	var spaceport: SpacePort = null
@@ -258,14 +269,10 @@ func _open_spaceport_dialogue() -> void:
 		_dialogue.open_dialogue(spaceport)
 
 func _toggle_dialogue() -> void:
-	# Only allow dialogue if docked to a SpacePort
-	if not locked_dockable or not is_instance_valid(locked_dockable):
+	# Only allow dialogue if docked to an open SpacePort
+	if not _port_is_open():
 		return
-	
-	# Check if dockable is a SpacePort by checking if it's in the space_ports group
-	if not locked_dockable.is_in_group("space_ports"):
-		return
-	
+
 	# Find dialogue in scene tree if not already cached
 	if not _dialogue or not is_instance_valid(_dialogue):
 		# Get the current scene (Main node)

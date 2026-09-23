@@ -1659,6 +1659,7 @@ start_beside_scrap = true
 position = Vector2(382, 100)
 rotation = 1.5707964
 scale = Vector2(0.6, 0.6)
+needs_core = true
 dock_offset = Vector2(0, -10)
 
 [node name="StationPower" type="Node" parent="."]

@@ -26,6 +26,12 @@ assert not pt.recall("station").get_node("Lights").lit "every light out"
 assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").limp "the dish hangs limp"
 assert pt.mount("fuel_tank").alarm.active and pt.mount("solar_array").alarm.active and pt.mount("dorsal_arm").alarm.active and pt.nudge().alarm.active "an alarm at every cut"
 screenshot restore_1_new_game
+# A dead station meets nobody (docs/OPENING.md §3): no hub, no prompt for one, and no
+# hold taken in. UNIT-7 is off in the cold core until §5, so docking here is silence.
+assert not pt.recall("station").get_node("SpacePort").is_open() "SR-7's dock is shut"
+press action
+wait 0.3
+assert pt.visible_ui().is_empty() "docking a dead station opens nothing"
 
 # --- The Sections: the tank adrift just past the dock, the arm going round in Rook's
 # debris with the ring, the array lying on Rook's sunlit ground ---
@@ -191,4 +197,10 @@ assert pt.section("fuel_tank") == null and pt.section("dorsal_arm") == null "no 
 eval pt.redock()
 wait 0.5
 assert pt.state_name() == "LandedState" "docks at the boom again"
+# Power is not the wake. SR-7 is lit, the dish is up and it is back on the air, and the
+# dock is still shut: the core is cold, UNIT-7 is still in it, and §5 has not happened.
+assert not pt.mount("fuel_tank").get_parent().get_node("SpacePort").is_open() "still shut with the power on"
+press action
+wait 0.3
+assert pt.visible_ui().is_empty() "and still opens nothing"
 quit

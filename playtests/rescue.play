@@ -10,6 +10,9 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 wait_until pt.state_name() == "LandedState" 5
+# SR-7's dock is shut until its core is cold-started (docs/OPENING.md §5). This
+# scenario is not about the opening, so start the core and open the port.
+eval gs.set("core_started", true)
 eval pt.remember("home", get_tree().get_nodes_in_group("space_stations")[0])
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2

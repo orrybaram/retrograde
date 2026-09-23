@@ -33,6 +33,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "credits", gs.credits)
 	cfg.set_value("stats", "death_count", gs.death_count)
+	cfg.set_value("stats", "core_started", gs.core_started)
 	if ship:
 		cfg.set_value("stats", "fuel", ship.fuel)
 		cfg.set_value("stats", "max_fuel", ship.max_fuel)
@@ -291,6 +292,8 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	
 	gs.credits = int(cfg.get_value("stats", "credits", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
+	# A save from before the cold start existed has a dead core, like a new game.
+	gs.core_started = bool(cfg.get_value("stats", "core_started", false))
 	RobotRadio.load_seen(load_radio_seen())
 	gs.scanned_planets.clear()
 	for key in load_scanned_planets():
