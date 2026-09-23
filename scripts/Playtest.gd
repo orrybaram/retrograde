@@ -959,6 +959,40 @@ func stage_at_mount(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void
 	ship.global_transform = ship_xf
 	ship.linear_velocity = station.linear_velocity
 
+## Every piece of SR-7 home at once - the three Sections and the nudged wing - without
+## flying them: the station whole and still dark, its core listening (CoreHousing).
+func seat_sr7() -> void:
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	for id in Sections.DATA.keys() + [Sections.SOLAR_ARRAY_2]:
+		gs.mark_section_seated(id)
+		Save.save_seated_section(id, PackedStringArray(gs.seated_sections.keys()))
+		var f := section(id)
+		if f:
+			f.queue_free()
+	for m in get_tree().get_nodes_in_group("mounts"):
+		m.refresh()
+	if nudge():
+		nudge().refresh()
+	core().refresh()
+
+## SR-7's core (CoreHousing).
+func core() -> CoreHousing:
+	return get_tree().get_first_node_in_group("core_housing") as CoreHousing
+
+## Put the ship `offset` px from SR-7's core, in open space beside the housing, still and
+## moving with the station: in reach of it.
+func park_by_core(offset := Vector2(260, 5)) -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var c := core()
+	var station := c.get_parent() as RigidBody2D
+	var xf := Transform2D(-PI * 0.5, c.global_position + offset)
+	var rid := ship.get_rid()
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, xf)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, station.linear_velocity)
+	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
+	ship.global_transform = xf
+	ship.linear_velocity = station.linear_velocity
+
 ## SR-7's hanging solar wing (ArrayNudge).
 func nudge() -> ArrayNudge:
 	return get_tree().get_first_node_in_group("nudges") as ArrayNudge

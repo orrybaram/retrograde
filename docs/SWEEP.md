@@ -60,6 +60,13 @@ it just hides when there is nothing to break.
 
 Change that: the bar shows whenever the ship is sweeping.
 
+> **As built (2026-09-22):** the Sweep now charges one ring for as long as it is held, so
+> the bar is a readout of the *charge*: `Resonance.BAR_TIME` (1.6s) split into six Slots, the
+> Mark being the Slot the key comes up in (a tap is Slot 1), and a hold past the end the
+> Commit - itself a charged ring, reaching further than the bar is shown. And the
+> RESONANCE bar does **not** show everywhere: only while hardware that listens is within
+> `Resonance.REACH`. Everywhere else a free Sweep shows no bar.
+
 | Ship is | Bar shows | Release does |
 |---|---|---|
 | Sweeping, scrap or seam in reach | `E X T R A C T` - six **Slots**, the lit zone, the PERFECT slice | A graded hit. Unchanged. |
@@ -307,6 +314,13 @@ The delta from what ships today is small. Most of it is moving one object.
 8. **A listener component** that accumulates Marks in range and matches a `ProcedureDef`.
 
 Nothing above changes flight, fuel or the Chart.
+
+**Built (2026-09-22), for SR-7's core:** 2-6 as a separate `ResonanceMeter` rather than a mode
+of `HarvestMeter` (the two never show together: resonance only while flying free), with
+Marks counted on the ship (`Resonance`) and a Commit carried on its ring to
+`on_procedure(marks)` (`SonarPulse.fire`); 7 as `ProcedureDef`; 8 as `CoreHousing`. Step 1 was
+not needed and is not done. Stepwise arrow-key entry (§10) is for hardware with a
+terminal, and waits for the Gate.
 
 ---
 

@@ -2,7 +2,8 @@
 # of the refuel boom on a station missing its FUEL TANK, SOLAR ARRAY and DORSAL ARM, with
 # the right solar wing hanging off true. The three Sections float dead out in Rook's
 # debris on one line; each is fetched, released at its own Mount and seated, and the wing
-# is pushed home with the hull. It all survives reloads.
+# is pushed home with the hull. It all survives reloads, and leaves the station whole and
+# still dark, its core listening.
 # Run: PLAYTEST_PORT=7793 tools/play.sh --headless playtests/restore_sr7.play
 
 press enter
@@ -167,31 +168,18 @@ assert pt.nudge().seated "the wing locked true"
 wait 0.5
 assert absf(pt.nudge().off_true()) < 0.01 "and it sits true"
 assert not pt.nudge().alarm.active "the hinge stops sparking"
-assert pt.recall("station").get_node("StationPower").powered "both wings home: power"
-assert pt.recall("station").get_node("Lights").lit and pt.recall("station").get_node("Lights").is_waking() "the lights start coming on, one by one"
-assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").limp "the dish waits for the lights"
-wait_until not pt.recall("station").get_node("Lights").is_waking() 12
-wait 0.2
-assert not pt.recall("station").get_node("Visuals/KeelLower/CommDish").limp "then the dish comes up"
-wait_until pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node_or_null("Ping") != null 15
-assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping").ring_count() == 1 "on the Sun, it pings"
-assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping")._rings[0]["color"] == Color(0.710, 0.541, 0.878, 1.0) "in the Titan's purple"
-# Powered, a Sweep that reaches the dish is answered with the same ping
-wait 3.0
-eval pt.warp_to(pt.recall("station").get_node("Visuals/KeelLower/CommDish").global_position + Vector2(150, 60))
-eval ship.set("linear_velocity", pt.recall("station").linear_velocity)
-wait 0.2
-eval pt.remember("dish_rings", pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping").ring_count())
-hold action 0.1
-wait 1.0
-assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").get_node("Ping").ring_count() > pt.recall("dish_rings") "the dish answers a Sweep"
+# Whole, and still dark: the power comes from the core (playtests/core_cold_start.play)
+assert not pt.recall("station").get_node("StationPower").powered "every piece home, and still no power"
+assert not pt.recall("station").get_node("Lights").lit "every light still out"
+assert pt.recall("station").get_node("Visuals/KeelLower/CommDish").limp "the dish still hangs"
+assert pt.core().listens() "the core is listening"
 screenshot restore_3_whole
 
 # --- Seated survives reload ---
 reload
 assert pt.mount("fuel_tank").seated and pt.mount("solar_array").seated and pt.mount("dorsal_arm").seated "all three still seated"
 assert pt.nudge().seated and absf(pt.nudge().off_true()) < 0.01 "the wing still true"
-assert get_tree().get_first_node_in_group("station_power").powered "still powered after a reload"
+assert pt.core().listens() "the core still listens after a reload"
 assert get_tree().get_nodes_in_group("ground_fx").is_empty() "the scar in Rook's ground doesn't outlive the session"
 assert pt.section("fuel_tank") == null and pt.section("dorsal_arm") == null "no Section comes back as Freight"
 eval pt.redock()

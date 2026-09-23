@@ -42,6 +42,26 @@ Ship._drive_sonar -> Ship.wants_sonar() -> SonarPulse.charging (held) -> fire() 
   cut) until a ring reaches it, then `ScrapNode.reveal()` lights it up for the rest of its spawn and sends one cream `SonarEcho` ring back.
   Containers and derelicts opt out via `_hides_until_pinged()`. Playtest `stage_harvest` reveals.
 
+## Procedures (docs/SWEEP.md, docs/OPENING.md §5)
+
+```
+Ship._drive_sonar release -> Resonance.available_for(ship)? -> Resonance.release(held)
+  -> a Mark (Slot 1-6 of the hold, BAR_TIME / 6 each) or, held past BAR_TIME, the Commit
+  -> SonarPulse.fire(marks) -> the ring reaches a listener -> on_procedure(marks)
+```
+
+- Hardware that listens joins `procedure_listeners` with `procedure_point()`, `listens()`
+  and (for a placard) `placard() -> ProcedureDef`; it also joins `sonar_listeners` so a
+  plain Sweep can answer. The bar (`ResonanceMeter`) and placard (`PlacardPanel`) only
+  show within `Resonance.REACH` of a listening one, flying free.
+- `ProcedureDef` (`entities/procedure/`) holds the steps; the placard draws from the same
+  data. `check()` gives `ok`, a `right` count (never which) and `incomplete`.
+- SR-7's core is the first (`CoreHousing`): it listens once `CoreHousing.is_whole` (all
+  Sections plus the nudged wing), and its cold start sets `GameState.core_started`
+  (saved as `[sections] core_started`), which is SR-7's power (`StationPower`) and UNIT-7
+  awake (`RobotRadio.guide_awake`, `wake_guide()`). Dev panel: PROGRESS > SR-7 WHOLE /
+  SR-7 CORE. Playtest: `pt.seat_sr7()`, `pt.park_by_core()`, `playtests/core_cold_start.play`.
+
 ## Freight (clamped to the nose, docs/adr/0012)
 
 ```

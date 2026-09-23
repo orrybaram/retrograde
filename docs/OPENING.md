@@ -118,15 +118,16 @@ wake (§5), so the game opens in silence. There is no damage report and no parts
 manifest):
 
 - **No power.** Every light on SR-7 is out: dark glass in the windows, dead lenses on the
-  beacons, the dock's lamps unlit. Power needs both solar wings home - the SOLAR ARRAY
-  fetched and seated, and the right wing pushed true (`StationPower`).
+  beacons, the dock's lamps unlit. The power comes from the core, and the core only
+  listens once every piece is home (§5, decided 2026-09-22). The wings are pieces like the
+  others, not a switch (`StationPower`, `CoreHousing`).
 - **The dish hangs limp.** The comm dish below the keel has no drive: bowl down, swaying
   a little on its post. Power back, it swings up and finds the Sun.
 - **Every wound is alarmed.** At each empty Mount, and at the hanging wing's hinge, the
   severed lines along the cut spit sparks and a red emergency lamp pulses slowly beside it
   (`CutAlarm`). Each stops as its piece goes home, so the alarms are the to-do list.
-- **Power comes on while the player watches.** Seating the second wing lights the station
-  slowly, one light at a time outward from the keel, then the dock's lamps; only then does
+- **Power comes on while the player watches.** The core's cold start (§5) lights the station
+  slowly, one light at a time outward from the core, then the dock's lamps; only then does
   the dish strain up off its post, find the Sun, and send out one great ping in the Titan's purple - SR-7 back
   on the air, and every piece of scrap across the ring lights up at once. From then on,
   with the power on, a Sweep that reaches the dish is answered with the same purple ping.
@@ -214,10 +215,12 @@ back, they already know exactly what that means.
 
 ## 5. The Wake
 
-Power comes up. The station's parts are back. One thing in the middle of it is still dark.
+The station's parts are back. The alarms are quiet, and for the first time SR-7 makes no
+noise at all - it is still dark. The only light on it is one standby lamp on the core
+housing, blinking slowly.
 
 Sweep the core before the repairs and nothing happens - it is not part of a working system.
-Sweep it after, and it still does not answer. It is seated wrong. It is cold.
+Sweep it after, and it gives back a cold thump. It is listening. It is seated wrong. It is cold.
 
 The placard on its housing is the first **Procedure** in the game:
 
@@ -236,12 +239,24 @@ Two words. The same two operations as the Veld Gate, with different arguments - 
 later the player drifts up to a dead orbital structure the size of a city, reads its face,
 and **recognises it**. *I have done this. I did this to my friend.*
 
-The core lights. The rest of the station comes up with it.
+### Performing it (built 2026-09-22)
 
-**And there is a silhouette in it.**
+The placard shows beside the housing as the ship comes close (`PlacardPanel`), and near the
+core a Sweep shows **R E S O N A N C E** under the ship (`ResonanceMeter`): the bar is the
+charge being held, split into six Slots, and the Slot the key comes up in is the Mark. A
+tap is Slot 1. So the placard is: tap, tap, a short hold, tap, and a hold past the end of
+the bar - **O V E R D R I V E** - which is the Commit. Under the bar each Mark is drawn as a
+row with a dot in its Slot, the same rows as the placard. Marks fall off if the next press
+is more than 1.2s after the last release (`Resonance`).
 
-The player did not fetch a friend. They repaired their house and found out somebody had
-been in there the whole time, through every docking trip of the opening, in the dark.
+- **Wrong:** the core thumps, and one segment along the foot of the housing lights per Mark
+  in its right place - how wrong, never where (`docs/SWEEP.md` §7).
+- **Right:** SEAT - the core swings square in its housing with the seating clunk, undoing
+  the previous clone's work. CYCLE - it turns over, stutters and catches. The power comes up
+  from it: the lights one by one outward, the dock, then the dish finds the Sun and sends
+  the purple ping that lights up the scrap across the ring. Then the radio clicks on.
+
+There is no silhouette (decided 2026-09-22). Where UNIT-7 was is not shown.
 
 ### What it says first
 
@@ -394,9 +409,9 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the
 > player brings. `Store.gd`, `StoreData.gd` and `SR7Store.tres` are still in the tree, so
 > the hub the wake opens is the superseded shopfront until that lands.
-> **TODO**: UNIT-7's tutorial tips are parked behind `RobotRadio.guide_awake`, which
-> nothing sets yet. The core's cold start (§5) should. Its functional calls (relaunch,
-> tow, the Void) still come from UNIT-7 on a new game and need a speaker of their own.
+> **TODO**: UNIT-7's functional calls (relaunch, tow, the Void) still come from UNIT-7
+> before the core's cold start wakes it (`RobotRadio.wake_guide`), and need a speaker of
+> their own.
 > **TODO**: Playtest the opening for wandering. There is no clock by design; the array's
 > long-range answer (§4) is the only pointer. Tune its range until a lost player picks it
 > up without being led by the hand.
