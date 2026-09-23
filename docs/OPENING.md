@@ -131,6 +131,14 @@ manifest):
   on the air, and every piece of scrap across the ring lights up at once. From then on,
   with the power on, a Sweep that reaches the dish is answered with the same purple ping.
 
+- **Docking it is met by nobody** (decided 2026-09-22). The dock opens no hub and does not
+  prompt for one, and the hold is not taken in: there is nobody there to receive it. The
+  dock is a perch, and thrust is the way off it. The station's hub appears for the first
+  time at the wake, so the wake is what hands the player the port. `SpacePort.needs_core`
+  gates it on `GameState.core_started`, which §5's cold start sets and the save keeps -
+  a station does not go back to being dead. The gate is the world's state, not the radio's:
+  `RobotRadio.guide_awake` still governs only whether UNIT-7's tips play.
+
 The emergency lamps are the only red on SR-7 (`Colors.DANGER`), and the pull still holds:
 nothing is marked, nothing counts. Three red lights and a dark dish are four lines of
 objective with zero instruction.
@@ -378,8 +386,14 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > in ordinary debris.
 > **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
 > dock without ever reading as a tutorial popup.
-> **TODO**: Gate `SpacePortDialogue` on UNIT-7 being awake; decide what docking at the
-> dead station offers instead (no manifest - §3).
+> **TODO**: The dry dock is not built. §3 says the player's own dock has no tank to fill
+> from, but `LandedState` still refuels at any port, so a dead SR-7 hands out a free full
+> tank. Gate refuelling on the FUEL TANK Section being seated - but not before ADR 0010's
+> Aux exists, which it does not, or an empty tank before the tank is home is a soft-lock.
+> **TODO**: What the dock offers *after* the wake is ADR 0007's, not this document's:
+> there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the
+> player brings. `Store.gd`, `StoreData.gd` and `SR7Store.tres` are still in the tree, so
+> the hub the wake opens is the superseded shopfront until that lands.
 > **TODO**: UNIT-7's tutorial tips are parked behind `RobotRadio.guide_awake`, which
 > nothing sets yet. The core's cold start (§5) should. Its functional calls (relaunch,
 > tow, the Void) still come from UNIT-7 on a new game and need a speaker of their own.

@@ -44,6 +44,11 @@ var met_automatons: Dictionary = {}
 ## Sections of SR-7 seated back in their Mounts, keyed by Sections id. Permanent.
 var seated_sections: Dictionary = {}
 
+## SR-7's core has been cold-started and the station is crewed again (docs/OPENING.md §5).
+## The world fact, not the radio's: UNIT-7 waking is what sets it, and it is what opens
+## SR-7's dock. Permanent - a station does not go back to being dead.
+var core_started: bool = false
+
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
 
@@ -148,6 +153,7 @@ func reset_all_state() -> void:
 	identified_gates.clear()
 	met_automatons.clear()
 	seated_sections.clear()
+	core_started = false
 	death_count = 0
 	upgrade_levels.clear()
 	InventoryManager.clear_inventory()

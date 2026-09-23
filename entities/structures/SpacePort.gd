@@ -10,6 +10,13 @@ const Dockable = preload("res://entities/structures/Dockable.gd")
 signal ship_landed(ship: Ship)
 signal ship_took_off(ship: Ship)
 
+## A port nobody is awake to run. SR-7 opens like this (docs/OPENING.md §3, §5): the
+## station is dead, UNIT-7 is off in the cold core, and a ship that docks is met by
+## nothing at all - no hub, no prompt for one, and no hold taken in, because there is
+## nobody there to take delivery. The core's cold start opens it for good.
+## Ports with nobody to wake (the Sun Station's pair) leave this false.
+@export var needs_core := false
+
 @export var landing_pad_size: Vector2 = Vector2(100, 20)
 @export var light_blink_rate: float = 1.0  # Blink rate in seconds
 @export var landing_lock_distance: float = 60.0  # Distance threshold for landing lock (pixels above pad)
@@ -112,6 +119,15 @@ func set_lit(on: bool) -> void:
 		_blink_tween = null
 	_left_light.modulate = UNLIT
 	_right_light.modulate = UNLIT
+
+## Whether docking here is met by anyone: the hub opens, the hold is taken in. False on
+## SR-7 until its core is cold-started (`needs_core`). The gate is the world's state,
+## not the radio's - `RobotRadio.guide_awake` only governs whether UNIT-7's tips play.
+func is_open() -> bool:
+	if not needs_core:
+		return true
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	return gs != null and gs.core_started
 
 ## Get the landing pad position in world space
 func get_landing_pad_position() -> Vector2:

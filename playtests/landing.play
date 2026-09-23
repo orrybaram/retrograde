@@ -13,6 +13,9 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # guide - whose low-fuel briefing pauses the game, so the ship would never burn dry
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 wait_until pt.state_name() == "LandedState" 5
+# SR-7's dock is shut until its core is cold-started (docs/OPENING.md §5). This
+# scenario is not about the opening, so start the core and open the port.
+eval gs.set("core_started", true)
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
