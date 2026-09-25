@@ -11,7 +11,7 @@
 
 ## 1. PREMISE
 
-A post-war solar system. Manufacturing is dead. Everything that exists was built before the conflict and is now held together with duct tape and desperation. You wake up in a scrapper's ship docked at an outer-system station with no memory of who you are or how you got here.
+A post-war solar system. Manufacturing is dead. Everything that exists was built before the conflict and is now held together with duct tape and desperation. You wake up in a scrapper's ship adrift outside an outer-system station with no memory of who you are or how you got here.
 
 Your job is simple: fly out, collect scrap, sell it, survive. The only thing anyone ever asks of you is small and sensible - there is a dead transit gate in orbit at every planet, and powering one up would save everybody a great deal of flying. Nobody mentions what the gates are wired to.
 

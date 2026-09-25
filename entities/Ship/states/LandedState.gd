@@ -11,6 +11,7 @@ var _docking_animation_duration: float = 0.5  # Duration of smooth docking anima
 var _initial_ship_position: Vector2 = Vector2.ZERO
 var _initial_ship_rotation: float = 0.0
 var _dialogue = null  # SpacePortDialogue
+var _terminal: CoreTerminal = null
 var _cash_in: HoldCashIn = null
 var _refueling := false
 
@@ -47,6 +48,7 @@ func enter() -> void:
 
 	locked_dockable = pending_dockable
 	locked_offset_from_target = Vector2.ZERO  # Will be calculated on first frame
+	ship.drift_spin = 0.0  # docked is under control, whatever it was doing before
 
 	if instant_dock:
 		# Instant dock: skip animation by setting start time far in the past
@@ -95,12 +97,20 @@ func enter() -> void:
 			_open_spaceport_dialogue()
 	elif instant_dock and port_open:
 		_show_enter_spaceport_message()
+	elif _awaiting_reboot():
+		# SR-7 whole and its core cold: the dock's console is the only thing awake
+		# (docs/OPENING.md §5), and it is what docking was for.
+		if instant_dock:
+			_show_terminal_message()
+		else:
+			_open_core_terminal()
 
 func exit() -> void:
 	super.exit()
 	var cash_in := _cash_in
 	_cash_in = null
 	_refueling = false
+	_close_core_terminal()
 	# Close dialogue if open
 	if _dialogue and is_instance_valid(_dialogue):
 		if _dialogue.dialogue_closed.is_connected(_on_dialogue_closed):
@@ -136,11 +146,14 @@ func physics_process(delta: float) -> void:
 	# Handle dialogue keypress (ui_accept - Space/Enter)
 	# Don't toggle dialogue if store UI is open (Space is used for menu selection there)
 	if Input.is_action_just_pressed("action") and not _is_store_open():
-		_toggle_dialogue()
+		if _awaiting_reboot():
+			_toggle_core_terminal()
+		else:
+			_toggle_dialogue()
 	
 	# Release lock if thrusting - transition back to FlyingState
 	# Don't allow takeoff if any UI is open (dialogue, store, etc.)
-	var is_ui_blocking = (_dialogue and _dialogue.visible) or _is_store_open()
+	var is_ui_blocking = (_dialogue and _dialogue.visible) or _is_store_open() or _is_terminal_open()
 	if (ship.want_thrust or ship.want_reverse_thrust) and not is_ui_blocking:
 		_exit_to_flying()
 		return
@@ -328,6 +341,95 @@ func _exit_to_flying() -> void:
 	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
 	if state_machine and state_machine.has_state("FlyingState"):
 		state_machine.change_state("FlyingState")
+
+# --- SR-7's core terminal -------------------------------------------------------
+
+## The core behind the port the ship is docked to, if that port is on a station with one.
+func _port_core() -> CoreHousing:
+	if not locked_dockable or not is_instance_valid(locked_dockable):
+		return null
+	var node: Node = locked_dockable.get_parent()
+	while node:
+		var core := node.get_node_or_null("CoreHousing") as CoreHousing
+		if core:
+			return core
+		node = node.get_parent()
+	return null
+
+## Docked at a port nobody runs yet, on a station whose core is whole and waiting.
+func _awaiting_reboot() -> bool:
+	if _port_is_open() or not locked_dockable or not locked_dockable.is_in_group("space_ports"):
+		return false
+	var core := _port_core()
+	return core != null and core.listens()
+
+func _find_terminal() -> CoreTerminal:
+	if not _terminal or not is_instance_valid(_terminal):
+		_terminal = ship.get_tree().get_first_node_in_group("core_terminal") as CoreTerminal
+	return _terminal
+
+func _open_core_terminal() -> void:
+	var terminal := _find_terminal()
+	if not terminal:
+		return
+	if not terminal.reboot_requested.is_connected(_on_reboot_requested):
+		terminal.reboot_requested.connect(_on_reboot_requested)
+	if not terminal.terminal_closed.is_connected(_on_terminal_closed):
+		terminal.terminal_closed.connect(_on_terminal_closed)
+	EventBus.action_message_changed.emit("")
+	terminal.open()
+
+func _close_core_terminal() -> void:
+	var terminal := _terminal
+	if not terminal or not is_instance_valid(terminal):
+		return
+	if terminal.terminal_closed.is_connected(_on_terminal_closed):
+		terminal.terminal_closed.disconnect(_on_terminal_closed)
+	if terminal.reboot_requested.is_connected(_on_reboot_requested):
+		terminal.reboot_requested.disconnect(_on_reboot_requested)
+	terminal.close()
+
+func _toggle_core_terminal() -> void:
+	if _is_terminal_open():
+		if not _terminal.is_running():
+			_terminal.close()
+	else:
+		_open_core_terminal()
+
+func _is_terminal_open() -> bool:
+	return _terminal != null and is_instance_valid(_terminal) and _terminal.visible
+
+func _show_terminal_message() -> void:
+	EventBus.action_message_changed.emit(EventBus.action_prompt("TERMINAL"))
+
+func _on_terminal_closed() -> void:
+	if _awaiting_reboot():
+		_show_terminal_message()
+
+## The console asked for it: the core reboots, and the camera pulls back so the player
+## watches the power come up across the station from where they sit. Once the dish has
+## pinged the port is open, and docking is met by someone at last.
+func _on_reboot_requested() -> void:
+	var core := _port_core()
+	if not core or not core.reboot():
+		return
+	EventBus.action_message_changed.emit("")
+	if ship.camera:
+		ship.camera.zoom_camera_out()
+	await EventBus.core_started
+	var power := core.get_parent().get_node_or_null("StationPower") as StationPower
+	if power:
+		await power.woken
+	if not is_ship_valid() or not locked_dockable or not is_instance_valid(locked_dockable):
+		return
+	if ship.camera:
+		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
+	if _port_is_open():
+		var gs := ship.get_tree().get_first_node_in_group("game_state") as GameState
+		_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
+		if _cash_in:
+			_cash_in.finished.connect(_on_cash_in_finished)
+		_show_enter_spaceport_message()
 
 func _show_enter_spaceport_message() -> void:
 	EventBus.action_message_changed.emit(EventBus.action_prompt("ENTER PORT"))

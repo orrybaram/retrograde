@@ -844,6 +844,27 @@ func rel_speed(planet_name: String) -> float:
 	return (ship.linear_velocity - planet(planet_name).linear_velocity).length()
 
 ## Warp back to the home port and dock (as if the player had flown in).
+## Skip Act 1 for a scenario that is not about it: SR-7's core already running - so its
+## arm is out, its port open and the station lit - and the ship docked there, instantly,
+## the way new games started before they opened adrift (docs/OPENING.md §3). The Sections
+## stay wherever a new game leaves them.
+func skip_opening() -> void:
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	gs.core_started = true
+	Save.save_core_started(true)
+	for group in ["dock_arms", "core_housing", "station_power"]:
+		get_tree().call_group(group, "refresh")
+	for station in get_tree().get_nodes_in_group("space_stations"):
+		for child in station.get_children():
+			if child is WakeDrift:
+				child.queue_free()
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var port := node("space_ports") as Node2D
+	warp_to(port.get_dock_position())
+	ship.set_meta("pending_dockable", port)
+	ship.set_meta("instant_dock", true)
+	ship.state_machine.change_state("LandedState")
+
 func redock() -> void:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	var port := node("space_ports") as Node2D
@@ -960,20 +981,32 @@ func stage_at_mount(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void
 	ship.linear_velocity = station.linear_velocity
 
 ## Every piece of SR-7 home at once - the three Sections and the nudged wing - without
-## flying them: the station whole and still dark, its core listening (CoreHousing).
-func seat_sr7() -> void:
+## flying them: the station whole and still dark, its core on standby (CoreHousing) and its
+## dock's arm out (DockArm). `live` plays it as the last piece going home would - the bay's
+## aux strips catch and the arm runs out while you watch - instead of snapping it.
+func seat_sr7(live := false) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	var last := ""
 	for id in GameState.station_pieces():
 		gs.mark_section_seated(id)
 		Save.save_seated_section(id, PackedStringArray(gs.seated_sections.keys()))
 		var f := section(id)
 		if f:
 			f.queue_free()
+		last = id
 	for m in get_tree().get_nodes_in_group("mounts"):
 		m.refresh()
 	if nudge():
 		nudge().refresh()
+	if live:
+		EventBus.section_seated.emit(last)
+		return
 	core().refresh()
+	get_tree().call_group("dock_arms", "refresh")
+
+## SR-7's dock arm (DockArm).
+func arm() -> DockArm:
+	return get_tree().get_first_node_in_group("dock_arms") as DockArm
 
 ## SR-7's core (CoreHousing).
 func core() -> CoreHousing:

@@ -17,6 +17,11 @@ signal ship_took_off(ship: Ship)
 ## Ports with nobody to wake (the Sun Station's pair) leave this false.
 @export var needs_core := false
 
+## Whether the port is out where a ship can reach it. SR-7's rides a telescoping arm that
+## sits retracted inside the hull until every piece of the station is home (DockArm); a
+## stowed port takes no ship and offers no DOCK. Every other port is always out.
+var deployed := true
+
 @export var landing_pad_size: Vector2 = Vector2(100, 20)
 @export var light_blink_rate: float = 1.0  # Blink rate in seconds
 @export var landing_lock_distance: float = 60.0  # Distance threshold for landing lock (pixels above pad)
@@ -128,6 +133,10 @@ func is_open() -> bool:
 		return true
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	return gs != null and gs.core_started
+
+## Whether a ship can dock here at all: the port is out on its arm.
+func accepts_docking() -> bool:
+	return deployed
 
 ## Get the landing pad position in world space
 func get_landing_pad_position() -> Vector2:

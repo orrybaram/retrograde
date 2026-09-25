@@ -1,11 +1,8 @@
 extends GdUnitTestSuite
 
-## SR-7's core (docs/OPENING.md §5): dead until the station is whole, then listening for
-## its placard's Procedure, and saying how wrong a wrong one is. Its bay is four window
-## slots for the Marks and a fifth for the Commit, set permanently out of true.
-
-## How many Marks SR-7's Procedure takes: SEAT·1, CYCLE·1.
-const PROCEDURE_MARKS := 4
+## SR-7's core (docs/OPENING.md §5): dead until the station is whole, then on standby until
+## the dock's console reboots it. Its bay is four window slots and a fifth, wider one, set
+## permanently out of true.
 
 
 func _gs() -> GameState:
@@ -41,36 +38,31 @@ func test_dead_until_whole() -> void:
 	var gs := _gs()
 	var core := _core()
 	assert_bool(core.listens()).is_false()
-	core.on_procedure([1, 1, 1, 1])
-	assert_int(core.segments_lit()).is_equal(0)
+	assert_bool(core.reboot()).override_failure_message("a broken station's core cannot be rebooted").is_false()
+	assert_bool(core.is_starting()).is_false()
 	_whole(gs)
 	core.refresh()
 	assert_bool(core.listens()).is_true()
 
 
-func test_a_wrong_procedure_lights_a_count_of_segments() -> void:
+func test_a_reboot_starts_it_and_it_stops_listening() -> void:
 	var gs := _gs()
 	_whole(gs)
 	var core := _core()
-	core.on_procedure([1, 1, 1, 1])
-	assert_int(core.segments_lit()).is_equal(3)
-	assert_bool(core.is_starting()).is_false()
-	core._process(CoreHousing.SEGMENT_HOLD + 0.1)
-	assert_int(core.segments_lit()).is_equal(0)
-
-
-func test_the_right_procedure_starts_it_and_it_stops_listening() -> void:
-	var gs := _gs()
-	_whole(gs)
-	var core := _core()
-	core.on_procedure([1, 1, 2, 1])
+	assert_bool(core.reboot()).is_true()
 	assert_bool(core.is_starting()).is_true()
 	assert_bool(core.listens()).is_false()
+	assert_bool(core.reboot()).override_failure_message("only once").is_false()
 
 
-func test_the_bay_is_four_words_and_a_commit() -> void:
+func test_the_core_is_off_the_procedure() -> void:
+	var core := _core()
+	assert_bool(core.is_in_group("procedure_listeners")).override_failure_message(
+		"the core is rebooted from the dock's console, not by a Procedure").is_false()
+
+
+func test_the_bay_is_five_slots_out_of_true() -> void:
 	assert_int(CoreHousing.SLOT_X.size()).is_equal(5)
-	assert_int(CoreHousing.word_slots()).is_equal(PROCEDURE_MARKS)
 	assert_int(CoreHousing.SLOT_KINK.size()).override_failure_message(
 		"every slot needs its kink: the row never straightens").is_equal(CoreHousing.SLOT_X.size())
 	# the row is out of true and the cold start does not undo it
@@ -78,21 +70,10 @@ func test_the_bay_is_four_words_and_a_commit() -> void:
 		assert_bool(kink.is_zero_approx()).is_false()
 
 
-func test_a_near_miss_lights_word_slots_and_never_the_commit() -> void:
+func test_the_slots_are_dark_until_it_catches() -> void:
 	var gs := _gs()
 	_whole(gs)
 	var core := _core()
-	core.on_procedure([1, 1, 1, 1])
-	var light := core._slot_light()
-	assert_array(light).is_equal([1.0, 1.0, 1.0, 0.0, 0.0])
-
-
-func test_the_echo_is_empty_with_no_ship() -> void:
-	var gs := _gs()
-	_whole(gs)
-	var core := _core()
-	core._poll_ship()
-	assert_int(core.echo_lit()).is_equal(0)
 	assert_array(core._slot_light()).is_equal([0.0, 0.0, 0.0, 0.0, 0.0])
 
 

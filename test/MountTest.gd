@@ -328,10 +328,11 @@ func test_the_prompt_reads_release_only_at_the_mount() -> void:
 # --- docking ---
 
 func test_the_ship_docks_at_the_head_of_the_refuel_boom() -> void:
-	var ports := _station.get_children().filter(func(n): return n is SpacePort)
+	var slide := _station.get_node("DockArm/Slide")
+	var ports := slide.get_children().filter(func(n): return n is SpacePort)
 	assert_int(ports.size()).is_equal(1)
 	var port: SpacePort = ports[0]
-	var head := Freight.bounds((_station.get_node("Visuals/RefuelBoom") as Polygon2D).polygon)
+	var head := Freight.bounds((slide.get_node("RefuelBoom") as Polygon2D).polygon)
 	assert_float(port.position.x).is_greater(head.end.x)  # out past the boom's truss, at its head
 	assert_float(port.position.y).is_between(head.position.y - 30.0, head.end.y + 30.0)
 

@@ -2,19 +2,18 @@ extends Node
 class_name StationPower
 
 ## SR-7's power (docs/OPENING.md §3, §5). The station is dead until its core is
-## cold-started (CoreHousing) - and the core only listens once every piece is home, so the
-## wings are pieces like the others, not a switch. Until then every light is out, the
-## dock's lamps are dark, and the comm dish hangs limp on its post. Power coming in while
-## the player watches wakes it in order: the lights catch one by one outward from the core,
-## then the dock, and only then does the dish swing up, find the Sun and ping - and
-## `woken` fires. The emergency alarms at the cuts run on their own (CutAlarm) and stop one
+## cold-started (CoreHousing) - and the core is only rebooted once every piece is home and
+## the ship has docked, so the wings are pieces like the others, not a switch. Until then
+## every light is out and the comm dish hangs limp on its post. Power coming in while the
+## player watches wakes it in order: the lights catch one by one outward from the core, and
+## only then does the dish swing up, find the Sun and ping - and `woken` fires. The dock's
+## lamps are not on this circuit: they run off the core's battery with the arm (DockArm). The emergency alarms at the cuts run on their own (CutAlarm) and stop one
 ## by one as each piece goes home.
 
 signal woken  ## A live wake has run to the end: the dish is on the Sun and has pinged.
 
 @export var lights: NodePath
 @export var dish: NodePath
-@export var port: NodePath
 
 var powered := false
 
@@ -38,9 +37,8 @@ func _apply(on: bool, instant: bool) -> void:
 	powered = on
 	var l := get_node_or_null(lights) as StationLights
 	var d := get_node_or_null(dish) as CommDish
-	var p := get_node_or_null(port) as SpacePort
 	if on and changed and not instant and l:
-		_wake(l, d, p)
+		_wake(l, d)
 		return
 	if l and (changed or instant):
 		l.set_lit(on)
@@ -48,17 +46,13 @@ func _apply(on: bool, instant: bool) -> void:
 		d.limp = not on
 		if instant:
 			d.cancel_wake()
-	if p:
-		p.set_lit(on)
 
-## The power comes in: lights one by one, then the dock, then the dish comes up.
-func _wake(l: StationLights, d: CommDish, p: SpacePort) -> void:
+## The power comes in: lights one by one, then the dish comes up.
+func _wake(l: StationLights, d: CommDish) -> void:
 	l.set_lit(true, false)
 	await l.woken
 	if not powered:
 		return
-	if p:
-		p.set_lit(true)
 	if d:
 		d.limp = false
 		await d.settled

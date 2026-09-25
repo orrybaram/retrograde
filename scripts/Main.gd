@@ -186,9 +186,10 @@ func is_within_tractor_beam() -> bool:
 ## A station's own port: the dock a tractor beam rescue drops the next clone on.
 ## The station itself isn't dockable, so the beam has to hand off to one of its ports.
 func _station_port(station: Node2D) -> Node2D:
-	for child in station.get_children():
-		if child is SpacePort:
-			return child as Node2D
+	# SR-7's rides out on its dock arm (DockArm), so look below the station's own children
+	for port in get_tree().get_nodes_in_group("space_ports"):
+		if station.is_ancestor_of(port):
+			return port as Node2D
 	return null
 
 ## The station currently holding the ship in its tractor beam, or null.
@@ -232,6 +233,19 @@ func _on_void_consumed() -> void:
 		ship.state_machine.change_state("ConsumedState")
 	await get_tree().create_timer(CONSUMED_SILENCE).timeout
 	show_game_over("Consumed")
+
+## Put the ship at `dock` - unless it is a dock whose arm is still in (SR-7 before every
+## piece is home, DockArm), which no ship can sit on: then adrift outside the station, the
+## way a new game opens.
+func _spawn_home(dock: Node2D) -> void:
+	var port := dock as SpacePort
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	if port and port.needs_core and not DockArm.should_be_out(gs):
+		var station := await ship_spawner.find_home_station()
+		if station:
+			await ship_spawner.spawn_adrift(station, false)
+			return
+	await ship_spawner.spawn_at_dock(dock)
 
 ## Checked when a game starts, not at init: Playtest.active is still false while the
 ## main scene is being built, so reading it any earlier is a race.
@@ -338,13 +352,13 @@ func start_game() -> void:
 	# Wait a frame for scene to initialize
 	await get_tree().process_frame
 
-	# Spawn ship at default dock (new game)
+	# A new game opens adrift outside SR-7, its dock's arm still in (docs/OPENING.md §3)
 	if ship_spawner:
-		var dock = await ship_spawner.find_default_dock()
-		if dock:
-			await ship_spawner.spawn_at_dock(dock)
+		var station := await ship_spawner.find_home_station()
+		if station:
+			await ship_spawner.spawn_adrift(station)
 		else:
-			push_warning("No default dock found for new game")
+			push_warning("No home station found for new game")
 
 	# Notify that planets are in position (for new game, they're already at initial angles)
 	# This triggers spawners to start
@@ -368,6 +382,10 @@ func start_game() -> void:
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 	EventBus.ship_respawned.emit()
+	# The ship no longer starts on a dock, so nothing autosaves: save the fresh game now,
+	# so CONTINUE never resumes the last one.
+	if gs and ship:
+		Save.save(gs, ship)
 
 	# A beat of silence in the dark, then the lights come up on a dead station. Nobody is
 	# on the comms: UNIT-7 is off until the core's cold start (RobotRadio.guide_awake).
@@ -429,7 +447,7 @@ func load_game() -> void:
 		if not dock:
 			dock = await ship_spawner.find_default_dock()
 		if dock:
-			await ship_spawner.spawn_at_dock(dock)
+			await _spawn_home(dock)
 		else:
 			push_warning("No dock found for load game")
 
@@ -451,6 +469,10 @@ func load_game() -> void:
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 	EventBus.ship_respawned.emit()
+	# The ship no longer starts on a dock, so nothing autosaves: save the fresh game now,
+	# so CONTINUE never resumes the last one.
+	if gs and ship:
+		Save.save(gs, ship)
 
 	# Every waking starts the same way, continue or not
 	if wake:
@@ -557,7 +579,7 @@ func reset_game() -> void:
 		if not dock:
 			dock = await ship_spawner.find_default_dock()
 		if dock:
-			await ship_spawner.spawn_at_dock(dock)
+			await _spawn_home(dock)
 		else:
 			push_warning("No dock found for respawn")
 	_rescue_station = null

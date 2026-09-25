@@ -3,39 +3,25 @@ class_name CoreHousing
 
 ## SR-7's core, in the hull section at the middle of the station (docs/OPENING.md §5): the
 ## end of Act 1. It is not a component in a housing - it is a recessed bay of window slots
-## set in ordinary hull, drawn the way StationLights draws every other window on SR-7, and
-## the placard beside it is the game's first Procedure: SEAT·1, CYCLE·1, commit.
+## set in ordinary hull, drawn the way StationLights draws every other window on SR-7.
 ##
-## - Until every piece of SR-7 is home it is dead: no answer to anything, and no bar.
-## - Whole, it listens (group `procedure_listeners`). The last piece going home brings the
-##   bay's **auxiliary lighting** up while the player watches - two strips along the lip of
-##   the recess, catching with the same stutter as every other light on SR-7, and the only
-##   light on the station until the wake. They are not a marker: a panel on standby has lit
-##   its own working area. What they light is the recess *around* the slots, which lifts
-##   just enough for the dark slots to read as notches and for the placard beside them to
-##   be readable at all. A Sweep that reaches it gets a cold thump back, and a ship close by
-##   sees the placard (PlacardPanel) and the RESONANCE bar (Resonance).
-## - The four word slots **echo** the Marks laid down: one lights per Mark, right or wrong,
-##   so the hardware is visibly hearing the player and telling them nothing. The fifth slot
-##   is wider and set apart, and lights while the Sweep is held past the end of the bar -
-##   the Commit, armed.
-## - A Commit of the wrong Marks thumps, and the echo is replaced for SEGMENT_HOLD by one
-##   slot per Mark in its right place - how wrong, never where (docs/SWEEP.md §7). The count
-##   only ever arrives at the Commit, so there is nothing to brute-force per Slot.
-## - The right Marks cold-start it: the seating clunk lands (SEAT - heard, never seen; the
-##   row stays as crooked as whoever left it), it turns over and the slots catch outward
-##   (CYCLE), and the power comes up from here (StationPower). Once the dish is on the Sun,
-##   UNIT-7 comes on the comms (RobotRadio.wake_guide). The started state is
-##   GameState.core_started.
-
-const PROCEDURE: ProcedureDef = preload("res://entities/procedure/sr7_core.tres")
+## - Until every piece of SR-7 is home it is dead: no answer to anything.
+## - Whole, it comes to standby. The last piece going home brings the bay's **auxiliary
+##   lighting** up while the player watches - two strips along the lip of the recess,
+##   catching with the same stutter as every other light on SR-7, and the only light on the
+##   station until the wake. They are not a marker: a panel on standby has lit its own
+##   working area. The same battery runs the dock's arm out (DockArm). A Sweep that reaches
+##   the core gets a cold thump back.
+## - It is rebooted from the dock's terminal (CoreTerminal), not from out here: `reboot`.
+##   The seating clunk lands (SEAT - heard, never seen; the row stays as crooked as whoever
+##   left it), it turns over and the slots catch outward (CYCLE), and the power comes up
+##   from here (StationPower). Once the dish is on the Sun, UNIT-7 comes on the comms
+##   (RobotRadio.wake_guide). The started state is GameState.core_started.
 
 ## Cold start pacing, s: the beat before the clunk lands, the beat after it, and the catch.
 const SEAT_TIME := 0.5
 const CYCLE_DELAY := 0.9
 const CATCH_TIME := 1.4
-## A near miss's slots stay lit this long, s.
-const SEGMENT_HOLD := 1.8
 
 ## The bay's auxiliary lighting: two strips along the lip of the recess, running off the
 ## core's own standby battery. Not a marker and not addressed to the player - a panel that
@@ -53,11 +39,11 @@ const STRIP_SPILL := 7.0
 const BAY_WASH := 0.05
 const SPILL_ALPHA := 0.09
 
-## The bay recessed into the hull, and the slots set in it: four for the Procedure's Marks,
-## then a fifth, wider and set apart, for the Commit.
+## The bay recessed into the hull, and the slots set in it: four, then a fifth, wider and
+## set apart.
 const BAY := Rect2(-97.0, -20.0, 194.0, 40.0)
 const SLOT_SIZE := Vector2(20.0, 12.0)
-const COMMIT_SIZE := Vector2(30.0, 12.0)
+const WIDE_SIZE := Vector2(30.0, 12.0)
 const SLOT_X: Array[float] = [-75.0, -43.0, -11.0, 21.0, 70.0]
 ## How far each slot sits out of true. Nobody straightens these and the cold start does not
 ## undo them: the row was refitted in a hurry by whoever took SR-7 apart, and the station
@@ -73,12 +59,6 @@ var _starting := false
 var _whole := false
 var _lit := 0.0
 var _clock := 0.0
-var _segments_lit := 0
-var _segment_time := 0.0
-## The Marks the ship has laid down at this core, and whether its Sweep is past the bar.
-var _echo := 0
-var _commit_armed := false
-var _ship: Ship = null
 ## Seconds until the bay's aux strips hold; 0 once they are on.
 var _aux_time := 0.0
 
@@ -86,7 +66,6 @@ func _ready() -> void:
 	z_index = 2  # over the station's Visuals
 	add_to_group("core_housing")
 	add_to_group("sonar_listeners")
-	add_to_group("procedure_listeners")
 	EventBus.planets_restored.connect(refresh)
 	EventBus.section_seated.connect(_on_section_seated)
 	refresh.call_deferred()
@@ -114,46 +93,18 @@ func refresh() -> void:
 	_aux_time = 0.0
 	queue_redraw()
 
-## Listening for a Procedure: the station whole, the core still cold.
+## On standby: the station whole, the core still cold. A reboot takes now.
 func listens() -> bool:
 	return _whole and not started and not _starting
-
-## What its placard prints (PlacardPanel).
-func placard() -> ProcedureDef:
-	return PROCEDURE
-
-func procedure_point() -> Vector2:
-	return global_position
 
 func sonar_point() -> Vector2:
 	return global_position
 
-## How many slots show a Mark; the rest of the bay is the Commit slot.
-static func word_slots() -> int:
-	return SLOT_X.size() - 1
-
-## An ordinary Sweep: a dull ring off the hull if it is listening, nothing if it is dead or
-## running. It leaves the echo alone - every Mark's ring arrives here too.
+## An ordinary Sweep: a dull ring off the hull if it is on standby, nothing if it is dead
+## or running.
 func on_sonar_touched(_strength := 1.0) -> void:
 	if listens():
 		_ring()
-
-## A Commit reached it.
-func on_procedure(marks: Array) -> void:
-	if not listens():
-		return
-	var result := PROCEDURE.check(marks)
-	if result.ok:
-		cold_start()
-	else:
-		_reject(result.right)
-
-func segments_lit() -> int:
-	return _segments_lit if _segment_time > 0.0 else 0
-
-## The Marks echoed in the bay right now, before any Commit.
-func echo_lit() -> int:
-	return _echo
 
 func is_starting() -> bool:
 	return _starting
@@ -165,17 +116,16 @@ func _ring() -> void:
 	var velocity := station.linear_velocity if station else Vector2.ZERO
 	HarvestJuice.ring(ship.get_parent() if ship else get_parent(), global_position, Color(Colors.PRIMARY_DIM, 0.8), 90.0, velocity)
 
-## A wrong Commit: the ring, and `right` slots held a while in place of the echo.
-func _reject(right: int) -> void:
-	_segments_lit = right
-	_segment_time = SEGMENT_HOLD
-	_ring()
-	queue_redraw()
+## The dock's terminal asked for it (CoreTerminal). Nothing happens unless it is on standby.
+func reboot() -> bool:
+	if not listens():
+		return false
+	cold_start()
+	return true
 
 ## SEAT·1, CYCLE·1: the clunk lands, it turns over and catches, and the station comes up.
 func cold_start() -> void:
 	_starting = true
-	_segment_time = 0.0
 	# SEAT is heard, not seen: the clunk and the shake, and nothing on the hull moves.
 	await get_tree().create_timer(SEAT_TIME, false).timeout
 	Mount.clunk(self)
@@ -195,29 +145,10 @@ func cold_start() -> void:
 		await power.woken
 	RobotRadio.wake_guide()
 
-## What the ship is saying to this core: the Marks it holds, and whether its Sweep has
-## already run past the end of the bar.
-func _poll_ship() -> void:
-	_echo = 0
-	_commit_armed = false
-	if not listens():
-		return
-	if _ship == null or not is_instance_valid(_ship):
-		_ship = get_tree().get_first_node_in_group("ship") as Ship
-	if _ship == null or _ship.resonance == null or _ship.sonar == null:
-		return
-	if Resonance.listener_near(get_tree(), _ship.global_position) != self:
-		return
-	_echo = mini(_ship.resonance.marks.size(), word_slots())
-	_commit_armed = _ship.sonar.charging and Resonance.is_commit(_ship.sonar.held())
-
 func _process(delta: float) -> void:
 	_clock += delta
-	if _segment_time > 0.0:
-		_segment_time -= delta
 	if _aux_time > 0.0:
 		_aux_time = maxf(0.0, _aux_time - delta)
-	_poll_ship()
 	if _whole or _lit > 0.0:
 		queue_redraw()
 
@@ -232,27 +163,18 @@ func aux_level() -> float:
 		return 1.0 if fmod(_aux_time, 0.1) < 0.05 else 0.12
 	return 0.0
 
-## How brightly each slot is showing, 0-1: the catch first, then a rejection's count, then
-## the echo of the Marks laid down.
+## How brightly each slot is showing, 0-1: dark until the core catches, then turning over
+## outward, stuttering before they hold.
 func _slot_light() -> Array[float]:
 	var out: Array[float] = []
 	out.resize(SLOT_X.size())
 	out.fill(0.0)
-	if _lit > 0.0:
-		# turning over, the slots catch outward and stutter before they hold
-		for i in out.size():
-			var t := clampf((_lit - i * 0.09) * 2.2, 0.0, 1.0)
-			var steady := t >= 1.0 or fmod(_clock * 7.0 + i, 1.0) > 0.45
-			out[i] = t * (0.85 + 0.15 * sin(_clock * 1.7)) if steady else t * 0.3
+	if _lit <= 0.0:
 		return out
-	if _segment_time > 0.0:
-		for i in mini(_segments_lit, word_slots()):
-			out[i] = 1.0
-		return out
-	for i in mini(_echo, word_slots()):
-		out[i] = 1.0
-	if _commit_armed:
-		out[word_slots()] = 1.0
+	for i in out.size():
+		var t := clampf((_lit - i * 0.09) * 2.2, 0.0, 1.0)
+		var steady := t >= 1.0 or fmod(_clock * 7.0 + i, 1.0) > 0.45
+		out[i] = t * (0.85 + 0.15 * sin(_clock * 1.7)) if steady else t * 0.3
 	return out
 
 func _draw() -> void:
@@ -264,7 +186,7 @@ func _draw() -> void:
 	_draw_aux(aux_level())
 	var light := _slot_light()
 	for i in SLOT_X.size():
-		var size := COMMIT_SIZE if i == word_slots() else SLOT_SIZE
+		var size := WIDE_SIZE if i == SLOT_X.size() - 1 else SLOT_SIZE
 		var at := Vector2(SLOT_X[i], 0.0) + SLOT_KINK[i]
 		_draw_slot(Rect2(at - size * 0.5, size), light[i])
 

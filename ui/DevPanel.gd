@@ -531,6 +531,7 @@ func _progress_rows() -> Array[Dictionary]:
 			RobotRadio.guide_awake = on
 			get_tree().call_group("core_housing", "refresh")
 			get_tree().call_group("station_power", "refresh")
+			get_tree().call_group("dock_arms", "refresh")
 	))
 
 	rows.append(_value_row(

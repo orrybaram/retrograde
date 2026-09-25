@@ -72,6 +72,7 @@ const ALARM_LAMP_SETBACK := 7.0
 @export var start_buried := false
 
 var seated := false
+var _minimap_target: SectionMinimapTarget = null
 var _part: Polygon2D
 var _collision: CollisionPolygon2D
 ## The part's exposed pieces, in the part's own space, and which of their edges were cut.
@@ -100,6 +101,22 @@ func _ready() -> void:
 		add_child(check)
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	_show_seated(gs != null and gs.is_section_seated(section))
+	_register_with_minimap.call_deferred()
+
+## A faint pulse on the minimap roughly where this Mount's piece is, until it is home
+## (SectionMinimapTarget).
+func _register_with_minimap() -> void:
+	var minimap := Minimap.get_instance(get_tree())
+	if minimap:
+		_minimap_target = SectionMinimapTarget.new(self)
+		minimap.register_target(_minimap_target)
+
+func _exit_tree() -> void:
+	if _minimap_target:
+		var minimap := Minimap.get_instance(get_tree())
+		if minimap:
+			minimap.unregister_target(_minimap_target)
+		_minimap_target = null
 
 ## The Mount for Section `id` in `tree`, or null.
 static func for_section(tree: SceneTree, id: String) -> Mount:
@@ -396,16 +413,18 @@ func _find_section() -> Freight:
 	return null
 
 ## The clunk of something going home on SR-7 at `at`: sparks, two rings, and a bump the
-## ship feels if it is near. Shared with the nudged solar wing (ArrayNudge).
-static func clunk(at: Node2D) -> void:
+## ship feels if it is near. Shared with the nudged solar wing (ArrayNudge) and the dock's
+## arm (DockArm). `offset` moves it off `at`'s origin, in `at`'s own space.
+static func clunk(at: Node2D, offset := Vector2.ZERO) -> void:
 	var ship := at.get_tree().get_first_node_in_group("ship") as Ship
 	var parent := ship.get_parent() if ship else at.get_parent()
 	var station := at.get_parent() as RigidBody2D
 	var velocity := station.linear_velocity if station else Vector2.ZERO
-	ClampFX.burst(parent, at.global_position, velocity, CLUNK_BURST, CLUNK_DENSITY)
-	HarvestJuice.ring(parent, at.global_position, Color(Colors.CREAM, Ship.CLAMP_RING_ALPHA), 70.0, velocity)
-	HarvestJuice.ring(parent, at.global_position, Color(Colors.PRIMARY, Ship.CLAMP_RING_ALPHA), 120.0, velocity)
-	if ship and ship.global_position.distance_to(at.global_position) <= CLUNK_FELT_WITHIN:
+	var point := at.to_global(offset)
+	ClampFX.burst(parent, point, velocity, CLUNK_BURST, CLUNK_DENSITY)
+	HarvestJuice.ring(parent, point, Color(Colors.CREAM, Ship.CLAMP_RING_ALPHA), 70.0, velocity)
+	HarvestJuice.ring(parent, point, Color(Colors.PRIMARY, Ship.CLAMP_RING_ALPHA), 120.0, velocity)
+	if ship and ship.global_position.distance_to(point) <= CLUNK_FELT_WITHIN:
 		ship.damage_shake_time = CLUNK_SHAKE_DURATION
 		ship.damage_shake_current_intensity = CLUNK_SHAKE_INTENSITY
 

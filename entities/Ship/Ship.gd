@@ -52,6 +52,9 @@ var want_turn_left := false
 var want_turn_right := false
 var want_thrust := false
 var want_reverse_thrust := false
+## A slow tumble the ship keeps, rad/s, until the player first turns or thrusts: how a new game opens,
+## the ship adrift outside SR-7 (docs/OPENING.md §3). 0 is under control.
+var drift_spin := 0.0
 var want_boost := false
 var gs: GameState = null
 var health_component: HealthComponent
@@ -416,6 +419,7 @@ func is_carrying() -> bool:
 ## Its mark comes off the Chart and the ship tracks where it is headed instead. `quiet`
 ## skips the clunk (a load being put back on the nose from a save).
 func clamp_freight(f: Freight, quiet := false) -> void:
+	drift_spin = 0.0  # a load on the nose is a ship under control
 	if is_carrying() or f == null or not is_instance_valid(f):
 		return
 	var own_mass := mass
@@ -646,6 +650,7 @@ func reset_to_initial_state() -> void:
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
 	rotation = 0.0
+	drift_spin = 0.0
 
 	# Reset camera shake
 	camera_shake_time = 0.0

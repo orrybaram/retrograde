@@ -9,10 +9,10 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 # UNIT-7 is off on a new game and gives no tips (docs/OPENING.md §5); this scenario is
 # about the radio itself, so it wakes the guide by hand.
 eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
+# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-# SR-7's dock is shut until its core is cold-started (docs/OPENING.md §5). This
-# scenario is not about the opening, so start the core and open the port.
-eval gs.set("core_started", true)
 assert not pt.node("radio_panel").visible "radio quiet while docked"
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
