@@ -8,6 +8,9 @@ class_name GateMinimapTarget
 ## no more, so a Gate has to be flown to rather than pointed at (docs/adr/0002).
 ##
 ## Unlabelled: the glyph is the name. Nothing on the minimap spells out what it is.
+##
+## Not shown at all until it has been found: its planet scanned (PlanetScanner), or the Gate
+## itself reached and named (Gate.identify). A Gate is discovered, never pointed at.
 
 const SIZE := 6.0
 
@@ -31,7 +34,9 @@ func get_minimap_priority() -> int:
 	return 55
 
 func is_minimap_visible() -> bool:
-	return gate != null and is_instance_valid(gate)
+	if gate == null or not is_instance_valid(gate):
+		return false
+	return gate.is_identified() or (gate.parent_planet != null and gate.parent_planet.is_scanned())
 
 func get_minimap_node() -> Node2D:
 	return gate

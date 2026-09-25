@@ -162,6 +162,24 @@ func test_the_minimap_marker_takes_the_titans_color_once_powered() -> void:
 	assert_object(marker.get_minimap_color()).is_equal(Colors.TITAN)
 
 
+## A Gate is not on the minimap until it has been found: its planet scanned, or the Gate
+## reached and named.
+func test_the_minimap_hides_a_gate_until_its_planet_is_scanned() -> void:
+	var planet := _planet("Veld")
+	var gate := _gate(planet)
+	var marker := GateMinimapTarget.new(gate)
+	assert_bool(marker.is_minimap_visible()).is_false()
+	_gs.mark_planet_scanned(planet.save_key())
+	assert_bool(marker.is_minimap_visible()).is_true()
+
+
+func test_the_minimap_shows_a_gate_once_it_is_named() -> void:
+	var gate := _gate(_planet("Crom"))
+	var marker := GateMinimapTarget.new(gate)
+	_gs.mark_gate_identified(gate.save_key())
+	assert_bool(marker.is_minimap_visible()).is_true()
+
+
 func test_new_game_powers_every_module_back_down() -> void:
 	var gate := _gate(_planet("Veld"), 600)
 	_gs.credits = 600
