@@ -232,9 +232,9 @@ func handle_key(keycode: int) -> bool:
 		# Hand whatever the mark is sitting on to the nav system
 		KEY_ENTER, KEY_KP_ENTER:
 			_set_tracking_point()
-		# Drop the tracking point and fall back to home base
+		# Drop the tracking point. Nothing is tracked until the player picks again.
 		KEY_DELETE, KEY_BACKSPACE:
-			NavSystem.track_home()
+			NavSystem.clear()
 		KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT:
 			pass
 		_:
@@ -1145,7 +1145,7 @@ func draw_chrome(c: Control) -> void:
 ## offered once there is one to drop.
 func hint_text() -> String:
 	var hint := "[ +/- ] ZOOM   [ WASD ] PAN   [ ARROWS ] MARK   [ ENTER ] TRACK"
-	if NavSystem.get_target() != null and not NavSystem.is_tracking_home():
+	if NavSystem.get_target() != null:
 		hint += "   [ DEL ] CLEAR"
 	return hint + "   [ C ] CENTER"
 

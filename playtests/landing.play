@@ -12,10 +12,10 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # Dropping the tank to 2 below is what strands the ship, and a low tank also calls the
 # guide - whose low-fuel briefing pauses the game, so the ship would never burn dry
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-# SR-7's dock is shut until its core is cold-started (docs/OPENING.md §5). This
-# scenario is not about the opening, so start the core and open the port.
-eval gs.set("core_started", true)
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
@@ -59,7 +59,7 @@ assert pt.state_name() == "FlyingState" "starts in flight above the seam"
 eval get_node("/root/NavSystem").track(pt.ore("Rook").tracking_target())
 land Rook 15 15
 assert pt.state_name() == "PlanetLandedState" "touched down"
-assert get_node("/root/NavSystem").is_tracking_home() "arriving drops the seam target"
+assert get_node("/root/NavSystem").get_target() == null "arriving drops the seam target"
 assert str(pt.snapshot().action_message).contains("HARVEST") "landed prompt offers the harvest"
 wait 0.6
 screenshot landing_2_landed

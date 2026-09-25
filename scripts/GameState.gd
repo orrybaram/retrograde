@@ -105,6 +105,37 @@ func is_section_seated(id: String) -> bool:
 func mark_section_seated(id: String) -> void:
 	seated_sections[id] = true
 
+## Every piece of SR-7 that has to go home for the station to be whole: the three Sections
+## that come back as Freight, and the right solar wing that is nudged back (Sections).
+static func station_pieces() -> Array:
+	return Sections.DATA.keys() + [Sections.SOLAR_ARRAY_2]
+
+## Whether every piece of SR-7 is home. The core only listens once it is (CoreHousing), so
+## a running core means the station is whole - see `mark_station_whole`.
+func station_whole() -> bool:
+	for id in station_pieces():
+		if not is_section_seated(id):
+			return false
+	return true
+
+## Every piece home at once.
+func mark_station_whole() -> void:
+	for id in station_pieces():
+		mark_section_seated(id)
+
+## SR-7's restoration as a save holds it: which pieces are home, and whether the core is
+## running. The core does not listen until the station is whole (CoreHousing.listens), so a
+## save that kept the cold start and lost the seated list - one written before a new game
+## owned its save file from its first frame - comes back whole and lit, never lit with its
+## Sections still floating outside it.
+func restore_station(seated: PackedStringArray, started: bool) -> void:
+	seated_sections.clear()
+	for id in seated:
+		mark_section_seated(id)
+	core_started = started
+	if core_started and not station_whole():
+		mark_station_whole()
+
 func is_gate_identified(key: String) -> bool:
 	return identified_gates.has(key)
 

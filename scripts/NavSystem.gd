@@ -1,12 +1,17 @@
 extends Node
 
-## Player navigation. Owns the player's Tracker (one target at a time) and
-## falls back to tracking home base whenever nothing else is selected - including the
-## moment the ship reaches a waypoint, which has done its job.
+## Player navigation. Owns the player's Tracker (one target at a time).
+##
+## **Nothing is tracked until the player asks for it.** There is no fallback to home base:
+## a tracker that always points somewhere is a marker the player never chose, and it parks
+## a label over whatever it is aimed at (it sat on SR-7's core). Reaching a waypoint clears
+## it, and so does dropping it from the chart. Home is still a target the player can pick -
+## it is just never the one they get by default.
 ##
 ##   NavSystem.track_point(pos, "WAYPOINT")
 ##   NavSystem.track(NodeTrackingTarget.new(planet))
 ##   NavSystem.track_home()
+##   NavSystem.clear()
 
 const HOME_LABEL := "HOME"
 
@@ -20,11 +25,10 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if not player_tracker.has_target():
-		track_home()
 		return
 	var ship := get_tree().get_first_node_in_group("ship") as Node2D
 	if ship and waypoint_reached(player_tracker.target, ship.global_position):
-		track_home()
+		clear()
 
 ## A waypoint (a bare point in space, not a body) is done with once the ship is inside
 ## its arrival radius. Bodies, stations and Freight stay tracked until something else is.
@@ -35,12 +39,13 @@ static func waypoint_reached(target: TrackingTarget, ship_position: Vector2) -> 
 func get_target() -> TrackingTarget:
 	return player_tracker.target if player_tracker.has_target() else null
 
-## Track something new. Passing null returns to home base.
+## Track something new. Passing null stops tracking.
 func track(target: TrackingTarget) -> void:
-	if target == null:
-		track_home()
-	else:
-		player_tracker.track(target)
+	player_tracker.track(target)
+
+## Stop tracking. The indicator goes away until the player picks something.
+func clear() -> void:
+	player_tracker.clear()
 
 ## Track a fixed world position (player waypoint, map selection).
 func track_point(world_position: Vector2, label: String = "WAYPOINT") -> void:

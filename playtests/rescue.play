@@ -9,10 +9,10 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-# SR-7's dock is shut until its core is cold-started (docs/OPENING.md §5). This
-# scenario is not about the opening, so start the core and open the port.
-eval gs.set("core_started", true)
 eval pt.remember("home", get_tree().get_nodes_in_group("space_stations")[0])
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -63,6 +63,6 @@ press enter
 wait_until main.current_game_state == 1 30
 wait_until pt.state_name() == "LandedState" 10
 assert pt.state_name() == "LandedState" "the tow ends on a port, not in a Gate cradle"
-assert ship.state_machine.current_state.locked_dockable.get_parent() == pt.recall("home") "towed home to the station that caught the ship"
+assert pt.recall("home").is_ancestor_of(ship.state_machine.current_state.locked_dockable) "towed home to the station that caught the ship"
 assert ship.global_position.distance_to(pt.recall("home").global_position) < 600 "respawned at the station, not out at Veld"
 screenshot rescue_3_home

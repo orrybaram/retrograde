@@ -9,8 +9,11 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-assert get_node("/root/NavSystem").is_tracking_home() "tracks home base by default"
+assert get_node("/root/NavSystem").get_target() == null "nothing is tracked on a new game"
 
 press m
 wait 0.6
@@ -52,7 +55,7 @@ assert get_node("/root/NavSystem").get_target().get_position().distance_to(pt.pl
 # DEL drops the point and home base takes over again
 press delete
 wait 0.3
-assert get_node("/root/NavSystem").is_tracking_home() "DEL returns to home base"
+assert get_node("/root/NavSystem").get_target() == null "DEL drops the point and tracks nothing"
 screenshot mark_4_cleared
 
 press m
@@ -91,4 +94,4 @@ wait 0.1
 assert get_node("/root/NavSystem").get_target().get_label() == "WAYPOINT" "a waypoint set out ahead"
 eval pt.warp_to(get_node("/root/NavSystem").get_target().get_position() + Vector2(20, 0))
 wait 0.2
-assert get_node("/root/NavSystem").is_tracking_home() "arriving at the waypoint clears it, back to home"
+assert get_node("/root/NavSystem").get_target() == null "arriving at the waypoint clears it"

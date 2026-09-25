@@ -69,9 +69,10 @@ Chosen from the silhouette lab (claude.ai/artifact/CCVHLMG6SyGxY5Shks5aSG, round
 - **Hub** with a docking port at each end.
 - **Core** in the middle, with a **long cylindrical tank** on each side of it. The right
   one is the **FUEL TANK** Section; its empty cradle is where the **refuel boom** comes off.
-- **Refuel boom**: a truss out to the right ending in a docking head. **The ship docks
-  here** (replacing the `SpacePort` docking). Its tank is gone, so the player's own dock
-  is dry: the no-fuel opening, shown in the station itself.
+- **Refuel boom**: a telescoping truss out to the right ending in a docking head. **The ship
+  docks here** (replacing the `SpacePort` docking) - but not at first: a new game finds it
+  run in, back inside the belly, and it only comes out once the station is whole (§3, §5;
+  `DockArm`, decided 2026-09-25).
 - **Belly module**: the clone vats, legible through the hull. One vat is empty and cracked,
   and there is a tally scratched beside the row.
 - **Truss keel** below, carrying two **solar wings**. The left wing is the **SOLAR ARRAY**
@@ -97,8 +98,8 @@ it. Clues, in the art and the text:
   along roughly one heading, so they lie on a line, not scattered.
 - **The tank went first.** Cutting the tank that feeds the dock meant no clone could fly
   out and do what the player is about to do.
-- **The core is seated wrong** (§5). Somebody unseated it by hand; the cold start undoes
-  their work.
+- **The core's slots sit out of true** (§5). Somebody refitted that panel in a hurry. The
+  cold start does not straighten it, and neither does anything else.
 - **The right solar wing** is wrenched 50° out of true, hanging limp off its hinge, but not
   thrown clear. They ran out of
   time, or were stopped.
@@ -112,14 +113,24 @@ enter, and they never stop being the ship.
 
 ## 3. The Dead Station
 
-The ship spawns docked, as it does today. Nothing is on the comms: UNIT-7 is off until the
-wake (§5), so the game opens in silence. There is no damage report and no parts list -
+**The ship wakes adrift** (decided 2026-09-25, replacing the docked start). The sabotage
+was who knows how long ago; the ship comes to hanging just off the end of SR-7's belly,
+turning slowly over among fine flakes of debris that thin and are gone within a couple of
+minutes (`WakeDrift`). The player has the stick from the first second: the tumble is
+the ship's own momentum, and the first touch of a turn key stops it
+(`Ship.drift_spin`, `ShipSpawner.spawn_adrift`).
+
+Where the dock should be there is nothing. The refuel boom's arm is run in, back inside the
+hull, so SR-7 has no dock at all and nothing offers DOCK (`DockArm`, `SpacePort.deployed`).
+A death or a load before the station is whole wakes the ship in the same place.
+
+Nothing is on the comms: UNIT-7 is off until the wake (§5), so the game opens in silence. There is no damage report and no parts list -
 **the station says what is wrong by how it looks** (decided 2026-09-22, replacing the
 manifest):
 
 - **No power.** Every light on SR-7 is out: dark glass in the windows, dead lenses on the
-  beacons, the dock's lamps unlit. The power comes from the core, and the core only
-  listens once every piece is home (§5, decided 2026-09-22). The wings are pieces like the
+  beacons. The power comes from the core, and the core can only be rebooted once every
+  piece is home (§5, decided 2026-09-22). The wings are pieces like the
   others, not a switch (`StationPower`, `CoreHousing`).
 - **The dish hangs limp.** The comm dish below the keel has no drive: bowl down, swaying
   a little on its post. Power back, it swings up and finds the Sun.
@@ -127,17 +138,18 @@ manifest):
   severed lines along the cut spit sparks and a red emergency lamp pulses slowly beside it
   (`CutAlarm`). Each stops as its piece goes home, so the alarms are the to-do list.
 - **Power comes on while the player watches.** The core's cold start (§5) lights the station
-  slowly, one light at a time outward from the core, then the dock's lamps; only then does
+  slowly, one light at a time outward from the core; only then does
   the dish strain up off its post, find the Sun, and send out one great ping in the Titan's purple - SR-7 back
   on the air, and every piece of scrap across the ring lights up at once. From then on,
   with the power on, a Sweep that reaches the dish is answered with the same purple ping.
 
-- **Docking it is met by nobody** (decided 2026-09-22). The dock opens no hub and does not
-  prompt for one, and the hold is not taken in: there is nobody there to receive it. The
-  dock is a perch, and thrust is the way off it. The station's hub appears for the first
-  time at the wake, so the wake is what hands the player the port. `SpacePort.needs_core`
-  gates it on `GameState.core_started`, which §5's cold start sets and the save keeps -
-  a station does not go back to being dead. The gate is the world's state, not the radio's:
+- **There is no dock until it is whole** (decided 2026-09-25, replacing "docking it is met
+  by nobody"). The arm comes out at the end of the repair (§5), and docking then is met by
+  the station's console, not its hub: the hold is not taken in, because there is nobody
+  there to receive it. The station's hub appears for the first time at the wake, so the
+  wake is what hands the player the port. `SpacePort.needs_core` gates it on
+  `GameState.core_started`, which §5's cold start sets and the save keeps - a station does
+  not go back to being dead. The gate is the world's state, not the radio's:
   `RobotRadio.guide_awake` still governs only whether UNIT-7's tips play.
 
 The emergency lamps are the only red on SR-7 (`Colors.DANGER`), and the pull still holds:
@@ -161,7 +173,7 @@ objective with zero instruction.
 
 Placement (revised 2026-09-22), nearest first:
 
-- **FUEL TANK**: adrift just off screen to the right of the dock, keeping pace with SR-7
+- **FUEL TANK**: adrift just off screen to the right of where the ship wakes, keeping pace with SR-7
   (not Rook). The first thing found by simply flying out.
 - **DORSAL ARM**: adrift in Rook's debris ring (3000 px out), going round with the ring
   at the ring's own speed for that distance (`Mount.start_in_orbit`), so it has to be
@@ -216,45 +228,98 @@ back, they already know exactly what that means.
 ## 5. The Wake
 
 The station's parts are back. The alarms are quiet, and for the first time SR-7 makes no
-noise at all - it is still dark. The only light on it is one standby lamp on the core
-housing, blinking slowly.
+noise at all - it is still dark. Then, as the last alarm dies, the core's **auxiliary
+lighting** comes up and catches with the same stutter as every other light on SR-7: two
+strips along the lip of its bay, the only light on the station until the wake.
+
+There is no standby lamp and nothing blinks (decided 2026-09-24). A blinking dot is a
+marker, which §6 forbids, and it collides with `CutAlarm` - the player has spent twenty
+minutes learning that a pulsing light is a wound, and this is not one. Service lighting is
+not addressed to the player at all: a panel that has come to standby has lit its own
+working area, and would have whether anybody was watching or not. It also explains itself
+on a station with no power, which the lamp never did: the core is running them off the same
+battery it is sitting on.
+
+What the strips light is the recess **around** the slots, not the slots. The bay lifts by
+almost nothing (`BAY_WASH`), so the dark slots appear as five faint notches in the hull.
 
 Sweep the core before the repairs and nothing happens - it is not part of a working system.
-Sweep it after, and it gives back a cold thump. It is listening. It is seated wrong. It is cold.
+Sweep it after, and it gives back a cold thump. It is on standby. It is cold.
 
-The placard on its housing is the first **Procedure** in the game:
+### The arm comes out (decided 2026-09-25)
+
+On the same battery, a beat after the strips hold, **the dock's arm runs out**
+(`DockArm`). It unlatches with the seating clunk where the boom leaves the belly, shudders
+a few pixels, then telescopes out along its track over three and a half seconds and locks
+with another clunk at the head. Half a second later the dock's lamps catch and start to
+blink: the first light on SR-7 that is addressed to the player, and it says only *here*.
+
+The arm is a mask the boom slides out through (`clip_children`), so it emerges from the
+hull rather than appearing over it. Whether it is out is the world's state - the station
+whole, or the core running - and is never saved on its own; a load snaps it.
+
+### The console
+
+Docking at the head of the boom opens **the station's own maintenance console**
+(`CoreTerminal`), not the hub and not UNIT-7. It reports what it can see, true of a station
+that has just had its last piece put back:
 
 ```
-SR-7 / CORE, COLD START
-┌───┬───┬───┬───┬───┬───┐
-│ ● │   │   │   │   │   │   ⟨seat⟩
-│ ● │   │   │   │   │   │   ·1
-│   │ ● │   │   │   │   │   ⟨cycle⟩
-│ ● │   │   │   │   │   │   ·1
-└───┴───┴───┴───┴───┴───┘
-          ▓▓▓  OVERDRIVE TO COMMIT
+/ S R - 7   C O R E /
+C O R E   O F F L I N E
+AUX BATTERY ....... STANDBY
+HULL SECTIONS ..... SEATED
+DOCK ARM .......... LOCKED OUT
+CORE .............. COLD
+
+> REBOOT CORE
+  DEPART                UNDOCK
 ```
 
-Two words. The same two operations as the Veld Gate, with different arguments - so hours
-later the player drifts up to a dead orbital structure the size of a city, reads its face,
-and **recognises it**. *I have done this. I did this to my friend.*
+ESC or the action key leaves it; the action key brings it back while docked. **REBOOT
+CORE** types a short log - `SEAT ... OK`, `CYCLE ... OK`, `CORE ... CAUGHT` - and steps
+aside. The camera pulls back from the dock so the player watches the rest from where they
+sit:
 
-### Performing it (built 2026-09-22)
+- SEAT - the seating clunk lands and the shake carries it; the crooked row stays crooked.
+- CYCLE - it turns over, stutters, and the slots catch outward. The power comes up from
+  it: the lights one by one outward, then the dish finds the Sun and sends the purple ping
+  that lights up the scrap across the ring. Then the radio clicks on.
 
-The placard shows beside the housing as the ship comes close (`PlacardPanel`), and near the
-core a Sweep shows **R E S O N A N C E** under the ship (`ResonanceMeter`): the bar is the
-charge being held, split into six Slots, and the Slot the key comes up in is the Mark. A
-tap is Slot 1. So the placard is: tap, tap, a short hold, tap, and a hold past the end of
-the bar - **O V E R D R I V E** - which is the Commit. Under the bar each Mark is drawn as a
-row with a dot in its Slot, the same rows as the placard. Marks fall off if the next press
-is more than 1.2s after the last release (`Resonance`).
+Once the dish has pinged, the camera comes back in and the port is open: somebody is home.
 
-- **Wrong:** the core thumps, and one segment along the foot of the housing lights per Mark
-  in its right place - how wrong, never where (`docs/SWEEP.md` §7).
-- **Right:** SEAT - the core swings square in its housing with the seating clunk, undoing
-  the previous clone's work. CYCLE - it turns over, stutters and catches. The power comes up
-  from it: the lights one by one outward, the dock, then the dish finds the Sun and sends
-  the purple ping that lights up the scrap across the ring. Then the radio clicks on.
+It is deliberately simple for now. **It will become an easy puzzle** - a short sequence the
+player has to get right off the console - and grow from there; the log's two operations
+are the seed of it.
+
+The Procedure (the placard and the RESONANCE bar, `docs/SWEEP.md`) is **no longer at the
+core** (decided 2026-09-25). Its code stays (`Resonance`, `ProcedureDef`, `PlacardPanel`,
+`ResonanceMeter`) for the Gates (ADR 0005); `sr7_core.tres` is no longer read by anything.
+
+### What the core is (decided 2026-09-24)
+
+**It is not a component in a housing.** There is no disc, no rotor, nothing round - that
+draft died because a 68px shape inside a 220x130 slab does not read from the 260px the
+player works at, and when it does read it says *drawn carelessly* rather than *somebody
+unseated this by hand*.
+
+The core is a **recessed bay of window slots set in ordinary hull** (`CoreHousing`), and the
+slab is now plain pressurised hull with the same end caps and bulkhead lines as
+`CentralHub` and `BellyModule`. The slots are drawn exactly the way `StationLights` draws
+every other window on SR-7 - `SPACE_BG` when dark, `SUN` at 0.9 with two bloom layers when
+lit - so the core is the same fabric as the rest of the station, present and unremarkable
+from the first second of the game.
+
+Four slots, then a fifth, wider and set apart. **The row sits permanently out of true**
+(`SLOT_KINK`), the way a panel refitted in a hurry sits. Nothing straightens it and the
+cold start does not undo it: SR-7 keeps its scars, the way the cracked vat and the tally
+scratched beside it do. `SEAT` is therefore **heard, never seen** - the clunk lands and the
+shake carries it, and nothing on the hull moves.
+
+This costs nothing and pays for itself at the wake: `StationLights.WAKE_ORIGIN` is already
+`Vector2(0, 15)`, the core, so the station's lights already catch outward from this exact
+point. Making the core windows means the wake is not a cutscene played near the core - it
+is the same light spreading from the first windows on the station to catch.
 
 There is no silhouette (decided 2026-09-22). Where UNIT-7 was is not shown.
 

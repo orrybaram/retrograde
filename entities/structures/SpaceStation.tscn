@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://entities/structures/StationLights.gd" id="9_lights"]
 [ext_resource type="Script" path="res://entities/structures/StationPower.gd" id="10_power"]
 [ext_resource type="Script" path="res://entities/structures/CoreHousing.gd" id="11_core"]
+[ext_resource type="Script" path="res://entities/structures/DockArm.gd" id="12_arm"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
@@ -22,7 +23,7 @@ orbital_distance = 1000.0
 orbital_speed = 64.43
 
 [node name="CollisionShape2D" type="CollisionPolygon2D" parent="." unique_id=1813966489]
-polygon = PackedVector2Array(29.4, -549, 35, -543.4, 35, -429, 41, -429, 41, -421, 169, -421, 169, -539, 193, -539, 193, -421, 330, -421, 330, -401, 391.4, -401, 398, -394.4, 398, -353.6, 389.1, -344.7, 390.7, -341, 391, -341, 391, -311, 271, -311, 271, -303, 391, -303, 391, -273, 271, -273, 271, -265, 391, -265, 391, -235, 237, -235, 237, -222.6, 233.1, -218.7, 234.7, -215, 241, -215, 241, -199, 190.7, -199, 189.1, -195.3, 197, -187.4, 197, -122.6, 191.4, -117, 23, -117, 23, -51, 111, -51, 111, 5, 125, 5, 125, -25.6, 140.7, -41.3, 139.2, -45, 121, -45, 121, -55, 183, -55, 183, -45, 162.8, -45, 161.3, -41.3, 177, -25.6, 177, 63.6, 161.3, 79.3, 162.8, 83, 187, 83, 187, 91, 341, 91, 341, 109, 125, 109, 125, 93, 117, 93, 117, 115.4, 111.4, 121, 23, 121, 23, 175, 31, 175, 31, 195, 23, 195, 23, 291, -23, 291, -23, 211, -181, 211, -181, 159, -23, 159, -23, 121, -111.4, 121, -117, 115.4, -117, 86.6, -111, 80.6, -111, 31, -125, 31, -125, 63.6, -146.4, 85, -155.6, 85, -177, 63.6, -177, -25.6, -155.6, -47, -146.4, -47, -125, -25.6, -125, 5, -111, 5, -111, -51, -23, -51, -23, -117, -191.4, -117, -197, -122.6, -197, -187.4, -189.1, -195.3, -190.7, -199, -241, -199, -241, -215, -234.7, -215, -233.1, -218.7, -237, -222.6, -237, -235, -391, -235, -391, -265, -271, -265, -271, -273, -391, -273, -391, -303, -271, -303, -271, -311, -391, -311, -391, -341, -390.7, -341, -389.1, -344.7, -398, -353.6, -398, -394.4, -391.4, -401, -330, -401, -330, -421, -193, -421, -193, -539, -169, -539, -169, -421, -41, -421, -41, -429, -35, -429, -35, -543.4, -29.4, -549)
+polygon = PackedVector2Array(29.4, -549, 35, -543.4, 35, -429, 41, -429, 41, -421, 169, -421, 169, -539, 193, -539, 193, -421, 330, -421, 330, -401, 391.4, -401, 398, -394.4, 398, -353.6, 389.1, -344.7, 390.7, -341, 391, -341, 391, -311, 271, -311, 271, -303, 391, -303, 391, -273, 271, -273, 271, -265, 391, -265, 391, -235, 237, -235, 237, -222.6, 233.1, -218.7, 234.7, -215, 241, -215, 241, -199, 190.7, -199, 189.1, -195.3, 197, -187.4, 197, -122.6, 191.4, -117, 23, -117, 23, -51, 111, -51, 111, 5, 125, 5, 125, -25.6, 140.7, -41.3, 139.2, -45, 121, -45, 121, -55, 183, -55, 183, -45, 162.8, -45, 161.3, -41.3, 177, -25.6, 177, 63.6, 161.3, 79.3, 162.8, 83, 187, 83, 187, 93, 117, 93, 117, 115.4, 111.4, 121, 23, 121, 23, 175, 31, 175, 31, 195, 23, 195, 23, 291, -23, 291, -23, 211, -181, 211, -181, 159, -23, 159, -23, 121, -111.4, 121, -117, 115.4, -117, 86.6, -111, 80.6, -111, 31, -125, 31, -125, 63.6, -146.4, 85, -155.6, 85, -177, 63.6, -177, -25.6, -155.6, -47, -146.4, -47, -125, -25.6, -125, 5, -111, 5, -111, -51, -23, -51, -23, -117, -191.4, -117, -197, -122.6, -197, -187.4, -189.1, -195.3, -190.7, -199, -241, -199, -241, -215, -234.7, -215, -233.1, -218.7, -237, -222.6, -237, -235, -391, -235, -391, -265, -271, -265, -271, -273, -391, -273, -391, -303, -271, -303, -271, -311, -391, -311, -391, -341, -390.7, -341, -389.1, -344.7, -398, -353.6, -398, -394.4, -391.4, -401, -330, -401, -330, -421, -193, -421, -193, -539, -169, -539, -169, -421, -41, -421, -41, -429, -35, -429, -35, -543.4, -29.4, -549)
 
 [node name="Visuals" type="Node2D" parent="." unique_id=1837500441]
 z_index = 1
@@ -1075,7 +1076,7 @@ color = Color(0.58, 0.545, 0.451, 0.8)
 polygon = PackedVector2Array(-24, -53, 24, -53, 24, -50, -24, -50)
 
 [node name="CentralCore" type="Polygon2D" parent="Visuals"]
-color = Color(0.216, 0.204, 0.173, 1)
+color = Color(0.29, 0.275, 0.231, 1)
 polygon = PackedVector2Array(-110, -50, 110, -50, 110, 80, -110, 80)
 
 [node name="D0" type="Polygon2D" parent="Visuals/CentralCore"]
@@ -1083,8 +1084,22 @@ color = Color(0.184, 0.173, 0.145, 1)
 polygon = PackedVector2Array(-10, -56, 10, -56, 10, -50, -10, -50)
 
 [node name="D1" type="Polygon2D" parent="Visuals/CentralCore"]
-color = Color(0.184, 0.173, 0.145, 0.8)
-polygon = PackedVector2Array(34, 15, 31.95, 26.63, 26.05, 36.85, 17, 44.44, 5.9, 48.48, -5.9, 48.48, -17, 44.44, -26.05, 36.85, -31.95, 26.63, -34, 15, -31.95, 3.37, -26.05, -6.85, -17, -14.44, -5.9, -18.48, 5.9, -18.48, 17, -14.44, 26.05, -6.85, 31.95, 3.37)
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-114, -42, -110, -42, -110, 72, -114, 72)
+
+[node name="D2" type="Polygon2D" parent="Visuals/CentralCore"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(110, -42, 114, -42, 114, 72, 110, 72)
+
+[node name="D3" type="Line2D" parent="Visuals/CentralCore"]
+points = PackedVector2Array(-56, -47, -56, 77)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/CentralCore"]
+points = PackedVector2Array(56, -47, 56, 77)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
 
 [node name="FuelTankL" type="Polygon2D" parent="Visuals"]
 color = Color(0.29, 0.275, 0.231, 1)
@@ -1125,95 +1140,6 @@ polygon = PackedVector2Array(122, -54, 182, -54, 182, -46, 122, -46)
 [node name="CradleBottom" type="Polygon2D" parent="Visuals"]
 color = Color(0.184, 0.173, 0.145, 1)
 polygon = PackedVector2Array(122, 84, 186, 84, 186, 92, 122, 92)
-
-[node name="RefuelBoom" type="Polygon2D" parent="Visuals"]
-color = Color(0.184, 0.173, 0.145, 1)
-polygon = PackedVector2Array(126, 92, 340, 92, 340, 108, 126, 108)
-
-[node name="D0" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(126, 94, 142.46, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D1" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(142.46, 94, 158.92, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D2" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(158.92, 94, 175.38, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D3" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(175.38, 94, 191.85, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D4" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(191.85, 94, 208.31, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D5" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(208.31, 94, 224.77, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D6" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(224.77, 94, 241.23, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D7" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(241.23, 94, 257.69, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D8" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(257.69, 94, 274.15, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D9" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(274.15, 94, 290.62, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D10" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(290.62, 94, 307.08, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D11" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(307.08, 94, 323.54, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D12" type="Line2D" parent="Visuals/RefuelBoom"]
-points = PackedVector2Array(323.54, 94, 340, 106)
-width = 1
-default_color = Color(0.58, 0.545, 0.451, 0.55)
-
-[node name="D13" type="Polygon2D" parent="Visuals/RefuelBoom"]
-color = Color(0.58, 0.545, 0.451, 0.8)
-polygon = PackedVector2Array(126, 90, 129, 90, 129, 110, 126, 110)
-
-[node name="D14" type="Polygon2D" parent="Visuals/RefuelBoom"]
-color = Color(0.58, 0.545, 0.451, 0.8)
-polygon = PackedVector2Array(337, 90, 340, 90, 340, 110, 337, 110)
-
-[node name="D15" type="Polygon2D" parent="Visuals/RefuelBoom"]
-color = Color(0.29, 0.275, 0.231, 1)
-polygon = PackedVector2Array(344, 70, 370, 70, 370, 130, 344, 130)
-
-[node name="D16" type="Polygon2D" parent="Visuals/RefuelBoom"]
-color = Color(0.58, 0.545, 0.451, 1)
-polygon = PackedVector2Array(370, 76, 376, 76, 376, 124, 370, 124)
-
-[node name="D17" type="Polygon2D" parent="Visuals/RefuelBoom"]
-color = Color(0.184, 0.173, 0.145, 1)
-polygon = PackedVector2Array(352, 88, 362, 88, 362, 112, 352, 112)
 
 [node name="BellyModule" type="Polygon2D" parent="Visuals"]
 color = Color(0.29, 0.275, 0.231, 1)
@@ -1656,7 +1582,110 @@ start_on_planet = true
 start_in_orbit = true
 start_beside_scrap = true
 
-[node name="SpacePort" parent="." unique_id=1193258047 instance=ExtResource("5")]
+[node name="DockArm" type="Polygon2D" parent="."]
+z_index = 1
+clip_children = 1
+polygon = PackedVector2Array(126, 56, 430, 56, 430, 144, 126, 144)
+script = ExtResource("12_arm")
+port = NodePath("Slide/SpacePort")
+
+[node name="Slide" type="Node2D" parent="DockArm"]
+
+[node name="RefuelBoom" type="Polygon2D" parent="DockArm/Slide"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(126, 92, 340, 92, 340, 108, 126, 108)
+
+[node name="D0" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(126, 94, 142.46, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D1" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(142.46, 94, 158.92, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D2" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(158.92, 94, 175.38, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D3" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(175.38, 94, 191.85, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D4" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(191.85, 94, 208.31, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D5" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(208.31, 94, 224.77, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D6" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(224.77, 94, 241.23, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D7" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(241.23, 94, 257.69, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D8" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(257.69, 94, 274.15, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D9" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(274.15, 94, 290.62, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D10" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(290.62, 94, 307.08, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D11" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(307.08, 94, 323.54, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D12" type="Line2D" parent="DockArm/Slide/RefuelBoom"]
+points = PackedVector2Array(323.54, 94, 340, 106)
+width = 1
+default_color = Color(0.58, 0.545, 0.451, 0.55)
+
+[node name="D13" type="Polygon2D" parent="DockArm/Slide/RefuelBoom"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(126, 90, 129, 90, 129, 110, 126, 110)
+
+[node name="D14" type="Polygon2D" parent="DockArm/Slide/RefuelBoom"]
+color = Color(0.58, 0.545, 0.451, 0.8)
+polygon = PackedVector2Array(337, 90, 340, 90, 340, 110, 337, 110)
+
+[node name="D15" type="Polygon2D" parent="DockArm/Slide/RefuelBoom"]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(344, 70, 370, 70, 370, 130, 344, 130)
+
+[node name="D16" type="Polygon2D" parent="DockArm/Slide/RefuelBoom"]
+color = Color(0.58, 0.545, 0.451, 1)
+polygon = PackedVector2Array(370, 76, 376, 76, 376, 124, 370, 124)
+
+[node name="D17" type="Polygon2D" parent="DockArm/Slide/RefuelBoom"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(352, 88, 362, 88, 362, 112, 352, 112)
+
+[node name="BoomBody" type="StaticBody2D" parent="DockArm/Slide"]
+
+[node name="Collision" type="CollisionPolygon2D" parent="DockArm/Slide/BoomBody"]
+polygon = PackedVector2Array(126, 91, 341, 91, 341, 109, 126, 109)
+
+[node name="SpacePort" parent="DockArm/Slide" unique_id=1193258047 instance=ExtResource("5")]
 position = Vector2(382, 100)
 rotation = 1.5707964
 scale = Vector2(0.6, 0.6)
@@ -1666,13 +1695,11 @@ dock_offset = Vector2(0, -10)
 [node name="CoreHousing" type="Node2D" parent="."]
 position = Vector2(0, 15)
 script = ExtResource("11_core")
-core = NodePath("../Visuals/CentralCore/D1")
 
 [node name="StationPower" type="Node" parent="."]
 script = ExtResource("10_power")
 lights = NodePath("../Lights")
 dish = NodePath("../Visuals/KeelLower/CommDish")
-port = NodePath("../SpacePort")
 
 [node name="TractorBeamArea" type="Area2D" parent="." unique_id=1581157943]
 collision_layer = 0

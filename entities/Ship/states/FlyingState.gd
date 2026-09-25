@@ -114,7 +114,13 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		turn = -1.0
 	elif ship.want_turn_right:
 		turn = 1.0
-	state.angular_velocity = turned_spin(state.angular_velocity, turn, ship.turn_speed, ship.turn_ratio(), state.step)
+	# Waking adrift, the ship turns slowly over until the player first takes the stick
+	if turn != 0.0 or ship.want_thrust or ship.want_reverse_thrust:
+		ship.drift_spin = 0.0
+	if ship.drift_spin != 0.0:
+		state.angular_velocity = ship.drift_spin
+	else:
+		state.angular_velocity = turned_spin(state.angular_velocity, turn, ship.turn_speed, ship.turn_ratio(), state.step)
 
 	if ship.want_thrust:
 		_apply_thrust(state, Vector2.RIGHT)
@@ -539,6 +545,8 @@ func _check_dockable_proximity() -> void:
 		# Check if node has dockable methods
 		var dockable_node = node as Node2D
 		if not dockable_node.has_method("get_dock_position") or not dockable_node.has_method("get_dock_distance"):
+			continue
+		if dockable_node.has_method("accepts_docking") and not dockable_node.accepts_docking():
 			continue
 		
 		var dock_pos = dockable_node.get_dock_position()

@@ -75,6 +75,44 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 	print("Ship spawned at dock: ", dockable.name, " position: ", spawn_pos)
 	spawn_complete.emit()
 
+## Where the ship wakes adrift beside SR-7 (docs/OPENING.md §3), in the station's space:
+## just off the end of the belly, where the dock would be if its arm were out.
+const ADRIFT_OFFSET := Vector2(560, 190)
+## Its heading and slow tumble, rad and rad/s, and how it drifts off the station, px/s.
+const ADRIFT_ROTATION := 2.3
+const ADRIFT_SPIN := 0.32
+const ADRIFT_VELOCITY := Vector2(3.0, 2.0)
+
+## A new game, or no dock to come back to: the ship adrift outside `station`, turning slowly
+## over among the fine debris it woke in (WakeDrift). `with_drift` false leaves the debris
+## out (a respawn: the player has seen it).
+func spawn_adrift(station: Node2D, with_drift := true) -> void:
+	if not station or not is_instance_valid(station):
+		push_error("ShipSpawner: No station to wake beside")
+		return
+	await get_tree().process_frame
+	if not is_instance_valid(station):
+		return
+	var velocity := Vector2.ZERO
+	if station is RigidBody2D:
+		velocity = (station as RigidBody2D).linear_velocity
+	var pos := station.to_global(ADRIFT_OFFSET)
+	await spawn_in_flight(pos, ADRIFT_ROTATION, velocity + ADRIFT_VELOCITY)
+	if is_instance_valid(ship):
+		ship.drift_spin = ADRIFT_SPIN
+	if with_drift:
+		for old in station.get_children():
+			if old is WakeDrift:
+				old.queue_free()
+		var drift := WakeDrift.new()
+		drift.position = ADRIFT_OFFSET
+		station.add_child(drift)
+
+## The station a new game wakes beside: the player's home (group "space_stations").
+func find_home_station() -> Node2D:
+	await get_tree().process_frame
+	return get_tree().get_first_node_in_group("space_stations") as Node2D
+
 ## Put the ship back in open flight at `pos`, turned to `rot`, moving at `velocity`:
 ## a save made away from any dock (with Freight clamped, which no dock takes).
 func spawn_in_flight(pos: Vector2, rot: float, velocity: Vector2) -> void:

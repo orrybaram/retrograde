@@ -8,10 +8,10 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-# SR-7's dock is shut until its core is cold-started (docs/OPENING.md §5). This
-# scenario is not about the opening, so start the core and open the port.
-eval gs.set("core_started", true)
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
@@ -27,9 +27,14 @@ assert not pt.gate("Veld").is_powered() "Veld's Gate starts dormant"
 assert pt.gate("Veld").power_cost == 600 "Veld's Gate asks for 600 CR"
 eval gs.set("credits", 1000)
 
-# In scanner range of Veld's Gate: it shows on the minimap as a ring with its blinker
+# In scanner range of Veld's Gate: nothing on the minimap until Veld has been scanned,
+# then it shows as a ring with its blinker
 eval pt.park_at_gate("Veld", 3000.0)
 frames 2
+assert not pt.gate("Veld").minimap_target.is_minimap_visible() "an unscanned planet's Gate is not on the minimap"
+eval gs.mark_planet_scanned(pt.planet("Veld").save_key())
+frames 2
+assert pt.gate("Veld").minimap_target.is_minimap_visible() "scanned, its Gate shows"
 screenshot gate_0_minimap
 
 # Lined up on the cradle, matched to the Gate's orbit, the way flying in leaves you

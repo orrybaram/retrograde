@@ -16,5 +16,6 @@ wait 0.5
 wait_until main.current_game_state == 1 and not get_tree().paused 15
 assert pt.planet("Rook").global_position.distance_to(pt.recall("rook")) < 60.0 "a new game puts Rook back where it starts"
 assert pt.planet("Veld").global_position.distance_to(pt.recall("veld")) < 60.0 "and Veld"
-assert pt.state_name() == "LandedState" "docked at SR-7"
+assert pt.state_name() == "FlyingState" "adrift outside SR-7"
+assert ship.global_position.distance_to(pt.node("space_stations").to_global(Vector2(560, 190))) < 40.0 "beside the station, where a new game wakes"
 quit

@@ -64,7 +64,7 @@ func _complete(planet: Planet) -> void:
 	EventBus.planet_scanned.emit(planet)
 	# Point the way to the closest seam found, unless the player is headed somewhere else
 	var ore := nearest_ore(planet, _ship.global_position)
-	if ore and NavSystem.is_tracking_home():
+	if ore and NavSystem.get_target() == null:
 		NavSystem.track(ore.tracking_target())
 
 ## The planet's closest ore seam to `pos`, or null when it has none.

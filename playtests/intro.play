@@ -1,5 +1,5 @@
-# The first minute: a boot terminal you can read, a beat in the dark, then a dead
-# station and silence. UNIT-7 is off: nothing radios the player on waking.
+# The first minute: a boot terminal you can read, a beat in the dark, then the ship adrift
+# outside a dead station, turning slowly over among fine debris, and silence. UNIT-7 is off: nothing radios the player on waking.
 # The driver suppresses waking up by default, so this is the one scenario that asks for it.
 # Boot lines themselves are pinned in test/LoadingScreenTest.gd.
 # Run: tools/play.sh playtests/intro.play
@@ -20,7 +20,10 @@ wait_until main.current_game_state == 1 15
 assert main.get_node("FadeLayer/FadeRect").visible "screen is dark when the world arrives"
 screenshot 02_dark
 wait_until not main.get_node("FadeLayer/FadeRect").visible 8
-assert pt.state_name() == "LandedState" "the fade leaves the ship docked, not adrift"
+assert pt.state_name() == "FlyingState" "the ship wakes adrift, not docked"
+assert ship.drift_spin != 0.0 "turning slowly over"
+assert pt.arm() != null and not pt.arm().out "SR-7's dock arm is in: there is no dock"
+assert not pt.arm().get_port().accepts_docking() "nothing to dock at"
 screenshot 03_awake
 
 # Nobody is on the comms: UNIT-7 is off until the core's cold start (docs/OPENING.md §5)
@@ -30,5 +33,12 @@ assert not get_tree().root.get_node("RobotRadio").is_active() "the radio is quie
 assert not get_tree().paused "nothing holds the game"
 assert not get_tree().root.get_node("RobotRadio").has_seen("first_wake") "the wake-up call is parked"
 assert not gs.has_met_automaton("UNIT-7") "the Guide is not met on a new game"
-assert pt.state_name() == "LandedState" "still docked"
+assert pt.state_name() == "FlyingState" "still adrift"
+assert abs(ship.angular_velocity) > 0.1 "still turning over: nothing has taken the stick"
 screenshot 04_quiet
+
+# Taking the stick stops the tumble at once: the player is flying from the first second
+hold turn_left 0.3
+assert ship.drift_spin == 0.0 "turning takes the ship out of its tumble"
+wait 0.3
+assert abs(ship.angular_velocity) < 0.05 "and it holds still"

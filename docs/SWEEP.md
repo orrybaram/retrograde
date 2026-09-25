@@ -410,6 +410,11 @@ _Avoid_: language, cipher, runes, Trunic
 
 ## TODOs
 
+> **TODO**: The Notation's printed form is unsettled. The dot grid below is what
+> `PlacardPanel` draws and what ships; it has not been signed off. `docs/NOTATION-PRIOR-ART.md`
+> is the research - every real-world system for printing a timed pulse rhythm, what each one
+> does, and the patterns common to all of them. The maritime light-character system came
+> closest and was set aside on 2026-09-25; the doc is reference, not a direction.
 > **TODO**: Design the six Operation glyphs. They must read as industrial stamping rather
 > than as an alphabet - closer to a hazard symbol than to a letter.
 > **TODO**: Tune the chaining window and Slot boundaries against a real controller and a real
