@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## SR-7's missing pieces pulse faintly on the minimap, roughly where they are
-## (docs/OPENING.md §4), until each is back in its Mount.
+## SR-7's missing pieces ping on the minimap's sonar (docs/OPENING.md §4) until each is
+## back in its Mount.
 
 var _world: Node2D
 var _gs: GameState
@@ -27,19 +27,12 @@ func _piece(id: String, at := Vector2(2000, 0)) -> Freight:
 	return Freight.spawn_section(_world, id, at, 0.0)
 
 
-func test_a_missing_piece_pulses_near_it_but_not_on_it() -> void:
+func test_a_missing_piece_pings_from_where_it_is() -> void:
 	var f := _piece(Sections.FUEL_TANK)
 	var t := _target(Sections.FUEL_TANK)
 	assert_bool(t.is_minimap_visible()).is_true()
-	var off := t.get_minimap_position().distance_to(f.global_position)
-	assert_float(off).override_failure_message("approximate, never exact").is_equal_approx(SectionMinimapTarget.FUZZ, 0.5)
-
-
-func test_the_fuzz_is_steady_and_differs_per_piece() -> void:
-	var a := _target(Sections.FUEL_TANK)
-	var b := _target(Sections.DORSAL_ARM)
-	assert_vector(a._offset).is_equal(_target(Sections.FUEL_TANK)._offset)
-	assert_bool(a._offset.is_equal_approx(b._offset)).is_false()
+	assert_bool(t.is_ping()).override_failure_message("a missing part answers the beam").is_true()
+	assert_vector(t.get_minimap_position()).is_equal(f.global_position)
 
 
 func test_it_pins_to_the_rim_to_give_the_bearing() -> void:

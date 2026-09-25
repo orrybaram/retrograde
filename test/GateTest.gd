@@ -152,14 +152,15 @@ func test_each_planets_module_counts_once_toward_titan_influence() -> void:
 	assert_int(_gs.credits).is_equal(8200)
 
 
-## Purple is the Titan's; a dormant Gate is just dark hull out there.
-func test_the_minimap_marker_takes_the_titans_color_once_powered() -> void:
+## On the sonar a Gate is an echo like any other: nothing says whether it is powered.
+func test_the_minimap_echo_says_nothing_about_power() -> void:
 	var gate := _gate(_planet("Veld"), 600)
 	var marker := GateMinimapTarget.new(gate)
-	assert_object(marker.get_minimap_color()).is_equal(Colors.HULL_LIGHT)
+	var before := marker.echo_world_radius()
 	_gs.credits = 600
 	gate.power(_gs)
-	assert_object(marker.get_minimap_color()).is_equal(Colors.TITAN)
+	assert_float(marker.echo_world_radius()).is_equal(before)
+	assert_bool(marker.is_ping()).is_false()
 
 
 ## A Gate is not on the minimap until it has been found: its planet scanned, or the Gate
