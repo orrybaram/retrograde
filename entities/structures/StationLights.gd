@@ -2,8 +2,8 @@ extends Node2D
 class_name StationLights
 
 ## SR-7's running lights and windows. Dark glass and dead lenses while the station has no
-## power; lit once both solar wings are home (StationPower). Coming on while the player
-## watches, they catch one by one, slowly, outward from the keel where the power comes in,
+## power; lit once the core is running (StationPower). Coming on while the player
+## watches, they catch one by one, slowly, outward from the core where the power comes from,
 ## each with a flicker, so the station wakes up rather than switching on. `woken` fires as
 ## the last one catches.
 
@@ -21,7 +21,7 @@ const BEACON_FLASH := 0.35
 const WAKE_DELAY := 0.8
 const WAKE_STEP := 0.16
 const WAKE_FLICKER := 0.3
-const WAKE_ORIGIN := Vector2(0, 185)
+const WAKE_ORIGIN := Vector2(0, 15)  # the core (CoreHousing)
 
 var windows := PackedVector2Array()
 var beacons := PackedVector2Array()

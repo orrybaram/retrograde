@@ -43,9 +43,9 @@ var persist := true
 
 ## UNIT-7 is off when the game opens (docs/OPENING.md §5): the station is dead and nobody
 ## is on the comms. Until it wakes, its tutorial tips and alarms stay parked - the
-## triggers below drop them - and MSG_WAKE is never sent. The radio itself still carries
+## triggers below drop them - and MSG_WAKE waits for it. The radio itself still carries
 ## the calls the game needs (relaunch, tow, the Void), and is the comms system to reuse.
-## Nothing sets this yet: the core's cold start will.
+## The core's cold start sets it (wake_guide); a load sets it from GameState.core_started.
 var guide_awake := false
 
 ## Nothing teaches boosting any more — the wake-up call is story, not controls. If the
@@ -164,6 +164,12 @@ func _mark_guide_met() -> void:
 	gs.mark_automaton_met(designation)
 	if persist:
 		Save.save_met_automatons(PackedStringArray(gs.met_automatons.keys()), save_path)
+
+## SR-7's core has caught and the power is up (CoreHousing): UNIT-7 comes on the comms
+## for the first time, and from here its tips and alarms are live.
+func wake_guide() -> void:
+	guide_awake = true
+	request(MSG_WAKE)
 
 # --- Show-once flags -----------------------------------------------------------
 

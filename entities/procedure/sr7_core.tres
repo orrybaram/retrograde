@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="ProcedureDef" format=3]
+
+[ext_resource type="Script" path="res://entities/procedure/ProcedureDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"sr7_core_cold_start"
+title = "SR-7 / CORE, COLD START"
+steps = Array[Vector2i]([Vector2i(1, 1), Vector2i(2, 1)])

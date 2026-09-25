@@ -309,6 +309,7 @@ func start_game() -> void:
 	if gs:
 		gs.reset_all_state()
 	RobotRadio.reset()
+	RobotRadio.guide_awake = false
 	if encounter_field:
 		encounter_field.reset()
 

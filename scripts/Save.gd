@@ -28,12 +28,12 @@ const AUTOMATON_SECTION := "automatons"
 const AUTOMATON_MET_KEY := "met"
 const SECTION_SECTION := "sections"
 const SECTION_SEATED_KEY := "seated"
+const SECTION_CORE_KEY := "core_started"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "credits", gs.credits)
 	cfg.set_value("stats", "death_count", gs.death_count)
-	cfg.set_value("stats", "core_started", gs.core_started)
 	if ship:
 		cfg.set_value("stats", "fuel", ship.fuel)
 		cfg.set_value("stats", "max_fuel", ship.max_fuel)
@@ -90,6 +90,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray(gs.identified_gates.keys()))
 	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray(gs.met_automatons.keys()))
 	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray(gs.seated_sections.keys()))
+	cfg.set_value(SECTION_SECTION, SECTION_CORE_KEY, gs.core_started)
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -265,6 +266,23 @@ static func load_seated_sections(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray()))
 
+## Writes SR-7's core cold start into an existing save the moment it catches: it happens in
+## flight, with no dock to hang a full save off. With no save yet the next full save() writes it.
+static func save_core_started(started: bool, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(SECTION_SECTION, SECTION_CORE_KEY, started)
+	cfg.save(file)
+
+## Whether SR-7's core has been cold-started. A save from before this has not.
+static func load_core_started(path: String = "") -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return false
+	return bool(cfg.get_value(SECTION_SECTION, SECTION_CORE_KEY, false))
+
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
 static func _get_planet_key(planet: Planet) -> String:
@@ -292,8 +310,6 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	
 	gs.credits = int(cfg.get_value("stats", "credits", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
-	# A save from before the cold start existed has a dead core, like a new game.
-	gs.core_started = bool(cfg.get_value("stats", "core_started", false))
 	RobotRadio.load_seen(load_radio_seen())
 	gs.scanned_planets.clear()
 	for key in load_scanned_planets():
@@ -314,6 +330,8 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.seated_sections.clear()
 	for id in load_seated_sections():
 		gs.mark_section_seated(id)
+	gs.core_started = load_core_started()
+	RobotRadio.guide_awake = gs.core_started
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
 	var inventory_dict: Dictionary = {}

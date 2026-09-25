@@ -1,0 +1,98 @@
+# The end of Act 1 (docs/OPENING.md §5): SR-7 whole and dark, its core listening. The
+# placard on the core is the game's first Procedure - SEAT·1, CYCLE·1, commit - performed
+# with the Sweep: a tap is Slot 1, a short hold Slot 2, a hold past the end of the bar the
+# Commit. Wrong, the core thumps and lights a count of segments; right, it seats, catches,
+# the power comes up from it, the dish pings, and UNIT-7 comes on the comms.
+# Run: PLAYTEST_PORT=7794 tools/play.sh --headless playtests/core_cold_start.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+wait_until pt.state_name() == "LandedState" 5
+assert not get_tree().root.get_node("RobotRadio").guide_awake "nobody on the comms on a new game"
+assert not pt.core().listens() "a broken station's core hears nothing"
+
+# --- Before the repairs: a Commit at the core does nothing, and no bar shows ---
+hold thrust 1.0
+eval pt.park_by_core()
+wait 0.3
+assert not ship.resonance.available_for(ship) "nothing listening, so no bar"
+hold action 0.1
+wait 0.2
+hold action 1.9
+wait 1.0
+assert pt.core().segments_lit() == 0 and not pt.core().is_starting() "dead: no answer"
+
+# --- Whole: the core listens, the placard and the bar show ---
+eval pt.seat_sr7()
+wait 0.3
+assert pt.core().listens() "every piece home: the core listens"
+assert not get_tree().get_first_node_in_group("station_power").powered "and the station is still dark"
+eval pt.park_by_core()
+wait 0.3
+assert ship.resonance.available_for(ship) "in reach of the core"
+screenshot core_1_placard
+
+# --- Wrong: four taps and a Commit. Three Marks in their right place ---
+hold action 0.1
+wait 0.2
+hold action 0.1
+wait 0.2
+hold action 0.1
+wait 0.2
+hold action 0.1
+frames 3
+assert ship.resonance.marks == [1, 1, 1, 1] "four taps, four Marks in Slot 1"
+screenshot core_2_marks
+wait 0.2
+hold action 1.9
+frames 3
+assert ship.resonance.marks.is_empty() "the Commit carries them off"
+wait 1.0
+assert pt.core().segments_lit() == 3 "three segments: how wrong, never where"
+assert not pt.core().is_starting() and not pt.core().started "still cold"
+
+# --- Marks fall off if the window lapses ---
+hold action 0.1
+frames 3
+assert ship.resonance.marks.size() == 1 "one Mark"
+wait 1.6
+assert ship.resonance.marks.is_empty() "let the window lapse and it falls off"
+
+# --- Right: tap, tap, a short hold, tap, Commit ---
+wait 2.0
+eval pt.park_by_core()
+wait 0.2
+hold action 0.1
+wait 0.2
+hold action 0.1
+wait 0.2
+hold action 0.4
+wait 0.2
+hold action 0.1
+frames 3
+assert ship.resonance.marks == [1, 1, 2, 1] "SEAT·1 CYCLE·1 on the bar"
+wait 0.2
+hold action 1.9
+wait_until pt.core().is_starting() 3
+assert pt.core().is_starting() "it takes"
+wait_until pt.core().started 6
+assert get_tree().get_first_node_in_group("game_state").core_started "the core is running"
+assert get_tree().get_first_node_in_group("station_power").powered "power comes up from the core"
+assert pt.core().get_parent().get_node("Lights").is_waking() "the lights catch one by one"
+screenshot core_3_catching
+wait_until not pt.core().get_parent().get_node("Lights").is_waking() 15
+wait_until pt.core().get_parent().get_node("Visuals/KeelLower/CommDish").get_node_or_null("Ping") != null 20
+assert pt.core().get_parent().get_node("Visuals/KeelLower/CommDish").get_node("Ping")._rings[0]["color"] == Color(0.710, 0.541, 0.878, 1.0) "the dish finds the Sun and pings in the Titan's purple"
+wait_until get_tree().root.get_node("RobotRadio").guide_awake 5
+assert get_tree().root.get_node("RobotRadio").current_line().text == "..." "UNIT-7 comes on the comms"
+assert get_tree().paused "and the wake-up holds the game"
+screenshot core_4_unit7
+assert not pt.core().listens() "a running core listens for nothing"
+
+# --- It survives a reload ---
+eval get_tree().root.get_node("RobotRadio").silence()
+reload
+assert pt.core().started "still running after a reload"
+assert get_tree().get_first_node_in_group("station_power").powered "still powered"
+assert get_tree().root.get_node("RobotRadio").guide_awake "UNIT-7 still awake"
+quit

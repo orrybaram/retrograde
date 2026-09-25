@@ -1,16 +1,16 @@
 extends Node
 class_name StationPower
 
-## SR-7's power (docs/OPENING.md §2). The station is dead until both solar wings are home:
-## the SOLAR ARRAY fetched and seated, and the hanging right wing pushed true. Until then
-## every light is out, the dock's lamps are dark, and the comm dish hangs limp on its post.
-## Power coming in while the player watches wakes it in order: the lights catch one by one,
-## then the dock, and only then does the dish swing up, find the Sun and ping.
-## The emergency alarms at the cuts run on their own (CutAlarm) and stop one by one as
-## each piece goes home.
+## SR-7's power (docs/OPENING.md §3, §5). The station is dead until its core is
+## cold-started (CoreHousing) - and the core only listens once every piece is home, so the
+## wings are pieces like the others, not a switch. Until then every light is out, the
+## dock's lamps are dark, and the comm dish hangs limp on its post. Power coming in while
+## the player watches wakes it in order: the lights catch one by one outward from the core,
+## then the dock, and only then does the dish swing up, find the Sun and ping - and
+## `woken` fires. The emergency alarms at the cuts run on their own (CutAlarm) and stop one
+## by one as each piece goes home.
 
-## The Sections whose seating powers the station.
-const POWER_SECTIONS: Array[String] = [Sections.SOLAR_ARRAY, Sections.SOLAR_ARRAY_2]
+signal woken  ## A live wake has run to the end: the dish is on the Sun and has pinged.
 
 @export var lights: NodePath
 @export var dish: NodePath
@@ -21,17 +21,12 @@ var powered := false
 func _ready() -> void:
 	add_to_group("station_power")
 	EventBus.planets_restored.connect(refresh)
-	EventBus.section_seated.connect(func(_id: String) -> void: refresh(false))
+	EventBus.core_started.connect(func() -> void: refresh(false))
 	refresh.call_deferred()
 
-## Whether `gs` has both wings seated.
+## Whether `gs` has the core running.
 static func is_powered(gs: GameState) -> bool:
-	if gs == null:
-		return false
-	for id in POWER_SECTIONS:
-		if not gs.is_section_seated(id):
-			return false
-	return true
+	return gs != null and gs.core_started
 
 ## Match the game's state. `instant` (a load, a new game) snaps; a live repair wakes.
 func refresh(instant := true) -> void:
@@ -66,3 +61,5 @@ func _wake(l: StationLights, d: CommDish, p: SpacePort) -> void:
 		p.set_lit(true)
 	if d:
 		d.limp = false
+		await d.settled
+	woken.emit()

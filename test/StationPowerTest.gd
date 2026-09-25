@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## SR-7 is dead until both solar wings are home (docs/OPENING.md §2): StationPower, the
+## SR-7 is dead until its core is cold-started (docs/OPENING.md §3, §5): StationPower, the
 ## emergency alarms at the cuts, and the limp comm dish.
 
 
@@ -8,15 +8,13 @@ func _gs() -> GameState:
 	return auto_free(GameState.new())
 
 
-func test_unpowered_until_both_wings_are_home() -> void:
+func test_unpowered_until_the_core_starts() -> void:
 	var gs := _gs()
 	assert_bool(StationPower.is_powered(gs)).is_false()
-	gs.mark_section_seated(Sections.SOLAR_ARRAY)
-	assert_bool(StationPower.is_powered(gs)).is_false()
-	gs.mark_section_seated(Sections.FUEL_TANK)
-	gs.mark_section_seated(Sections.DORSAL_ARM)
-	assert_bool(StationPower.is_powered(gs)).override_failure_message("the other Sections don't carry power").is_false()
-	gs.mark_section_seated(Sections.SOLAR_ARRAY_2)
+	for id in Sections.DATA.keys() + [Sections.SOLAR_ARRAY_2]:
+		gs.mark_section_seated(id)
+	assert_bool(StationPower.is_powered(gs)).override_failure_message("the wings are pieces, not a switch").is_false()
+	gs.core_started = true
 	assert_bool(StationPower.is_powered(gs)).is_true()
 
 
@@ -69,7 +67,7 @@ func test_lights_come_on_dark_and_wake_one_by_one() -> void:
 	assert_bool(lights._showing(0)).is_false()
 
 
-func test_the_lights_wake_outward_from_the_keel_one_at_a_time() -> void:
+func test_the_lights_wake_outward_from_the_core_one_at_a_time() -> void:
 	var w := StationLights.default_windows()
 	var b := StationLights.default_beacons()
 	var delays := StationLights.wake_order_delays(w, b)
@@ -78,7 +76,7 @@ func test_the_lights_wake_outward_from_the_keel_one_at_a_time() -> void:
 	sorted.sort()
 	for i in range(1, sorted.size()):
 		assert_float(sorted[i] - sorted[i - 1]).is_equal_approx(StationLights.WAKE_STEP, 0.0001)
-	# The hub (near the keel) catches before the ring pods up top
+	# The hub (next to the core) catches before the ring pods up top
 	var hub := Array(w).find(Vector2(0, -134))
 	var pod := Array(w).find(Vector2(-368, -380))
 	assert_float(delays[hub]).is_less(delays[pod])

@@ -72,6 +72,8 @@ var dev_infinite_fuel := false
 var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
 var sonar: SonarPulse = null
+## The Marks a Sweep lays down near hardware that listens (docs/SWEEP.md).
+var resonance: Resonance = null
 var _sonar_blocked := false  # this hold of `action` began or passed somewhere it couldn't ping  # sonar resonance rings while `action` is held (see wants_sonar)
 
 # Landing lock system
@@ -173,6 +175,9 @@ func _ready() -> void:
 	sonar = SonarPulse.new()
 	sonar.name = "SonarPulse"
 	add_child(sonar)
+	resonance = Resonance.new()
+	resonance.name = "Resonance"
+	add_child(resonance)
 
 	var magnet := GemMagnet.new()
 	magnet.name = "GemMagnet"
@@ -238,6 +243,7 @@ func _physics_process(dt: float) -> void:
 		state_machine.current_state.physics_process(dt)
 	if sonar:
 		_drive_sonar()
+		resonance.tick(dt, sonar.charging, Resonance.available_for(self))
 
 ## `action` held charges a ping, let go sends it. A hold that was ever somewhere a ping
 ## isn't allowed (docked, a menu, a load clamped - including the hold that lets the load
@@ -255,7 +261,12 @@ func _drive_sonar() -> void:
 		if down:
 			sonar.cancel()
 		else:
-			sonar.fire()
+			# Near hardware that listens the hold is also a Mark, or the Commit that
+			# carries them all out on this ring
+			var marks: Array[int] = []
+			if Resonance.available_for(self):
+				marks = resonance.release(sonar.held())
+			sonar.fire(marks)
 
 ## Sonar resonance: `action` pings from anywhere the ship is free to act. It is not tied
 ## to harvesting; a scrap or a seam in the rings is what makes a ping a harvest. The state

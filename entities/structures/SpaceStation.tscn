@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://entities/structures/CommDish.gd" id="8_dish"]
 [ext_resource type="Script" path="res://entities/structures/StationLights.gd" id="9_lights"]
 [ext_resource type="Script" path="res://entities/structures/StationPower.gd" id="10_power"]
+[ext_resource type="Script" path="res://entities/structures/CoreHousing.gd" id="11_core"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
@@ -1661,6 +1662,11 @@ rotation = 1.5707964
 scale = Vector2(0.6, 0.6)
 needs_core = true
 dock_offset = Vector2(0, -10)
+
+[node name="CoreHousing" type="Node2D" parent="."]
+position = Vector2(0, 15)
+script = ExtResource("11_core")
+core = NodePath("../Visuals/CentralCore/D1")
 
 [node name="StationPower" type="Node" parent="."]
 script = ExtResource("10_power")

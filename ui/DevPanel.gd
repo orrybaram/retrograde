@@ -511,6 +511,23 @@ func _progress_rows() -> Array[Dictionary]:
 			_set_modules(count)
 	))
 
+	rows.append(_action_row(
+		"SR-7 WHOLE",
+		"Seats every Section and pushes the wing true: the station whole and dark, the core listening.",
+		func() -> void: Playtest.seat_sr7()
+	))
+
+	rows.append(_toggle_row(
+		"SR-7 CORE",
+		"Cold-started: the station powered and UNIT-7 awake. OFF puts the core back cold.",
+		func() -> bool: return gs.core_started,
+		func(on: bool) -> void:
+			gs.core_started = on
+			RobotRadio.guide_awake = on
+			get_tree().call_group("core_housing", "refresh")
+			get_tree().call_group("station_power", "refresh")
+	))
+
 	rows.append(_value_row(
 		"GATES NAMED",
 		"RIGHT or ENTER names every Gate; LEFT puts them all back to ? ? ?.",

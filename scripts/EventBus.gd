@@ -59,6 +59,9 @@ signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
 
 signal section_seated(id: String)
+
+## SR-7's core has caught (CoreHousing): the power comes up from it (StationPower).
+signal core_started()
 ## A piece of SR-7 went home: a Section pulled into its Mount, or the hanging wing locked
 ## true. Fires once the clunk lands, with the Sections id.
 

@@ -17,8 +17,12 @@ class_name SonarPulse
 ## moment a ring's edge actually gets there - not when it leaves the ship - with the
 ## ring's strength, so an answer can match it (SonarEcho.answer_ping). Scrap listens but does not
 ## answer: a ring only lights it up out of the debris, with one cream echo (ScrapNode.reveal).
+##
+## A Commit (Resonance) is a ring that carries Marks. Listeners with `on_procedure(marks)`
+## get those instead of `on_sonar_touched` when it reaches them; the rest hear an ordinary ring.
 
 signal pulsed(origin: Vector2)  ## A ring left the ship, from `origin` (global).
+signal committed(marks: Array[int])  ## A ring left carrying a Procedure's Marks.
 
 ## An ordinary (tapped) ring: how long it lives and how far it reaches.
 const LIFETIME := 1.0
@@ -60,21 +64,23 @@ func _process(delta: float) -> void:
 func held() -> float:
 	return _held
 
-## Let the charge go as one ring, as strong as it got.
-func fire() -> void:
+## Let the charge go as one ring, as strong as it got, carrying `marks` if it is a Commit.
+func fire(marks: Array[int] = []) -> void:
 	var strength := strength_for(_held)
 	charging = false
-	send(strength)
+	send(strength, MAX_ALPHA, WIDTH, Colors.PRIMARY, marks)
 
 ## Send one ring worth `strength` ordinary rings, drawn at `alpha` and `width` - the ship's
 ## own ring by default; SR-7's dish sends a far bigger, brighter, Titan-purple one
 ## (CommDish.ping).
-func send(strength: float, alpha := MAX_ALPHA, width := WIDTH, color := Colors.PRIMARY) -> void:
+func send(strength: float, alpha := MAX_ALPHA, width := WIDTH, color := Colors.PRIMARY, marks: Array[int] = []) -> void:
 	_rings.append({"age": 0.0, "lifetime": LIFETIME * strength, "radius": END_RADIUS * strength,
 		"alpha": alpha, "width": width, "color": color})
 	pulsed.emit(global_position)
+	if not marks.is_empty():
+		committed.emit(marks)
 	EventBus.sonar_pulsed.emit(global_position)
-	_reach_listeners(global_position, strength)
+	_reach_listeners(global_position, strength, marks)
 	queue_redraw()
 
 ## Drop the charge without a ring: the key was taken for something else.
@@ -87,8 +93,9 @@ static func strength_for(held_seconds: float) -> float:
 	return 1.0 + maxf(held_seconds, 0.0) / CHARGE_TIME
 
 ## Tell every listener within reach when this ring's edge arrives at it. The timers hold
-## instance ids, not nodes, so a listener freed meanwhile is simply skipped.
-func _reach_listeners(origin: Vector2, strength: float) -> void:
+## instance ids, not nodes, so a listener freed meanwhile is simply skipped. A ring carrying
+## `marks` hands them to listeners that take a Procedure.
+func _reach_listeners(origin: Vector2, strength: float, marks: Array[int] = []) -> void:
 	for node in get_tree().get_nodes_in_group("sonar_listeners"):
 		if not node.has_method("sonar_point") or not node.has_method("on_sonar_touched"):
 			continue
@@ -99,7 +106,10 @@ func _reach_listeners(origin: Vector2, strength: float) -> void:
 		get_tree().create_timer(delay, false).timeout.connect(func() -> void:
 			var listener := instance_from_id(id)
 			if listener and is_instance_valid(listener):
-				listener.on_sonar_touched(strength))
+				if not marks.is_empty() and listener.has_method("on_procedure"):
+					listener.on_procedure(marks)
+				else:
+					listener.on_sonar_touched(strength))
 
 ## Seconds after leaving the ship that a ring of `strength` reaches `distance`; -1 if it
 ## never does.

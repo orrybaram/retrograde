@@ -5,28 +5,34 @@
 
 [sub_resource type="Resource" id="line_1"]
 script = ExtResource("2_line")
-text = "There you are. Took a while this time."
-expression = &"hello"
+text = "..."
+expression = &"sleep"
+glitch = true
 
 [sub_resource type="Resource" id="line_2"]
 script = ExtResource("2_line")
-text = "Systems look good. You feeling okay?"
-expression = &"happy"
+text = "OH."
+expression = &"surprise"
 
 [sub_resource type="Resource" id="line_3"]
 script = ExtResource("2_line")
-text = "..."
-expression = &"neutral"
+text = "Oh — hello! Hello. Sorry, I was — how long was that?"
+expression = &"talking"
 
 [sub_resource type="Resource" id="line_4"]
 script = ExtResource("2_line")
-text = "Anyway. There's scrap out there. Always is."
+text = "Never mind. Never mind! Look at this place."
 expression = &"happy"
 
 [sub_resource type="Resource" id="line_5"]
 script = ExtResource("2_line")
-text = "Debris ring hugging Rook, just inside our orbit. Worth a look."
+text = "You've been busy."
 expression = &"wink"
+
+[sub_resource type="Resource" id="line_6"]
+script = ExtResource("2_line")
+text = "Right. What are we doing?"
+expression = &"neutral"
 
 [resource]
 script = ExtResource("1_conv")
@@ -34,4 +40,4 @@ id = &"first_wake"
 priority = 1
 once = true
 pause_game = true
-lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4"), SubResource("line_5")])
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4"), SubResource("line_5"), SubResource("line_6")])
