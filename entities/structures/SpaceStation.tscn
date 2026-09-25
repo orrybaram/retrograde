@@ -1075,7 +1075,7 @@ color = Color(0.58, 0.545, 0.451, 0.8)
 polygon = PackedVector2Array(-24, -53, 24, -53, 24, -50, -24, -50)
 
 [node name="CentralCore" type="Polygon2D" parent="Visuals"]
-color = Color(0.216, 0.204, 0.173, 1)
+color = Color(0.29, 0.275, 0.231, 1)
 polygon = PackedVector2Array(-110, -50, 110, -50, 110, 80, -110, 80)
 
 [node name="D0" type="Polygon2D" parent="Visuals/CentralCore"]
@@ -1083,8 +1083,22 @@ color = Color(0.184, 0.173, 0.145, 1)
 polygon = PackedVector2Array(-10, -56, 10, -56, 10, -50, -10, -50)
 
 [node name="D1" type="Polygon2D" parent="Visuals/CentralCore"]
-color = Color(0.184, 0.173, 0.145, 0.8)
-polygon = PackedVector2Array(34, 15, 31.95, 26.63, 26.05, 36.85, 17, 44.44, 5.9, 48.48, -5.9, 48.48, -17, 44.44, -26.05, 36.85, -31.95, 26.63, -34, 15, -31.95, 3.37, -26.05, -6.85, -17, -14.44, -5.9, -18.48, 5.9, -18.48, 17, -14.44, 26.05, -6.85, 31.95, 3.37)
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-114, -42, -110, -42, -110, 72, -114, 72)
+
+[node name="D2" type="Polygon2D" parent="Visuals/CentralCore"]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(110, -42, 114, -42, 114, 72, 110, 72)
+
+[node name="D3" type="Line2D" parent="Visuals/CentralCore"]
+points = PackedVector2Array(-56, -47, -56, 77)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
+
+[node name="D4" type="Line2D" parent="Visuals/CentralCore"]
+points = PackedVector2Array(56, -47, 56, 77)
+width = 1.5
+default_color = Color(0.184, 0.173, 0.145, 0.9)
 
 [node name="FuelTankL" type="Polygon2D" parent="Visuals"]
 color = Color(0.29, 0.275, 0.231, 1)
@@ -1666,7 +1680,6 @@ dock_offset = Vector2(0, -10)
 [node name="CoreHousing" type="Node2D" parent="."]
 position = Vector2(0, 15)
 script = ExtResource("11_core")
-core = NodePath("../Visuals/CentralCore/D1")
 
 [node name="StationPower" type="Node" parent="."]
 script = ExtResource("10_power")

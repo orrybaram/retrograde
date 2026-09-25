@@ -1,8 +1,9 @@
 # The end of Act 1 (docs/OPENING.md §5): SR-7 whole and dark, its core listening. The
 # placard on the core is the game's first Procedure - SEAT·1, CYCLE·1, commit - performed
 # with the Sweep: a tap is Slot 1, a short hold Slot 2, a hold past the end of the bar the
-# Commit. Wrong, the core thumps and lights a count of segments; right, it seats, catches,
-# the power comes up from it, the dish pings, and UNIT-7 comes on the comms.
+# Commit. The core's bay echoes each Mark in a window slot as it is laid. Wrong, it thumps
+# and the echo is replaced by a count; right, it clunks home, the slots catch, the power
+# comes up from it, the dish pings, and UNIT-7 comes on the comms.
 # Run: PLAYTEST_PORT=7794 tools/play.sh --headless playtests/core_cold_start.play
 
 press enter
@@ -42,6 +43,7 @@ wait 0.2
 hold action 0.1
 frames 3
 assert ship.resonance.marks == [1, 1, 1, 1] "four taps, four Marks in Slot 1"
+assert pt.core().echo_lit() == 4 "the bay echoes every Mark laid, right or wrong"
 screenshot core_2_marks
 wait 0.2
 hold action 1.9
@@ -55,8 +57,10 @@ assert not pt.core().is_starting() and not pt.core().started "still cold"
 hold action 0.1
 frames 3
 assert ship.resonance.marks.size() == 1 "one Mark"
+assert pt.core().echo_lit() == 1 "one slot lit in the bay"
 wait 1.6
 assert ship.resonance.marks.is_empty() "let the window lapse and it falls off"
+assert pt.core().echo_lit() == 0 "and the bay goes dark with it"
 
 # --- Right: tap, tap, a short hold, tap, Commit ---
 wait 2.0

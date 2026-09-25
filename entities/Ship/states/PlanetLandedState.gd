@@ -54,9 +54,9 @@ func enter() -> void:
 	ship.damage_shake_time = ship.harvest_lockon_shake_duration
 	ship.damage_shake_current_intensity = ship.harvest_lockon_shake_intensity
 
-	# Arrived: the tracker goes back to home base
+	# Arrived: the seam target has done its job
 	if NavSystem.get_target() == ore.tracking_target():
-		NavSystem.track_home()
+		NavSystem.clear()
 	ore.harvest_hit.connect(_on_harvest_hit)
 	_prompt = ""
 	_update_prompt()

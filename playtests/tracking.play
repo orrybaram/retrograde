@@ -1,4 +1,4 @@
-# Home-base tracking HUD: indicator follows the station as the ship flies away.
+# The tracking HUD: nothing is tracked until asked for, then the indicator follows.
 # Run: tools/play.sh playtests/tracking.play
 
 press enter
@@ -9,7 +9,9 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 wait_until pt.state_name() == "LandedState" 5
-assert get_node("/root/NavSystem").is_tracking_home() "tracks home base by default"
+assert get_node("/root/NavSystem").get_target() == null "nothing is tracked until the player asks"
+eval get_node("/root/NavSystem").track_home()
+assert get_node("/root/NavSystem").is_tracking_home() "home is a target the player can pick"
 wait 0.5
 screenshot track_01_docked
 
@@ -31,5 +33,5 @@ assert pt.snapshot().tracking.label == "WAYPOINT" "waypoint replaces home"
 screenshot track_04_waypoint
 eval get_node("/root/NavSystem").track(null)
 wait 0.2
-assert get_node("/root/NavSystem").is_tracking_home() "clearing returns to home"
+assert get_node("/root/NavSystem").get_target() == null "clearing stops tracking, it does not fall back"
 state

@@ -1,7 +1,11 @@
 extends GdUnitTestSuite
 
 ## SR-7's core (docs/OPENING.md §5): dead until the station is whole, then listening for
-## its placard's Procedure, and saying how wrong a wrong one is.
+## its placard's Procedure, and saying how wrong a wrong one is. Its bay is four window
+## slots for the Marks and a fifth for the Commit, set permanently out of true.
+
+## How many Marks SR-7's Procedure takes: SEAT·1, CYCLE·1.
+const PROCEDURE_MARKS := 4
 
 
 func _gs() -> GameState:
@@ -64,6 +68,55 @@ func test_the_right_procedure_starts_it_and_it_stops_listening() -> void:
 	assert_bool(core.listens()).is_false()
 
 
+func test_the_bay_is_four_words_and_a_commit() -> void:
+	assert_int(CoreHousing.SLOT_X.size()).is_equal(5)
+	assert_int(CoreHousing.word_slots()).is_equal(PROCEDURE_MARKS)
+	assert_int(CoreHousing.SLOT_KINK.size()).override_failure_message(
+		"every slot needs its kink: the row never straightens").is_equal(CoreHousing.SLOT_X.size())
+	# the row is out of true and the cold start does not undo it
+	for kink in CoreHousing.SLOT_KINK:
+		assert_bool(kink.is_zero_approx()).is_false()
+
+
+func test_a_near_miss_lights_word_slots_and_never_the_commit() -> void:
+	var gs := _gs()
+	_whole(gs)
+	var core := _core()
+	core.on_procedure([1, 1, 1, 1])
+	var light := core._slot_light()
+	assert_array(light).is_equal([1.0, 1.0, 1.0, 0.0, 0.0])
+
+
+func test_the_echo_is_empty_with_no_ship() -> void:
+	var gs := _gs()
+	_whole(gs)
+	var core := _core()
+	core._poll_ship()
+	assert_int(core.echo_lit()).is_equal(0)
+	assert_array(core._slot_light()).is_equal([0.0, 0.0, 0.0, 0.0, 0.0])
+
+
+func test_the_bay_lights_catch_when_the_last_piece_goes_home() -> void:
+	var gs := _gs()
+	var core := _core()
+	assert_float(core.aux_level()).override_failure_message(
+		"a broken SR-7 has no light on it anywhere").is_equal(0.0)
+	_whole(gs)
+	core._on_section_seated(Sections.SOLAR_ARRAY_2)
+	assert_float(core.aux_level()).override_failure_message(
+		"they catch while the player watches, they do not snap on").is_equal(0.0)
+	core._process(CoreHousing.AUX_DELAY + 0.1)
+	assert_float(core.aux_level()).is_equal(1.0)
+
+
+func test_a_load_snaps_the_bay_lights_on() -> void:
+	var gs := _gs()
+	_whole(gs)
+	var core := _core()
+	assert_float(core.aux_level()).override_failure_message(
+		"loading into a whole station does not replay the catch").is_equal(1.0)
+
+
 func test_a_started_core_is_deaf() -> void:
 	var gs := _gs()
 	_whole(gs)
@@ -84,8 +137,8 @@ func test_a_restored_station_comes_back_whole_and_running() -> void:
 
 func test_a_running_core_brings_its_pieces_back_with_it() -> void:
 	var gs := _gs()
-	# A save that kept the cold start and lost the seated list, the way the dev panel's
-	# core toggle used to leave one
+	# A save from before a new game owned its file: the cold start landed in it, the seated
+	# list did not
 	gs.restore_station(PackedStringArray([Sections.SOLAR_ARRAY_2]), true)
 	assert_bool(gs.station_whole()).override_failure_message(
 		"a lit station is never in pieces - the core does not listen until it is whole").is_true()

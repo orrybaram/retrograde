@@ -294,7 +294,7 @@ func seat(f: Freight) -> void:
 	var poses := seats()
 	var home := poses[maxi(matching_seat(f.global_transform, poses), 0)]
 	f.reparent(self, true)
-	NavSystem.track_home()
+	NavSystem.clear()
 	_seating = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	_seating.tween_property(f, "transform", global_transform.affine_inverse() * home, SEAT_TIME)
 	_seating.tween_callback(func() -> void:

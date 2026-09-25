@@ -183,7 +183,7 @@ func test_seating_pulls_it_home_and_the_part_is_back() -> void:
 	assert_bool(_part(Sections.FUEL_TANK).visible).is_true()
 	await get_tree().process_frame
 	assert_bool(_solid_at(m.position)).is_true()
-	assert_bool(NavSystem.is_tracking_home()).is_true()
+	assert_object(NavSystem.get_target()).is_null()
 
 func test_a_seated_mount_takes_nothing_more() -> void:
 	var m := _mount(Sections.DORSAL_ARM)

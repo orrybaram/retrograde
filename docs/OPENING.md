@@ -97,8 +97,8 @@ it. Clues, in the art and the text:
   along roughly one heading, so they lie on a line, not scattered.
 - **The tank went first.** Cutting the tank that feeds the dock meant no clone could fly
   out and do what the player is about to do.
-- **The core is seated wrong** (§5). Somebody unseated it by hand; the cold start undoes
-  their work.
+- **The core's slots sit out of true** (§5). Somebody refitted that panel in a hurry. The
+  cold start does not straighten it, and neither does anything else.
 - **The right solar wing** is wrenched 50° out of true, hanging limp off its hinge, but not
   thrown clear. They ran out of
   time, or were stopped.
@@ -216,13 +216,52 @@ back, they already know exactly what that means.
 ## 5. The Wake
 
 The station's parts are back. The alarms are quiet, and for the first time SR-7 makes no
-noise at all - it is still dark. The only light on it is one standby lamp on the core
-housing, blinking slowly.
+noise at all - it is still dark. Then, as the last alarm dies, the core's **auxiliary
+lighting** comes up and catches with the same stutter as every other light on SR-7: two
+strips along the lip of its bay, the only light on the station until the wake.
+
+There is no standby lamp and nothing blinks (decided 2026-09-24). A blinking dot is a
+marker, which §6 forbids, and it collides with `CutAlarm` - the player has spent twenty
+minutes learning that a pulsing light is a wound, and this is not one. Service lighting is
+not addressed to the player at all: a panel that has come to standby has lit its own
+working area, and would have whether anybody was watching or not. It also explains itself
+on a station with no power, which the lamp never did: the core is running them off the same
+battery it is sitting on.
+
+What the strips light is the recess **around** the slots, not the slots. The bay lifts by
+almost nothing (`BAY_WASH`), so the dark slots appear as five faint notches in the hull -
+and the placard beside them becomes readable at all.
 
 Sweep the core before the repairs and nothing happens - it is not part of a working system.
-Sweep it after, and it gives back a cold thump. It is listening. It is seated wrong. It is cold.
+Sweep it after, and it gives back a cold thump. It is listening. It is cold.
 
-The placard on its housing is the first **Procedure** in the game:
+### What the core is (decided 2026-09-24)
+
+**It is not a component in a housing.** There is no disc, no rotor, nothing round - that
+draft died because a 68px shape inside a 220x130 slab does not read from the 260px the
+player works at, and when it does read it says *drawn carelessly* rather than *somebody
+unseated this by hand*.
+
+The core is a **recessed bay of window slots set in ordinary hull** (`CoreHousing`), and the
+slab is now plain pressurised hull with the same end caps and bulkhead lines as
+`CentralHub` and `BellyModule`. The slots are drawn exactly the way `StationLights` draws
+every other window on SR-7 - `SPACE_BG` when dark, `SUN` at 0.9 with two bloom layers when
+lit - so the core is the same fabric as the rest of the station, present and unremarkable
+from the first second of the game.
+
+Four slots for the Procedure's four Marks, then a fifth, wider and set apart, for the
+Commit. **The row sits permanently out of true** (`SLOT_KINK`), the way a panel refitted in
+a hurry sits. Nothing straightens it and the cold start does not undo it: SR-7 keeps its
+scars, the way the cracked vat and the tally scratched beside it do. `SEAT` is therefore
+**heard, never seen** - the clunk lands and the shake carries it, and nothing on the hull
+moves.
+
+This costs nothing and pays for itself at the wake: `StationLights.WAKE_ORIGIN` is already
+`Vector2(0, 15)`, the core, so the station's lights already catch outward from this exact
+point. Making the core windows means the wake is not a cutscene played near the core - it
+is the same light spreading from the first windows the player lit by hand.
+
+The placard beside it is the first **Procedure** in the game:
 
 ```
 SR-7 / CORE, COLD START
@@ -249,10 +288,15 @@ the bar - **O V E R D R I V E** - which is the Commit. Under the bar each Mark i
 row with a dot in its Slot, the same rows as the placard. Marks fall off if the next press
 is more than 1.2s after the last release (`Resonance`).
 
-- **Wrong:** the core thumps, and one segment along the foot of the housing lights per Mark
-  in its right place - how wrong, never where (`docs/SWEEP.md` §7).
-- **Right:** SEAT - the core swings square in its housing with the seating clunk, undoing
-  the previous clone's work. CYCLE - it turns over, stutters and catches. The power comes up
+The bay **echoes** as the player works: one slot lights per Mark laid, right or wrong, so
+the hardware is visibly hearing them and telling them nothing. The fifth slot lights while
+the Sweep is held past the end of the bar - the Commit, armed. No correctness is reported
+until the Commit arrives, so there is nothing to brute-force per Slot (`docs/SWEEP.md` §7).
+
+- **Wrong:** the core thumps, and the echo is replaced for 1.8s by one slot lit per Mark in
+  its right place - how wrong, never where (`docs/SWEEP.md` §7).
+- **Right:** SEAT - the seating clunk lands and the shake carries it; the crooked row stays
+  crooked. CYCLE - it turns over, stutters, and the slots catch outward. The power comes up
   from it: the lights one by one outward, the dock, then the dish finds the Sun and sends
   the purple ping that lights up the scrap across the ring. Then the radio clicks on.
 
