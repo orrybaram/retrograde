@@ -963,7 +963,7 @@ func stage_at_mount(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void
 ## flying them: the station whole and still dark, its core listening (CoreHousing).
 func seat_sr7() -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	for id in Sections.DATA.keys() + [Sections.SOLAR_ARRAY_2]:
+	for id in GameState.station_pieces():
 		gs.mark_section_seated(id)
 		Save.save_seated_section(id, PackedStringArray(gs.seated_sections.keys()))
 		var f := section(id)

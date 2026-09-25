@@ -71,3 +71,37 @@ func test_a_started_core_is_deaf() -> void:
 	var core := _core()
 	assert_bool(core.started).is_true()
 	assert_bool(core.listens()).is_false()
+
+
+# --- what a save brings back ---
+
+func test_a_restored_station_comes_back_whole_and_running() -> void:
+	var gs := _gs()
+	gs.restore_station(PackedStringArray(GameState.station_pieces()), true)
+	assert_bool(gs.station_whole()).is_true()
+	assert_bool(gs.core_started).is_true()
+
+
+func test_a_running_core_brings_its_pieces_back_with_it() -> void:
+	var gs := _gs()
+	# A save that kept the cold start and lost the seated list, the way the dev panel's
+	# core toggle used to leave one
+	gs.restore_station(PackedStringArray([Sections.SOLAR_ARRAY_2]), true)
+	assert_bool(gs.station_whole()).override_failure_message(
+		"a lit station is never in pieces - the core does not listen until it is whole").is_true()
+
+
+func test_a_cold_core_leaves_the_pieces_where_the_save_had_them() -> void:
+	var gs := _gs()
+	gs.restore_station(PackedStringArray([Sections.SOLAR_ARRAY_2]), false)
+	assert_bool(gs.is_section_seated(Sections.SOLAR_ARRAY_2)).is_true()
+	assert_bool(gs.is_section_seated(Sections.FUEL_TANK)).is_false()
+	assert_bool(gs.core_started).is_false()
+
+
+func test_a_load_clears_what_the_game_before_it_seated() -> void:
+	var gs := _gs()
+	_whole(gs)
+	gs.restore_station(PackedStringArray(), false)
+	assert_bool(gs.is_section_seated(Sections.FUEL_TANK)).is_false()
+	assert_bool(gs.station_whole()).is_false()

@@ -522,6 +522,11 @@ func _progress_rows() -> Array[Dictionary]:
 		"Cold-started: the station powered and UNIT-7 awake. OFF puts the core back cold.",
 		func() -> bool: return gs.core_started,
 		func(on: bool) -> void:
+			# A running core means every piece is home: it does not listen until the station
+			# is whole (CoreHousing.listens), so turning it on seats them too. Otherwise the
+			# save keeps a lit station with its Sections still floating outside it.
+			if on:
+				Playtest.seat_sr7()
 			gs.core_started = on
 			RobotRadio.guide_awake = on
 			get_tree().call_group("core_housing", "refresh")

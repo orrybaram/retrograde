@@ -327,10 +327,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.met_automatons.clear()
 	for designation in load_met_automatons():
 		gs.mark_automaton_met(designation)
-	gs.seated_sections.clear()
-	for id in load_seated_sections():
-		gs.mark_section_seated(id)
-	gs.core_started = load_core_started()
+	gs.restore_station(load_seated_sections(), load_core_started())
 	RobotRadio.guide_awake = gs.core_started
 	
 	# Load inventory into InventoryManager (before reapply so cargo weight is correct)

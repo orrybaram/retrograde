@@ -89,10 +89,13 @@ assert get_tree().paused "and the wake-up holds the game"
 screenshot core_4_unit7
 assert not pt.core().listens() "a running core listens for nothing"
 
-# --- It survives a reload ---
+# --- It survives a reload, station and all ---
 eval get_tree().root.get_node("RobotRadio").silence()
 reload
 assert pt.core().started "still running after a reload"
 assert get_tree().get_first_node_in_group("station_power").powered "still powered"
 assert get_tree().root.get_node("RobotRadio").guide_awake "UNIT-7 still awake"
+assert get_tree().get_first_node_in_group("game_state").station_whole() "every piece still home: a lit station is never in pieces"
+assert pt.mount("fuel_tank").seated and pt.mount("dorsal_arm").seated "the Mounts come back seated"
+assert pt.section("fuel_tank") == null "and no Section is left floating outside a whole station"
 quit
