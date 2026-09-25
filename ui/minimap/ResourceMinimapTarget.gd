@@ -1,8 +1,11 @@
 extends MinimapTarget
 class_name ResourceMinimapTarget
 
-## MinimapTarget for ScrapNode: a small hull-colored chunk that tumbles with the scrap.
-## Trophy scrap is a larger mustard chunk that twinkles. Only once a Sweep has found it.
+## MinimapTarget for ScrapNode: the smallest echo on the scope. Only once a Sweep has
+## found it.
+
+## A chunk's reach, world px: far under the scope's smallest echo, so all scrap reads the same.
+const ECHO_RADIUS := 25.0
 
 var resource: ScrapNode
 
@@ -23,19 +26,8 @@ func get_minimap_position() -> Vector2:
 
 	return resource.global_position
 
-func get_minimap_color() -> Color:
-	if resource and is_instance_valid(resource) and resource.is_trophy:
-		return Colors.PRIMARY
-	return Colors.HULL_LIGHT
-
-func get_minimap_size() -> float:
-	if resource and is_instance_valid(resource) and resource.is_trophy:
-		return 3.0
-	return 2.2
-
-func get_minimap_priority() -> int:
-	# Resources have low priority (drawn below planets/stations)
-	return 10
+func echo_world_radius() -> float:
+	return ECHO_RADIUS
 
 func is_minimap_visible() -> bool:
 	# Only show if resource exists and is not depleted
@@ -48,9 +40,3 @@ func is_minimap_visible() -> bool:
 
 func get_minimap_node() -> Node2D:
 	return resource
-
-func draw_marker(map: Minimap, pos: Vector2, size: float, view_rotation: float) -> void:
-	var color := get_minimap_color()
-	if resource.is_trophy:
-		color.a = 0.65 + 0.35 * sin(Minimap.now() * 5.0 + pos.x)
-	Minimap.draw_fleck(map, pos, size, resource.rotation + view_rotation, color)

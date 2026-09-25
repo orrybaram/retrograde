@@ -1,53 +1,39 @@
 extends RefCounted
 class_name MinimapTarget
 
-## Base interface/abstract class for entities that can be displayed on the minimap.
-## Any entity that wants to show on the minimap should extend this class.
+## Something the minimap's sonar can find (Minimap). A target says only where it is, how
+## big it is, and whether it answers the beam with a ping; the minimap draws every one
+## the same way, so size is all that tells them apart.
 
-## Returns the world position of the target
+## The target's world position.
 func get_minimap_position() -> Vector2:
 	return Vector2.ZERO
 
-## Returns the color to use for this target on the minimap
-func get_minimap_color() -> Color:
-	return Colors.PRIMARY
-
-## Returns the icon type for this target: "dot", "diamond", "triangle", "square"
-func get_minimap_icon() -> String:
-	return "dot"
-
-## Returns the size of the marker (radius for dots, half-size for others)
-func get_minimap_size() -> float:
-	return 4.0
-
-## Returns the priority of this target (higher = drawn on top)
-func get_minimap_priority() -> int:
-	return 0
-
-## Returns whether this target should be visible on the minimap
+## Whether the sonar can find it right now.
 func is_minimap_visible() -> bool:
 	return true
 
-## Returns the Node2D reference for this target
+## The node it stands for (the nav target rings its echo).
 func get_minimap_node() -> Node2D:
 	return null
 
-## Keep drawing at the minimap rim when out of range (for things you need to find).
-func pins_to_edge() -> bool:
+## How big the thing is, world px (a radius). The echo is drawn to scale, down to
+## Minimap.ECHO_MIN_PX, so most small things come back the same size.
+func echo_world_radius() -> float:
+	return 0.0
+
+## A planet: comes back as a disc at true scale rather than a smudge.
+func is_body() -> bool:
 	return false
 
-## Draw the marker centred on `pos`. `size` is get_minimap_size(); `view_rotation` is
-## added to world headings (non-zero when the minimap rotates with the ship).
-## Default: the simple icon from get_minimap_icon().
-func draw_marker(map: Minimap, pos: Vector2, size: float, view_rotation: float) -> void:
-	var color := get_minimap_color()
-	match get_minimap_icon():
-		"diamond":
-			Minimap.draw_diamond(map, pos, size, color)
-		"triangle":
-			Minimap.draw_chevron(map, pos, size, -PI / 2 + view_rotation, color)
-		"square":
-			map.draw_rect(Rect2(pos - Vector2(size, size), Vector2(size, size) * 2.0), color)
-		_:
-			map.draw_circle(pos, size, color)
+## Comes back as a diamond rather than a smudge: home, so it can be picked out.
+func echo_is_diamond() -> bool:
+	return false
 
+## Answers the beam with a ping (a hollow ring) rather than a solid echo.
+func is_ping() -> bool:
+	return false
+
+## Keep coming back on the rim when out of range, so it can be found.
+func pins_to_edge() -> bool:
+	return false
