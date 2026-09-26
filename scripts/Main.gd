@@ -14,6 +14,7 @@ enum MainGameState {
 @onready var ship := $Ship
 @onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
 @onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
+@onready var intro_screen: IntroScreen = $"CanvasLayer/IntroScreen"
 @onready var log_ui: LogUI = $"CanvasLayer/LogUI"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
@@ -49,6 +50,8 @@ var force_wake_sequence := false
 ## Black sheet above every layer, used for the wake-up fade. Built in code so it
 ## sits outside CanvasLayer (Playtest.visible_ui() only scans that one).
 var _fade_rect: ColorRect = null
+## Whether the last spawn ran the boot terminal (only a powered station boots).
+var booted_last_spawn := false
 
 func _ready() -> void:
 	add_to_group("main")
@@ -153,6 +156,11 @@ func _toggle_system_map() -> void:
 		log_ui.open_map()
 
 func _on_start_game() -> void:
+	# Only New Game opens on the intro: a continue or a relaunch skips straight past it.
+	if intro_screen and _wake_enabled():
+		if start_menu:
+			start_menu.visible = false
+		await intro_screen.play()
 	await start_game()
 
 func _on_load_game() -> void:
@@ -267,8 +275,34 @@ func _build_fade_overlay() -> void:
 	_fade_rect.visible = false
 	layer.add_child(_fade_rect)
 
-## Goes dark immediately. Called while the loading screen still covers the screen,
-## so hiding that screen reveals black rather than the world.
+## Whether SR-7's core is running - the station is powered, Act 1 is behind the player.
+func _station_powered() -> bool:
+	return StationPower.is_powered(get_tree().get_first_node_in_group("game_state") as GameState)
+
+## Hide the ship being placed. The boot terminal is the ship's computer coming up on a
+## powered station (docs/DESIGN.md "Minute 0-1"), so it only runs once the core has been
+## cold-started; until then the screen just goes dark. Returns whether it booted.
+func _cover_spawn(powered: bool) -> bool:
+	booted_last_spawn = powered and loading_screen != null
+	if booted_last_spawn:
+		loading_screen.show_loading()
+		return true
+	_black_out()
+	return false
+
+## Take the cover away again. Waking up goes dark either way, so hiding the boot terminal
+## reveals black rather than the world: order matters, since the terminal holds for a few
+## seconds and blacking out before that would hide it behind the fade sheet. With no
+## waking up (the playtest driver), the dark comes straight off.
+func _uncover_spawn(booting: bool, wake: bool) -> void:
+	if booting:
+		await loading_screen.hide_loading(wake)
+	if wake:
+		_black_out()
+	elif _fade_rect:
+		_fade_rect.visible = false
+
+## Goes dark immediately.
 func _black_out() -> void:
 	if _fade_rect == null:
 		return
@@ -342,9 +376,8 @@ func start_game() -> void:
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
 
-	# Show loading screen animation
-	if loading_screen:
-		loading_screen.show_loading()
+	# The boot terminal only runs on a powered station; before that the dark covers the spawn
+	var booting := _cover_spawn(_station_powered())
 
 	# Unpause so spawner can work
 	get_tree().paused = false
@@ -364,15 +397,8 @@ func start_game() -> void:
 	# This triggers spawners to start
 	EventBus.planets_restored.emit()
 
-	# Go dark behind the loading screen, so hiding it reveals black, not a hard cut
 	var wake := _wake_enabled()
-	# Order matters: the boot terminal holds for a few seconds, and going dark before
-	# that would hide it behind the fade sheet. Blacking out straight after it hides
-	# happens in the same frame, so the world never flashes through.
-	if loading_screen:
-		await loading_screen.hide_loading(wake)
-	if wake:
-		_black_out()
+	await _uncover_spawn(booting, wake)
 
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
@@ -401,9 +427,8 @@ func load_game() -> void:
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
 
-	# Show loading screen animation
-	if loading_screen:
-		loading_screen.show_loading()
+	# The boot terminal only runs on a powered station; before that the dark covers the spawn
+	var booting := _cover_spawn(Save.load_core_started())
 
 	# Unpause so spawner can work
 	get_tree().paused = false
@@ -451,15 +476,8 @@ func load_game() -> void:
 		else:
 			push_warning("No dock found for load game")
 
-	# Go dark behind the loading screen, so hiding it reveals black, not a hard cut
 	var wake := _wake_enabled()
-	# Order matters: the boot terminal holds for a few seconds, and going dark before
-	# that would hide it behind the fade sheet. Blacking out straight after it hides
-	# happens in the same frame, so the world never flashes through.
-	if loading_screen:
-		await loading_screen.hide_loading(wake)
-	if wake:
-		_black_out()
+	await _uncover_spawn(booting, wake)
 
 	# Show ship after spawning is complete
 	if ship and ship.ship_polygon:
@@ -512,8 +530,7 @@ func reset_game() -> void:
 
 	# A relaunch is another clone coming up, so it boots the same way a new game does
 	var wake := _wake_enabled()
-	if loading_screen:
-		loading_screen.show_loading()
+	var booting := _cover_spawn(_station_powered())
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
 
@@ -584,13 +601,7 @@ func reset_game() -> void:
 			push_warning("No dock found for respawn")
 	_rescue_station = null
 
-	# Order matters: the boot terminal holds for a few seconds, and going dark before
-	# that would hide it behind the fade sheet. Blacking out straight after it hides
-	# happens in the same frame, so the world never flashes through.
-	if loading_screen:
-		await loading_screen.hide_loading(wake)
-	if wake:
-		_black_out()
+	await _uncover_spawn(booting, wake)
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = true
 

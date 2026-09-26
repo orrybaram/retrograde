@@ -73,12 +73,13 @@ wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 3
 wait_until not pt.node("radio_panel").is_typing() 5
 assert pt.node("radio_panel").message_text().contains("cargo's still aboard") "robot says the cargo is on the derelict"
 screenshot abandon_3_game_over
-# A relaunch is another clone coming up, so it boots like a new game does
+# A relaunch is another clone coming up; the station is running here (skip_opening), so it boots
 eval main.set("force_wake_sequence", true)
 press enter
 wait_until pt.visible_ui().has("LoadingScreen") 10
 screenshot abandon_4_relaunch_boot
 wait_until main.current_game_state == 1 30
+assert main.booted_last_spawn "a running station boots the relaunch"
 assert main.get_node("FadeLayer/FadeRect").visible "relaunch comes up out of the dark"
 wait_until not main.get_node("FadeLayer/FadeRect").visible 10
 eval main.set("force_wake_sequence", false)

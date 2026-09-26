@@ -98,15 +98,16 @@ assert get_tree().root.get_node("RobotRadio").current_line().expression == "lost
 assert not pt.node("radio_panel").message_text().contains("Stay inside the orbits") "the words never arrive"
 assert pt.node("radio_panel").message_text().length() > 20 "but the shape of speech does"
 assert get_tree().get_first_node_in_group("void_shroud").visible "the dark still holds before the relaunch"
-# Relaunch: the boot screen comes up clean, with nothing of the Void left over it
+# Relaunch: the wake's dark comes up clean, with nothing of the Void left under it (no boot
+# terminal: SR-7 is unpowered)
 eval main.set("force_wake_sequence", true)
 press space
-wait_until pt.visible_ui().has("LoadingScreen") 10
-assert not get_tree().get_first_node_in_group("void_shroud").visible "the Void's overlay is gone before the boot screen"
+wait_until main.get_node("FadeLayer/FadeRect").visible 10
+assert not get_tree().get_first_node_in_group("void_shroud").visible "the Void's overlay is gone before the wake"
 assert get_node("/root/VoidZone").shroud == 0.0 "and so is the dark behind it"
-assert not get_tree().get_first_node_in_group("hull_alarm").visible "no hull alarm over the boot either"
+assert not get_tree().get_first_node_in_group("hull_alarm").visible "no hull alarm over the wake either"
 assert main.get_node("CanvasLayer/HUD/DashboardAnchor").modulate.a == 1.0 "nor a glitched dashboard"
-screenshot void_6_boot
+screenshot void_6_wake_dark
 wait_until main.current_game_state == 1 30
 eval main.set("force_wake_sequence", false)
 wait_until pt.state_name() == "LandedState" 10
