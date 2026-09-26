@@ -39,12 +39,6 @@ const SLAG_EVERY := 3
 const COLLISION_CLEARANCE := 2.0
 ## How much of a buried Section sticks out of the ground (px, along its length).
 const BURIED_EXPOSED := 62.0
-## The scrap left beside a Section adrift in a ring sits this far (px) behind it round
-## the orbit, and a Section with scrap already this near is left as it is.
-const SCRAP_BESIDE := 130.0
-const SCRAP_NEAR := 260.0
-## How often (s) a Section adrift beside scrap checks it still has some.
-const SCRAP_CHECK_TIME := 1.0
 ## How far back from the cut, onto the hull, the red emergency lamp sits (px).
 const ALARM_LAMP_SETBACK := 7.0
 
@@ -63,9 +57,6 @@ const ALARM_LAMP_SETBACK := 7.0
 ## With `start_on_planet`: adrift in the planet's debris ring, going round with it at the
 ## ring's speed for its distance (OrbitalRingSpawner), instead of hanging still.
 @export var start_in_orbit := false
-## With `start_in_orbit`: a piece of scrap is left going round just beside it, so the Sweep
-## that finds the Section is likely to find the scrap too.
-@export var start_beside_scrap := false
 ## With `start_on_planet`: buried in the planet's ground on its sunlit face, the Lug end
 ## sticking out, taking Freight.BURY_TUGS tugs to pull free. `section_start_offset` is
 ## ignored; `section_start_rotation` leans it off straight up.
@@ -91,14 +82,6 @@ func _ready() -> void:
 		_gaps = exposed_regions(_part.polygon, _covers())
 		_build_alarm()
 	EventBus.planets_restored.connect(refresh)
-	if start_beside_scrap:
-		# The ring clears and respawns its scrap on its own schedule (a new game, a load,
-		# a harvest): keep checking the Section still has its companion while it waits
-		var check := Timer.new()
-		check.wait_time = SCRAP_CHECK_TIME
-		check.autostart = true
-		check.timeout.connect(_check_scrap_beside)
-		add_child(check)
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	_show_seated(gs != null and gs.is_section_seated(section))
 	_register_with_minimap.call_deferred()
@@ -205,8 +188,6 @@ func ensure_section() -> void:
 	elif piece.lodged and anchor:
 		piece.lodge_in(anchor, piece.lodged_offset, piece.lodged_spin)
 		piece.bury_in(anchor)
-	if start_beside_scrap and piece and piece.lodged and not piece.handled and not piece.beside_spent:
-		_leave_scrap_beside.call_deferred(piece)
 
 ## What a new game's Section hangs in: the planet the station orbits when `start_on_planet`
 ## and there is one, else the station.
@@ -240,60 +221,6 @@ func start_spin(anchor: Node2D, offset: Vector2) -> float:
 		if ring:
 			return OrbitalRingSpawner.angular_speed(ring.orbital_speed, offset.length())
 	return 0.0
-
-## Put a piece of scrap going round beside `piece` in the ring, unless one already is.
-## Deferred a frame: a load clears and respawns the ring on the same signal that brings
-## the piece back, and the scrap must land after that, not be swept away by it.
-func _leave_scrap_beside(piece: Freight) -> void:
-	await get_tree().process_frame
-	if not is_instance_valid(piece) or not piece.lodged or piece.lodged_in == null or piece.beside_spent:
-		return
-	var ring: OrbitalRingSpawner = null
-	for child in piece.lodged_in.get_children():
-		if child is OrbitalRingSpawner:
-			ring = child
-	if ring == null:
-		return
-	var scrap := _scrap_near(piece)
-	if scrap == null:
-		var r := piece.lodged_offset.length()
-		scrap = ring.spawn_scrap_at(r, piece.lodged_offset.angle() - SCRAP_BESIDE / maxf(r, 1.0))
-	if scrap and scrap._orbital_motion:
-		var world_angle := piece.lodged_in.global_transform.basis_xform(piece.lodged_offset).angle()
-		piece.lodge_beside(scrap, angle_difference(scrap._orbital_motion.angle_now(), world_angle))
-		# Harvested, it is gone for good: the Section is not given another
-		var on_harvest := _on_companion_harvested.bind(scrap)
-		if not scrap.resource_depleted.is_connected(on_harvest):
-			scrap.resource_depleted.connect(on_harvest)
-
-## A pooled scrap is reused elsewhere later, so it only counts while it is still this
-## Section's companion.
-func _on_companion_harvested(scrap: Node2D) -> void:
-	var piece := _find_section()
-	if piece and piece.lodged_beside == scrap:
-		piece.beside_spent = true
-		piece.lodged_beside = null
-
-## The ring clears and respawns its scrap on a new game or a load, which can take the
-## companion away; put it back then - but never once the player has harvested it.
-func _check_scrap_beside() -> void:
-	var piece := _find_section()
-	if piece and piece.lodged and not piece.handled and not piece.beside_spent and not piece._beside_valid():
-		_leave_scrap_beside(piece)
-
-## Scrap already going round close beside `piece`, on its own orbit (so the two keep
-## together), or null.
-func _scrap_near(piece: Freight) -> ScrapNode:
-	var r := piece.lodged_offset.length()
-	for node in get_tree().get_nodes_in_group("resource_nodes"):
-		var s := node as ScrapNode
-		if s == null or not s.is_inside_tree() or s.amount <= 0:
-			continue
-		if s._orbital_motion and s._orbital_motion.orbital_body == piece.lodged_in \
-				and s.global_position.distance_to(piece.global_position) <= SCRAP_NEAR \
-				and absf(s._orbital_motion.orbital_distance - r) < 20.0:
-			return s
-	return null
 
 ## Pull `f` home and seat it. `f` has just been let go of, within tolerance.
 func seat(f: Freight) -> void:
