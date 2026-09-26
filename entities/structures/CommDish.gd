@@ -74,8 +74,8 @@ func _process(delta: float) -> void:
 	rotation = lerp_angle(rotation, target, minf(1.0, rate * delta))
 	if _waking and absf(angle_difference(rotation, target)) <= SETTLE_ANGLE:
 		_waking = false
-		settled.emit()
 		ping()
+		settled.emit()
 
 ## SR-7 back on the air: one great ring out from the dish, reaching everything a Sweep
 ## would - scrap lights up out of the debris across the ring.
