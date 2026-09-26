@@ -75,6 +75,7 @@ wait_until pt.visible_ui().has("SpacePortDialogue") 3
 
 # --- It survives a reload, station and all ---
 reload
+assert main.booted_last_spawn "a powered station boots the ship's computer again"
 assert pt.core().started "still running after a reload"
 assert pt.arm().out "the arm stays out"
 assert get_tree().get_first_node_in_group("station_power").powered "still powered"

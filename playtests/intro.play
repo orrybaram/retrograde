@@ -1,7 +1,6 @@
-# The first minute: three typed lines held for ENTER, a boot terminal you can read, a beat in the dark, then the ship adrift
+# The first minute: three typed lines held for ENTER, a beat in the dark (no boot terminal until the core runs), then the ship adrift
 # outside a dead station, turning slowly over among fine debris, and silence. UNIT-7 is off: nothing radios the player on waking.
 # The driver suppresses waking up by default, so this is the one scenario that asks for it.
-# Boot lines themselves are pinned in test/LoadingScreenTest.gd.
 # Run: tools/play.sh playtests/intro.play
 
 eval main.set("force_wake_sequence", true)
@@ -19,15 +18,15 @@ screenshot 00_intro_waiting
 press enter
 wait_until not pt.visible_ui().has("IntroScreen") 2
 
-# The boot terminal stays up long enough to be read, not a flash
-wait_until pt.visible_ui().has("LoadingScreen") 5
-assert str(pt.screen_text().get("LoadingScreen", [])).contains("S Y S T E M") "boot terminal is on screen"
-wait 1.5
-assert pt.visible_ui().has("LoadingScreen") "boot terminal is still up a second and a half in"
-screenshot 01_boot
+# No boot terminal: that is the ship's computer on a powered station, and SR-7 is dead
+# until Act 1's cold start. The intro hands straight over to the dark.
+assert main.get_node("FadeLayer/FadeRect").visible "the intro gives way to the dark"
+assert not pt.visible_ui().has("LoadingScreen") "no boot on a dead station"
+screenshot 01_dark_after_intro
 
 # The world comes up out of the dark rather than cutting in
 wait_until main.current_game_state == 1 15
+assert not main.booted_last_spawn "the spawn never booted"
 assert main.get_node("FadeLayer/FadeRect").visible "screen is dark when the world arrives"
 screenshot 02_dark
 wait_until not main.get_node("FadeLayer/FadeRect").visible 8
