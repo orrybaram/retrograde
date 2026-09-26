@@ -58,7 +58,7 @@ static func _fill(template: String, vars: Dictionary) -> String:
 	var regex := RegEx.create_from_string("\\{key:([a-z_]+)\\}")
 	var out := template
 	for m in regex.search_all(template):
-		out = out.replace(m.get_string(), InputUtils.get_action_key_name(m.get_string(1)).to_upper())
+		out = out.replace(m.get_string(), Controls.label(m.get_string(1)))
 	return out.format(vars) if not vars.is_empty() else out
 
 ## Seconds the finished line stays up before it auto-dismisses.

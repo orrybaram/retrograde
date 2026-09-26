@@ -52,7 +52,7 @@ grow_vertical = 2
 
 [node name="MenuPanel" type="Control" parent="CenterContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(300, 150)
+custom_minimum_size = Vector2(300, 185)
 
 [node name="BackgroundRect" type="ColorRect" parent="CenterContainer/MenuPanel"]
 layout_mode = 1
@@ -114,6 +114,19 @@ theme_override_colors/default_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 bbcode_enabled = true
 text = "> RESUME"
+fit_content = true
+
+[node name="ControlsRow" type="HBoxContainer" parent="CenterContainer/MenuPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ControlsButton" type="RichTextLabel" parent="CenterContainer/MenuPanel/MarginContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+theme_override_colors/default_color = Color(0.91, 0.757, 0.439, 1)
+theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
+bbcode_enabled = true
+text = "  CONTROLS"
 fit_content = true
 
 [node name="Spacer" type="Control" parent="CenterContainer/MenuPanel/MarginContainer/VBoxContainer"]

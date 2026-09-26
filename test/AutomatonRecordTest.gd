@@ -229,7 +229,7 @@ func test_down_carries_the_cursor_from_a_body_into_the_automatons() -> void:
 	assert_str(tab.selected_key()).is_equal("Sun/Veld")
 	assert_int(tab._automaton_index()).is_equal(-1)
 
-	assert_bool(tab.handle_key(KEY_DOWN)).is_true()
+	assert_bool(tab.handle_action(&"menu_down")).is_true()
 	assert_int(tab._automaton_index()).is_equal(0)
 	assert_str(tab.selected_key()).is_equal("")
 	assert_array(_text_of(tab._automaton_rows)).contains([">"])
@@ -238,7 +238,7 @@ func test_down_carries_the_cursor_from_a_body_into_the_automatons() -> void:
 	# closes the Body's behind it rather than leaving a second pane standing empty.
 	assert_str("\n".join(_text_of(tab._detail))).not_contains("VELD")
 
-	assert_bool(tab.handle_key(KEY_UP)).is_true()
+	assert_bool(tab.handle_action(&"menu_up")).is_true()
 	assert_str(tab.selected_key()).is_equal("Sun/Veld")
 	assert_str("\n".join(_text_of(tab._detail))).not_contains("UNIT-7")
 
@@ -246,25 +246,25 @@ func test_down_carries_the_cursor_from_a_body_into_the_automatons() -> void:
 ## With no Records at all the keys go back to the shell rather than being swallowed.
 func test_an_empty_list_claims_no_keys() -> void:
 	var tab := _records_tab()
-	assert_bool(tab.handle_key(KEY_DOWN)).is_false()
-	assert_bool(tab.handle_key(KEY_UP)).is_false()
+	assert_bool(tab.handle_action(&"menu_down")).is_false()
+	assert_bool(tab.handle_action(&"menu_up")).is_false()
 
 
 ## LEFT / RIGHT stay unclaimed for a future tab's adjustable rows.
 func test_left_and_right_stay_unclaimed() -> void:
 	_gs.mark_automaton_met("UNIT-7")
 	var tab := _records_tab()
-	assert_bool(tab.handle_key(KEY_LEFT)).is_false()
-	assert_bool(tab.handle_key(KEY_RIGHT)).is_false()
+	assert_bool(tab.handle_action(&"menu_left")).is_false()
+	assert_bool(tab.handle_action(&"menu_right")).is_false()
 
 
 ## A Record on its own is enough to earn the cursor keys in the bottom border.
 func test_a_met_automaton_earns_the_cursor_keys() -> void:
 	var tab := _records_tab()
-	assert_str(tab.hint()).is_equal(LogTab.SHELL_KEYS)
+	assert_str(tab.hint()).is_equal(LogTab.shell_keys())
 	_gs.mark_automaton_met("UNIT-7")
 	tab.refresh()
-	assert_str(tab.hint()).is_equal("%s   %s" % [RecordsTab.CURSOR_KEYS, LogTab.SHELL_KEYS])
+	assert_str(tab.hint()).is_equal("%s   %s" % [RecordsTab.cursor_keys(), LogTab.shell_keys()])
 
 
 # --- Parts -------------------------------------------------------------------

@@ -161,7 +161,7 @@ func prompt_row(prompts: Array[String], gap := 3) -> String:
 	return "\n".join(out)
 
 func _key_label(action: String) -> String:
-	return InputUtils.get_action_key_name(action).to_upper()
+	return Controls.label(action)
 
 func _cleanup_invalid_nodes() -> void:
 	for node in _harvestable_nodes.keys():

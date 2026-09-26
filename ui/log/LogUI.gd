@@ -42,6 +42,10 @@ func _ready() -> void:
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
 
+	# Key names in the hint follow the device in hand.
+	Controls.device_changed.connect(_on_device_changed)
+	Controls.bindings_changed.connect(_on_device_changed)
+
 	# Live updates while open
 	if gs:
 		gs.credits_changed.connect(_refresh)
@@ -92,7 +96,7 @@ func active_tab_title() -> String:
 # --- Layout ------------------------------------------------------------------
 
 func _build() -> void:
-	_frame = TerminalWindow.new(WINDOW_SIZE, TerminalWindow.spaced_title("LOG"), LogTab.SHELL_KEYS)
+	_frame = TerminalWindow.new(WINDOW_SIZE, TerminalWindow.spaced_title("LOG"), LogTab.shell_keys())
 	add_child(_frame)
 
 	var titles: Array[String] = []
@@ -146,22 +150,30 @@ func _connect_ship() -> void:
 # --- Input -------------------------------------------------------------------
 
 func _input(event: InputEvent) -> void:
-	if not visible or not (event is InputEventKey and event.pressed and not event.echo):
+	if not visible:
 		return
-	var key_event := event as InputEventKey
-	var key := key_event.keycode
-	# I and ESC stay with Main, which owns opening and closing.
-	if key == KEY_I or key == KEY_ESCAPE:
+	# The Log and chart shortcuts and BACK stay with Main, which owns opening and closing.
+	for owned in [&"open_log", &"open_map", &"menu_back"]:
+		if event.is_action_pressed(owned):
+			return
+	var action := Controls.menu_action(event)
+	if action == &"":
 		return
-	if key == KEY_TAB:
-		_cycle_tab(-1 if key_event.shift_pressed else 1)
+	if action == &"menu_tab_prev" or action == &"menu_tab_next":
+		if not event.is_echo():
+			_cycle_tab(-1 if action == &"menu_tab_prev" else 1)
 		get_viewport().set_input_as_handled()
 		return
-	# Everything else is the active tab's to take. A key it takes can change what its
+	# Everything else is the active tab's to take. An action it takes can change what its
 	# hint offers (the chart's CLEAR comes and goes with a tracking point).
-	if not _tabs.is_empty() and _tabs[_active].handle_key(key):
+	if not _tabs.is_empty() and _tabs[_active].handle_action(action):
 		_frame.set_hint(_tabs[_active].hint())
 		get_viewport().set_input_as_handled()
+
+
+func _on_device_changed(_pad: bool = false) -> void:
+	if visible and not _tabs.is_empty():
+		_frame.set_hint(_tabs[_active].hint())
 
 
 func _cycle_tab(direction: int) -> void:

@@ -46,7 +46,7 @@ extends Node
 ## Expressions are Godot `Expression`s with these names bound:
 ##   ship, main, gs (GameState), inv (InventoryManager), bus (EventBus),
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
-##       pt.screen_text(), pt.nearest(group), pt.node(group), pt.planet(name),
+##       pt.screen_text(), pt.controls_ui(), pt.nearest(group), pt.node(group), pt.planet(name),
 ##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
 ##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.seam(),
 ##       pt.stage_freight([gap]) (test Freight on the nose, ready to clamp), pt.spawn_freight(pos, [rot], [vel]),
@@ -73,6 +73,7 @@ var last_drops: Array[String] = []  # gem ids from the most recent harvest hit: 
 var notes: Dictionary = {}  # scratch values a scenario wants to compare later: pt.remember/pt.recall
 
 var _held: Dictionary = {}  # keycode -> true
+var _controls_file := ""
 var _caption: Label = null
 var _action_message := ""
 var _server: TCPServer
@@ -93,6 +94,10 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAVE_DIR))
 	_save_file = "%s/save_%d.cfg" % [SAVE_DIR, OS.get_process_id()]
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_save_file))
+	# Nor the player's rebinds: scenarios press default keys.
+	_controls_file = "%s/controls_%d.cfg" % [SAVE_DIR, OS.get_process_id()]
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(_controls_file))
+	Controls.use_save_path(_controls_file)
 	EventBus.action_message_changed.connect(func(msg: String): _action_message = msg)
 	EventBus.harvest_hit.connect(func(_s, grade: HarvestTiming.Grade, gems: Array[String], final: bool):
 		last_drops = gems
@@ -200,6 +205,8 @@ func _finish() -> void:
 	_release_all()
 	if _save_file != "":
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(_save_file))
+	if _controls_file != "":
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(_controls_file))
 	var summary := {"done": true, "ok": failures.is_empty(), "failures": failures, "out_dir": out_dir}
 	_emit(summary)
 	print("PLAYTEST %s" % ("PASSED" if failures.is_empty() else "FAILED"))
@@ -1091,6 +1098,13 @@ func visible_ui() -> Array:
 			names.append(str(c.name))
 	return names
 
+## The CONTROLS screen that is up, or null. The start menu and the pause menu each own one.
+func controls_ui() -> ControlsUI:
+	for n in get_tree().get_nodes_in_group("controls_ui"):
+		if n.visible:
+			return n
+	return null
+
 ## All text a player could read on visible UI panels, top to bottom.
 func screen_text() -> Dictionary:
 	var out := {}
@@ -1133,7 +1147,7 @@ func _ui_panels() -> Array:
 	return layer.get_children().filter(func(c): return c is CanvasItem) if layer else []
 
 func _collect_text(node: Node, lines: Array) -> void:
-	if node is CanvasItem and not node.visible:
+	if (node is CanvasItem or node is CanvasLayer) and not node.visible:
 		return
 	var text := ""
 	if node is RichTextLabel:

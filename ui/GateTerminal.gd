@@ -169,7 +169,7 @@ func _refresh_hub() -> void:
 	_status.add_theme_color_override("font_color", Colors.TITAN if powered else Colors.PRIMARY)
 	# The HUD already carries the credit balance; the terminal doesn't repeat it.
 	_subhead.visible = false
-	_frame.set_hint("UP/DN SELECT   ENTER CONFIRM   ESC LEAVE")
+	_frame.set_hint(Controls.menu_hint("CONFIRM", "LEAVE"))
 
 	_menu_items.clear()
 	if core:
@@ -224,7 +224,7 @@ func _refresh_transit() -> void:
 	_status.add_theme_color_override("font_color", Colors.TITAN)
 	_subhead.text = "LINKED GATES"
 	_subhead.visible = true
-	_frame.set_hint("UP/DN SELECT   ENTER TRANSIT   ESC BACK")
+	_frame.set_hint(Controls.menu_hint("TRANSIT", "BACK"))
 
 	_menu_items.clear()
 	for destination in GateTransit.destinations(gate, get_tree()):
@@ -330,27 +330,28 @@ func _refresh_rows() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if not (event is InputEventKey and event.pressed):
+	if not event.is_pressed():
 		return
+	var action := Controls.menu_action(event)
 
 	if _booting:
 		# The launch key doubles as the skip key: nothing else undocks from in here.
-		if (event as InputEventKey).keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE]:
+		if action in [&"menu_accept", &"menu_back"] or event.is_action_pressed(&"action"):
 			_skip_boot = true
 			get_viewport().set_input_as_handled()
 		return
 
-	match (event as InputEventKey).keycode:
-		KEY_UP:
+	match action:
+		&"menu_up":
 			_move_selection(-1)
 			get_viewport().set_input_as_handled()
-		KEY_DOWN:
+		&"menu_down":
 			_move_selection(1)
 			get_viewport().set_input_as_handled()
-		KEY_ENTER, KEY_KP_ENTER:
+		&"menu_accept":
 			_activate_selection()
 			get_viewport().set_input_as_handled()
-		KEY_ESCAPE:
+		&"menu_back":
 			if _view == View.TRANSIT:
 				_back_to_hub()
 			else:
