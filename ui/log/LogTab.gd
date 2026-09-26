@@ -6,7 +6,7 @@ extends VBoxContainer
 ## cycling. Adding a tab is one subclass plus one entry in `LogUI.TABS`.
 ##
 ## The Log is the player's own instrument, read alone — no Automaton speaks from
-## inside a tab (see CONTEXT.md).
+## inside a tab (see docs/GLOSSARY.md).
 
 ## Keys the shell always offers, whichever tab is up.
 const SHELL_KEYS := "[TAB] SWITCH   [I] / [ESC]  CLOSE"

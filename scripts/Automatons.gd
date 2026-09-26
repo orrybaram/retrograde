@@ -4,7 +4,7 @@ class_name Automatons
 ## Meeting an Automaton earns its Record in the Log; the Log only ever gains Records.
 ##
 ## Holding a Record about an Automaton is the player's note on it, not the Automaton
-## being present — nothing speaks from inside the Log (CONTEXT.md).
+## being present — nothing speaks from inside the Log (docs/GLOSSARY.md).
 
 ## UNIT-7, the Guide: stationed at SR-7 over Rook and the first Automaton the player
 ## meets (docs/DESIGN.md 5.3, NPC #1). The player holds its Record from the first

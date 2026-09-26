@@ -12,7 +12,7 @@ extends LogTab
 ## many there are to find, which is the spoiler docs/adr/0002 protects.
 ##
 ## A Record about an Automaton is the player's own note on it, not the Automaton being
-## present: nothing speaks from inside the Log (CONTEXT.md).
+## present: nothing speaks from inside the Log (docs/GLOSSARY.md).
 
 ## Shown while the player holds no Records. It says what earns one; it never hints at
 ## how many there are to find.
@@ -201,7 +201,7 @@ func _draw_rows() -> void:
 
 ## The one detail column, opened out on whichever Record the cursor is on. A Body's
 ## Record is instrument output and an Automaton's is Notes, so the two do not share a
-## voice (CONTEXT.md) — but they do share this column, which is what keeps the rule
+## voice (docs/GLOSSARY.md) — but they do share this column, which is what keeps the rule
 ## beside it running full height instead of stopping at an empty pane.
 func _draw_detail() -> void:
 	_clear(_detail)

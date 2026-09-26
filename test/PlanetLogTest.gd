@@ -246,7 +246,7 @@ func test_a_surveyed_moon_still_names_what_it_orbits() -> void:
 	assert_str(detail).contains("BARREN")
 
 ## The sun reads honestly through the same instrument as everything else: its own class,
-## no habitability and no ore, with no row left empty and no special case (CONTEXT.md,
+## no habitability and no ore, with no row left empty and no special case (docs/GLOSSARY.md,
 ## Body). It is not a moon, so it carries no ORBITS row.
 func test_the_suns_record_reads_honestly() -> void:
 	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")

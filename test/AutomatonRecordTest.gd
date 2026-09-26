@@ -102,7 +102,7 @@ func test_every_step_of_influence_reveals_the_guides_notes() -> void:
 
 
 ## A Note is the player's own writing, not the Guide talking: terminal uppercase, and
-## none of the Guide's radio or greeting register (CONTEXT.md).
+## none of the Guide's radio or greeting register (docs/GLOSSARY.md).
 func test_the_guides_notes_are_not_the_guide_talking() -> void:
 	for note in GUIDE.notes_at(Gate.MODULE_COUNT):
 		assert_str(note).is_equal(note.to_upper())
