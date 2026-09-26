@@ -9,6 +9,9 @@
 [ext_resource type="Script" path="res://entities/structures/StationPower.gd" id="10_power"]
 [ext_resource type="Script" path="res://entities/structures/CoreHousing.gd" id="11_core"]
 [ext_resource type="Script" path="res://entities/structures/DockArm.gd" id="12_arm"]
+[ext_resource type="Script" path="res://entities/structures/TankBreach.gd" id="13_breach"]
+[ext_resource type="Script" path="res://entities/structures/FuelGauge.gd" id="14_gauge"]
+[ext_resource type="Script" path="res://entities/structures/HullDamage.gd" id="15_damage"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
 
@@ -1125,6 +1128,9 @@ points = PackedVector2Array(-157, -36, -157, 74)
 width = 2
 default_color = Color(0.58, 0.545, 0.451, 0.35)
 
+[node name="Breach" type="Node2D" parent="Visuals/FuelTankL"]
+script = ExtResource("13_breach")
+
 [node name="TankStrutL" type="Polygon2D" parent="Visuals"]
 color = Color(0.184, 0.173, 0.145, 1)
 polygon = PackedVector2Array(-126, 6, -110, 6, -110, 30, -126, 30)
@@ -1387,6 +1393,9 @@ points = PackedVector2Array(145, -36, 145, 74)
 width = 2
 default_color = Color(0.58, 0.545, 0.451, 0.35)
 
+[node name="Gauge" type="Node2D" parent="Visuals/FuelTank"]
+script = ExtResource("14_gauge")
+
 [node name="SolarArray" type="Polygon2D" parent="Visuals"]
 color = Color(0.18, 0.165, 0.125, 1)
 polygon = PackedVector2Array(-180, 160, -30, 160, -30, 210, -180, 210)
@@ -1481,6 +1490,10 @@ default_color = Color(0.184, 0.173, 0.145, 0.9)
 [node name="D5" type="Polygon2D" parent="Visuals/DorsalArm"]
 color = Color(0.58, 0.545, 0.451, 0.8)
 polygon = PackedVector2Array(8, -534, 5.66, -528.34, 0, -526, -5.66, -528.34, -8, -534, -5.66, -539.66, 0, -542, 5.66, -539.66)
+
+[node name="HullDamage" type="Node2D" parent="."]
+script = ExtResource("15_damage")
+visuals = NodePath("../Visuals")
 
 [node name="Lights" type="Node2D" parent="."]
 z_index = 1

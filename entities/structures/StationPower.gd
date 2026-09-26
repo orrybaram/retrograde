@@ -10,7 +10,11 @@ class_name StationPower
 ## lamps are not on this circuit: they run off the core's battery with the arm (DockArm). The emergency alarms at the cuts run on their own (CutAlarm) and stop one
 ## by one as each piece goes home.
 
-signal woken  ## A live wake has run to the end: the dish is on the Sun and has pinged.
+signal woken  ## A live wake has run to the end: the dish is on the Sun and its ping is well out.
+
+## How long the dish's ping is left to spread before the wake is over, s. Whatever comes next
+## (UNIT-7 on the comms) holds the game, and a ping it freezes mid-screen never goes out.
+const PING_WATCH := 4.0
 
 @export var lights: NodePath
 @export var dish: NodePath
@@ -56,4 +60,7 @@ func _wake(l: StationLights, d: CommDish) -> void:
 	if d:
 		d.limp = false
 		await d.settled
+		await get_tree().create_timer(PING_WATCH, false).timeout
+		if not powered:
+			return
 	woken.emit()

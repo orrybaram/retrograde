@@ -60,7 +60,9 @@ screenshot core_3_catching
 wait_until not pt.core().get_parent().get_node("Lights").is_waking() 15
 wait_until pt.core().get_parent().get_node("Visuals/KeelLower/CommDish").get_node_or_null("Ping") != null 20
 assert pt.core().get_parent().get_node("Visuals/KeelLower/CommDish").get_node("Ping")._rings[0]["color"] == Color(0.710, 0.541, 0.878, 1.0) "the dish finds the Sun and pings in the Titan's purple"
-wait_until get_tree().root.get_node("RobotRadio").guide_awake 5
+wait 1.0
+assert not get_tree().paused and not get_tree().root.get_node("RobotRadio").guide_awake "the ping goes out before anyone is on the comms"
+wait_until get_tree().root.get_node("RobotRadio").guide_awake 8
 assert get_tree().root.get_node("RobotRadio").current_line().text == "..." "UNIT-7 comes on the comms"
 assert get_tree().paused "and the wake-up holds the game"
 screenshot core_4_unit7
