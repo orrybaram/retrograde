@@ -6,6 +6,11 @@ class_name StationLights
 ## watches, they catch one by one, slowly, outward from the core where the power comes from,
 ## each with a flicker, so the station wakes up rather than switching on. `woken` fires as
 ## the last one catches.
+##
+## Nothing about them is quite regular: each window sits a little off its line, some are
+## wider or narrower, a few are gone altogether (more on one side than the other), some burn
+## dimmer, a handful stay dark even with the power on, and a few flicker. All of it comes
+## from fixed seeds and never from the shared RNG, so it is the same station every run.
 
 signal woken
 
@@ -23,9 +28,25 @@ const WAKE_STEP := 0.16
 const WAKE_FLICKER := 0.3
 const WAKE_ORIGIN := Vector2(0, 15)  # the core (CoreHousing)
 
+## The windows' irregularity: how far each strays off its line (px), how much wider or
+## narrower it can be, and how often one is missing - the left side of the station more
+## often than the right, so it stops mirroring itself.
+const WINDOWS_SEED := 22
+const WINDOW_NUDGE := Vector2(3.5, 1.5)
+const WINDOW_WIDTHS: Array[float] = [4.0, 5.0, 6.0, 6.0, 7.0, 8.0]
+const MISSING_LEFT := 0.2
+const MISSING_RIGHT := 0.07
+## With the power on: one window in DEAD_EVERY never lights, one in FAULTY_EVERY flickers,
+## and the rest burn somewhere between DIM and full.
+const DEAD_EVERY := 9
+const FAULTY_EVERY := 7
+const DIM := 0.55
+
 var windows := PackedVector2Array()
 var beacons := PackedVector2Array()
 var lit := false
+## Per window: {size, glow (0 dead), faulty}. Built for whatever `windows` holds.
+var _quirks: Array[Dictionary] = []
 
 var _clock := 0.0
 var _waking := false
@@ -37,18 +58,48 @@ func _ready() -> void:
 		windows = default_windows()
 	if beacons.is_empty():
 		beacons = default_beacons()
+	_quirks = window_quirks(windows.size())
 
-## Two windows on each ring pod, a row along each module and the hub.
-static func default_windows() -> PackedVector2Array:
-	var out := PackedVector2Array()
+## Two windows on each ring pod, a row along each module and the hub - each nudged off its
+## line, and a few missing.
+static func default_windows(seed_value := WINDOWS_SEED) -> PackedVector2Array:
+	var grid := PackedVector2Array()
 	for i in 8:
 		var x := -350.0 + i * 100.0
-		out.append(Vector2(x - 18, -380))
-		out.append(Vector2(x + 18, -380))
+		grid.append(Vector2(x - 18, -380))
+		grid.append(Vector2(x + 18, -380))
 	for x: float in [-190.0, -148.0, -106.0, -25.0, 0.0, 25.0, 106.0, 148.0, 190.0]:
-		out.append(Vector2(x, -228))
+		grid.append(Vector2(x, -228))
 	for j in 9:
-		out.append(Vector2(-160 + j * 40, -134))
+		grid.append(Vector2(-160 + j * 40, -134))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var out := PackedVector2Array()
+	for p in grid:
+		var missing := MISSING_LEFT if p.x < 0.0 else MISSING_RIGHT
+		var nudge := Vector2(rng.randf_range(-1.0, 1.0) * WINDOW_NUDGE.x, rng.randf_range(-1.0, 1.0) * WINDOW_NUDGE.y)
+		if rng.randf() < missing:
+			continue
+		out.append(p + nudge)
+	return out
+
+## How each of `count` windows looks: its size, how bright it burns lit (0: dead, it never
+## comes on), and whether it flickers.
+static func window_quirks(count: int) -> Array[Dictionary]:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = WINDOWS_SEED + 1
+	var out: Array[Dictionary] = []
+	for i in count:
+		var w: float = WINDOW_WIDTHS[rng.randi_range(0, WINDOW_WIDTHS.size() - 1)]
+		var h := WINDOW_SIZE.y + (1.0 if rng.randf() < 0.25 else 0.0)
+		var roll := rng.randi_range(0, DEAD_EVERY * FAULTY_EVERY - 1)
+		var dead := roll % DEAD_EVERY == 0
+		out.append({
+			"size": Vector2(w, h),
+			"glow": 0.0 if dead else rng.randf_range(DIM, 1.0),
+			"faulty": not dead and roll % FAULTY_EVERY == 1,
+			"phase": rng.randf() * 10.0,
+		})
 	return out
 
 ## Mast tips, the ends of the ring, and the foot of the keel.
@@ -112,13 +163,32 @@ func _showing(i: int) -> bool:
 		return true
 	return d < WAKE_FLICKER and fmod(d, 0.1) < 0.05
 
+## How brightly window `i` burns right now, 0-1: its power, then its own quirks.
+func window_glow(i: int) -> float:
+	if not _showing(i):
+		return 0.0
+	if _quirks.size() != windows.size():
+		_quirks = window_quirks(windows.size())
+	var q := _quirks[i]
+	var g: float = q["glow"]
+	if q["faulty"]:
+		# a bad contact: mostly on, dropping out in short stutters
+		var t: float = _clock + q["phase"]
+		if fmod(t, 3.7) < 0.35 and fmod(t * 9.0, 1.0) < 0.5:
+			return g * 0.15
+	return g
+
 func _draw() -> void:
+	if _quirks.size() != windows.size():
+		_quirks = window_quirks(windows.size())
 	for i in windows.size():
-		var r := Rect2(windows[i] - WINDOW_SIZE * 0.5, WINDOW_SIZE)
-		if _showing(i):
-			draw_rect(r.grow(4.0), Color(Colors.SUN, 0.08))
-			draw_rect(r.grow(1.5), Color(Colors.SUN, 0.2))
-			draw_rect(r, Color(Colors.SUN, 0.9))
+		var size: Vector2 = _quirks[i]["size"]
+		var r := Rect2(windows[i] - size * 0.5, size)
+		var g := window_glow(i)
+		if g > 0.0:
+			draw_rect(r.grow(4.0), Color(Colors.SUN, 0.08 * g))
+			draw_rect(r.grow(1.5), Color(Colors.SUN, 0.2 * g))
+			draw_rect(r, Color(Colors.SUN, 0.9 * g))
 		else:
 			draw_rect(r, Colors.SPACE_BG)
 	var flash := fposmod(_clock, BEACON_PERIOD) < BEACON_FLASH

@@ -77,8 +77,8 @@ func test_the_lights_wake_outward_from_the_core_one_at_a_time() -> void:
 	for i in range(1, sorted.size()):
 		assert_float(sorted[i] - sorted[i - 1]).is_equal_approx(StationLights.WAKE_STEP, 0.0001)
 	# The hub (next to the core) catches before the ring pods up top
-	var hub := Array(w).find(Vector2(0, -134))
-	var pod := Array(w).find(Vector2(-368, -380))
+	var hub := _nearest(w, Vector2(0, -134))
+	var pod := _nearest(w, Vector2(-368, -380))
 	assert_float(delays[hub]).is_less(delays[pod])
 
 
@@ -183,3 +183,43 @@ func test_a_dead_dish_answers_nothing() -> void:
 	dish._process(0.016)
 	dish.on_sonar_touched()
 	assert_object(dish.get_node_or_null("Ping")).is_null()
+
+
+func test_the_windows_are_not_a_mirror_image() -> void:
+	var w := StationLights.default_windows()
+	var left := 0
+	var right := 0
+	for p in w:
+		if p.x < 0.0:
+			left += 1
+		elif p.x > 0.0:
+			right += 1
+	assert_int(left).override_failure_message("more missing on the left than the right").is_less(right)
+	# and none sits exactly on the old grid lines
+	var off_line := 0
+	for p in w:
+		if not is_equal_approx(p.y, -380.0) and not is_equal_approx(p.y, -228.0) and not is_equal_approx(p.y, -134.0):
+			off_line += 1
+	assert_int(off_line).is_greater(w.size() / 2)
+
+
+func test_some_windows_stay_dark_and_the_rest_vary() -> void:
+	var q := StationLights.window_quirks(60)
+	var dead := q.filter(func(d: Dictionary) -> bool: return d["glow"] == 0.0).size()
+	var faulty := q.filter(func(d: Dictionary) -> bool: return d["faulty"]).size()
+	assert_int(dead).is_greater(0)
+	assert_int(dead).is_less(15)
+	assert_int(faulty).is_greater(0)
+
+
+func test_the_same_station_every_run() -> void:
+	assert_array(StationLights.default_windows()).is_equal(StationLights.default_windows())
+
+
+## The window nearest `spot` (they sit a little off their lines).
+func _nearest(w: PackedVector2Array, spot: Vector2) -> int:
+	var best := 0
+	for i in w.size():
+		if w[i].distance_to(spot) < w[best].distance_to(spot):
+			best = i
+	return best
