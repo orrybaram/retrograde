@@ -52,7 +52,7 @@ static func deepest(pos: Vector2, planets: Array) -> Planet:
 
 ## The unsurveyed Body in reach, for the scanner to work on. The sun is a Body like any
 ## other and is surveyed by the same rule; its survey honestly reports no ore and no
-## habitability (CONTEXT.md, Body).
+## habitability (docs/GLOSSARY.md, Body).
 static func pick(pos: Vector2, planets: Array) -> Planet:
 	var unscanned := planets.filter(func(node: Variant) -> bool:
 		var planet := node as Planet

@@ -60,7 +60,7 @@ stacked on top of it pushes the heavy end back over the ceiling.
   The sun is not a wide star — at 9000 px it is barely twice TERRA-0, because a real one
   would not fit in a system the player can fly across.
 - **Special-case the sun.** Rejected on the same grounds #78 rejected it: the readout runs
-  one formula for every Body (CONTEXT.md, Body), and a fudge at the sun leaves Rook still
+  one formula for every Body (docs/GLOSSARY.md, Body), and a fudge at the sun leaves Rook still
   outweighing Veld.
 - **Re-tune `massMultiplier` by hand to better numbers.** Rejected: it fixes the table
   without fixing what produced it, so the next authored Body drifts again.
@@ -85,7 +85,7 @@ stacked on top of it pushes the heavy end back over the ceiling.
 | Cairn | 448 | 1.6 G | 23% | 15% |
 
 - **The sun is the hardest place in the system to fly**, which is what the Core sitting
-  there asks for (CONTEXT.md, Sun Station: "the last and hardest place to reach"). You
+  there asks for (docs/GLOSSARY.md, Sun Station: "the last and hardest place to reach"). You
   cannot hover over a star; the 20 s survey at the scan ring costs 89% of thrust held the
   whole time, and the Sun Station sits in 58%. Boost is 200%, so there is always a way out.
 - **TERRA-0 is the heaviest Body that can be landed on**, at 74%. That is deliberate: it
