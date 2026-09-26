@@ -58,12 +58,8 @@ func physics_process(delta: float) -> void:
 		return
 	var flying := _flying()
 
-	ship.want_turn_left = Input.is_action_pressed("turn_left")
-	ship.want_turn_right = Input.is_action_pressed("turn_right")
-	ship.want_thrust = Input.is_action_pressed("thrust")
-	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
-	ship.want_boost = Input.is_action_pressed("boost")
-	if ship.want_turn_left or ship.want_turn_right or ship.want_thrust or ship.want_reverse_thrust:
+	FlyingState.read_stick(ship)
+	if FlyingState.has_stick_input(ship):
 		_locked = false
 		ship.sleeping = false
 

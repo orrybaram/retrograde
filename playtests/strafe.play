@@ -1,0 +1,53 @@
+# Q/E strafe sideways without turning the ship or burning fuel, even with boost held.
+# WASD flies like the arrows.
+# Run: tools/play.sh --headless playtests/strafe.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+eval pt.skip_opening()
+wait_until pt.state_name() == "LandedState" 5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "thrust undocks the ship"
+# Parked in open space, out of anything's way
+eval ship.set("collision_mask", 0)
+eval ship.set("collision_layer", 0)
+eval pt.warp_to(ship.global_position + Vector2(0, -30000))
+frames 5
+eval ship.set("linear_velocity", Vector2(0, 0))
+eval ship.set("angular_velocity", 0.0)
+eval pt.remember("heading", ship.rotation)
+eval pt.remember("fuel", ship.fuel)
+
+# Q/E strafe
+hold e 1.0
+frames 2
+assert ship.linear_velocity.rotated(-ship.rotation).y > 30.0 "E strafes to starboard"
+assert absf(angle_difference(ship.rotation, pt.recall("heading"))) < 0.02 "E does not turn the ship"
+hold q 1.0
+frames 2
+assert ship.linear_velocity.length() < 10.0 "Q cancels E"
+assert ship.fuel >= pt.recall("fuel") "Q/E burn no fuel"
+
+# WASD: W thrusts forward, S brakes, D turns
+hold w 1.0
+frames 2
+assert ship.linear_velocity.rotated(-ship.rotation).x > 30.0 "W thrusts forward"
+hold s 1.0
+frames 2
+assert ship.linear_velocity.length() < 10.0 "S brakes"
+eval ship.set("linear_velocity", Vector2(0, 0))
+
+# Shift is only the boost: with a turn key it turns, it does not strafe
+down boost
+hold d 0.5
+up boost
+frames 2
+assert absf(angle_difference(ship.rotation, pt.recall("heading"))) > 0.3 "shift + D turns"
+assert ship.linear_velocity.length() < 5.0 "shift + D does not strafe"
+assert ship.fuel >= pt.recall("fuel") "shift without thrust burns no fuel"
+quit

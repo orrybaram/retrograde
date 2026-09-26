@@ -37,7 +37,7 @@ successful live exploration into one. A scenario stops at the first failing non-
 
 | command | effect |
 |---|---|
-| `press <key\|action> [n]` | tap n times. Keys: `enter up down left right esc space i m e …`; actions: `thrust turn_left turn_right reverse_thrust boost action` |
+| `press <key\|action> [n]` | tap n times. Keys: `enter up down left right esc space i m e …`; actions: `thrust turn_left turn_right reverse_thrust boost action strafe_left strafe_right` |
 | `hold <key\|action> <sec>` / `down` / `up` / `release_all` | sustained input |
 | `face <group> [tol]` | steer with turn keys toward nearest node in group (`planets`, `space_ports`, `space_stations`, `resource_nodes`) |
 | `wait <sec>` / `frames <n>` / `timescale <n>` | advance time (wait is game time) |

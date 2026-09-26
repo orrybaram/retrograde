@@ -15,6 +15,8 @@ const LIFTOFF_GRACE := 0.9
 ## one half; it grows with the load, to at most twice this (see turned_spin). Unladen
 ## there is no wind-up.
 const TURN_LAG := 0.3
+## Strafing pushes at this share of `ship.thrust_power`: side jets, weaker than the main engine.
+const STRAFE_POWER := 0.6
 
 var _state_enter_time: float = 0.0
 var _touchdown_pending := false
@@ -48,20 +50,18 @@ func physics_process(delta: float) -> void:
 	if _is_ui_blocking_input():
 		ship.want_turn_left = false
 		ship.want_turn_right = false
+		ship.want_strafe_left = false
+		ship.want_strafe_right = false
 		ship.want_thrust = false
 		ship.want_reverse_thrust = false
 		ship.want_boost = false
 		return
 	
 	# Sample input here (physics rate, thread-safe for our purposes)
-	ship.want_turn_left = Input.is_action_pressed("turn_left")
-	ship.want_turn_right = Input.is_action_pressed("turn_right")
-	ship.want_thrust = Input.is_action_pressed("thrust")
-	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
-	ship.want_boost = Input.is_action_pressed("boost")
+	read_stick(ship)
 	
 	# If any input, ensure the body is awake
-	if ship.want_turn_left or ship.want_turn_right or ship.want_thrust or ship.want_reverse_thrust or ship.want_boost:
+	if has_stick_input(ship) or ship.want_boost:
 		ship.sleeping = false
 	
 	# Update particle systems
@@ -73,6 +73,25 @@ func physics_process(delta: float) -> void:
 	if not Input.is_action_pressed("action"):
 		_action_armed = true
 	_update_action()
+
+## Sample the flight keys into `ship`'s wants.
+static func read_stick(ship: Ship) -> void:
+	ship.want_turn_left = Input.is_action_pressed("turn_left")
+	ship.want_turn_right = Input.is_action_pressed("turn_right")
+	ship.want_strafe_left = Input.is_action_pressed("strafe_left")
+	ship.want_strafe_right = Input.is_action_pressed("strafe_right")
+	ship.want_boost = Input.is_action_pressed("boost")
+	ship.want_thrust = Input.is_action_pressed("thrust")
+	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
+
+## Is the player working the stick at all (turning, strafing or thrusting)?
+static func has_stick_input(ship: Ship) -> bool:
+	return ship.want_turn_left or ship.want_turn_right or ship.want_strafe_left \
+		or ship.want_strafe_right or ship.want_thrust or ship.want_reverse_thrust
+
+## -1 strafing left (to port), 1 right, 0 neither or both.
+static func strafe_axis(ship: Ship) -> float:
+	return (1.0 if ship.want_strafe_right else 0.0) - (1.0 if ship.want_strafe_left else 0.0)
 
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if not is_ship_valid():
@@ -115,7 +134,7 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	elif ship.want_turn_right:
 		turn = 1.0
 	# Waking adrift, the ship turns slowly over until the player first takes the stick
-	if turn != 0.0 or ship.want_thrust or ship.want_reverse_thrust:
+	if has_stick_input(ship):
 		ship.drift_spin = 0.0
 	if ship.drift_spin != 0.0:
 		state.angular_velocity = ship.drift_spin
@@ -127,6 +146,13 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	
 	if ship.want_reverse_thrust:
 		_apply_thrust(state, Vector2.LEFT)
+
+	# Strafe: ordinary side thrust, held to cruise speed; the boost never touches it, so it
+	# never burns fuel. Ship nose is +X, so its right side is +Y.
+	var strafe := strafe_axis(ship)
+	if strafe != 0.0:
+		var side := Vector2(0.0, strafe).rotated(ship.rotation) * ship.thrust_power * STRAFE_POWER
+		state.linear_velocity = cruise_velocity(state.linear_velocity, side * state.inverse_mass * state.step, ship.cruise_speed)
 
 	if _coupled and is_instance_valid(_coupled):
 		_hold_coupled(state)
@@ -245,9 +271,16 @@ func _update_particles() -> void:
 	# Ship points RIGHT (0°), so 90° left = UP (90°), 90° right = DOWN (270° or -90°)
 	if ship.side_thruster_particles:
 		var is_turning = ship.want_turn_left or ship.want_turn_right
-		ship.side_thruster_particles.emitting = is_turning
-		
-		if is_turning:
+		var strafe := strafe_axis(ship)
+		ship.side_thruster_particles.emitting = is_turning or strafe != 0.0
+
+		if strafe != 0.0:
+			var strafe_material = ship.side_thruster_particles.process_material as ParticleProcessMaterial
+			if strafe_material:
+				# Jet fires from the side opposite the slide, blowing away from it
+				ship.side_thruster_particles.position = Vector2(0, -7 * strafe)
+				strafe_material.direction = Vector3(0, -strafe, 0)
+		elif is_turning:
 			var material = ship.side_thruster_particles.process_material as ParticleProcessMaterial
 			if material:
 				# Ship points RIGHT (0°) in local space

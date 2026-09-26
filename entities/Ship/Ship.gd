@@ -52,6 +52,9 @@ var want_turn_left := false
 var want_turn_right := false
 var want_thrust := false
 var want_reverse_thrust := false
+## Side thrust (Q/E): slides the ship sideways without turning it.
+var want_strafe_left := false
+var want_strafe_right := false
 ## A slow tumble the ship keeps, rad/s, until the player first turns or thrusts: how a new game opens,
 ## the ship adrift outside SR-7 (docs/OPENING.md §3). 0 is under control.
 var drift_spin := 0.0
