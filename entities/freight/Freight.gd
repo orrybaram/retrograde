@@ -72,15 +72,6 @@ var lodged_in: Node2D = null
 ## Radians/s the lodged spot turns round `lodged_in`: a piece adrift in a debris ring goes
 ## round with the ring (and turns with it) rather than hanging still in it. 0 hangs still.
 var lodged_spin := 0.0
-## Lodged beside this piece of scrap, `lodged_beside_turn` radians further round
-## `lodged_in` than it: it goes round with the scrap exactly, so the two are always found
-## together. Not saved - Mount finds it a companion again after a load. Falls back to
-## `lodged_spin` once the scrap is gone.
-var lodged_beside: Node2D = null
-var lodged_beside_turn := 0.0
-## The scrap it was left beside has been harvested: it is not given another. Saved.
-var beside_spent := false
-var _beside_radius := 0.0
 
 ## Buried in a planet's ground (the SOLAR ARRAY, lying in Rook). The magnet reaches it but
 ## can't pull it: each hold of `action` that finds it is one tug, and the BURY_TUGS-th rips
@@ -215,26 +206,6 @@ func lodge_in(body: Node2D, offset: Vector2, spin := 0.0) -> void:
 	lodged_in = body
 	lodged_offset = offset
 	lodged_spin = spin
-
-## Lodge beside `scrap`, `turn` radians further round the anchor than it.
-func lodge_beside(scrap: Node2D, turn: float) -> void:
-	lodged_beside = scrap
-	lodged_beside_turn = turn
-	var motion = scrap.get("_orbital_motion")
-	_beside_radius = motion.orbital_distance if motion else 0.0
-
-## The scrap it rides beside is still out there, still where it was: not harvested, not
-## handed back to the pool and reused on some other orbit.
-func _beside_valid() -> bool:
-	if lodged_beside == null or not is_instance_valid(lodged_beside) or not lodged_beside.is_inside_tree():
-		return false
-	var scrap := lodged_beside as ScrapNode
-	if scrap == null or scrap.amount <= 0 or not scrap.is_in_group("resource_nodes"):
-		return false
-	# Handed back to the pool and reused on another orbit is not the same scrap
-	var motion := scrap._orbital_motion as OrbitalMotion
-	return motion != null and motion.orbital_body == lodged_in \
-		and absf(motion.orbital_distance - _beside_radius) < 1.0
 
 # --- buried ---
 
@@ -371,15 +342,7 @@ func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if lodged and is_instance_valid(lodged_in):
 		# Keep pace: close on the lodged spot within the step
-		if _beside_valid():
-			# Off the scrap's orbit clock, not its position: far from the ship scrap only
-			# moves every few frames, and the piece must not stutter along with it
-			var motion: OrbitalMotion = lodged_beside._orbital_motion
-			var world_dir := Vector2.from_angle(motion.angle_now() + lodged_beside_turn)
-			lodged_offset = lodged_in.global_transform.basis_xform_inv(world_dir).normalized() * _beside_radius
-		else:
-			lodged_beside = null
-			lodged_offset = lodged_offset.rotated(lodged_spin * state.step)
+		lodged_offset = lodged_offset.rotated(lodged_spin * state.step)
 		var spot := lodged_in.to_global(lodged_offset)
 		state.linear_velocity = (spot - state.transform.origin) / maxf(state.step, 0.0001)
 		state.angular_velocity = lodged_spin
@@ -425,7 +388,7 @@ func to_row() -> Dictionary:
 		"vx": v.x, "vy": v.y, "spin": angular_velocity if is_loose() else 0.0,
 		"label": label, "handled": handled, "clamped": is_clamped(),
 		"section": section, "lodged": lodged, "lodged_x": lodged_offset.x, "lodged_y": lodged_offset.y,
-		"lodged_spin": lodged_spin, "buried": buried_tugs_left, "beside_spent": beside_spent,
+		"lodged_spin": lodged_spin, "buried": buried_tugs_left,
 	}
 
 static func from_row(world: Node, row: Dictionary) -> Freight:
@@ -436,7 +399,6 @@ static func from_row(world: Node, row: Dictionary) -> Freight:
 	f.lodged_offset = Vector2(float(row.get("lodged_x", 0.0)), float(row.get("lodged_y", 0.0)))
 	f.lodged_spin = float(row.get("lodged_spin", 0.0))
 	f.buried_tugs_left = int(row.get("buried", 0))
-	f.beside_spent = bool(row.get("beside_spent", false))
 	f.handled = bool(row.get("handled", false))
 	world.add_child(f)
 	f.global_position = Vector2(float(row.get("x", 0.0)), float(row.get("y", 0.0)))

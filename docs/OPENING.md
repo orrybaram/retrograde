@@ -179,9 +179,7 @@ Placement (revised 2026-09-22), nearest first:
   (not Rook). The first thing found by simply flying out.
 - **DORSAL ARM**: adrift in Rook's debris ring (3000 px out), going round with the ring
   at the ring's own speed for that distance (`Mount.start_in_orbit`), so it has to be
-  caught up with rather than flown to. A piece of scrap always goes round right beside it
-  (`Mount.start_beside_scrap`), so the Sweep that finds the arm finds scrap too - the
-  harvest is met by accident, on the way to something else.
+  caught up with rather than flown to.
 - **SOLAR ARRAY**: buried in Rook's ground on its sunlit face - the far side of Rook from
   where SR-7 starts - with only its Lug end sticking out (`Mount.start_buried`). The
   magnet reaches it but can't lift it: each hold of the key is one tug that shudders it
