@@ -49,6 +49,8 @@ func enter() -> void:
 	ship.want_boost = false
 	ship.want_turn_left = false
 	ship.want_turn_right = false
+	ship.want_strafe_left = false
+	ship.want_strafe_right = false
 	_flying()._update_particles()
 	ship.camera.zoom_camera_in(CAMERA_ZOOM)
 	ship.damage_shake_time = ship.harvest_lockon_shake_duration
