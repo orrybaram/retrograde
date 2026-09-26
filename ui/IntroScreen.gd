@@ -97,11 +97,12 @@ func _process(delta: float) -> void:
 		_playing = false
 		finished.emit()
 
-## ENTER while it types finishes the text at once; ENTER on the finished text moves on.
+## CONFIRM (or ACTION / BACK) while it types finishes the text at once; again on the finished text moves on.
 func _input(event: InputEvent) -> void:
 	if not _playing or _elapsed < SKIP_GUARD:
 		return
-	if not (event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel")):
+	if not (event.is_action_pressed(&"menu_accept") or event.is_action_pressed(&"menu_back") \
+			or event.is_action_pressed(&"action")):
 		return
 	get_viewport().set_input_as_handled()
 	if _elapsed < typed_by():

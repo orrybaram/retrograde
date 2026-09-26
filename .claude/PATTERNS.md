@@ -88,6 +88,28 @@ CarryingState: hold action RELEASE_HOLD (0.8s; the action message is only a fill
   `Freight.punch()` and a camera bump.
 - Spawn a test piece: dev panel SPAWN FREIGHT, or `pt.stage_freight()` in a playtest (`playtests/freight.play`).
 
+## Controls (keyboard, gamepad, rebinding)
+
+```
+Controls (autoload, first) ACTIONS + defaults() -> InputMap at boot -> user://controls.cfg overrides
+  game code:  Input.is_action_pressed("thrust")            (unchanged)
+  menus:      match Controls.menu_action(event): &"menu_up" / &"menu_accept" / &"menu_back" ...
+  prompts:    Controls.label(action), nav_label(), menu_hint(accept, back)  (follow the last device used)
+  CONTROLS screen: ui/ControlsUI.gd (CanvasLayer), a row in StartMenu and PauseMenu
+```
+
+- A new action is one `ACTIONS` entry (id, label, group, ctx) plus one `defaults()` line with its key and
+  pad inputs. It then shows on the CONTROLS screen, is rebindable and is saved; nothing touches project.godot.
+- `ctx` says where an action is live (`CTX_FLIGHT`, `CTX_MENU`). A rebind clashing with an action live at the
+  same time swaps (the other takes the old input); a clash with a `fixed` one is refused. PAUSE and the MENUS
+  group are fixed, so the way out of a menu can't be lost. ESC and START are reserved to cancel a capture.
+- ESC is both PAUSE and BACK: `menu_action` checks the MENUS group first, so to a menu it is BACK.
+- The left stick drives menus through synthetic `InputEventAction` presses with key-repeat (`_drive_pad_nav`);
+  a held D-pad repeats the same way. Anything that glides while held (the chart's mark) polls `nav_vector()`.
+  Pad axes fire many motion events, so step-once actions (chart zoom/center) poll `is_action_just_pressed`.
+- Log tabs take `handle_action(action: StringName)`, not keycodes. Tests call e.g. `tab.handle_action(&"menu_down")`.
+- Playtests run on their own controls file (defaults); `pt.controls_ui()` is the open screen. `playtests/controls.play`.
+
 ## Terminal UI Patterns
 
 Panel: `StyleBoxFlat: draw_center=false, border_width=2, border_color=Colors.UI_BORDER`

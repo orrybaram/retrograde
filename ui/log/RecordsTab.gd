@@ -29,7 +29,8 @@ const EMPTY_STATE := [
 ## one line (PlanetScan.summary_line) instead.
 const NO_SURVEY := "UNSURVEYED"
 ## The keys this tab owns, laid before the shell's in the bottom border.
-const CURSOR_KEYS := "[UP/DOWN] SELECT"
+static func cursor_keys() -> String:
+	return "[%s] SELECT" % Controls.nav_label()
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
 ## Section headings inside the list column. Smaller than TerminalWindow.header(): these
 ## label a list within a column rather than a panel of the screen.
@@ -78,8 +79,8 @@ func tab_title() -> String:
 ## stayed home is offered the shell's keys alone.
 func hint() -> String:
 	if _row_count() == 0:
-		return SHELL_KEYS
-	return "%s   %s" % [CURSOR_KEYS, SHELL_KEYS]
+		return shell_keys()
+	return "%s   %s" % [cursor_keys(), shell_keys()]
 
 
 func _build() -> void:
@@ -248,14 +249,14 @@ static func orbits(body: Planet) -> String:
 
 # --- Input -------------------------------------------------------------------
 
-func handle_key(keycode: int) -> bool:
+func handle_action(action: StringName) -> bool:
 	if _row_count() == 0:
 		return false
-	match keycode:
-		KEY_UP:
+	match action:
+		&"menu_up":
 			_move_cursor(-1)
 			return true
-		KEY_DOWN:
+		&"menu_down":
 			_move_cursor(1)
 			return true
 	return false

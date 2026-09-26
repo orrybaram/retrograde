@@ -169,7 +169,7 @@ func test_no_visits_leaves_the_bodies_list_empty() -> void:
 	assert_bool(tab._empty.visible).is_true()
 	assert_bool(tab._bodies.visible).is_false()
 	assert_str("\n".join(_text(tab))).not_contains("? ? ?")
-	assert_str(tab.hint()).is_equal(LogTab.SHELL_KEYS)
+	assert_str(tab.hint()).is_equal(LogTab.shell_keys())
 
 
 ## A Body reached with no scanner aboard gets a row, and the row says so.
@@ -289,14 +289,14 @@ func test_up_and_down_move_the_cursor_and_the_detail_follows() -> void:
 	var tab := _records_tab()
 	assert_int(tab._cursor).is_equal(0)
 	assert_str("\n".join(_text(tab._detail))).contains("CROM")
-	assert_bool(tab.handle_key(KEY_DOWN)).is_true()
+	assert_bool(tab.handle_action(&"menu_down")).is_true()
 	assert_int(tab._cursor).is_equal(1)
 	assert_str("\n".join(_text(tab._detail))).contains("SONDER")
-	assert_bool(tab.handle_key(KEY_UP)).is_true()
+	assert_bool(tab.handle_action(&"menu_up")).is_true()
 	assert_int(tab._cursor).is_equal(0)
 	assert_str("\n".join(_text(tab._detail))).contains("CROM")
 	# and the cursor wraps rather than sticking at the ends
-	tab.handle_key(KEY_UP)
+	tab.handle_action(&"menu_up")
 	assert_int(tab._cursor).is_equal(1)
 
 
@@ -305,8 +305,8 @@ func test_the_cursor_keys_appear_with_the_first_record() -> void:
 	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
 	_gs.mark_planet_visited(crom.save_key())
 	var tab := _records_tab()
-	assert_str(tab.hint()).contains(RecordsTab.CURSOR_KEYS)
-	assert_str(tab.hint()).contains(LogTab.SHELL_KEYS)
+	assert_str(tab.hint()).contains(RecordsTab.cursor_keys())
+	assert_str(tab.hint()).contains(LogTab.shell_keys())
 
 
 ## Nothing to move through, nothing to swallow: LEFT / RIGHT stay unclaimed either way.
@@ -314,5 +314,5 @@ func test_unclaimed_keys_pass_through() -> void:
 	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
 	_gs.mark_planet_visited(crom.save_key())
 	var tab := _records_tab()
-	assert_bool(tab.handle_key(KEY_LEFT)).is_false()
-	assert_bool(tab.handle_key(KEY_RIGHT)).is_false()
+	assert_bool(tab.handle_action(&"menu_left")).is_false()
+	assert_bool(tab.handle_action(&"menu_right")).is_false()

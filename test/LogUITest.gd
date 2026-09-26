@@ -131,11 +131,11 @@ func test_only_the_map_claims_left_and_right() -> void:
 	for tab in log_ui._tabs:
 		if tab is MapTab:
 			continue
-		assert_bool(tab.handle_key(KEY_LEFT)).is_false()
-		assert_bool(tab.handle_key(KEY_RIGHT)).is_false()
+		assert_bool(tab.handle_action(&"menu_left")).is_false()
+		assert_bool(tab.handle_action(&"menu_right")).is_false()
 	log_ui.open_map()
-	assert_bool(log_ui._tabs[LogUI.MAP_TAB].handle_key(KEY_LEFT)).is_true()
-	assert_bool(log_ui._tabs[LogUI.MAP_TAB].handle_key(KEY_RIGHT)).is_true()
+	assert_bool(log_ui._tabs[LogUI.MAP_TAB].handle_action(&"menu_left")).is_true()
+	assert_bool(log_ui._tabs[LogUI.MAP_TAB].handle_action(&"menu_right")).is_true()
 
 
 ## "M" opens the Log straight onto the star chart, and the chart is up with it.
@@ -175,7 +175,7 @@ func test_the_map_hint_carries_the_chart_keys() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_map()
 	assert_str(log_ui._frame._hint.text).contains("ZOOM")
-	assert_str(log_ui._frame._hint.text).contains(LogTab.SHELL_KEYS)
+	assert_str(log_ui._frame._hint.text).contains(LogTab.shell_keys())
 
 
 func _map(log_ui: LogUI) -> SystemMap:

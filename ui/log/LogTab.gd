@@ -8,8 +8,10 @@ extends VBoxContainer
 ## The Log is the player's own instrument, read alone — no Automaton speaks from
 ## inside a tab (see docs/GLOSSARY.md).
 
-## Keys the shell always offers, whichever tab is up.
-const SHELL_KEYS := "[TAB] SWITCH   [I] / [ESC]  CLOSE"
+## Keys the shell always offers, whichever tab is up, named for the device in use.
+static func shell_keys() -> String:
+	return "[%s] SWITCH   [%s] / [%s]  CLOSE" % [
+		Controls.label(&"menu_tab_next"), Controls.label(&"open_log"), Controls.label(&"menu_back")]
 
 
 ## This tab's label in the top-left notch, e.g. "HOLD". A tab is a control, not a
@@ -18,9 +20,9 @@ func tab_title() -> String:
 	return ""
 
 
-## What the bottom border says while this tab is up. Own keys go before SHELL_KEYS.
+## What the bottom border says while this tab is up. Own keys go before shell_keys().
 func hint() -> String:
-	return SHELL_KEYS
+	return shell_keys()
 
 
 ## Redraw from current game state. Called on open, on switch, and whenever the
@@ -29,9 +31,9 @@ func refresh() -> void:
 	pass
 
 
-## Handle a key the shell did not claim. Return true to swallow it.
-## The arrows arrive here; only the Map tab claims LEFT / RIGHT, to drive its mark.
-func handle_key(_keycode: int) -> bool:
+## Handle a menu action (`Controls.menu_action`) the shell did not claim. Return true to
+## swallow it. The directions arrive here; only the Map tab claims LEFT / RIGHT, to drive its mark.
+func handle_action(_action: StringName) -> bool:
 	return false
 
 

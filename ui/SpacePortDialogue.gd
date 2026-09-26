@@ -109,19 +109,22 @@ func _input(event: InputEvent) -> void:
 	if _store_ui and is_instance_valid(_store_ui) and _store_ui.visible:
 		return
 
-	if event is InputEventKey and event.pressed:
-		match event.keycode:
-			KEY_UP:
-				_move_selection(-1)
-				get_viewport().set_input_as_handled()
-			KEY_DOWN:
-				_move_selection(1)
-				get_viewport().set_input_as_handled()
-			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+	match Controls.menu_action(event):
+		&"menu_up":
+			_move_selection(-1)
+			get_viewport().set_input_as_handled()
+		&"menu_down":
+			_move_selection(1)
+			get_viewport().set_input_as_handled()
+		&"menu_accept":
+			_activate_selection()
+			get_viewport().set_input_as_handled()
+		&"menu_back":
+			close_dialogue()
+			get_viewport().set_input_as_handled()
+		_:
+			if event.is_action_pressed(&"action"):
 				_activate_selection()
-				get_viewport().set_input_as_handled()
-			KEY_ESCAPE:
-				close_dialogue()
 				get_viewport().set_input_as_handled()
 
 func _move_selection(direction: int) -> void:

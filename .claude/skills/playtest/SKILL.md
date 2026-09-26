@@ -101,6 +101,8 @@ still taking a waypoint on it, a purple link between two powered Gates, and both
 (`.playtest/chart_*.png`). Powering a Gate by hand (`eval pt.gate("Veld").power(gs)`) doesn't save on its own —
 `eval pt.save_now()` before a `reload`.
 
+`playtests/controls.play` opens CONTROLS from the start menu, rebinds BOOST to Q (swapping STRAFE LEFT onto SHIFT), reopens it over the pause menu and checks Q boosts in flight. `pt.controls_ui()` is whichever CONTROLS screen is up; runs use their own controls file, so a player's rebinds never leak into a scenario.
+
 `playtests/minimap.play` screenshots the minimap markers (ship arrow, station silhouette + beacon, shaded planets, scrap chunks, derelict pinned to the rim).
 
 `playtests/alerts.play` forces low fuel / a full hold and screenshots the vapor trail, engine sputter, full-hold HUD and gems left floating (`.playtest/alert_*.png`).

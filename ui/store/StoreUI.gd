@@ -139,19 +139,22 @@ func _input(event: InputEvent) -> void:
 	if not visible:
 		return
 
-	if event is InputEventKey and event.pressed:
-		match event.keycode:
-			KEY_UP:
-				_move_selection(-1)
-				get_viewport().set_input_as_handled()
-			KEY_DOWN:
-				_move_selection(1)
-				get_viewport().set_input_as_handled()
-			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+	match Controls.menu_action(event):
+		&"menu_up":
+			_move_selection(-1)
+			get_viewport().set_input_as_handled()
+		&"menu_down":
+			_move_selection(1)
+			get_viewport().set_input_as_handled()
+		&"menu_accept":
+			_activate_selection()
+			get_viewport().set_input_as_handled()
+		&"menu_back":
+			_on_escape()
+			get_viewport().set_input_as_handled()
+		_:
+			if event.is_action_pressed(&"action"):
 				_activate_selection()
-				get_viewport().set_input_as_handled()
-			KEY_ESCAPE:
-				_on_escape()
 				get_viewport().set_input_as_handled()
 
 
@@ -233,7 +236,7 @@ func _switch_to_character() -> void:
 	_mode = Mode.CHARACTER
 	_selected_index = 0
 	_section.text = "S E R V I C E S"
-	_frame.set_hint("UP/DN SELECT   ENTER CONFIRM   ESC LEAVE")
+	_frame.set_hint(Controls.menu_hint("CONFIRM", "LEAVE"))
 	var npc := _get_npc()
 	_card.say(_as_speech(npc.greeting) if npc else "Welcome aboard, pilot.", &"happy")
 
@@ -257,7 +260,7 @@ func _switch_to_talk() -> void:
 	_mode = Mode.TALK
 	_selected_index = 0
 	_section.text = "T A L K"
-	_frame.set_hint("UP/DN SELECT   ENTER ASK   ESC BACK")
+	_frame.set_hint(Controls.menu_hint("ASK", "BACK"))
 	_card.say("What's on your mind?", &"neutral")
 
 	_menu_items.clear()
@@ -271,7 +274,7 @@ func _switch_to_buy() -> void:
 	_mode = Mode.BUY
 	_selected_index = 0
 	_section.text = "U P G R A D E S"
-	_frame.set_hint("UP/DN SELECT   ENTER BUY   ESC BACK")
+	_frame.set_hint(Controls.menu_hint("BUY", "BACK"))
 	_rebuild_buy_items()
 
 
