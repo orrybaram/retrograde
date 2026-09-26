@@ -14,6 +14,7 @@ enum MainGameState {
 @onready var ship := $Ship
 @onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
 @onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
+@onready var intro_screen: IntroScreen = $"CanvasLayer/IntroScreen"
 @onready var log_ui: LogUI = $"CanvasLayer/LogUI"
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
@@ -153,6 +154,11 @@ func _toggle_system_map() -> void:
 		log_ui.open_map()
 
 func _on_start_game() -> void:
+	# Only New Game opens on the intro: a continue or a relaunch goes straight to the boot.
+	if intro_screen and _wake_enabled():
+		if start_menu:
+			start_menu.visible = false
+		await intro_screen.play()
 	await start_game()
 
 func _on_load_game() -> void:

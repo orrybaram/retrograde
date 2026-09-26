@@ -105,7 +105,9 @@ it. Clues, in the art and the text:
   time, or were stopped.
 - **The clone vats**: one empty and cracked, and a tally beside the row. Somebody was
   counting.
-- **`0347 CYCLES SINCE EVENT`**: the event was not an accident.
+- **`0 CYCLES SINCE EVENT`**: the new-game intro's record (`ui/IntroScreen.gd`), read before
+  anything else. The event was not an accident, and it has only just happened (decided
+  2026-09-25, replacing `0347`).
 
 Because the game is top-down, the station's interior is legible from outside by default.
 `CentralCore` is a polygon at the middle of the station. The player can see it. They never
@@ -482,5 +484,5 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > up without being led by the hand.
 > **TODO**: Range separates "answers" from "harvestable" (§4). Still decide how the
 > answering ring *looks* up close, where both are inside the bar.
-> **TODO**: `0347` - pick the number deliberately against whatever the clone counter ends up
-> being (`docs/DESIGN.md` §3.2 leaves it open).
+> **TODO**: The intro reads `0 CYCLES SINCE EVENT`: square "only just happened" with the
+> fine debris and the clone counter (`docs/DESIGN.md` §3.2 leaves its number open).

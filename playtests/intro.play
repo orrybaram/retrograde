@@ -1,4 +1,4 @@
-# The first minute: a boot terminal you can read, a beat in the dark, then the ship adrift
+# The first minute: three typed lines held for ENTER, a boot terminal you can read, a beat in the dark, then the ship adrift
 # outside a dead station, turning slowly over among fine debris, and silence. UNIT-7 is off: nothing radios the player on waking.
 # The driver suppresses waking up by default, so this is the one scenario that asks for it.
 # Boot lines themselves are pinned in test/LoadingScreenTest.gd.
@@ -7,6 +7,17 @@
 eval main.set("force_wake_sequence", true)
 assert main.current_game_state == 0 "boots to menu"
 press enter
+
+# Three lines typed out close up, before anything boots. It waits on ENTER.
+wait_until pt.visible_ui().has("IntroScreen") 2
+wait 1.8
+screenshot 00_intro_typing
+wait 10
+assert pt.visible_ui().has("IntroScreen") "the finished text waits for the player"
+assert main.current_game_state == 0 "nothing has started under the intro"
+screenshot 00_intro_waiting
+press enter
+wait_until not pt.visible_ui().has("IntroScreen") 2
 
 # The boot terminal stays up long enough to be read, not a flash
 wait_until pt.visible_ui().has("LoadingScreen") 5
