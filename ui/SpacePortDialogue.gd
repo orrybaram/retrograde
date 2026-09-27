@@ -2,7 +2,8 @@ extends Control
 class_name SpacePortDialogue
 
 ## Space Port hub menu - small left-side panel listing what the dock offers.
-## There is no store (docs/adr/0007): for now the only row is DEPART.
+## There is no store (docs/adr/0007): at SR-7, a Component waiting in the Cradle can be
+## fitted (`FIT CARGO BAY`); otherwise the only row is DEPART.
 
 var ship: Ship = null
 var spaceport: SpacePort = null
@@ -165,6 +166,14 @@ func _update_hub_display() -> void:
 	_menu_items.clear()
 	_clear_container(_hub_items_container)
 
+	var cradle := _cradle()
+	if cradle:
+		_menu_items.append({
+			"enabled": true,
+			"action": _fit,
+			"label": "FIT %s" % Components.label(gs.cradled),
+		})
+
 	_menu_items.append({
 		"enabled": true,
 		"action": close_dialogue,
@@ -180,6 +189,20 @@ func _update_hub_display() -> void:
 		_hub_items_container.add_child(_make_menu_label())
 
 	_update_menu_display()
+
+## SR-7's Cradle, when the ship is docked at SR-7 and something is waiting in it.
+func _cradle() -> Cradle:
+	if gs == null or gs.cradled == "" or not is_inside_tree():
+		return null
+	var cradle := Cradle.find(get_tree())
+	return cradle if cradle and cradle.serves(spaceport) else null
+
+func _fit() -> void:
+	var cradle := _cradle()
+	if cradle:
+		cradle.fit()
+	_selected_index = 0
+	_update_hub_display()
 
 func _update_menu_display() -> void:
 	var labels: Array[RichTextLabel] = []

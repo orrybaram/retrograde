@@ -48,6 +48,10 @@ var seated_sections: Dictionary = {}
 ## id), or "" while the Cradle is empty. Permanent until it is fitted.
 var cradled := ""
 
+## Components fitted to the ship from the Cradle, keyed by Components id. Permanent: the
+## ship's hold is the Cargo Bay's (Ship.refit).
+var fitted: Dictionary = {}
+
 ## SR-7's core has been cold-started (docs/OPENING.md §5): the station has power, UNIT-7
 ## is awake, and SR-7's dock is crewed again. The world fact, not the radio's. Permanent -
 ## a station does not go back to being dead.
@@ -87,6 +91,12 @@ func has_met_automaton(designation: String) -> bool:
 
 func mark_automaton_met(designation: String) -> void:
 	met_automatons[designation] = true
+
+func is_fitted(id: String) -> bool:
+	return fitted.has(id)
+
+func mark_fitted(id: String) -> void:
+	fitted[id] = true
 
 func is_section_seated(id: String) -> bool:
 	return seated_sections.has(id)
@@ -168,6 +178,7 @@ func reset_all_state() -> void:
 	met_automatons.clear()
 	seated_sections.clear()
 	cradled = ""
+	fitted.clear()
 	core_started = false
 	death_count = 0
 	InventoryManager.clear_inventory()

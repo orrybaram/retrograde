@@ -2,6 +2,8 @@
 # slung under the refuel boom's root, open outboard. Clamping the Cargo Bay tracks the
 # Cradle; flown in under the dock's head and let go of in tolerance, it is pulled home and
 # stays there, as itself, through a reload - and the hauler on Veld never puts another back.
+# Docked, `FIT CARGO BAY` fits it: the hold becomes 50, the readout shows, and it stays
+# fitted through a reload.
 # Run: tools/play.sh --headless playtests/cradle.play
 
 press enter
@@ -11,7 +13,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
-eval pt.skip_opening()
+eval pt.skip_opening(false)
 wait_until pt.state_name() == "LandedState" 5
 wait 0.1
 assert pt.cradle() != null and pt.cradle().visible "the Cradle hangs off the arm, out"
@@ -60,5 +62,33 @@ wait 0.5
 assert gs.cradled == "cargo_bay" "still in the Cradle after a reload"
 assert pt.cradle().is_full() "shown there"
 assert pt.cradle().piece.global_position.distance_to(pt.cradle().global_position) < 1.0 "in place"
+assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"
+
+# --- Docked at SR-7, FIT CARGO BAY: the ship has its hold ---
+assert ship.max_cargo_weight == 0.0 "no hold before it is fitted"
+eval pt.redock()
+wait_until pt.state_name() == "LandedState" 10
+wait_until pt.visible_ui().has("SpacePortDialogue") 10
+assert str(pt.screen_text()).contains("> FIT CARGO BAY") "FIT CARGO BAY offered, selected"
+screenshot cradle_3_fit_offered
+press enter
+wait 0.1
+assert ship.max_cargo_weight == 50.0 "the hold is 50"
+assert gs.is_fitted("cargo_bay") and gs.cradled == "" "fitted, out of the Cradle"
+assert not pt.cradle().is_full() "the Cradle is empty"
+assert not str(pt.screen_text()).contains("FIT CARGO BAY") "nothing more to fit"
+press enter
+wait 0.2
+assert not pt.visible_ui().has("SpacePortDialogue") "departed the menu"
+assert str(pt.screen_text()).contains("/50") "the cargo readout shows"
+screenshot cradle_4_fitted
+
+# --- Fitted through a reload, and nothing loose on Veld ---
+eval pt.save_now()
+reload
+wait 0.5
+assert gs.is_fitted("cargo_bay") "still fitted after a reload"
+assert ship.max_cargo_weight == 50.0 "and the hold is 50"
+assert not pt.cradle().is_full() "the Cradle stays empty"
 assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"
 quit

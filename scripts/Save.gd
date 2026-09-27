@@ -28,6 +28,7 @@ const SECTION_SECTION := "sections"
 const SECTION_SEATED_KEY := "seated"
 const SECTION_CORE_KEY := "core_started"
 const SECTION_CRADLE_KEY := "cradled"
+const SECTION_FITTED_KEY := "fitted"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -85,6 +86,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray(gs.seated_sections.keys()))
 	cfg.set_value(SECTION_SECTION, SECTION_CORE_KEY, gs.core_started)
 	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, gs.cradled)
+	cfg.set_value(SECTION_SECTION, SECTION_FITTED_KEY, PackedStringArray(gs.fitted.keys()))
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -264,6 +266,25 @@ static func load_cradled(path: String = "") -> String:
 		return ""
 	return str(cfg.get_value(SECTION_SECTION, SECTION_CRADLE_KEY, ""))
 
+## Writes a Component fitted from the Cradle into an existing save the moment it happens:
+## what is fitted, and the Cradle empty again. With no save yet this does nothing; the next
+## full save() writes it.
+static func save_fitted(ids: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(SECTION_SECTION, SECTION_FITTED_KEY, ids)
+	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, "")
+	cfg.save(file)
+
+## The Components fitted to the ship. A save from before fitting has none.
+static func load_fitted(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(SECTION_SECTION, SECTION_FITTED_KEY, PackedStringArray()))
+
 ## Writes SR-7's core cold start into an existing save the moment it catches: it happens in
 ## flight, with no dock to hang a full save off. With no save yet the next full save() writes it.
 static func save_core_started(started: bool, path: String = "") -> void:
@@ -327,6 +348,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 		gs.mark_automaton_met(designation)
 	gs.restore_station(load_seated_sections(), load_core_started())
 	gs.cradled = load_cradled()
+	gs.fitted.clear()
+	for id in load_fitted():
+		gs.mark_fitted(id)
 	RobotRadio.guide_awake = gs.core_started
 	
 	# Load inventory into InventoryManager
@@ -348,6 +372,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 		# Clamp to max values (in case save has invalid values)
 		ship.fuel = min(ship.fuel, ship.max_fuel)
 		ship.hull_strength = min(ship.hull_strength, ship.max_hull)
+		ship.refit(gs)
 		ship.update_mass_from_cargo()  # Update mass based on loaded cargo
 
 ## Respawn saved wreck gems into `world`.
