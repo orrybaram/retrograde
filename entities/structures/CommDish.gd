@@ -32,6 +32,8 @@ const PING_WIDTH := 2.5
 ## another - its own ring reaches it the instant it leaves.
 const PING_GLOW_TIME := 0.9
 const PING_COOLDOWN := 2.5
+## How long after a ping whatever listens for the dish (dish_listeners) hears it, s.
+const DISH_ANSWER_DELAY := 2.0
 
 var limp := false:
 	set(on):
@@ -98,6 +100,20 @@ func ping() -> void:
 			_glow.tween_property(part, "modulate", Color.WHITE, PING_GLOW_TIME)
 	EventBus.sonar_pulsed.emit(global_position)
 	_pulse._reach_listeners(global_position, PING_STRENGTH)
+	_reach_dish_listeners()
+
+## Whatever listens for the dish itself (HaulerWreck) hears it this long after it leaves,
+## however far off: an answer from across the system, back while the ring is still going
+## out and before UNIT-7 comes on the comms (StationPower.PING_WATCH).
+func _reach_dish_listeners() -> void:
+	for node in get_tree().get_nodes_in_group("dish_listeners"):
+		if not node.has_method("on_dish_ping"):
+			continue
+		var id := node.get_instance_id()
+		get_tree().create_timer(DISH_ANSWER_DELAY, false).timeout.connect(func() -> void:
+			var listener := instance_from_id(id)
+			if listener and is_instance_valid(listener):
+				listener.on_dish_ping())
 
 ## A load or a new game: no swing, no ping - it is simply where it belongs next frame.
 func cancel_wake() -> void:

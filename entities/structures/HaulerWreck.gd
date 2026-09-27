@@ -22,6 +22,9 @@ const BAY_LEAN := 0.12
 const NAME := "HAULER, DOWN"
 const MSG_IDENTIFIED := preload("res://entities/Robot/radio/messages/hauler_identified.tres")
 
+## SR-7's dish ping at the cold start (CommDish.ping) reaching the wreck puts it on the
+## minimap as a ping (HaulerWreckMinimapTarget) until it has been identified.
+
 ## Where on the planet it lies: degrees round from the planet's +X.
 @export var ground_angle_degrees := 205.0
 @export var component := Components.CARGO_BAY
@@ -49,10 +52,14 @@ const PLATES := [
 var planet: Planet
 ## Off in tests so naming the wreck never touches a save file (Gate does the same).
 var persist := true
+## The dish's ping has reached it: it pings on the minimap until it is identified.
+var heard := false
 var _ship: Node2D = null
+var _minimap_target: HaulerWreckMinimapTarget = null
 
 func _ready() -> void:
 	add_to_group("hauler_wrecks")
+	add_to_group("dish_listeners")
 	planet = get_parent() as Planet
 	z_index = 0  # under the planet's disc (PlanetVisual is 1): below ground is hidden
 	if planet:
@@ -60,7 +67,32 @@ func _ready() -> void:
 		position = dir * Mount.ground_radius(planet)
 		rotation = dir.angle() + PI * 0.5
 	EventBus.planets_restored.connect(ensure_cargo_bay)
+	EventBus.planets_restored.connect(_restore_heard)
 	queue_redraw()
+	_register_with_minimap.call_deferred()
+
+func _register_with_minimap() -> void:
+	var minimap := Minimap.get_instance(get_tree())
+	if minimap:
+		_minimap_target = HaulerWreckMinimapTarget.new(self)
+		minimap.register_target(_minimap_target)
+
+func _exit_tree() -> void:
+	if _minimap_target:
+		var minimap := Minimap.get_instance(get_tree())
+		if minimap:
+			minimap.unregister_target(_minimap_target)
+		_minimap_target = null
+
+## SR-7's dish ping has reached the wreck (CommDish.ping).
+func on_dish_ping() -> void:
+	heard = true
+
+## A load or a new game: the dish has already pinged if the core is running (a load skips
+## the wake, so no ping will come to set it).
+func _restore_heard() -> void:
+	var gs := _game_state()
+	heard = gs != null and gs.core_started
 
 ## The hauler wreck in `tree`, or null.
 static func find(tree: SceneTree) -> HaulerWreck:
