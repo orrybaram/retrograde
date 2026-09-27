@@ -40,8 +40,16 @@ assert ship.thruster_particles.emitting "the cough takes the boost, not the thru
 assert not ship.boost_particles.emitting "the boost plume is what a cough cuts"
 burst alert_sputter 6 0.06
 up boost
-up thrust
 eval ship.set("dev_infinite_fuel", false)
+# Trying to boost on a dry tank coughs too, and plain thrust still flies
+eval ship.set("fuel", 0.0)
+wait 0.5
+assert not ship.low_fuel_effect.is_coughing() "a dry tank on plain thrust never coughs"
+down boost
+wait_until ship.low_fuel_effect.is_coughing() 3
+assert ship.thruster_particles.emitting "a dry cough leaves the thrust alone"
+up boost
+up thrust
 eval ship.set("fuel", 150.0)
 wait 0.2
 assert not ship.low_fuel_effect.is_coughing() "cough clears above threshold"

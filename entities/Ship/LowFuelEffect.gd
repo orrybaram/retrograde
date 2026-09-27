@@ -7,6 +7,7 @@ class_name LowFuelEffect
 ##   spits sparks and smoke, and the hull jolts. Ordinary thrust runs on aux power and never
 ##   coughs: a low or empty tank costs the boost and nothing else. FlyingState drops the boost
 ##   during a cough (particles already out finish naturally). Rare when LOW, frequent when CRITICAL.
+##   A dry tank coughs too when you try to boost: nothing to burn, and the engine says so.
 ## Only runs in flight; docking refuels and clears it. Puffs are drawn in world space.
 
 enum Level { OK, LOW, CRITICAL }
@@ -78,8 +79,9 @@ func _emit_vapor(delta: float) -> void:
 		})
 
 func _update_sputter(delta: float) -> void:
-	# Only a burn draws on the tank, so only a burn can cough
-	var burning := (_ship.want_thrust or _ship.want_reverse_thrust) and _ship.want_boost and _ship.fuel > 0.0
+	# Only a burn draws on the tank, so only a burn can cough - including one tried on
+	# an empty tank
+	var burning := (_ship.want_thrust or _ship.want_reverse_thrust) and _ship.want_boost
 	if _cough_left > 0.0:
 		_cough_left -= delta
 		if _cough_left <= 0.0:
