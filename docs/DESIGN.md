@@ -38,7 +38,7 @@ The system is organized in orbital tiers, with the player starting in the outerm
 
 Each planet hosts one **Module**: one subsystem of the Titan, offline since the shutdown. Each Module is powered by exactly one **Gate**, a dormant structure in that planet's orbit. Powering a Gate brings its Module online, charts its region, and links it to every other powered Gate for transit. There is no way to power a Module back down.
 
-**Naming convention:** Official military designations exist for everything, but the automatons use older civilian names. Both coexist, adding texture to the world's layered history. The civilian names are the ones in `scenes/HomeSystem.tscn`.
+**Naming convention:** Official military designations exist for everything, but the automatons use older civilian names. Both coexist, adding texture to the world's layered history. The civilian names are the ones in `scenes/HomeSystem.tscn`. The system itself is the **Kotlar**, designation **KSD-78** (see `CONTEXT.md`).
 
 ---
 

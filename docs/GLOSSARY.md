@@ -4,6 +4,10 @@ Retrograde's vocabulary, in full: what each term means, what to call it instead 
 
 ## The Titan
 
+**Kotlar**:
+The solar system's name, military designation **KSD-78**. Automatons say "the Kotlar"; the military writes KSD-78. Both hide the pre-war catalog name, Kessler's Star: Kessler syndrome is the debris cascade that a war of anti-satellite weapons leaves behind, first described in 1978, and *Kotlar* is the Czech form of the same trade as Kessler (a kettle-maker, a tinker). Never state the Kessler link; it is lore to find, not to tell.
+_Avoid_: Kessler, Kessel (Star Wars), the home system (code name only)
+
 **Titan**:
 The solar-system-scale AI that the war shut down; the whole system is its body.
 _Avoid_: the prisoner, the contained AI, the thing in the sun

@@ -15,4 +15,4 @@ Full vocabulary, definitions and relationships: **`docs/GLOSSARY.md`**. Read the
 
 ## Terms
 
-Titan, Module, Gate, Core, Sun Station, Titan Influence, Automaton, Guide, Merchant, Unidentified, Charted, Chart, Void, Body, Visited, Sweep, Procedure, Component, Freight, Clamp, Lug, Section, Mount, Cradle, Log, Record, Note.
+Kotlar, Titan, Module, Gate, Core, Sun Station, Titan Influence, Automaton, Guide, Merchant, Unidentified, Charted, Chart, Void, Body, Visited, Sweep, Procedure, Component, Freight, Clamp, Lug, Section, Mount, Cradle, Log, Record, Note.
