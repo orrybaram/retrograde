@@ -73,7 +73,7 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/magnet.play` drops gems around the flying ship and checks the magnet pulls them in (range, fly-by, full hold).
 
-`playtests/dock.play` redocks with a stocked hold and empty tank: gems arc into the port while HUD Stores roll up, the dialogue waits for the Deposit, SR-7 tops the tank up to its free quarter and stops, and leaves a tank above the quarter alone (`.playtest/dock_*.png`).
+`playtests/dock.play` redocks with a stocked hold and empty tank: gems arc into the port while HUD Stores roll up, the dialogue waits for the Deposit, SR-7 tops the tank up to its free quarter, then spends the Stores on the hull first and the tank past the quarter (and runs them dry when they are short), and with no Stores leaves a tank above the quarter alone (`.playtest/dock_*.png`).
 
 `playtests/wreck.play` blows the ship up with a stocked hold: 70% of it stays at the wreck through respawn, the loose-gem lifetime and a save reload, then gets collected (`pt.wreck_gem_count()`, `pt.warp_to_wreck()`).
 
