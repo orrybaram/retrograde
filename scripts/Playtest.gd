@@ -858,6 +858,8 @@ func rel_speed(planet_name: String) -> float:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	return (ship.linear_velocity - planet(planet_name).linear_velocity).length()
 
+const STOCK_HOLD := 50.0
+
 ## Warp back to the home port and dock (as if the player had flown in).
 ## Skip Act 1 for a scenario that is not about it: SR-7's core already running - so its
 ## arm is out, its port open and the station lit - and the ship docked there, instantly,
@@ -874,6 +876,13 @@ func skip_opening() -> void:
 			if child is WakeDrift:
 				child.queue_free()
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	# A new game starts with a dry tank and no hold; scenarios past the opening start with
+	# a full tank and the stock 50-unit hold (nothing in the game grants one yet)
+	ship.base_max_cargo_weight = STOCK_HOLD
+	ship.max_cargo_weight = STOCK_HOLD
+	ship.cargo_changed.emit(ship.get_cargo_weight(), ship.max_cargo_weight)
+	ship.fuel = ship.max_fuel
+	ship.fuel_changed.emit()
 	var port := node("space_ports") as Node2D
 	warp_to(port.get_dock_position())
 	ship.set_meta("pending_dockable", port)

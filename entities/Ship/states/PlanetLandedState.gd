@@ -96,8 +96,9 @@ func physics_process(delta: float) -> void:
 		return
 	# A sweep starts on a fresh press, not a key still held from flying or from the hit
 	# that just landed; once it is running, holding keeps it going.
+	# With no hold there is nothing to work the seam into: it never starts.
 	var holding := Input.is_action_pressed("action") if ore.is_harvesting() \
-		else Input.is_action_just_pressed("action")
+		else Input.is_action_just_pressed("action") and ship.has_hold()
 	ore.tick_harvest(delta, holding)
 	_update_prompt()
 
@@ -160,7 +161,7 @@ func _update_prompt() -> void:
 func prompt_text() -> String:
 	if ore.is_spent():
 		return "SEAM SPENT"
-	if ore.is_harvesting():
+	if ore.is_harvesting() or not ship.has_hold():
 		return ""
 	return EventBus.action_prompt("HARVEST")
 

@@ -9,6 +9,7 @@ extends Control
 @onready var hull_label: Label = $"DashboardAnchor/HBox/RightColumn/HullRow/HullLabel"
 @onready var current_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CurrentCargoLabel"
 @onready var max_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/MaxCargoLabel"
+@onready var cargo_icon: TextureRect = $"DashboardAnchor/HBox/RightColumn/CargoRow/TrolleyIcon"
 @onready var stores_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/StoresLabel"
 @onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
@@ -128,6 +129,10 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	if gs == null: return
 	var cargo_weight = InventoryManager.get_total_weight()
 	var max_cargo = int(ship.max_cargo_weight) if ship and is_instance_valid(ship) and "max_cargo_weight" in ship else 50
+	# No hold, no readout: the ship has nothing to fill, not an empty hold
+	var has_hold: bool = max_cargo > 0
+	for node: CanvasItem in [cargo_icon, current_cargo_label, max_cargo_label]:
+		node.visible = has_hold
 	current_cargo_label.text = "%d" % int(cargo_weight)
 	var cargo_full: bool = cargo_weight >= max_cargo
 	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo

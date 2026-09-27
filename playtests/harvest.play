@@ -17,6 +17,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
+assert pt.node("hud").current_cargo_label.visible "past the opening there is a hold, and the HUD reads it"
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
