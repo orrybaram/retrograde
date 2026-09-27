@@ -469,10 +469,9 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > in ordinary debris.
 > **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
 > dock without ever reading as a tutorial popup.
-> **TODO**: The dry dock is not built. §3 says the player's own dock has no tank to fill
-> from, but `LandedState` still refuels at any port, so a dead SR-7 hands out a free full
-> tank. Gate refuelling on the FUEL TANK Section being seated - but not before ADR 0010's
-> Aux exists, which it does not, or an empty tank before the tank is home is a soft-lock.
+> **TODO**: The dry dock is not built. A dead SR-7 now gives nothing on a dock or a
+> relaunch, and a running one tops the tank up to a quarter (`Ship.free_fuel_floor`), but
+> an empty tank before the cold start is a soft-lock until ADR 0010's Aux exists.
 > **TODO**: What the dock offers *after* the wake is ADR 0007's, not this document's:
 > there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the
 > player brings. The store is gone (#132); the hub the wake opens offers only `DEPART`

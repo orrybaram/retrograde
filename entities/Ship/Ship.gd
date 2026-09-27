@@ -352,6 +352,22 @@ func reset_boost_particles() -> void:
 	boost_particles.emitting = false
 	boost_particles.position = Vector2(-10, 0)  # Reset position
 
+## What SR-7 puts in the tank for nothing (docs/OPENING.md §9): once its core is running,
+## every dock and every relaunch tops the tank up to a quarter, never higher. A dead SR-7
+## gives nothing. Anything past the quarter is paid for out of Stores.
+const FREE_FUEL_FRACTION := 0.25
+
+## The level SR-7 tops the tank up to, or 0 while its core is cold.
+func free_fuel_floor(gs: GameState) -> float:
+	if gs == null or not gs.core_started:
+		return 0.0
+	return max_fuel * FREE_FUEL_FRACTION
+
+## Relaunch: SR-7 tops the tank up to its free quarter at once. Never drains it.
+func top_up_to_free_floor(gs: GameState) -> void:
+	fuel = maxf(fuel, free_fuel_floor(gs))
+	fuel_changed.emit()
+
 ## Consume fuel and return true if fuel was consumed
 func consume_fuel(amount: float) -> bool:
 	# The dev panel's infinite tank: the engine still fires, the gauge never moves.

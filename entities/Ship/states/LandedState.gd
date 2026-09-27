@@ -14,8 +14,10 @@ var _dialogue = null  # SpacePortDialogue
 var _terminal: CoreTerminal = null
 var _cash_in: HoldCashIn = null
 var _refueling := false
+## Where this dock's fill stops: SR-7's free quarter (Ship.free_fuel_floor).
+var _refuel_target := 0.0
 
-## Seconds for a port to fill an empty tank.
+## Seconds for a port to fill an empty tank; the free quarter takes a quarter of that.
 const REFUEL_TIME := 5.0
 
 ## Docked: `action` is the port's key, not the sonar's.
@@ -70,13 +72,14 @@ func enter() -> void:
 	
 	var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
 
-	# Space ports: refuel over time, fly the hold into the port as credits, refresh resources
+	# Space ports: top the tank up to SR-7's free quarter, fly the hold into the port as
+	# credits, refresh resources
 	var at_port := locked_dockable.is_in_group("space_ports")
 	# A port nobody runs takes no delivery: the hold keeps what it carries until someone
 	# is awake to receive it (docs/OPENING.md §3, SpacePort.is_open).
 	var port_open := at_port and _port_is_open()
 	if at_port:
-		_refueling = true
+		_start_refuel(gs)
 		if port_open:
 			_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
 			if _cash_in:
@@ -110,6 +113,7 @@ func exit() -> void:
 	var cash_in := _cash_in
 	_cash_in = null
 	_refueling = false
+	_refuel_target = 0.0
 	_close_core_terminal()
 	# Close dialogue if open
 	if _dialogue and is_instance_valid(_dialogue):
@@ -311,10 +315,16 @@ func _toggle_dialogue() -> void:
 			if spaceport:
 				_dialogue.open_dialogue(spaceport)
 
+## Tops the tank up to SR-7's free quarter, if it is below it. A cold SR-7 gives nothing,
+## and a tank already past the quarter is left alone (docs/OPENING.md §9).
+func _start_refuel(gs: GameState) -> void:
+	_refuel_target = ship.free_fuel_floor(gs)
+	_refueling = ship.fuel < _refuel_target
+
 func _refuel(delta: float) -> void:
-	ship.fuel = minf(ship.fuel + ship.max_fuel / REFUEL_TIME * delta, ship.max_fuel)
+	ship.fuel = minf(ship.fuel + ship.max_fuel / REFUEL_TIME * delta, _refuel_target)
 	ship.fuel_changed.emit()
-	if ship.fuel >= ship.max_fuel:
+	if ship.fuel >= _refuel_target:
 		_refueling = false
 		_autosave()
 
@@ -423,8 +433,10 @@ func _on_reboot_requested() -> void:
 		return
 	if ship.camera:
 		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
+	var gs := ship.get_tree().get_first_node_in_group("game_state") as GameState
+	# The first thing a running SR-7 does for the ship on its dock is the free quarter
+	_start_refuel(gs)
 	if _port_is_open():
-		var gs := ship.get_tree().get_first_node_in_group("game_state") as GameState
 		_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
 		if _cash_in:
 			_cash_in.finished.connect(_on_cash_in_finished)

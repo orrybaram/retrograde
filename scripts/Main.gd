@@ -550,7 +550,7 @@ func reset_game() -> void:
 	# Reset ship state
 	if ship:
 		ship.hull_strength = ship.max_hull
-		ship.fuel = ship.max_fuel
+		ship.top_up_to_free_floor(gs)
 		ship.linear_velocity = Vector2.ZERO
 		ship.angular_velocity = 0.0
 		ship.rotation = 0.0  # Reset rotation

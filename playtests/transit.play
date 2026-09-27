@@ -1,4 +1,4 @@
-# Transit between powered Gates, and the free fill while docked at one. Power Veld's
+# Transit between powered Gates, and no fuel while docked at one. Power Veld's
 # Gate, bring Crom's Module online too, then take the link from one cradle to the other
 # and check the trip cost nothing.
 # Run: tools/play.sh playtests/transit.play   (frames land in .playtest/transit_*.png)
@@ -46,19 +46,14 @@ wait_until gs.titan_influence() == 2 3
 wait_until not pt.node("gate_terminal").is_booting() 8
 assert gs.credits == 400 "Veld's Gate took its 600 CR"
 
-# The free fill: the tank comes up to full and nothing is charged for it
-press down
-assert pt.node("gate_terminal")._menu_items[1]["right"] == "FREE" "the Gate charges nothing for fuel"
-press enter
-wait 0.6
-screenshot transit_0_refuelling
-wait_until ship.fuel >= ship.max_fuel 8
-assert gs.credits == 400 "the Titan's fuel costs nothing"
+# A Gate gives no fuel: that is SR-7's (docs/OPENING.md §9)
+assert pt.node("gate_terminal")._menu_items.size() == 2 "a powered Gate offers transit and the door, no fuel"
+wait 1.0
+assert ship.fuel == 10.0 "the cradle leaves the tank as it was"
 assert ship.hull_strength == ship.max_hull "a Gate has no hull shop"
-screenshot transit_1_full
+screenshot transit_1_hub
 
 # The transit list: every other powered Gate, this one left out
-press up
 press enter
 frames 2
 assert pt.node("gate_terminal")._menu_items.size() == 1 "one linked Gate to go to"
