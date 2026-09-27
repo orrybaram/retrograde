@@ -74,13 +74,29 @@ var lodged_in: Node2D = null
 var lodged_spin := 0.0
 
 ## Buried in a planet's ground (the SOLAR ARRAY, lying in Rook). The magnet reaches it but
-## can't pull it: each hold of `action` that finds it is one tug, and the BURY_TUGS-th rips
-## it out (tug). This many tugs are still to go; 0 is not buried. Saved.
-const BURY_TUGS := 3
-var buried_tugs_left := 0
-## A tug that doesn't free it knocks the ship back this hard (px/s), and shakes the camera.
-const TUG_KICK := 55.0
-const TUG_SHAKE := 3.0
+## can't lift it: a ship coupled onto its Lug has to fly away from the ground and keep
+## pulling harder than `pull_threshold` for PULL_TIME to tear it free (pull). Saved.
+var buried := false
+## How hard it holds in the ground, as a share of the Aux's full thrust pointed straight
+## out of it (FlyingState.pull_force): under 1 the Aux can tear it free; over 1 only the
+## Burn can. Set by the Mount that buried it (Mount.buried_pull_threshold).
+const DEFAULT_PULL_THRESHOLD := 0.6
+var pull_threshold := DEFAULT_PULL_THRESHOLD
+## Seconds of pulling past the threshold that tear it free, and how much slower than that
+## the progress drains away when the pull eases off.
+const PULL_TIME := 1.3
+const PULL_EASE := 0.6
+## 0..1: how far the pull has got. Not saved - a load starts the pull over.
+var pull_progress := 0.0
+## The pull draws it up out of the ground this far (px) on its way to tearing free. It
+## never sinks back: what a pull won stays won.
+const PULL_RISE := 18.0
+var _risen := 0.0
+## Straining at it shakes the camera up to this hard, and throws a puff of dust at the
+## ground this often (s) - harder and more often the nearer the pull is to the threshold.
+const STRAIN_SHAKE := 2.5
+const STRAIN_DUST_EVERY := 0.28
+var _strain_dust := 0.0
 const BREAK_SHAKE := 7.0
 
 var _collider: CollisionPolygon2D
@@ -210,13 +226,15 @@ func lodge_in(body: Node2D, offset: Vector2, spin := 0.0) -> void:
 # --- buried ---
 
 func is_buried() -> bool:
-	return buried_tugs_left > 0
+	return buried
 
 ## Sunk into `planet`'s ground: drawn under the planet's disc, so only what sticks out of
-## the ground shows, and never pushing on the planet it is inside.
-func bury_in(planet: Node2D, tugs := -1) -> void:
-	if tugs >= 0:
-		buried_tugs_left = tugs
+## the ground shows, and never pushing on the planet it is inside. `threshold` > 0 buries
+## it holding that hard (pull_threshold); without one it only re-sinks a piece still buried.
+func bury_in(planet: Node2D, threshold := 0.0) -> void:
+	if threshold > 0.0:
+		buried = true
+		pull_threshold = threshold
 	if not is_buried():
 		return
 	z_index = 0
@@ -232,36 +250,57 @@ func ground_point() -> Vector2:
 	var dir := (global_position - planet.global_position).normalized()
 	return planet.global_position + dir * Mount.ground_radius(planet)
 
-## A coupled ship straining at it, `amount` 0..1: it trembles in the ground, harder the
-## closer the coupling is to giving.
-func strain(amount: float) -> void:
+## One step (`dt` s) of a coupled ship pulling with `force` (FlyingState.pull_force). Past
+## `pull_threshold` the pull builds; short of it, it drains. True once it has built all
+## the way: the piece is ready to tear free (break_free).
+func pull(force: float, dt: float) -> bool:
+	if not is_buried():
+		return true
+	if force >= pull_threshold:
+		pull_progress = minf(pull_progress + dt / PULL_TIME, 1.0)
+	else:
+		pull_progress = maxf(pull_progress - dt / PULL_TIME * PULL_EASE, 0.0)
+	if pull_progress > _risen and lodged_in:
+		var up := lodged_in.global_transform.basis_xform_inv(ground_point() - lodged_in.global_position).normalized()
+		lodged_offset += up * (pull_progress - _risen) * PULL_RISE
+		_risen = pull_progress
+	return pull_progress >= 1.0
+
+## 0..1: how hard `force` strains it, 1 at the threshold and past it.
+func strain_of(force: float) -> float:
+	return clampf(force / maxf(pull_threshold, 0.001), 0.0, 1.0)
+
+## A coupled ship straining at it, `amount` 0..1, for `dt` s: it trembles in the ground,
+## the ground throws dust, and the camera shakes - all harder the harder it pulls.
+func strain(amount: float, dt := 0.0, ship: Ship = null) -> void:
 	if not _visual:
 		return
 	var k := amount * amount * 1.8
 	var t := Time.get_ticks_msec() / 1000.0
 	_visual.position = Vector2(sin(t * 91.0), cos(t * 77.0)) * k if amount > 0.05 else Vector2.ZERO
+	if amount <= 0.15:
+		_strain_dust = 0.0
+		return
+	if ship:
+		_shake(ship, STRAIN_SHAKE * amount)
+	_strain_dust -= dt
+	if _strain_dust <= 0.0 and lodged_in:
+		_strain_dust = STRAIN_DUST_EVERY * (1.6 - amount)
+		var ground := ground_point()
+		var outward := (ground - lodged_in.global_position).normalized()
+		GroundBreakFX.strain.call_deferred(lodged_in, ground, outward, amount)
 
-## One pull by a ship coupled on, at full strain. Short of the last, the coupling snaps:
-## grit and dust at the ground, the ship flung back; the last rips it out of the ground.
-## True once it is free.
-func tug(ship: Ship) -> bool:
+## Torn out of the ground: the burst and the scar, and it can be clamped like any piece.
+func break_free(ship: Ship) -> void:
 	if not is_buried():
-		return true
-	buried_tugs_left -= 1
+		return
+	buried = false
+	pull_progress = 0.0
 	if _visual:
 		_visual.position = Vector2.ZERO
 	var planet := lodged_in
 	var ground := ground_point()
 	var outward := (ground - planet.global_position).normalized() if planet else Vector2.UP
-	if buried_tugs_left > 0:
-		if planet:
-			GroundBreakFX.tug(planet, ground, outward)
-		_shudder(0.5 + 0.25 * (BURY_TUGS - buried_tugs_left))
-		if ship:
-			var back := (ship.global_position - lug_global()).normalized()
-			ship.linear_velocity += back * TUG_KICK
-			_shake(ship, TUG_SHAKE)
-		return false
 	if planet:
 		GroundBreakFX.break_free(planet, ground, outward)
 	z_index = 1
@@ -272,17 +311,6 @@ func tug(ship: Ship) -> bool:
 	var body := planet as PhysicsBody2D
 	if body:
 		part_from(body, 2.5)
-	return true
-
-## A strained jolt in place: the piece twitches against the ground, `amount` px.
-func _shudder(amount: float) -> void:
-	if not _visual:
-		return
-	var t := _visual.create_tween()
-	for i in 6:
-		var k := amount * (1.0 - i / 6.0) * 4.0
-		t.tween_property(_visual, "position", Vector2(k if i % 2 == 0 else -k, 0.0), 0.035)
-	t.tween_property(_visual, "position", Vector2.ZERO, 0.05)
 
 static func _shake(ship: Ship, intensity: float) -> void:
 	ship.damage_shake_time = 0.35
@@ -388,7 +416,7 @@ func to_row() -> Dictionary:
 		"vx": v.x, "vy": v.y, "spin": angular_velocity if is_loose() else 0.0,
 		"label": label, "handled": handled, "clamped": is_clamped(),
 		"section": section, "lodged": lodged, "lodged_x": lodged_offset.x, "lodged_y": lodged_offset.y,
-		"lodged_spin": lodged_spin, "buried": buried_tugs_left,
+		"lodged_spin": lodged_spin, "buried": buried,
 	}
 
 static func from_row(world: Node, row: Dictionary) -> Freight:
@@ -398,7 +426,7 @@ static func from_row(world: Node, row: Dictionary) -> Freight:
 	f.lodged = bool(row.get("lodged", false))
 	f.lodged_offset = Vector2(float(row.get("lodged_x", 0.0)), float(row.get("lodged_y", 0.0)))
 	f.lodged_spin = float(row.get("lodged_spin", 0.0))
-	f.buried_tugs_left = int(row.get("buried", 0))
+	f.buried = bool(row.get("buried", false))  # older saves kept a count of tugs left
 	f.handled = bool(row.get("handled", false))
 	world.add_child(f)
 	f.global_position = Vector2(float(row.get("x", 0.0)), float(row.get("y", 0.0)))

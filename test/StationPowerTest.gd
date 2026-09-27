@@ -113,25 +113,80 @@ func test_a_load_brings_the_dish_up_without_a_ping() -> void:
 	assert_object(dish.get_node_or_null("Ping")).is_null()
 
 
-func test_a_buried_piece_takes_three_tugs() -> void:
+func _buried(threshold: float) -> Freight:
 	var f: Freight = auto_free(Freight.new())
-	f.buried_tugs_left = Freight.BURY_TUGS
-	assert_bool(f.is_buried()).is_true()
-	assert_bool(f.tug(null)).is_false()
-	assert_bool(f.tug(null)).is_false()
-	assert_bool(f.tug(null)).is_true()
+	f.buried = true
+	f.pull_threshold = threshold
+	return f
+
+
+func test_a_pull_past_the_threshold_held_long_enough_tears_it_free() -> void:
+	var f := _buried(0.6)
+	var steps := ceili(Freight.PULL_TIME / 0.1)
+	for i in steps - 1:
+		assert_bool(f.pull(1.0, 0.1)).is_false()
+	f.pull(1.0, 0.1)
+	assert_bool(f.pull(1.0, 0.1)).is_true()
+	f.break_free(null)
 	assert_bool(f.is_buried()).is_false()
 
 
-func test_a_buried_piece_saves_how_many_tugs_are_left() -> void:
+func test_a_pull_short_of_the_threshold_only_strains() -> void:
+	var f := _buried(0.6)
+	for i in 100:
+		assert_bool(f.pull(0.5, 0.1)).is_false()
+	assert_float(f.pull_progress).is_equal(0.0)
+	assert_float(f.strain_of(0.5)).is_between(0.8, 0.9)
+	assert_float(f.strain_of(2.0)).is_equal(1.0)
+
+
+func test_easing_off_loses_the_pull_slowly() -> void:
+	var f := _buried(0.6)
+	f.pull(1.0, 0.5)
+	var built := f.pull_progress
+	f.pull(0.0, 0.1)
+	assert_float(f.pull_progress).is_between(0.0, built - 0.001)
+
+
+func test_the_pull_is_thrust_pointed_out_of_the_ground() -> void:
+	# Nose on the Lug, facing down into the ground: reverse thrust pulls straight out
+	assert_float(FlyingState.pull_force(Vector2.DOWN, -1.0, Vector2.UP)).is_equal_approx(1.0, 0.0001)
+	# Thrusting into the ground, or across it, pulls nothing
+	assert_float(FlyingState.pull_force(Vector2.DOWN, 1.0, Vector2.UP)).is_equal(0.0)
+	assert_float(FlyingState.pull_force(Vector2.RIGHT, -1.0, Vector2.UP)).is_equal_approx(0.0, 0.0001)
+	# The Burn pulls harder than the Aux
+	assert_float(FlyingState.pull_force(Vector2.DOWN, -1.0, Vector2.UP, 2.0)).is_equal_approx(2.0, 0.0001)
+
+
+func test_a_heavy_piece_demands_the_burn() -> void:
+	var ship_boost := 2.667  # Ship.boost_power_multiplier
+	var aux := FlyingState.pull_force(Vector2.DOWN, -1.0, Vector2.UP)
+	var burn := FlyingState.pull_force(Vector2.DOWN, -1.0, Vector2.UP, ship_boost)
+	var heavy := _buried(1.5)
+	for i in 40:
+		heavy.pull(aux, 0.1)
+	assert_float(heavy.pull_progress).is_equal(0.0)
+	var freed := false
+	for i in 40:
+		freed = heavy.pull(burn, 0.1) or freed
+	assert_bool(freed).is_true()
+
+
+func test_a_buried_piece_saves_that_it_is_buried() -> void:
 	var world: Node2D = auto_free(Node2D.new())
 	add_child(world)
 	var f := Freight.new()
 	Sections.apply(f, Sections.SOLAR_ARRAY)
 	world.add_child(f)
-	f.buried_tugs_left = 2
+	f.buried = true
 	var back := Freight.from_row(world, f.to_row())
-	assert_int(back.buried_tugs_left).is_equal(2)
+	assert_bool(back.is_buried()).is_true()
+	# A save from before the pull kept a count of tugs left
+	var old := f.to_row()
+	old["buried"] = 2
+	assert_bool(Freight.from_row(world, old).is_buried()).is_true()
+	old["buried"] = 0
+	assert_bool(Freight.from_row(world, old).is_buried()).is_false()
 
 
 func test_the_hanging_wing_sways_but_only_a_little() -> void:

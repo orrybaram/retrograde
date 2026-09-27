@@ -219,6 +219,8 @@ func test_each_section_starts_somewhere_of_its_own() -> void:
 	# The array is buried in Rook's sunlit ground
 	var array := _mount(Sections.SOLAR_ARRAY)
 	assert_bool(array.start_on_planet and array.start_buried).is_true()
+	# ...light enough that the Aux alone tears it free
+	assert_float(array.buried_pull_threshold).is_between(0.0, 1.0)
 
 func test_the_ring_turns_faster_nearer_in() -> void:
 	assert_float(OrbitalRingSpawner.angular_speed(10.0, 2500.0)).is_greater(OrbitalRingSpawner.angular_speed(10.0, 3500.0))

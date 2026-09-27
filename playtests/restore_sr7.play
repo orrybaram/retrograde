@@ -67,10 +67,13 @@ assert pt.mount("fuel_tank").seated "the tank is seated"
 wait 0.7
 assert pt.recall("station").get_node("Visuals/FuelTank").visible "the tank is back"
 
-# --- SOLAR ARRAY: buried in Rook. A hold couples on, like any clamp; pull back hard and
-# it comes a little, then the coupling snaps. The third pull rips it out ---
+# --- SOLAR ARRAY: buried in Rook. A hold couples on, like any clamp; flying away from the
+# ground pulls at it. Short of its threshold it only strains; past it, held, it tears free.
+# It is light: the Aux alone does it. A heavier piece demands the Burn ---
 wait 0.2
-assert pt.section("solar_array").is_buried() and pt.section("solar_array").buried_tugs_left == 3 "the array is buried: three pulls"
+assert pt.section("solar_array").is_buried() "the array is buried"
+assert pt.section("solar_array").pull_threshold == pt.mount("solar_array").buried_pull_threshold "its Mount sets how hard it holds"
+assert pt.section("solar_array").pull_threshold < 1.0 "light enough for the Aux"
 eval pt.remember("sunk", pt.section("solar_array").lodged_offset.length())
 eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
 eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
@@ -81,28 +84,35 @@ hold action 0.4
 wait 1.0
 assert ship.sonar.ring_count() == pt.recall("rings") "coupling on sends no Sweep ring, like any clamp"
 assert pt._action_message == "" "no prompt while coupled"
-assert pt.section("solar_array").buried_tugs_left == 3 "coupled on, the key let go, not pulling: nothing gives"
+assert pt.section("solar_array").pull_progress == 0.0 "coupled on, the key let go, not pulling: nothing gives"
 assert ship.global_position.distance_to(pt.section("solar_array").lug_global()) < 60.0 "still coupled with the key let go"
 assert ship.to_global(Vector2(ship.NOSE)).distance_to(pt.section("solar_array").lug_global()) < 4.0 "nose on the Lug, like any clamp"
 assert ship.state_machine.current_state._latched "latched on"
-hold reverse_thrust 2.0
+# Made heavy for a moment: the Aux strains it but can't tear it free
+eval pt.section("solar_array").set("pull_threshold", 1.5)
+eval pt.remember("fx", get_tree().get_nodes_in_group("ground_fx").size())
+hold reverse_thrust 0.6
+assert ship.damage_shake_current_intensity > 0.5 "straining shakes the camera"
+hold reverse_thrust 1.6
+assert get_tree().get_nodes_in_group("ground_fx").size() > pt.recall("fx") "the ground throws dust as it strains"
+assert pt.section("solar_array").is_buried() "short of its threshold the Aux never tears it free"
+assert pt.section("solar_array").pull_progress == 0.0 "and never builds the pull"
+assert ship.state_machine.current_state._coupled != null "and the ship stays coupled, straining"
+# The Burn pulls past it
+eval ship.set("fuel", 100.0)
+down boost
+hold reverse_thrust 0.5
+up boost
+assert pt.section("solar_array").pull_progress > 0.2 "the Burn pulls past a heavy piece's threshold"
+assert pt.section("solar_array").lodged_offset.length() > pt.recall("sunk") + 3.0 "and draws it up out of the ground"
+eval pt.section("solar_array").set("pull_threshold", pt.mount("solar_array").buried_pull_threshold)
 wait 0.1
-assert pt.section("solar_array").buried_tugs_left == 2 "a full pull snaps the coupling"
-assert pt.section("solar_array").lodged "still in the ground"
-assert pt.section("solar_array").lodged_offset.length() > pt.recall("sunk") + 4.0 "but it came up a little"
-assert pt.state_name() == "FlyingState" "and the ship is free"
-eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
-eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
-eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
-wait 0.1
-hold action 0.4
-wait 0.2
 hold action 0.15
 wait 0.1
 assert ship.state_machine.current_state._coupled == null "a fresh press lets go of it"
-assert ship.sonar.ring_count() == 0 "and letting go sends none either"
+assert ship.sonar.ring_count() == pt.recall("rings") "and letting go sends none either"
 hold reverse_thrust 0.5
-assert pt.section("solar_array").buried_tugs_left == 2 "and letting go costs no pull"
+assert pt.section("solar_array").is_buried() "let go of, thrusting pulls nothing"
 eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
 eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
 eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
@@ -110,15 +120,7 @@ wait 0.1
 hold action 0.4
 hold reverse_thrust 2.0
 wait 0.1
-assert pt.section("solar_array").buried_tugs_left == 1 "the second pull"
-eval ship.set("rotation", (-pt.section("solar_array").lug_facing_global()).angle())
-eval pt.warp_to(pt.section("solar_array").lug_global() + pt.section("solar_array").lug_facing_global() * 26.0)
-eval ship.set("linear_velocity", pt.section("solar_array").linear_velocity)
-wait 0.1
-hold action 0.4
-hold reverse_thrust 2.0
-wait 0.1
-assert not pt.section("solar_array").is_buried() "the third pull rips it out"
+assert not pt.section("solar_array").is_buried() "a sustained pull on the Aux tears it free"
 assert get_tree().get_nodes_in_group("ground_fx").size() > 0 "the ground bursts where it came out"
 wait_until pt.state_name() == "CarryingState" 3
 assert pt.state_name() == "CarryingState" "and the magnet takes it"

@@ -1,16 +1,16 @@
 extends Node2D
 class_name GroundBreakFX
 
-## A buried piece being worked out of a planet's ground (Freight.tug). A tug that doesn't
-## free it throws a little dust and grit and a few sparks where it goes in; the last one
-## rips it out: a burst of dust rolling out along the ground, chunks of rock tumbling away,
+## A buried piece being worked out of a planet's ground (Freight.pull). While a coupled
+## ship strains at it the ground throws puffs of dust and grit where it goes in, bigger the
+## harder it pulls; tearing it free rips it out: a burst of dust rolling out along the ground, chunks of rock tumbling away,
 ## a spray of sparks, a shock ring, and a scar left in the ground where it lay.
 ##
 ## Parented to the planet, so it rides the planet's orbit and doesn't streak off behind it.
 ## Drawn, not particles, on its own randomness - never the shared RNG.
 
-## How much of each a tug throws, and the break-free. `power` scales count and speed.
-const TUG := {"dust": 14, "chunks": 5, "sparks": 10, "power": 0.6, "ring": false}
+## How much of each a full-strain puff throws, and the break-free. `power` scales count and speed.
+const STRAIN := {"dust": 8, "chunks": 2, "sparks": 3, "power": 0.5, "ring": false}
 const BREAK := {"dust": 46, "chunks": 18, "sparks": 36, "power": 1.0, "ring": true}
 ## The instant it rips out: a white-hot flash at the break, this long and this wide.
 const FLASH_TIME := 0.18
@@ -35,9 +35,16 @@ var _dust: Array = []
 var _chunks: Array = []
 var _sparks: Array = []
 
-## A tug that didn't free it, at `pos` (global) on `planet`'s ground facing `outward`.
-static func tug(planet: Node2D, pos: Vector2, outward: Vector2) -> GroundBreakFX:
-	return _spawn(planet, pos, outward, TUG, false)
+## A puff of strain, `amount` 0..1 of the way to tearing free, at `pos` (global) on
+## `planet`'s ground facing `outward`.
+static func strain(planet: Node2D, pos: Vector2, outward: Vector2, amount: float) -> GroundBreakFX:
+	if not is_instance_valid(planet):
+		return null
+	var kind := STRAIN.duplicate()
+	for key: String in ["dust", "chunks", "sparks"]:
+		kind[key] = roundi(STRAIN[key] * amount)
+	kind["power"] = STRAIN["power"] * lerpf(0.5, 1.0, amount)
+	return _spawn(planet, pos, outward, kind, false)
 
 ## The piece rips free: the full burst, and a scar left behind.
 static func break_free(planet: Node2D, pos: Vector2, outward: Vector2) -> GroundBreakFX:
