@@ -165,6 +165,12 @@ func on_sonar_touched(_strength := 1.0) -> void:
 		return
 	reveal()
 
+## A Sweep (the ship's own ring, not SR-7's dish) got here: found just now or long since,
+## the ship has been shown a live chunk of scrap, whether or not it can cut it.
+func on_swept() -> void:
+	if not _is_depleted and is_in_group("resource_nodes"):
+		EventBus.scrap_swept.emit()
+
 ## Light up: flash bright and settle to its own colour, sparkles fading in, and one cream ring
 ## goes back out to say it was found (animated reveals only). From here on it
 ## is on the minimap and takes a cut. `animate` false snaps straight to lit.

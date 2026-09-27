@@ -83,6 +83,7 @@ func ping() -> void:
 	if _pulse == null:
 		_pulse = SonarPulse.new()
 		_pulse.name = "Ping"
+		_pulse.sweep = false
 		add_child(_pulse)
 	_cooldown = PING_COOLDOWN
 	_pulse.send(PING_STRENGTH, PING_ALPHA, PING_WIDTH, Colors.TITAN)

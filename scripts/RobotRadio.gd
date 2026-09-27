@@ -26,6 +26,8 @@ const MSG_LOW_HULL := preload("res://entities/Robot/radio/messages/first_low_hul
 const MSG_HULL_CRITICAL := preload("res://entities/Robot/radio/messages/hull_critical.tres")
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
+const MSG_NO_HOLD := preload("res://entities/Robot/radio/messages/first_no_hold.tres")
+const MSG_CARGO_BAY_FITTED := preload("res://entities/Robot/radio/messages/cargo_bay_fitted.tres")
 const MSG_FIRST_TRANSIT := preload("res://entities/Robot/radio/messages/first_transit.tres")
 const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_destroyed.tres")
 const MSG_VOID_CONSUMED := preload("res://entities/Robot/radio/messages/void_consumed.tres")
@@ -57,6 +59,8 @@ var _watching_boost := false
 func _ready() -> void:
 	EventBus.radio_message_requested.connect(request)
 	EventBus.harvest_available_changed.connect(_on_harvest_available_changed)
+	EventBus.scrap_swept.connect(_on_scrap_swept)
+	EventBus.component_fitted.connect(check_fitted)
 	EventBus.ship_respawned.connect(_bind_ship)
 	# Hull comes off the bus, not off _bind_ship: it has to be heard on whichever ship
 	# is flying, including one that respawned before the binding caught up.
@@ -273,5 +277,31 @@ func check_cargo(weight: float, max_weight: float) -> void:
 		request(MSG_CARGO_FULL)
 
 func _on_harvest_available_changed(can_harvest: bool) -> void:
-	if guide_awake and can_harvest:
+	check_scrap(can_harvest, cargo_bay_fitted())
+
+## The cutting tutorial waits for the first scrap the ship can actually cut, which is only
+## ever after the Cargo Bay is fitted (docs/OPENING.md §9).
+func check_scrap(can_harvest: bool, fitted: bool) -> void:
+	if guide_awake and can_harvest and fitted:
 		request(MSG_SCRAP)
+
+func _on_scrap_swept() -> void:
+	check_swept_scrap(cargo_bay_fitted())
+
+## A Sweep found scrap and the ship has nowhere to put it: UNIT-7 names the need, never
+## the place (docs/OPENING.md §9). It sincerely does not know where a hold is (ADR 0008).
+func check_swept_scrap(fitted: bool) -> void:
+	if guide_awake and not fitted:
+		request(MSG_NO_HOLD)
+
+## UNIT-7 fits what the player brought home to SR-7's Cradle, and says so.
+func check_fitted(id: String) -> void:
+	if guide_awake and id == Components.CARGO_BAY:
+		request(MSG_CARGO_BAY_FITTED)
+
+## The Cargo Bay is the ship's: there is a hold, and scrap can be cut.
+func cargo_bay_fitted() -> bool:
+	if not is_inside_tree():
+		return false
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	return gs != null and gs.is_fitted(Components.CARGO_BAY)

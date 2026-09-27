@@ -41,6 +41,10 @@ const WIDTH := 1.0
 const CHARGE_GLOW_RADIUS := 14.0
 const CHARGE_GLOW_ALPHA := 0.3
 
+## A Sweep: the ship's own search. SR-7's dish sends rings through a pulse of its own with
+## this off - they light scrap up like any ring, but nobody was looking (ScrapNode.on_swept).
+var sweep := true
+
 ## Set by Ship every physics tick: `action` held somewhere a ping is allowed.
 var charging := false:
 	set(value):
@@ -126,7 +130,9 @@ func _reach_listeners(origin: Vector2, strength: float, marks: Array[int] = []) 
 				elif clarity >= 0.0:
 					listener.on_sonar_touched(answer_strength, clarity)
 				else:
-					listener.on_sonar_touched(strength))
+					listener.on_sonar_touched(strength)
+				if sweep and listener.has_method("on_swept"):
+					listener.on_swept())
 
 ## The strength an answer from `distance` px off, past the reach of a ring of `strength`,
 ## is sent back with: enough that its ring (SonarEcho.answer_ping) comes back to the ship.

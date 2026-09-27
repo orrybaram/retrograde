@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Ooh, scrap! Lovely. Cut it open and put it in the —"
+expression = &"happy"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Oh. You haven't got a hold. Not a small one. None at all."
+expression = &"surprise"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "Nothing to put it in, so there's no point cutting it. A ship ought to have a hold."
+expression = &"worried"
+
+[sub_resource type="Resource" id="line_4"]
+script = ExtResource("2_line")
+text = "I'd tell you where to find one if I knew. I don't. Sorry, pilot."
+expression = &"neutral"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"first_no_hold"
+priority = 1
+once = true
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4")])

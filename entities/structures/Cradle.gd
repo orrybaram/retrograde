@@ -121,6 +121,7 @@ func fit() -> String:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if ship:
 		ship.refit(gs)
+	EventBus.component_fitted.emit(id)
 	return id
 
 func is_seating() -> bool:
