@@ -168,13 +168,13 @@ func test_new_game_refills_everything() -> void:
 
 func test_regrow_timers_round_trip_through_the_save() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 5)
+	cfg.set_value("stats", "stores", 5)
 	cfg.save(SAVE_FILE)
 	Save.save_ore_regrowth({"Veld/Rook#0": 123.5, "Sun/Crom#1": 7.0}, SAVE_FILE)
 	var loaded := Save.load_ore_regrowth(SAVE_FILE)
 	assert_dict(loaded).is_equal({"Veld/Rook#0": 123.5, "Sun/Crom#1": 7.0})
 	cfg.load(SAVE_FILE)
-	assert_int(cfg.get_value("stats", "credits")).is_equal(5)
+	assert_int(cfg.get_value("stats", "stores")).is_equal(5)
 
 
 func test_regrow_save_needs_an_existing_save() -> void:

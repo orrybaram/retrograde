@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 
 ## Tests for the Sun Station and the Core's Gate: where they sit, why the Sun Station
 ## stays out of the home station's group, and the Core's Gate counting Modules instead
-## of credits while doing nothing yet.
+## of Stores while doing nothing yet.
 
 var _gs: GameState
 
@@ -48,7 +48,7 @@ func test_the_sun_station_and_the_cores_gate_ride_the_same_orbit_at_the_sun() ->
 		_override(state, station, "initial_angle_degrees"))
 
 
-func test_the_cores_gate_is_marked_as_the_core_and_asks_for_no_credits() -> void:
+func test_the_cores_gate_is_marked_as_the_core_and_asks_for_no_stores() -> void:
 	var state := _home_system()
 	var gate := _node_index(state, "./Sun/Gate")
 	assert_bool(_override(state, gate, "is_core")).is_true()
@@ -139,7 +139,7 @@ func test_the_cores_gate_is_dockable_the_same_way_a_modules_gate_is() -> void:
 	assert_str(FlyingState.docked_state_for(gate)).is_equal("GateDockedState")
 
 
-func test_the_cores_gate_waits_on_every_module_not_on_credits() -> void:
+func test_the_cores_gate_waits_on_every_module_not_on_stores() -> void:
 	var gate := _core_gate()
 	assert_bool(gate.modules_ready(_gs)).is_false()
 	_all_modules_online()
@@ -152,10 +152,10 @@ func test_the_cores_gate_waits_on_every_module_not_on_credits() -> void:
 func test_powering_the_cores_gate_does_nothing_yet() -> void:
 	var gate := _core_gate()
 	_all_modules_online()
-	_gs.credits = 5000
+	_gs.stores = 5000
 	assert_bool(gate.power(_gs)).is_false()
 	assert_bool(gate.is_powered()).is_false()
-	assert_int(_gs.credits).is_equal(5000)
+	assert_int(_gs.stores).is_equal(5000)
 	assert_int(_gs.titan_influence()).is_equal(Gate.MODULE_COUNT)
 
 
@@ -200,23 +200,23 @@ func test_the_terminal_offers_the_core_once_every_module_is_online() -> void:
 	var row: Dictionary = terminal._menu_items[0]
 	assert_bool(row["enabled"]).is_true()
 	assert_str(row["label"]).is_equal("POWER CORE")
-	# Nothing to pay: the Core asks for Modules, not credits
+	# Nothing to pay: the Core asks for Modules, not Stores
 	assert_str(row["right"]).is_equal("")
 
 
 func test_taking_the_core_row_changes_nothing() -> void:
 	_all_modules_online()
-	_gs.credits = 900
+	_gs.stores = 900
 	var gate := _core_gate()
 	var terminal := _terminal(gate)
 	terminal._selected_index = 0
 	terminal._activate_selection()
-	assert_int(_gs.credits).is_equal(900)
+	assert_int(_gs.stores).is_equal(900)
 	assert_int(_gs.titan_influence()).is_equal(Gate.MODULE_COUNT)
 	assert_bool(gate.is_powered()).is_false()
 
 
-## A planet's Gate still asks for its credits; the Core's row is the Core's alone.
+## A planet's Gate still asks for its Stores; the Core's row is the Core's alone.
 func test_a_modules_terminal_is_untouched() -> void:
 	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
 	planet.name = "Veld"
@@ -229,10 +229,10 @@ func test_a_modules_terminal_is_untouched() -> void:
 	gate.power_cost = 600
 	gate.enable_orbiting = false
 	planet.add_child(gate)
-	_gs.credits = 600
+	_gs.stores = 600
 
 	var terminal := _terminal(gate)
 	var row: Dictionary = terminal._menu_items[0]
 	assert_bool(row["enabled"]).is_true()
 	assert_str(row["label"]).is_equal("POWER GATE")
-	assert_str(row["right"]).is_equal("600 CR")
+	assert_str(row["right"]).is_equal("600 ST")

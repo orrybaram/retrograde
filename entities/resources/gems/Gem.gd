@@ -139,7 +139,7 @@ func _draw() -> void:
 		draw_line(Vector2.ZERO, _trail.rotated(-rotation), Color(_color, 0.45), maxf(s * 0.6, 1.0))
 	draw_gem(self, s, _color)
 
-## The gem's glow + diamond, centered on `canvas`'s origin. Shared with HoldCashIn.
+## The gem's glow + diamond, centered on `canvas`'s origin. Shared with HoldDeposit.
 static func draw_gem(canvas: CanvasItem, s: float, color: Color) -> void:
 	var points := PackedVector2Array([Vector2(0, -s * 1.4), Vector2(s, 0), Vector2(0, s * 1.4), Vector2(-s, 0)])
 	canvas.draw_circle(Vector2.ZERO, s * 2.2, Color(color, 0.18))

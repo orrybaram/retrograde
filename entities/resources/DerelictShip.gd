@@ -43,7 +43,7 @@ var _tracking: NodeTrackingTarget
 ## Leave `ship` adrift with its hold aboard (a bare hull if the hold is empty).
 ## A load on the nose stays on it, and the hull becomes the tracked target.
 static func abandon(ship: Ship) -> DerelictShip:
-	var items := HoldCashIn.launch_order(InventoryManager.get_all_items())
+	var items := HoldDeposit.launch_order(InventoryManager.get_all_items())
 	var hits := HITS if not items.is_empty() else ScrapNode.NORMAL_HITS
 	var derelict := spawn(ship.get_parent(), ship.ship_polygon, items, ship.global_position,
 		ship.linear_velocity, ship.rotation, randf_range(-MAX_SPIN, MAX_SPIN), hits, false)

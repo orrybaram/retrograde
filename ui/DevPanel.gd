@@ -29,10 +29,10 @@ const VALUE_WIDTH := 150.0
 
 ## LEFT/RIGHT on a gauge moves it this fraction of its maximum.
 const GAUGE_STEP := 0.1
-## LEFT/RIGHT on the credits row.
-const CREDIT_STEP := 1000
-## ENTER on the credits row.
-const CREDIT_JUMP := 25000
+## LEFT/RIGHT on the Stores row.
+const STORES_STEP := 1000
+## ENTER on the Stores row.
+const STORES_JUMP := 25000
 ## LEFT/RIGHT on a gravity row multiplies or divides by this. Gravity runs from a tenth of
 ## a G to ten G, so it steps by ratio - a fixed nudge would be lost at one end and wild at
 ## the other.
@@ -374,12 +374,12 @@ func _ship_rows() -> Array[Dictionary]:
 	))
 
 	rows.append(_value_row(
-		"CREDITS",
-		"Arrows move the balance by %d; ENTER adds %d." % [CREDIT_STEP, CREDIT_JUMP],
-		func() -> String: return str(gs.credits) if gs else "-",
+		"STORES",
+		"Arrows move the balance by %d; ENTER adds %d." % [STORES_STEP, STORES_JUMP],
+		func() -> String: return str(gs.stores) if gs else "-",
 		func(direction: int) -> void:
 			if gs:
-				gs.credits = maxi(0, gs.credits + (CREDIT_JUMP if direction == 0 else direction * CREDIT_STEP))
+				gs.stores = maxi(0, gs.stores + (STORES_JUMP if direction == 0 else direction * STORES_STEP))
 	))
 
 	rows.append(_toggle_row(
@@ -706,7 +706,7 @@ func _save_rows() -> Array[Dictionary]:
 	))
 	rows.append(_action_row(
 		"RESET ALL STATE",
-		"Credits, hold and every flag back to a fresh run.",
+		"Stores, hold and every flag back to a fresh run.",
 		func() -> void:
 			if gs:
 				gs.reset_all_state()

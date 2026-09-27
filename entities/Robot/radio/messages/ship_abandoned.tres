@@ -12,7 +12,7 @@ expression = &"worried"
 script = ExtResource("2_line")
 text = "{salvage} Your new ship is fueled and waiting."
 expression = &"neutral"
-confirm = "RELAUNCH  -{penalty} CR"
+confirm = "RELAUNCH"
 
 [resource]
 script = ExtResource("1_conv")

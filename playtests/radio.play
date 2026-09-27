@@ -84,6 +84,7 @@ assert not get_tree().root.get_node("RobotRadio").is_active() "tutorial finished
 assert not get_tree().paused "closing the tutorial unpauses"
 
 # Out of fuel: the robot offers to abandon ship (a confirm call), game keeps running
+eval gs.set("stores", 500)
 eval ship.set("fuel", 0.5)
 # Thrust is free now, so a dry tank no longer strands the ship on its own. The state is
 # entered directly; what this scenario covers is the radio traffic once it is.
@@ -122,7 +123,8 @@ press space
 wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
 wait_until not pt.node("radio_panel").is_typing() 5
 screenshot radio_08_abandoned
-assert pt.node("radio_panel").choice_text().contains("-10 CR") "abandon fee filled in"
+assert pt.node("radio_panel").choice_text().contains("RELAUNCH") "relaunch offered"
+assert not pt.node("radio_panel").choice_text().contains("-") "relaunching costs nothing"
 press enter
 wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
 wait 0.3
@@ -148,7 +150,8 @@ press space
 wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
 wait_until not pt.node("radio_panel").is_typing() 5
 screenshot radio_10_relaunch
-assert pt.node("radio_panel").choice_text().contains("RELAUNCH  -20 CR") "relaunch fee filled in"
+assert pt.node("radio_panel").choice_text().contains("RELAUNCH") "relaunch offered"
+assert not pt.node("radio_panel").choice_text().contains("-") "relaunching costs nothing"
 press space
 wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
 # Let the dock's save-indicator timer finish so nothing is pending at quit
@@ -156,6 +159,7 @@ wait 1
 assert not get_tree().paused "relaunch unpauses"
 assert pt.visible_ui().is_empty() "the confirming SPACE doesn't open the dock menu"
 assert gs.death_count == 2 "abandoning and exploding both count as deaths"
+assert gs.stores == 500 "dying costs no Stores"
 
 # Hold fills mid-harvest while SPACE is being mashed: the hold-full tutorial waits
 # until the player backs off, then pauses in view (gem popups don't hide the radio)

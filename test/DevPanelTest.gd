@@ -204,20 +204,20 @@ func test_infinite_fuel_flag_leaves_the_tank_alone() -> void:
 	assert_float(ship.fuel).is_equal(before - 50.0)
 
 
-func test_credits_row_steps_and_floors_at_zero() -> void:
+func test_stores_row_steps_and_floors_at_zero() -> void:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	ship.add_to_group("ship")
 	add_child(ship)
 	_panel_in_tree()
 
-	_run("SHIP", "CREDITS", 0)
-	assert_int(_gs.credits).is_equal(DevPanel.CREDIT_JUMP)
-	_run("SHIP", "CREDITS", -1)
-	assert_int(_gs.credits).is_equal(DevPanel.CREDIT_JUMP - DevPanel.CREDIT_STEP)
+	_run("SHIP", "STORES", 0)
+	assert_int(_gs.stores).is_equal(DevPanel.STORES_JUMP)
+	_run("SHIP", "STORES", -1)
+	assert_int(_gs.stores).is_equal(DevPanel.STORES_JUMP - DevPanel.STORES_STEP)
 
-	_gs.credits = 10
-	_run("SHIP", "CREDITS", -1)
-	assert_int(_gs.credits).is_equal(0)
+	_gs.stores = 10
+	_run("SHIP", "STORES", -1)
+	assert_int(_gs.stores).is_equal(0)
 
 
 # --- Guards ------------------------------------------------------------------

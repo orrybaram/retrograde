@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Tests for loose gems, the ship's magnet, and cashing in the hold.
+## Tests for loose gems, the ship's magnet, and depositing the hold.
 
 
 func before_test() -> void:
@@ -58,11 +58,11 @@ func test_active_gems_are_capped() -> void:
 	assert_int(Gem.active.size()).is_equal(Gem.MAX_ACTIVE)
 
 
-func test_cash_in_empties_hold_and_returns_value() -> void:
+func test_deposit_empties_hold_and_returns_value() -> void:
 	InventoryManager.add_item("gem", 3)
 	InventoryManager.add_item("crystal", 1)
 	var expected := 3 * GemData.value_of("gem") + GemData.value_of("crystal")
-	assert_int(InventoryManager.cash_in()).is_equal(expected)
+	assert_int(InventoryManager.deposit()).is_equal(expected)
 	assert_int(InventoryManager.get_total_value()).is_equal(0)
 	assert_dict(InventoryManager.get_all_items()).is_empty()
 

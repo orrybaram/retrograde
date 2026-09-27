@@ -34,7 +34,7 @@ func _mean_tier(rich: bool) -> float:
 		total += GemData.tier_of(GemData.ore_roll(GOOD, rich, rng))
 	return total / 2000.0
 
-## Credits from breaking one seam open: every hit GOOD, the last one the break.
+## Stores from breaking one seam open: every hit GOOD, the last one the break.
 func _seam_value(rich: bool, rng: RandomNumberGenerator) -> int:
 	var hits := OreDeposit.RICH_HITS if rich else OreDeposit.HITS
 	var ids: Array[String] = []
@@ -42,7 +42,7 @@ func _seam_value(rich: bool, rng: RandomNumberGenerator) -> int:
 		ids.append_array(GemData.ore_drops(GOOD, hit == hits - 1, rich, rng))
 	return GemData.hold_value(_as_hold(ids))
 
-## Credits from breaking one scrap node: three hits, the last one the break, all GOOD.
+## Stores from breaking one scrap node: three hits, the last one the break, all GOOD.
 func _scrap_value(rng: RandomNumberGenerator) -> int:
 	var ids: Array[String] = []
 	for hit in 3:

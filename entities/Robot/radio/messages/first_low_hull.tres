@@ -10,7 +10,7 @@ expression = &"worried"
 
 [sub_resource type="Resource" id="line_2"]
 script = ExtResource("2_line")
-text = "Dock at a port and pay for the patch job. Credits are cheaper than vacuum."
+text = "Dock at a port and let SR-7 patch you up. Hulls are cheaper than pilots."
 expression = &"neutral"
 
 [sub_resource type="Resource" id="line_3"]

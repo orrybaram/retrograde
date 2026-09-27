@@ -27,7 +27,7 @@ text = "New hull's on the pad. Stay inside the orbits and I'll stay talking."
 expression = &"lost"
 glitch = true
 garbled = true
-confirm = "RELAUNCH  -{penalty} CR"
+confirm = "RELAUNCH"
 
 [resource]
 script = ExtResource("1_conv")

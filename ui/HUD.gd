@@ -1,6 +1,6 @@
 extends Control
 
-## In-game HUD: fuel bar, hull segment bar, cargo weight, banked credits, velocity readout,
+## In-game HUD: fuel bar, hull segment bar, cargo weight, Stores, velocity readout,
 ## and the robot's radio panel. Subscribes to ship signals. (Action prompts live in IndicatorManager.)
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
@@ -9,7 +9,7 @@ extends Control
 @onready var hull_label: Label = $"DashboardAnchor/HBox/RightColumn/HullRow/HullLabel"
 @onready var current_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CurrentCargoLabel"
 @onready var max_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/MaxCargoLabel"
-@onready var credits_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CreditsLabel"
+@onready var stores_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/StoresLabel"
 @onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
 
@@ -17,8 +17,8 @@ var gs: Node = null
 var ship: Ship = null
 var _last_cargo_weight: float = 0.0
 var _cargo_punch_tween: Tween = null
-var _shown_credits := 0.0  # rolls toward gs.credits so banked credits count up
-var _credits_punch_tween: Tween = null
+var _shown_stores := 0.0  # rolls toward gs.stores so the Deposit counts up
+var _stores_punch_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("hud")
@@ -44,7 +44,7 @@ func _ready() -> void:
 	# Auto-fit dashboard to its content
 	_fit_dashboard.call_deferred()
 	if gs:
-		_shown_credits = gs.credits
+		_shown_stores = gs.stores
 	_update_labels()
 	_last_cargo_weight = InventoryManager.get_total_weight()
 	InventoryManager.inventory_changed.connect(_on_inventory_changed)
@@ -89,8 +89,8 @@ func _punch_cargo_label() -> void:
 	_cargo_punch_tween.parallel().tween_property(current_cargo_label, "modulate", Color.WHITE, 0.3)
 
 func _fit_dashboard() -> void:
-	# The panel breathes with the cargo and credit digit counts, so the meters are
-	# fixed-width (no expand flag in HUD.tscn) — a cash-in must not stretch the fuel bar.
+	# The panel breathes with the cargo and Stores digit counts, so the meters are
+	# fixed-width (no expand flag in HUD.tscn) — a Deposit must not stretch the fuel bar.
 	if not dashboard:
 		return
 	var min_size = dashboard.get_combined_minimum_size()
@@ -98,31 +98,31 @@ func _fit_dashboard() -> void:
 	dashboard.offset_right = dashboard.offset_left + min_size.x
 
 func _process(dt: float) -> void:
-	_roll_credits(dt)
+	_roll_stores(dt)
 	_update_labels()
 
-## During a cash-in, tick the shown credit count up toward the bank; otherwise
-## (loads, purchases) snap to it.
-func _roll_credits(dt: float) -> void:
+## During a Deposit, tick the shown Stores count up toward `gs.stores`; otherwise
+## (loads, a Gate powering up) snap to it.
+func _roll_stores(dt: float) -> void:
 	if gs == null:
 		return
-	var target := float(gs.credits)
-	if HoldCashIn.running == 0 or target < _shown_credits:
-		_shown_credits = target
+	var target := float(gs.stores)
+	if HoldDeposit.running == 0 or target < _shown_stores:
+		_shown_stores = target
 		return
-	var step := maxf(absf(target - _shown_credits) * 10.0, 40.0) * dt
-	var before := int(_shown_credits)
-	_shown_credits = move_toward(_shown_credits, target, step)
-	if int(_shown_credits) > before:
-		_punch_credits_label()
+	var step := maxf(absf(target - _shown_stores) * 10.0, 40.0) * dt
+	var before := int(_shown_stores)
+	_shown_stores = move_toward(_shown_stores, target, step)
+	if int(_shown_stores) > before:
+		_punch_stores_label()
 
-func _punch_credits_label() -> void:
-	if not credits_label or (_credits_punch_tween and _credits_punch_tween.is_running()):
+func _punch_stores_label() -> void:
+	if not stores_label or (_stores_punch_tween and _stores_punch_tween.is_running()):
 		return
-	credits_label.pivot_offset = credits_label.size / 2.0
-	_credits_punch_tween = create_tween()
-	_credits_punch_tween.tween_property(credits_label, "scale", Vector2(1.15, 1.15), 0.05)
-	_credits_punch_tween.tween_property(credits_label, "scale", Vector2.ONE, 0.1)
+	stores_label.pivot_offset = stores_label.size / 2.0
+	_stores_punch_tween = create_tween()
+	_stores_punch_tween.tween_property(stores_label, "scale", Vector2(1.15, 1.15), 0.05)
+	_stores_punch_tween.tween_property(stores_label, "scale", Vector2.ONE, 0.1)
 
 func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	if gs == null: return
@@ -131,7 +131,7 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	current_cargo_label.text = "%d" % int(cargo_weight)
 	var cargo_full: bool = cargo_weight >= max_cargo
 	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo
-	credits_label.text = "  %d CR" % int(_shown_credits)
+	stores_label.text = "  %d ST" % int(_shown_stores)
 	var cargo_color := Colors.DANGER if cargo_full else Colors.PRIMARY
 	current_cargo_label.add_theme_color_override("font_color", cargo_color)
 	max_cargo_label.add_theme_color_override("font_color", Colors.DANGER if cargo_full else Colors.PRIMARY_DIM)

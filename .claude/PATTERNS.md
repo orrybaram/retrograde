@@ -221,7 +221,7 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   `Gate.get_dock_transform()`. Approach rules are the port's (distance 60, same alignment).
 - The Gate is deliberately not pinned to the minimap rim - the minimap shows scanner range and
   nothing more, so a Gate has to be flown to (docs/adr/0002).
-- Save: `[gates] powered`, written on power-up (a full autosave, which also banks the credits
+- Save: `[gates] powered`, written on power-up (a full autosave, which also saves the Stores
   it cost) and on the normal save path. `Save.save_powered_gates` writes only that section.
 - Unidentified (docs/GLOSSARY.md): a Gate reads `? ? ?` on the minimap until the ship comes within
   `Identifiable.RANGE` of it, at which point `Gate.identify()` records it in

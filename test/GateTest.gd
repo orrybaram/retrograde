@@ -116,40 +116,40 @@ func test_a_gate_starts_dormant_and_knows_its_planet() -> void:
 	assert_int(_gs.titan_influence()).is_equal(0)
 
 
-func test_powering_a_gate_spends_the_credits_and_brings_its_module_online() -> void:
+func test_powering_a_gate_spends_the_stores_and_brings_its_module_online() -> void:
 	var gate := _gate(_planet("Veld"), 600)
-	_gs.credits = 1000
+	_gs.stores = 1000
 	assert_bool(gate.power(_gs)).is_true()
-	assert_int(_gs.credits).is_equal(400)
+	assert_int(_gs.stores).is_equal(400)
 	assert_bool(gate.is_powered()).is_true()
 	assert_int(_gs.titan_influence()).is_equal(1)
 
 
 func test_a_gate_the_player_cannot_pay_for_stays_dormant() -> void:
 	var gate := _gate(_planet("Sonder"), 2000)
-	_gs.credits = 1999
+	_gs.stores = 1999
 	assert_bool(gate.can_afford(_gs)).is_false()
 	assert_bool(gate.power(_gs)).is_false()
-	assert_int(_gs.credits).is_equal(1999)
+	assert_int(_gs.stores).is_equal(1999)
 	assert_bool(gate.is_powered()).is_false()
 
 
 ## A Module never goes back offline, so its Gate is never charged for twice.
 func test_a_powered_gate_refuses_a_second_payment() -> void:
 	var gate := _gate(_planet("Roke"), 600)
-	_gs.credits = 2000
+	_gs.stores = 2000
 	assert_bool(gate.power(_gs)).is_true()
 	assert_bool(gate.power(_gs)).is_false()
-	assert_int(_gs.credits).is_equal(1400)
+	assert_int(_gs.stores).is_equal(1400)
 	assert_int(_gs.titan_influence()).is_equal(1)
 
 
 func test_each_planets_module_counts_once_toward_titan_influence() -> void:
-	_gs.credits = 10000
+	_gs.stores = 10000
 	_gate(_planet("Veld"), 600).power(_gs)
 	_gate(_planet("Crom"), 1200).power(_gs)
 	assert_int(_gs.titan_influence()).is_equal(2)
-	assert_int(_gs.credits).is_equal(8200)
+	assert_int(_gs.stores).is_equal(8200)
 
 
 ## On the sonar a Gate is an echo like any other: nothing says whether it is powered.
@@ -157,7 +157,7 @@ func test_the_minimap_echo_says_nothing_about_power() -> void:
 	var gate := _gate(_planet("Veld"), 600)
 	var marker := GateMinimapTarget.new(gate)
 	var before := marker.echo_world_radius()
-	_gs.credits = 600
+	_gs.stores = 600
 	gate.power(_gs)
 	assert_float(marker.echo_world_radius()).is_equal(before)
 	assert_bool(marker.is_ping()).is_false()
@@ -183,7 +183,7 @@ func test_the_minimap_shows_a_gate_once_it_is_named() -> void:
 
 func test_new_game_powers_every_module_back_down() -> void:
 	var gate := _gate(_planet("Veld"), 600)
-	_gs.credits = 600
+	_gs.stores = 600
 	gate.power(_gs)
 	_gs.reset_all_state()
 	assert_dict(_gs.powered_gates).is_empty()
@@ -195,7 +195,7 @@ func test_new_game_powers_every_module_back_down() -> void:
 ## run used to carry its glow straight into the new game and read as already powered.
 func test_a_new_game_puts_out_a_gate_that_was_lit() -> void:
 	var gate := _gate(_planet("Veld"), 600)
-	_gs.credits = 600
+	_gs.stores = 600
 	gate.power(_gs)
 	gate._process(Gate.POWER_UP_TIME)
 	assert_float(gate._glow).is_equal(1.0)
@@ -350,12 +350,12 @@ func test_a_ship_docked_at_a_gate_is_saved_against_that_gate() -> void:
 
 func test_powered_gates_round_trip_through_the_save() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 42)
+	cfg.set_value("stats", "stores", 42)
 	cfg.save(SAVE_FILE)
 	Save.save_powered_gates(PackedStringArray(["Sun/Veld", "Sun/Crom"]), SAVE_FILE)
 	assert_array(Array(Save.load_powered_gates(SAVE_FILE))).contains_exactly(["Sun/Veld", "Sun/Crom"])
 	cfg.load(SAVE_FILE)
-	assert_int(cfg.get_value("stats", "credits")).is_equal(42)
+	assert_int(cfg.get_value("stats", "stores")).is_equal(42)
 	assert_array(Array(cfg.get_value(Save.GATE_SECTION, Save.GATE_POWERED_KEY))).contains_exactly(
 		["Sun/Veld", "Sun/Crom"])
 
@@ -368,27 +368,27 @@ func test_gate_save_needs_an_existing_save() -> void:
 
 func test_a_save_from_before_gates_reads_as_nothing_powered() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 7)
+	cfg.set_value("stats", "stores", 7)
 	cfg.save(SAVE_FILE)
 	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
 
 
 func test_identified_gates_round_trip_through_the_save() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 42)
+	cfg.set_value("stats", "stores", 42)
 	cfg.save(SAVE_FILE)
 	Save.save_identified_gates(PackedStringArray(["Sun/Veld", "Sun/Crom"]), SAVE_FILE)
 	assert_array(Array(Save.load_identified_gates(SAVE_FILE))).contains_exactly(
 		["Sun/Veld", "Sun/Crom"])
 	cfg.load(SAVE_FILE)
-	assert_int(cfg.get_value("stats", "credits")).is_equal(42)
+	assert_int(cfg.get_value("stats", "stores")).is_equal(42)
 	# Naming a Gate is not powering it: the two lists are kept apart
 	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
 
 
 func test_a_save_from_before_gates_were_named_reads_as_nothing_named() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 7)
+	cfg.set_value("stats", "stores", 7)
 	cfg.save(SAVE_FILE)
 	assert_int(Save.load_identified_gates(SAVE_FILE).size()).is_equal(0)
 
