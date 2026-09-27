@@ -1,10 +1,10 @@
 extends Control
 
-## In-game HUD: fuel bar, hull segment bar, cargo weight, Stores, velocity readout,
+## In-game HUD: boost gauge (around the minimap), hull segment bar, cargo weight, Stores, velocity readout,
 ## and the robot's radio panel. Subscribes to ship signals. (Action prompts live in IndicatorManager.)
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
-@onready var fuel_progress_bar: ProgressBarWidget = $"DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar"
+@onready var boost_gauge: BoostGauge = $"DashboardAnchor/HBox/LeftColumn/MinimapDial/BoostGauge"
 @onready var hull_segment_bar: HullSegmentBar = $"DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar"
 @onready var hull_label: Label = $"DashboardAnchor/HBox/RightColumn/HullRow/HullLabel"
 @onready var current_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CurrentCargoLabel"
@@ -26,9 +26,8 @@ func _ready() -> void:
 	gs = get_tree().get_first_node_in_group("game_state")
 	ship = get_tree().get_first_node_in_group("ship") as Ship
 
-	if fuel_progress_bar:
-		fuel_progress_bar.bar_color = Colors.FUEL_FULL
-		fuel_progress_bar.background_color = Colors.PRIMARY_DIM
+	if boost_gauge:
+		boost_gauge.ship = ship
 	add_child(HarvestMeter.new())
 	add_child(ResonanceMeter.new())
 	add_child(PlacardPanel.new())
@@ -91,7 +90,7 @@ func _punch_cargo_label() -> void:
 
 func _fit_dashboard() -> void:
 	# The panel breathes with the cargo and Stores digit counts, so the meters are
-	# fixed-width (no expand flag in HUD.tscn) — a Deposit must not stretch the fuel bar.
+	# fixed-width (no expand flag in HUD.tscn) — a Deposit must not stretch the hull bar.
 	if not dashboard:
 		return
 	var min_size = dashboard.get_combined_minimum_size()
@@ -148,30 +147,10 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 			var speed = ship.linear_velocity.length()
 			velocity_label.text = "%.1f m/s" % [speed]
 
-		# Update fuel progress bar
 		var fuel = ship.fuel if "fuel" in ship else 0.0
 		var max_fuel = ship.max_fuel if "max_fuel" in ship else 100.0
-		var fuel_percent = (fuel / max_fuel * 100.0) if max_fuel > 0 else 0.0
-		if fuel_progress_bar:
-			fuel_progress_bar.set_value(fuel, max_fuel)
-			if fuel <= 0:
-				fuel_progress_bar.bar_color = Colors.FUEL_EMPTY
-			elif fuel_percent <= 12.5:
-				fuel_progress_bar.bar_color = Colors.FUEL_EIGHTH
-			elif fuel_percent <= 25:
-				fuel_progress_bar.bar_color = Colors.FUEL_QUARTER
-			elif fuel_percent <= 50:
-				fuel_progress_bar.bar_color = Colors.FUEL_HALF
-			elif fuel_percent <= 75:
-				fuel_progress_bar.bar_color = Colors.FUEL_THREE_QUARTERS
-			else:
-				fuel_progress_bar.bar_color = Colors.FUEL_FULL
-			# Blink the gauge once it's low; faster when critical. A dry tank holds still:
-			# a new game starts on one, and a gauge flashing from the first frame is noise.
-			var fuel_level := LowFuelEffect.level_for(fuel, max_fuel)
-			var blink_period := 0.5 if fuel_level == LowFuelEffect.Level.CRITICAL else 1.0
-			var dim := fuel > 0.0 and fuel_level != LowFuelEffect.Level.OK and fmod(Time.get_ticks_msec() / 1000.0, blink_period) > blink_period * 0.6
-			fuel_progress_bar.modulate.a = 0.35 if dim else 1.0
+		if boost_gauge:
+			boost_gauge.set_fuel(fuel, max_fuel)
 
 		# Update hull segment bar
 		var hull = ship.hull_strength if "hull_strength" in ship else 0.0
@@ -185,8 +164,7 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 					Colors.PRIMARY if hull_level == LowHullEffect.Level.OK else Colors.DANGER)
 	else:
 		velocity_label.text = "0.0 m/s"
-		if fuel_progress_bar:
-			fuel_progress_bar.set_value(0.0, 100.0)
-			fuel_progress_bar.bar_color = Colors.FUEL_EMPTY
+		if boost_gauge:
+			boost_gauge.set_fuel(0.0, 100.0)
 		if hull_segment_bar:
 			hull_segment_bar.set_value(0.0, 100.0)

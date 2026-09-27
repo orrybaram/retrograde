@@ -914,7 +914,7 @@ That fifth line is there on the first boot. The player won't think twice about i
 
 Black screen. A beat of silence.
 
-The cockpit fades in. The player is docked at the station in orbit around Rook. The HUD is minimal - fuel bar, hull bar, tiny cargo readout. All full, all fine. Through the viewport: stars, the grey curve of Rook below, Veld's frozen bulk beyond it, the distant pinprick of the sun.
+The cockpit fades in. The player is docked at the station in orbit around Rook. The HUD is minimal - boost gauge around the minimap, hull bar, tiny cargo readout. All full, all fine. Through the viewport: stars, the grey curve of Rook below, Veld's frozen bulk beyond it, the distant pinprick of the sun.
 
 A beep on the ship's comms. Text appears:
 

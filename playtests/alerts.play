@@ -25,13 +25,23 @@ wait 0.8
 screenshot alert_vapor_low
 eval ship.set("fuel", 15.0)
 wait 0.3
+# Ordinary thrust runs on aux power: a critical tank never coughs it
 down thrust
+wait 1.5
+assert not ship.low_fuel_effect.is_coughing() "plain thrust never coughs on a low tank"
+assert ship.fuel == 15.0 "plain thrust spends no fuel"
+# Only the boost draws on the tank, so only the boost coughs. Hold the tank at critical
+# for the burn, or it runs dry before the first cough.
+eval ship.set("dev_infinite_fuel", true)
+down boost
 wait_until ship.low_fuel_effect.is_coughing() 3
 frames 2
 assert ship.thruster_particles.emitting "the cough takes the boost, not the thrust"
 assert not ship.boost_particles.emitting "the boost plume is what a cough cuts"
 burst alert_sputter 6 0.06
+up boost
 up thrust
+eval ship.set("dev_infinite_fuel", false)
 eval ship.set("fuel", 150.0)
 wait 0.2
 assert not ship.low_fuel_effect.is_coughing() "cough clears above threshold"
