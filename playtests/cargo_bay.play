@@ -1,0 +1,98 @@
+# The Cargo Bay buried on Veld (docs/OPENING.md §9). A crashed hauler lies on Veld's ground
+# with the Cargo Bay standing Lug-up in it. It is dead to the Sweep until SR-7's cold
+# start; after, it answers from far past a ring's reach, faint and broken far off and whole
+# close in. On the Aux the ship strains at it and the ground holds; the Burn tears it free
+# on a quarter tank, and the Aux lifts it off Veld. It survives a reload where it lies.
+# Run: PLAYTEST_PORT=7811 tools/play.sh --headless playtests/cargo_bay.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+
+# --- In the world from a new game: the wreck on Veld, the Cargo Bay buried in it ---
+assert pt.hauler() != null and pt.hauler().get_parent() == pt.planet("Veld") "the hauler lies on Veld"
+eval pt.remember("bay", pt.component("cargo_bay"))
+assert pt.recall("bay") != null "the Cargo Bay is out there"
+assert pt.recall("bay").is_buried() and pt.recall("bay").lodged_in == pt.planet("Veld") "buried in Veld"
+assert pt.recall("bay").pull_threshold > 1.0 "deeper than the Aux can pull"
+assert pt.recall("bay").lug_global().distance_to(pt.planet("Veld").global_position) > 2400.0 "its Lug stands out of the ground"
+assert pt.recall("bay").lug_global().distance_to(pt.hauler().global_position) < 120.0 "in the wreck"
+assert not gs.core_started "SR-7 is still dark"
+
+# --- Dead to the Sweep before the cold start, even from right on top of it ---
+eval pt.remember("up", (pt.recall("bay").lug_global() - pt.planet("Veld").global_position).normalized())
+eval pt.warp_to(pt.recall("bay").lug_global() + pt.recall("up") * 150.0)
+eval ship.set("linear_velocity", pt.planet("Veld").linear_velocity)
+eval ship.set("rotation", pt.recall("up").angle())
+wait 0.1
+press action
+wait 1.3
+assert pt.answers(pt.recall("bay")) == 0 "no answer before the cold start"
+
+# --- After it, it answers from far off, faint and broken; close in, whole ---
+eval gs.set("core_started", true)
+eval pt.warp_to(pt.recall("bay").lug_global() + pt.recall("up") * 3000.0)
+eval ship.set("linear_velocity", pt.planet("Veld").linear_velocity)
+wait 0.1
+press action
+wait 1.3
+assert pt.answers(pt.recall("bay")) == 1 "3 km off, a single tap gets an answer"
+assert pt.broken_answers(pt.recall("bay")) == 1 "faint and broken, from past the ring"
+wait 3.5
+eval pt.warp_to(pt.recall("bay").lug_global() + pt.recall("up") * 150.0)
+eval ship.set("linear_velocity", pt.planet("Veld").linear_velocity)
+wait 0.1
+press action
+wait 1.0
+assert pt.answers(pt.recall("bay")) == 1 and pt.broken_answers(pt.recall("bay")) == 0 "close in the answer is whole"
+screenshot cargo_bay_1_wreck
+
+# --- The pull on the Aux: the ship strains and the ground holds ---
+eval ship.set("fuel", ship.max_fuel * 0.25)
+eval ship.set("rotation", (-pt.recall("bay").lug_facing_global()).angle())
+eval pt.warp_to(pt.recall("bay").lug_global() + pt.recall("bay").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.recall("bay").linear_velocity)
+wait 0.1
+hold action 0.4
+wait 1.0
+assert ship.state_machine.current_state._latched "coupled onto the Lug"
+hold reverse_thrust 4.0
+assert pt.recall("bay").is_buried() "the Aux never tears it free"
+assert pt.recall("bay").pull_progress == 0.0 "and never builds the pull"
+assert ship.damage_shake_current_intensity > 0.5 "but the ship strains at it"
+assert ship.state_machine.current_state._coupled != null "still coupled"
+screenshot cargo_bay_2_strain
+
+# --- The Burn tears it free, on the quarter tank SR-7 gives ---
+eval pt.remember("fuel", ship.fuel)
+down boost
+down reverse_thrust
+wait_until not pt.recall("bay").is_buried() 8
+up boost
+up reverse_thrust
+assert not pt.recall("bay").is_buried() "the Burn tears it free"
+assert ship.fuel > 0.0 "the quarter tank covered it"
+assert pt.recall("fuel") - ship.fuel > ship.max_fuel * 0.15 and pt.recall("fuel") - ship.fuel < ship.max_fuel * 0.23 "at about a fifth of a full tank"
+wait_until pt.state_name() == "CarryingState" 3
+assert pt.state_name() == "CarryingState" "the magnet takes it onto the nose"
+screenshot cargo_bay_3_free
+
+# --- The Aux lifts it off Veld ---
+eval pt.remember("alt", ship.global_position.distance_to(pt.planet("Veld").global_position))
+hold reverse_thrust 6.0
+assert ship.global_position.distance_to(pt.planet("Veld").global_position) > pt.recall("alt") + 150.0 "climbing away from Veld on the Aux"
+assert ship.fuel > 0.0 "without the Burn"
+assert pt.state_name() == "CarryingState" "still carrying it"
+eval pt.remember("fuel_left", ship.fuel)
+screenshot cargo_bay_4_lift
+
+# --- A reload keeps a buried one buried, and one there only once ---
+eval pt.save_now()
+reload
+assert pt.component("cargo_bay") != null "the Cargo Bay survives a reload"
+assert pt.component_count("cargo_bay") == 1 "and there is only the one"
+assert pt.component("cargo_bay").is_loose() or pt.component("cargo_bay").is_clamped() "where it was, not back in the ground"

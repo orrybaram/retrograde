@@ -22,6 +22,11 @@ const ANSWER_ALPHA := 0.35
 ## An answer reaches this much of the ping that woke it: it scales with the ping, but
 ## smaller, so it reads as a reply.
 const ANSWER_REACH := 0.5
+## An answer from past the ring's reach (clarity < 1) comes back as a broken ring: its
+## circle is cut into this many arcs, and the fainter it is the more of them are missing.
+const BROKEN_ARCS := 36
+## However far off it came from, such an answer fades within this many ordinary rings' time.
+const FAR_ANSWER_LIFETIME := 3.0
 
 var color := Colors.TITAN
 var rings := RINGS
@@ -30,17 +35,40 @@ var lifetime := LIFETIME
 var end_radius := END_RADIUS
 var max_alpha := MAX_ALPHA
 var width := WIDTH
+## Which of BROKEN_ARCS are drawn; empty draws the whole ring.
+var arcs: Array[bool] = []
 var _age := 0.0
 
 ## Answer a ping of `strength` (SonarPulse.strength_for) from `at` (local to `parent`):
 ## one ring, fading as slowly as the one that arrived and reaching ANSWER_REACH of it.
-static func answer_ping(parent: Node2D, at: Vector2, strength: float, tint := Colors.TITAN) -> SonarEcho:
+## `clarity` under 1 (an answer from past the ring, Freight.answer_clarity) is fainter and
+## broken: a stutter of arcs rather than a ring.
+static func answer_ping(parent: Node2D, at: Vector2, strength: float, tint := Colors.TITAN, clarity := 1.0) -> SonarEcho:
 	var echo := answer(parent, at, tint, 1)
 	strength = maxf(strength, 1.0)
 	echo.end_radius = SonarPulse.END_RADIUS * strength * ANSWER_REACH
 	echo.lifetime = SonarPulse.LIFETIME * strength
 	echo.max_alpha = ANSWER_ALPHA
+	if clarity < 1.0:
+		echo.lifetime = SonarPulse.LIFETIME * minf(strength, FAR_ANSWER_LIFETIME)
+		echo.max_alpha = ANSWER_ALPHA * clampf(clarity, 0.0, 1.0)
+		echo.arcs = broken_arcs(clarity, echo.get_instance_id())
 	return echo
+
+## Which of BROKEN_ARCS a ring of `clarity` keeps: all of them at 1, fewer the fainter it
+## is, never none. Its own generator (`seed_value`), never the game's shared one.
+static func broken_arcs(clarity: float, seed_value: int) -> Array[bool]:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var out: Array[bool] = []
+	var kept := false
+	for i in BROKEN_ARCS:
+		var on := rng.randf() < clarity
+		out.append(on)
+		kept = kept or on
+	if not kept:
+		out[0] = true
+	return out
 
 ## Send an echo out from `at` (local to `parent`).
 static func answer(parent: Node2D, at: Vector2, tint := Colors.TITAN, count := RINGS) -> SonarEcho:
@@ -67,4 +95,11 @@ func _draw() -> void:
 		var c := color
 		c.a = max_alpha * (1.0 - t)
 		var r := lerpf(START_RADIUS, end_radius, 1.0 - pow(1.0 - t, 2.0))
-		draw_arc(Vector2.ZERO, r, 0.0, TAU, clampi(int(r / 4.0), 48, 512), c, width, true)
+		if arcs.is_empty():
+			draw_arc(Vector2.ZERO, r, 0.0, TAU, clampi(int(r / 4.0), 48, 512), c, width, true)
+			continue
+		var step := TAU / arcs.size()
+		var points := clampi(int(r * step / 4.0), 4, 64)
+		for k in arcs.size():
+			if arcs[k]:
+				draw_arc(Vector2.ZERO, r, k * step, (k + 0.7) * step, points, c, width, true)
