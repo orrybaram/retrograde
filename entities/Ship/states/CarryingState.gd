@@ -32,6 +32,10 @@ func exit() -> void:
 	EventBus.action_message_changed.emit("")
 	super.exit()
 
+## How far the release hold has got, 0 to 1 (the manual check's RELEASE row, BootLog).
+func release_progress() -> float:
+	return clampf(_release_held / RELEASE_HOLD, 0.0, 1.0)
+
 func holds_freight() -> bool:
 	return true
 
@@ -47,7 +51,7 @@ func physics_process(delta: float) -> void:
 	super.physics_process(delta)
 
 func _update_action() -> void:
-	if _action_armed and Input.is_action_pressed("action"):
+	if _action_armed and Input.is_action_pressed("action") and ControlLock.allows(ControlLock.RELEASE):
 		_release_held += get_physics_process_delta_time()
 	else:
 		_release_held = 0.0

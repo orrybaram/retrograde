@@ -76,13 +76,17 @@ func physics_process(delta: float) -> void:
 
 ## Sample the flight keys into `ship`'s wants.
 static func read_stick(ship: Ship) -> void:
-	ship.want_turn_left = Input.is_action_pressed("turn_left")
-	ship.want_turn_right = Input.is_action_pressed("turn_right")
-	ship.want_strafe_left = Input.is_action_pressed("strafe_left")
-	ship.want_strafe_right = Input.is_action_pressed("strafe_right")
+	ship.want_turn_left = _stick("turn_left")
+	ship.want_turn_right = _stick("turn_right")
+	ship.want_strafe_left = _stick("strafe_left")
+	ship.want_strafe_right = _stick("strafe_right")
 	ship.want_boost = Input.is_action_pressed("boost")
-	ship.want_thrust = Input.is_action_pressed("thrust")
-	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
+	ship.want_thrust = _stick("thrust")
+	ship.want_reverse_thrust = _stick("reverse_thrust")
+
+## Held, and not locked by the manual diagnostic (ControlLock).
+static func _stick(action: StringName) -> bool:
+	return Input.is_action_pressed(action) and ControlLock.allows(action)
 
 ## Is the player working the stick at all (turning, strafing or thrusting)?
 static func has_stick_input(ship: Ship) -> bool:
@@ -375,7 +379,8 @@ var _latched := false
 const COUPLE_GAIN := 9.0
 
 func _update_magnet() -> void:
-	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available()
+	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available() \
+		and ControlLock.allows(ControlLock.CLAMP)
 	var fresh_press := holding and not _was_holding
 	_was_holding = holding
 	if not holding:
@@ -412,6 +417,14 @@ func _update_magnet() -> void:
 		_magnet_locked = false
 		ship.set_meta("pending_freight", f)
 		ship.state_machine.change_state("CarryingState")
+
+## How far the magnet has drawn a piece in, 0 to 1: the Lug's gap to the nose against the
+## magnet's reach. 0 with nothing in its pull (the manual check's CLAMP row, BootLog).
+func magnet_progress() -> float:
+	if _magnet_target == null or not is_instance_valid(_magnet_target):
+		return 0.0
+	var gap := ship.to_global(Ship.NOSE).distance_to(_magnet_target.lug_global())
+	return clampf(1.0 - gap / Freight.MAGNET_RANGE, 0.0, 1.0)
 
 ## A hold of `action` that is working the magnet - pulling a piece in, coupled onto a
 ## buried one, or the press that coupled on or let go - belongs to that, not the Sweep:

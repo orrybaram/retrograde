@@ -40,6 +40,9 @@ var last_game_over_reason: String = ""
 ## darken every scenario's opening frames and push back its first key press.
 ## playtests/intro.play sets this to cover the sequence itself.
 var force_wake_sequence := false
+## The manual diagnostic (BootLog) locks the controls, so scenarios run without it unless
+## they ask: playtests/boot_log.play sets this.
+var force_boot_log := false
 ## Black sheet above every layer, used for the wake-up fade. Built in code so it
 ## sits outside CanvasLayer (Playtest.visible_ui() only scans that one).
 var _fade_rect: ColorRect = null
@@ -351,6 +354,9 @@ func start_game() -> void:
 	# on the comms: UNIT-7 is off until the core's cold start (RobotRadio.guide_awake).
 	if wake:
 		await _wake_from_black()
+	# The ship checks its own controls, once, on a new game (docs/OPENING.md §6)
+	if force_boot_log or not Playtest.active:
+		get_tree().call_group("boot_log", "begin")
 
 func load_game() -> void:
 	clear_screen_effects()

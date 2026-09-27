@@ -1,0 +1,136 @@
+# The ship's manual diagnostic (docs/OPENING.md §6, BootLog): a new game types a header
+# saying the controls are locked into the bottom-right corner, then FLIGHT, whose controls
+# come back as its heading types; each control stamps [ OK ] as it is used, and a finished
+# section clears. SONAR types in just outside a Sweep's reach of the FUEL TANK, MAGNET close
+# to its Lug, LATERAL a beat after the pickup, RELEASE close to its Mount - each unlocking
+# its own control. Once all five have cleared it reports DIAGNOSTIC ... PASS and fades, and
+# nothing is locked. A continue never shows it.
+# Run: PLAYTEST_PORT=7831 tools/play.sh --headless playtests/boot_log.play
+
+eval main.set("force_boot_log", true)
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval pt.remember("log", pt.node("boot_log"))
+assert pt.recall("log").is_running() "a new game starts the diagnostic"
+
+# --- Locked: the stick does nothing until FLIGHT is up ---
+eval pt.remember("v", ship.linear_velocity)
+hold thrust 0.4
+assert (ship.linear_velocity - pt.recall("v")).length() < 1.0 and not pt.recall("log").checklist.is_used("thrust") "thrust is locked"
+assert pt.recall("log").has_locks() "everything is"
+wait_until pt.recall("log").text().contains("MANUAL DIAGNOSTIC") 4
+assert not pt.recall("log").checklist.is_live("flight") "the header types first"
+screenshot boot_log_0_locked
+
+# --- FLIGHT ---
+wait_until pt.recall("log").checklist.is_live("flight") 6
+wait 2.5
+assert pt.recall("log").text().contains("THRUST") and pt.recall("log").text().contains("[UP]") "each control with its key"
+assert not pt.recall("log").text().contains("SONAR") "and nothing else yet"
+assert pt.recall("log").get_global_rect().position.x > get_viewport().get_visible_rect().size.x / 2.0 "on the right"
+assert pt.recall("log").get_global_rect().end.y > get_viewport().get_visible_rect().size.y / 2.0 and pt.recall("log").get_global_rect().end.y <= get_viewport().get_visible_rect().size.y "at the bottom, on screen"
+screenshot boot_log_1_flight
+eval pt.remember("v", ship.linear_velocity)
+hold thrust 0.3
+assert (ship.linear_velocity - pt.recall("v")).length() > 1.0 "thrust is back"
+hold reverse_thrust 0.3
+hold turn_left 0.2
+wait 0.5
+assert pt.recall("log").checklist.is_done("thrust") and pt.recall("log").checklist.is_done("reverse") "thrust and reverse stamp"
+assert not pt.recall("log").checklist.is_done("turn") "one way isn't TURN"
+assert pt.recall("log").text().contains("[ OK ]") "stamped on screen"
+hold turn_right 0.2
+wait 0.3
+assert pt.recall("log").checklist.is_done("turn") "both ways is"
+wait 1.5
+assert pt.recall("log").checklist.is_cleared("flight") and not pt.recall("log").text().contains("THRUST") "a finished section clears"
+wait 1.0
+assert pt.recall("log").text().contains("PROPULSION ") and pt.recall("log").text().contains("[ OK ]") "and joins the list of passes"
+assert pt.recall("log").text().begins_with("MANUAL DIAGNOSTIC") "the header stays"
+
+# --- SONAR: just outside a Sweep's reach of the tank ---
+eval ship.set("rotation", (-pt.section("fuel_tank").lug_facing_global()).angle())
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 420.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 0.3
+assert not pt.recall("log").checklist.is_open("sonar") "well out of reach, not yet"
+hold action 0.1
+wait 0.2
+assert ship.sonar.ring_count() == 0 "and the Sweep is locked"
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 340.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 0.3
+assert pt.recall("log").checklist.is_open("sonar") "just outside a Sweep's reach opens SONAR"
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 180.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 1.0
+# A short hold, not a press: a press can fall between physics ticks on a cold start
+hold action 0.1
+wait 1.5
+assert pt.recall("log").checklist.is_done("sweep") "a Sweep stamps it"
+assert pt.recall("log").text().contains("FREIGHT") "and the tank answering logs the contact"
+wait 1.5
+assert pt.recall("log").checklist.is_cleared("sonar") "then SONAR clears"
+
+# --- MAGNET: close to the Lug ---
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 80.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 0.3
+assert not pt.recall("log").checklist.is_open("magnet") "not from across the way"
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 40.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 0.3
+assert pt.recall("log").checklist.is_open("magnet") "close to the Lug opens MAGNET"
+wait 1.0
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 26.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 0.1
+hold action 0.8
+assert pt.state_name() == "CarryingState" "the tank is clamped"
+wait 0.3
+assert pt.recall("log").checklist.is_done("clamp") "and CLAMP stamps"
+assert not pt.recall("log").checklist.is_open("lateral") "LATERAL waits a beat"
+hold strafe_left 0.2
+assert not pt.recall("log").checklist.is_used("strafe_left") "strafe is locked until then"
+hold action 1.0
+assert pt.state_name() == "CarryingState" "and so is letting go"
+
+# --- LATERAL: a beat after the pickup ---
+wait 0.5
+assert pt.recall("log").checklist.is_cleared("magnet") "MAGNET has cleared"
+assert pt.recall("log").checklist.is_open("lateral") "then LATERAL opens"
+wait 1.0
+hold strafe_left 0.2
+wait 0.5
+assert not pt.recall("log").checklist.is_done("strafe") "one side isn't STRAFE"
+hold strafe_right 0.2
+wait 0.5
+assert pt.recall("log").checklist.is_done("strafe") "both sides is"
+assert not pt.recall("log").checklist.is_open("let_go") "far from the Mount, no RELEASE"
+wait 1.5
+assert pt.recall("log").checklist.is_cleared("lateral") "LATERAL clears"
+
+# --- RELEASE: close to the Mount ---
+eval pt.stage_at_mount("fuel_tank", Vector2(15, -6), 8.0)
+wait 0.2
+assert pt.recall("log").checklist.is_open("let_go") "close to the Mount opens RELEASE"
+wait 1.2
+down action
+wait 0.4
+assert pt.recall("log").text().contains("[██") "the stamp fills with the hold"
+wait 0.6
+up action
+assert pt.mount("fuel_tank").seated "the tank is seated"
+wait 0.3
+assert pt.recall("log").checklist.is_done("release") "letting go stamps it"
+wait_until pt.recall("log").text().contains("PILOT") 6
+assert pt.recall("log").text().contains("PASS") "every section cleared: PASS, and the pilot has the controls"
+assert pt.recall("log").text().contains("PROPULSION") and pt.recall("log").text().contains("CLAMP RELEASE") "the list of passes stays up to the end"
+assert not pt.recall("log").has_locks() "nothing is locked after"
+wait_until not pt.recall("log").is_running() 8
+assert not pt.recall("log").is_running() and not pt.recall("log").visible "then it fades for good"
+
+# --- A continue never shows it ---
+reload
+assert not pt.recall("log").is_running() "not on a load"
+quit

@@ -42,6 +42,10 @@ signal sonar_pulsed(origin: Vector2)
 ## A sonar resonance ring left the ship at `origin` (global): one each time `action` is let
 ## go wherever the ship is free to act (held longer, it reaches further); puzzles listen here.
 
+signal freight_answered()
+## A Sweep's ring reached a piece of Freight and its Lug answered (the ship's manual check
+## logs the contact, BootLog).
+
 signal scrap_swept()
 ## A Sweep's ring reached a live chunk of scrap, found just now or long since: whether the
 ## ship can cut it is another matter (RobotRadio's no-hold call).

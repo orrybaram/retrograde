@@ -13,6 +13,7 @@ extends Control
 @onready var stores_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/StoresLabel"
 @onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
+var boot_log: BootLog = null
 
 var gs: Node = null
 var ship: Ship = null
@@ -37,6 +38,9 @@ func _ready() -> void:
 	add_child(tracking)
 	add_child(radio)
 	add_child(HullWarning.new())
+	boot_log = BootLog.new()
+	boot_log.radio = radio
+	add_child(boot_log)
 	# Added last so it processes after _update_labels and rots the finished readouts
 	var glitch := HudGlitch.new()
 	glitch.name = "HudGlitch"

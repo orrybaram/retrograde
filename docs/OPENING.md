@@ -384,6 +384,54 @@ The boot text is the load-bearing one, and it promotes the Boot Terminal from
 talking to itself - which means that by the time they wonder whether that terminal accepts
 input, they have been reading it since minute one.
 
+### The manual diagnostic (decided 2026-09-27)
+
+The boot text's in-flight half (`BootLog`, `BootChecklist`, `ControlLock`). A beat after a
+new game hands over control, the ship types its own manual diagnostic into the HUD's
+bottom-right corner (on top of UNIT-7's panel while that is up), growing upward, in bare
+terminal text with no frame:
+
+```
+MANUAL DIAGNOSTIC
+CTRL AUTH ................. SYSTEM
+
+PROPULSION
+THRUST ....... [UP]          [ OK ]
+REVERSE ...... [DOWN]        [ -- ]
+YAW .......... [LEFT][RIGHT] [ -- ]
+```
+
+A terse flight-computer readout, no sentences: status fields right-aligned under the
+stamps, headings naming the hardware under test (PROPULSION, SONAR, CLAMP, RCS, CLAMP
+RELEASE), rows the control that exercises it.
+
+**The controls are locked until their test.** Nothing answers until PROPULSION's heading has
+typed; then the stick comes back. Each later section gives back its own: SONAR the Sweep,
+CLAMP the magnet, RCS the strafe, CLAMP RELEASE the let-go. Boost is never locked. Finishing,
+a load, a new game or a quit clears every lock, so none can outlive the log.
+
+Each row stamps `[ OK ]` the first time the pilot uses it, so the controls are taught as a
+checklist the player ticks off, not as popups. YAW and STRAFE need both ways. A section
+whose rows are all OK clears a moment later, so the log only holds what is still to do,
+and its system name joins a running list of passes under the header
+(`PROPULSION ..... [ OK ]`), which stays up to the end. `CTRL AUTH` is an aside: smaller
+than the log, and dim.
+Later sections **unfold** when their moment comes: SONAR when a loose piece's Lug is just
+outside a tapped Sweep's reach (a Sweep that reaches it logs `CONTACT ... FREIGHT`), CLAMP
+when the nose is close to a Lug (the stamp fills as a bar while the magnet pulls), RCS a
+beat after the pickup, CLAMP RELEASE when the load is close to its Mount (its stamp fills with
+the release hold). A row left waiting flickers now and then; nothing else nags. With every
+section cleared it prints `DIAGNOSTIC ... PASS` / `CTRL AUTH ... PILOT`, holds, and
+fades for good.
+
+It runs on a new game only and is never saved: a continue does not bring it back. It never
+names a place or a goal - only the ship's own controls, which §6 already assigns to it.
+Considered and set aside (prototyped 2026-09-27): stacked on the dashboard (moved to the
+corner after a play), overlay key cards and prompts pinned to
+the ship (the popups this section rules out), every section listed from the start (tells
+the player the shape of Act 1 before they have seen a tank), and the POST panel folding
+into the corner (the dark new-game start has no POST to fold).
+
 ## 7. What Veld Withholds
 
 After the wake, Veld's job is to be **finishable**. Three to five hours: strip the ring,
