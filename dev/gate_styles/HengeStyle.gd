@@ -103,13 +103,13 @@ func draw_gate(c: CanvasItem, glow: float, clock: float) -> void:
 	_draw_altar(c, stone, lit, glow)
 	draw_blinker(c, glow, clock, polar(-PI / 2.0, RADIUS + POST_LEN / 2.0 + 8.0))
 
-## The cradle is an altar stone laid flat across the mouth, on two stubby footings.
+## The berth is an altar stone laid flat across the mouth, on two stubby footings.
 func _draw_altar(c: CanvasItem, stone: Color, lit: Color, glow: float) -> void:
 	var slab := PackedVector2Array([
-		Vector2(-CRADLE_HALF - 8, RADIUS - 9), Vector2(CRADLE_HALF + 7, RADIUS - 8),
-		Vector2(CRADLE_HALF + 10, RADIUS + 8), Vector2(-CRADLE_HALF - 11, RADIUS + 7),
+		Vector2(-BERTH_HALF - 8, RADIUS - 9), Vector2(BERTH_HALF + 7, RADIUS - 8),
+		Vector2(BERTH_HALF + 10, RADIUS + 8), Vector2(-BERTH_HALF - 11, RADIUS + 7),
 	])
-	for x in [-CRADLE_HALF + 2, CRADLE_HALF - 2]:
+	for x in [-BERTH_HALF + 2, BERTH_HALF - 2]:
 		var foot := PackedVector2Array([
 			Vector2(x - 7, RADIUS + 2), Vector2(x + 7, RADIUS + 3),
 			Vector2(x * 1.3 + 8, RADIUS + 26), Vector2(x * 1.3 - 8, RADIUS + 25),
@@ -118,5 +118,5 @@ func _draw_altar(c: CanvasItem, stone: Color, lit: Color, glow: float) -> void:
 		c.draw_polyline(foot, stone.darkened(0.6), 2.0, true)
 	c.draw_colored_polygon(slab, stone.lightened(0.05))
 	c.draw_polyline(slab, stone.darkened(0.55), 2.2, true)
-	c.draw_line(Vector2(-CRADLE_HALF, RADIUS - 4), Vector2(CRADLE_HALF, RADIUS - 4),
+	c.draw_line(Vector2(-BERTH_HALF, RADIUS - 4), Vector2(BERTH_HALF, RADIUS - 4),
 		Color(lit, 0.12 + glow * 0.75), 2.0)

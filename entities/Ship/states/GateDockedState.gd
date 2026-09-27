@@ -1,7 +1,7 @@
 extends ShipState
 class_name GateDockedState
 
-## The ship clamped into a Gate's docking cradle. (LandedState is a port; this is a Gate.)
+## The ship clamped into a Gate's docking berth. (LandedState is a port; this is a Gate.)
 ##
 ## A Gate is not a port: there is no quartermaster and nothing to sell. All that is out
 ## here is the Gate's own terminal, which opens on arrival and asks for the Stores to
@@ -22,7 +22,7 @@ var _terminal: GateTerminal = null
 ## The screen is already going dark; nothing else about this dock matters any more.
 var _transiting := false
 
-## Clamped in the cradle: `action` is the terminal's key, not the sonar's.
+## Clamped in the berth: `action` is the terminal's key, not the sonar's.
 func allows_sonar() -> bool:
 	return false
 
@@ -49,7 +49,7 @@ func enter() -> void:
 		ship.camera.zoom_camera_in(CAMERA_ZOOM)
 
 	# Reaching a Gate is what names it. In open flight that has already happened long
-	# before the cradle, but a ship that spawns docked at one skips the approach, so the
+	# before the berth, but a ship that spawns docked at one skips the approach, so the
 	# Guide gets its word in before the terminal takes the screen.
 	var gate := locked_dockable as Gate
 	if gate:
@@ -88,7 +88,7 @@ func physics_process(delta: float) -> void:
 		_exit_to_flying()
 		return
 
-	# Drifting out of the cradle's reach releases the lock, same as a port
+	# Drifting out of the berth's reach releases the lock, same as a port
 	if ship.global_position.distance_to(locked_dockable.get_dock_position()) > locked_dockable.get_dock_distance():
 		_exit_to_flying()
 		return
@@ -107,7 +107,7 @@ func physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("action"):
 		_open_terminal()
 
-## Holds the ship in the cradle: lerped in on arrival, rigid after that, riding the
+## Holds the ship in the berth: lerped in on arrival, rigid after that, riding the
 ## Gate's orbit.
 func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if not is_ship_valid() or not is_instance_valid(locked_dockable):
@@ -129,7 +129,7 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = locked_dockable.get_dock_velocity()
 	state.angular_velocity = 0.0
 
-## The cradle's frame, falling back to the node's own for anything that only
+## The berth's frame, falling back to the node's own for anything that only
 ## implements the plain Dockable methods.
 static func gate_dock_transform(dockable: Node2D) -> Transform2D:
 	if dockable.has_method("get_dock_transform"):
@@ -194,7 +194,7 @@ func _on_gate_powered(_gate: Gate) -> void:
 
 ## The link between two online Modules, taken. Nothing aboard pays for it, so there is
 ## nothing to check and nothing to spend: the terminal comes down, the screen goes dark
-## and the ship is set down in the other Gate's cradle.
+## and the ship is set down in the other Gate's berth.
 func _on_transit_requested(destination: Gate) -> void:
 	if _transiting or not is_ship_valid() or not is_instance_valid(destination):
 		return

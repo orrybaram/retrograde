@@ -30,7 +30,7 @@ eval pt.caption("In scanner range it draws as a ring on the minimap  //  nothing
 eval pt.park_at_gate("Veld", 2600.0)
 wait 3.5
 
-eval pt.caption("Veld's Gate: dark hull, one slow amber blinker, a cradle across the mouth")
+eval pt.caption("Veld's Gate: dark hull, one slow amber blinker, a berth across the mouth")
 eval pt.park_at_gate("Veld", 220.0)
 eval ship.set("linear_velocity", ship.linear_velocity + Vector2(0, 45))
 wait 3.2
@@ -66,7 +66,7 @@ wait 2.0
 reload
 wait_until main.current_game_state == 1 10
 wait 1.0
-eval pt.caption("Back in the cradle, Module still online, Stores still spent")
+eval pt.caption("Back in the berth, Module still online, Stores still spent")
 wait 3.0
 eval pt.caption("")
 wait 0.6

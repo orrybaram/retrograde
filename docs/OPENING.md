@@ -38,7 +38,11 @@ And it is a bar the player fills by hand. Each Section is Freight: clamped rigid
 hull, flown home with its mass and shape dragging the ship's handling, and **released into
 its own gap in the silhouette**. Not docked, not fitted from a menu - flown into the hole.
 Components (ship upgrades) are delivered the same way, into the station's Cradle, and fitted
-from the station's menus once docked. One delivery gesture for all Freight.
+from the station's menus once docked. One delivery gesture for all Freight. SR-7's Cradle
+(decided 2026-09-26) is slung under the refuel boom's root: a frame hanging off the boom,
+closed at the hull end and open outboard, so a Component is pushed in under the dock's head
+until the end plate stops it, and let go of. It hangs off the arm, so it is only there once
+the arm is out.
 
 ### Seating a Section
 
@@ -47,7 +51,7 @@ from the station's menus once docked. One delivery gesture for all Freight.
   beads of slag. A gap in a silhouette does not read as a hole; a cut edge does. No ghost
   outline, no glowing socket. It is a *cut* and never a tear because SR-7 was not damaged,
   it was taken apart (§2, "Why it is broken").
-- **One Section, one Mount.** The tank only goes in the empty tank cradle.
+- **One Section, one Mount.** The tank only goes in the empty tank saddle.
 - **The flying is the hard part; the last few pixels are free.** Within about 40 px of its
   Mount and 30° of its rotation (the docking tolerance), the action prompt reads
   **RELEASE**. On release the Mount pulls it home over half a second, with a clunk, and the
@@ -68,7 +72,7 @@ Chosen from the silhouette lab (claude.ai/artifact/CCVHLMG6SyGxY5Shks5aSG, round
 - **Arm block**: three pressurised modules, flanked by cold scissor **radiator fans**.
 - **Hub** with a docking port at each end.
 - **Core** in the middle, with a **long cylindrical tank** on each side of it. The right
-  one is the **FUEL TANK** Section; its empty cradle is where the **refuel boom** comes off.
+  one is the **FUEL TANK** Section; its empty saddle is where the **refuel boom** comes off.
 - **Refuel boom**: a telescoping truss out to the right ending in a docking head. **The ship
   docks here** (replacing the `SpacePort` docking) - but not at first: a new game finds it
   run in, back inside the belly, and it only comes out once the station is whole (§3, §5;
@@ -455,6 +459,71 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 - No answer to the survey marker.
 - The Heartbeat audible but not actionable - "faint, ignorable, but present."
 - No third Procedure. The core and the Gate are the only two, and they share their verbs.
+
+## 9. The Cargo Bay (decided 2026-09-26)
+
+The ship wakes with **nothing**: an empty tank and no hold. Not a small hold - none. No
+cargo readout on the HUD, no HOLD row in the Log, and no scrap, derelict, container or seam
+will harvest. A Sweep still lights them up and puts them on the minimap; there is simply
+nothing to put anything in. Act 1 does not need one, and so the first thing after the wake
+is to go and get one.
+
+**The Cargo Bay is the first Component**, and ADR 0007's model case made literal. It lies
+buried in Veld's surface inside a crashed hauler, Lug up. It is in the world from minute
+one and dead to the Sweep until SR-7's cold start; after that it answers from well beyond
+harvest range, the array's warmer-colder lesson reused.
+
+1. **Cold start.** SR-7 lights. From now on it tops the tank up to **a quarter** every time
+   the ship docks or relaunches, never higher. A dead SR-7 gives nothing.
+2. **The need.** The first time a Sweep finds scrap that will not harvest, UNIT-7 names the
+   problem, never the place: there is nothing to put it in. It is sincere; it does not know
+   where a hold is. On close approach it names the wreck flatly (`HAULER, DOWN` or similar).
+3. **The pull.** The player lands, clamps the Lug and flies away from the ground. On the Aux
+   the ship strains at the end of the clamp and the ground shudders and holds. Only the Burn
+   tears it free. Tuning: the tear-out costs about 20% of `max_fuel`, so the free quarter is
+   just enough with a little over. Once free it lifts off Veld on the Aux.
+4. **Home.** Flown back as Freight, heavy (ADR 0012), and released into SR-7's **Cradle**.
+5. **Fitting.** Docked, SR-7's menu offers `FIT CARGO BAY`. UNIT-7 fits it: the hold becomes
+   50, the cargo readout appears, and everything harvests.
+
+**The same pull on Rook.** The solar array's key-press tugs (§4) become the same verb: clamp
+and fly away. The array is light and Rook is small, so the Aux does it. The lesson learned in
+minute four is the one that fails on Veld.
+
+**There is no store** (ADR 0007, now in full). Credits become SR-7's **Stores**. The hold
+empties into them on docking (the **Deposit**, the old cash-in count re-aimed), and docking
+spends them automatically, with no menu: the hull patched first, then the tank topped past
+the free quarter. The ring pays for the trip, and the Cargo Bay is what lets it pay at all.
+Tuning target: one full hold of ordinary gems is about a full tank from empty. With the
+store go every `UpgradeItem`, so `max_hull` and `max_fuel` are fixed until Components exist,
+and the hold is 50 for good.
+
+**For now:** the planetary scan is removed and seams stay dormant with it - the store was
+the scanner's only source, and `ECHO` (`docs/SWEEP.md`) is not designed far enough to
+replace it. Visiting and Records are untouched; they never needed the scanner.
+
+**Open:** where the Cradle sits on SR-7; whether fitting stays a menu row; `ECHO` and the
+seams; old saves (credits, bought upgrades, a 50-unit hold with no Cargo Bay). The Gate's
+docking surface is also called a cradle in code (`Gate.CRADLE_HALF`, `GateTransit`) and
+should be renamed before SR-7's Cradle is built.
+
+**Tuning (#141).** The numbers the flow runs on, checked by `playtests/cargo_bay.play`,
+`playtests/dock.play` and `test/EconomyTest.gd`:
+
+| | Value | Where |
+|---|---|---|
+| Tank | 150 fuel (`max_fuel`); the Aux costs nothing, the Burn 6/s | `Ship`, `Main.tscn` |
+| Free quarter | 37.5 fuel on every dock or relaunch, never higher | `Ship.FREE_FUEL_FRACTION` |
+| Cargo Bay hold | pull threshold 1.6 (the Aux tops out at 1.0), `pull_time` 4.25 s | `Components` |
+| Tear-out | about 29-30 fuel of Burn, 19-20% of the tank; 7-9 fuel left over | measured |
+| Wasted quarter | a tenth of the tank burned on the way (15% left) runs dry mid-pull, and the ground holds; the Aux flies home for another quarter | measured |
+| Ordinary gem | 6.85 ST in 1.11 hold units on average (GOOD rolls on plain scrap) | `GemData` |
+| Full hold | 50 units of ordinary gems, about 309 ST | `EconomyTest` |
+| Fuel | 2 ST a point: a full tank from empty is 300 ST, the tank past the free quarter 225 ST | `Economy` |
+| Hull | 3 ST a point: a whole hull from nothing is 300 ST, and it is paid first | `Economy` |
+
+So one full hold of ordinary gems is about a full tank from empty; a hold spent on a
+badly holed hull goes mostly to the patch. A Gate's Module (600 ST) is two full holds.
 
 ---
 

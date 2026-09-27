@@ -1,7 +1,7 @@
 extends Control
 class_name GateTerminal
 
-## The Gate's own terminal, opened by GateDockedState while the ship sits in the cradle.
+## The Gate's own terminal, opened by GateDockedState while the ship sits in the berth.
 ## No robot, no shopfront: the Titan's hardware talking to itself, and one row asking
 ## for the Stores to bring this planet's Module online.
 ##

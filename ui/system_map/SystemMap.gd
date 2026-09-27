@@ -942,7 +942,7 @@ func _draw_gates(c: Control, rect: Rect2) -> void:
 		if reveal <= 0.0:
 			continue
 
-		# The glyph is the Gate seen from above: a ring with the cradle's mouth in it
+		# The glyph is the Gate seen from above: a ring with the berth's mouth in it
 		var start := PI / 2.0 + GATE_MOUTH / 2.0
 		var span := TAU - GATE_MOUTH
 		c.draw_arc(pos, GATE_GLYPH_RADIUS + 2.0, start, start + span, 24, Color(gate_color, 0.18 * reveal), 3.0, true)

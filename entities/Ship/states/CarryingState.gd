@@ -5,7 +5,8 @@ class_name CarryingState
 ## thrust, turning (slowed by the load through Ship.turn_ratio), knocks, particles - except
 ## that `action` means one thing here: hold it to let go, anywhere - a deliberate hold, so
 ## a tap never drops the load. Let go within tolerance of its Mount, a Section is pulled
-## home (Mount.seat), and the prompt reads RELEASE there before the hold starts. A carrying ship cannot Sweep, dock, harvest or touch down.
+## home (Mount.seat), a Component into SR-7's Cradle (Cradle.seat), and the prompt reads
+## RELEASE there before the hold starts. A carrying ship cannot Sweep, dock, harvest or touch down.
 ## Leaving this state lets go of the load, except into ConsumedState, where the Void
 ## hands it back inside the edge.
 
@@ -50,22 +51,30 @@ func _update_action() -> void:
 		_release_held += get_physics_process_delta_time()
 	else:
 		_release_held = 0.0
-	var mount := Mount.accepting(ship.get_tree(), ship.freight)
+	var home := home_for(ship.get_tree(), ship.freight)
 	if _release_held >= RELEASE_HOLD:
 		var f := ship.freight
 		ship.state_machine.change_state("FlyingState")
-		# Let go within tolerance of its Mount: the Mount pulls it home
-		if mount and is_instance_valid(f):
-			mount.seat(f)
+		# Let go within tolerance of its place: the Mount or the Cradle pulls it home
+		if home and is_instance_valid(f):
+			home.call("seat", f)
 		return
-	EventBus.action_message_changed.emit(action_label(_release_held / RELEASE_HOLD, mount != null))
+	EventBus.action_message_changed.emit(action_label(_release_held / RELEASE_HOLD, home != null))
+
+## Where `f` would be pulled home if let go of right now - a Section's Mount, a
+## Component's Cradle - or null.
+static func home_for(tree: SceneTree, f: Freight) -> Node2D:
+	var mount := Mount.accepting(tree, f)
+	if mount:
+		return mount
+	return Cradle.accepting(tree, f)
 
 ## What the prompt reads: nothing until the hold starts - except RELEASE when the load
-## would seat in its Mount - then the word and the bar filling.
-static func action_label(progress: float, at_mount: bool) -> String:
+## would seat in its Mount or the Cradle - then the word and the bar filling.
+static func action_label(progress: float, at_home: bool) -> String:
 	if progress > 0.0:
 		return release_label(progress)
-	return "RELEASE" if at_mount else ""
+	return "RELEASE" if at_home else ""
 
 ## What the prompt reads partway through the release hold: "RELEASING ███···".
 static func release_label(progress: float) -> String:

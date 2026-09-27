@@ -104,7 +104,7 @@ The cut place on SR-7 where a **Section** belongs — a straight torch line, emp
 _Avoid_: socket, slot, dock, marker
 
 **Cradle**:
-The place at a station that takes any **Component** delivered as **Freight**; what is in the Cradle is fitted to the ship from the station's menus once the player docks.
+The place at a station that takes any **Component** delivered as **Freight**; what is in the Cradle is fitted to the ship from the station's menus once the player docks. SR-7's is slung under its refuel boom. (A Gate's docking surface is its berth, not a cradle.)
 _Avoid_: bay, dock, drop-off, loading zone
 
 ## The Log

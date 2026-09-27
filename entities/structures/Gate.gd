@@ -7,7 +7,7 @@ class_name Gate
 ## Drawn in code: seven quarried blocks set in a ring, weathered at the edges, thick
 ## enough to throw a shadow on their outer face and to show a cut end where each one
 ## stops. The whole inner face is carved with a script nobody has read in a long time.
-## A docking cradle lies across the gap they leave at the bottom.
+## A docking berth lies across the gap they leave at the bottom.
 ##
 ## The block at the top is the keystone: wider than the rest, standing proud of the
 ## ring, carrying a sigil no other block does and the one amber blinker that is still
@@ -18,7 +18,7 @@ class_name Gate
 ## blocks fills with the Titan's purple. The stone itself only catches the spill.
 ##
 ## Orbits its parent planet with the same OrbitalMotion component the station uses, and
-## docks with the same rules as a port: the cradle is the dock surface, the ship comes
+## docks with the same rules as a port: the berth is the dock surface, the ship comes
 ## in slow and lined up, and GateDockedState clamps it there.
 ##
 ## Unidentified until flown to (docs/GLOSSARY.md): it is an unnamed ring on the minimap until
@@ -48,9 +48,9 @@ const KEYSTONE_PROUD := 9.0
 const GLYPH_SPACING := 13.0
 ## How much of the ring the reading head lights behind it, as a share of the whole.
 const READ_TAIL := 0.26
-## Half the width of the docking cradle laid across the mouth.
-const CRADLE_HALF := 44.0
-## How close the ship has to be to the cradle to dock (the port's range).
+## Half the width of the docking berth laid across the mouth.
+const BERTH_HALF := 44.0
+## How close the ship has to be to the berth to dock (the port's range).
 const DOCK_DISTANCE := 60.0
 ## Seconds for the ring to come up to full once the Module is online.
 const POWER_UP_TIME := 1.6
@@ -242,7 +242,7 @@ func power(gs: GameState) -> bool:
 
 # --- Dockable ----------------------------------------------------------------
 
-## The cradle sits across the mouth at the bottom of the ring, so a docked ship
+## The berth sits across the mouth at the bottom of the ring, so a docked ship
 ## rests inside it.
 func get_dock_position() -> Vector2:
 	return to_global(Vector2(0, RADIUS))
@@ -256,7 +256,7 @@ func get_dock_distance() -> float:
 func get_dock_velocity() -> Vector2:
 	return linear_velocity
 
-## The cradle's own frame: the docked ship is held just above its origin.
+## The berth's own frame: the docked ship is held just above its origin.
 func get_dock_transform() -> Transform2D:
 	return Transform2D(global_rotation, get_dock_position())
 
@@ -295,7 +295,7 @@ func _draw() -> void:
 
 	_draw_halo()
 	_draw_sigil(stone)
-	_draw_cradle(stone)
+	_draw_berth(stone)
 	_draw_blinker()
 
 # --- The stonework -----------------------------------------------------------
@@ -493,10 +493,10 @@ func _draw_halo() -> void:
 			_arc_start(), _arc_start() + _arc_span(), 72,
 			Color(Colors.TITAN, _glow * 0.22 / (i + 1.0)), 4.0, true)
 
-## The cradle across the mouth: a cut stone on two footings, with the ship resting on
+## The berth across the mouth: a cut stone on two footings, with the ship resting on
 ## it. The lit line along its head is the same light the script runs on.
-func _draw_cradle(stone: Color) -> void:
-	for x in [-CRADLE_HALF, CRADLE_HALF]:
+func _draw_berth(stone: Color) -> void:
+	for x in [-BERTH_HALF, BERTH_HALF]:
 		var foot := PackedVector2Array([
 			Vector2(x - 9, RADIUS + 3), Vector2(x + 9, RADIUS + 4),
 			Vector2(x * 1.28 + 10, RADIUS + 26), Vector2(x * 1.28 - 10, RADIUS + 25),
@@ -504,12 +504,12 @@ func _draw_cradle(stone: Color) -> void:
 		draw_colored_polygon(foot, stone.darkened(0.3))
 		draw_polyline(foot, stone.darkened(0.55), 2.0, true)
 	var slab := PackedVector2Array([
-		Vector2(-CRADLE_HALF - 10, RADIUS - 8), Vector2(CRADLE_HALF + 9, RADIUS - 9),
-		Vector2(CRADLE_HALF + 12, RADIUS + 8), Vector2(-CRADLE_HALF - 13, RADIUS + 7),
+		Vector2(-BERTH_HALF - 10, RADIUS - 8), Vector2(BERTH_HALF + 9, RADIUS - 9),
+		Vector2(BERTH_HALF + 12, RADIUS + 8), Vector2(-BERTH_HALF - 13, RADIUS + 7),
 	])
 	draw_colored_polygon(slab, stone.lightened(0.05))
 	draw_polyline(slab, stone.darkened(0.55), 2.4, true)
-	draw_line(Vector2(-CRADLE_HALF, RADIUS - 4), Vector2(CRADLE_HALF, RADIUS - 4),
+	draw_line(Vector2(-BERTH_HALF, RADIUS - 4), Vector2(BERTH_HALF, RADIUS - 4),
 		Color(Colors.PRIMARY, 0.12).lerp(Color(Colors.TITAN, 0.8), _glow), 2.0)
 
 ## The blinker sits on the keystone, so the thing that marks the top of the Gate and

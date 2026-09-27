@@ -2,17 +2,17 @@ extends RefCounted
 ## Base for one Gate look under test in the Gate Lab (`dev/GateLab.gd`).
 ##
 ## A style owns nothing but its drawing. Every variant keeps the same radius, the same
-## mouth at the bottom and the same cradle across it, so docking never changes and only
+## mouth at the bottom and the same berth across it, so docking never changes and only
 ## the construction is up for debate.
 ##
 ## Geometry that wants randomness (rough stone, carved runes) is built once in `_init`
 ## from a private seeded RandomNumberGenerator. Never the shared RNG autoload: that one
 ## rolls gameplay, and drawing from it shifts loot.
 
-## Matches Gate.RADIUS / MOUTH_ANGLE / CRADLE_HALF so the lab reads at true scale.
+## Matches Gate.RADIUS / MOUTH_ANGLE / BERTH_HALF so the lab reads at true scale.
 const RADIUS := 100.0
 const MOUTH_ANGLE := deg_to_rad(52.0)
-const CRADLE_HALF := 44.0
+const BERTH_HALF := 44.0
 
 ## Short key used for screenshots and the lab's selector.
 var id := ""
@@ -68,16 +68,16 @@ func draw_halo(c: CanvasItem, glow: float, outer: float) -> void:
 		c.draw_arc(Vector2.ZERO, outer + i * 5.0, start(), start() + span(), 72,
 			Color(Colors.TITAN, glow * 0.22 / (i + 1.0)), 4.0, true)
 
-## The cradle across the mouth: a bar the ship rests on, braced back to the ring.
+## The berth across the mouth: a bar the ship rests on, braced back to the ring.
 ## Styles that build in stone override this with their own bracing.
-func draw_cradle(c: CanvasItem, glow: float) -> void:
+func draw_berth(c: CanvasItem, glow: float) -> void:
 	var hull := hull_of(glow)
 	var rim := rim_of(glow)
-	var left := Vector2(-CRADLE_HALF, RADIUS)
-	var right := Vector2(CRADLE_HALF, RADIUS)
+	var left := Vector2(-BERTH_HALF, RADIUS)
+	var right := Vector2(BERTH_HALF, RADIUS)
 	c.draw_line(left, right, hull, 7.0)
 	c.draw_line(left + Vector2(0, -4), right + Vector2(0, -4), rim, 1.0)
-	for x in [-CRADLE_HALF + 6.0, CRADLE_HALF - 6.0]:
+	for x in [-BERTH_HALF + 6.0, BERTH_HALF - 6.0]:
 		c.draw_line(Vector2(x, RADIUS), Vector2(x * 1.25, RADIUS + 14.0), hull, 4.0)
 
 ## One slow amber blinker is all that is still running while dormant.

@@ -27,6 +27,7 @@ const AUTOMATON_MET_KEY := "met"
 const SECTION_SECTION := "sections"
 const SECTION_SEATED_KEY := "seated"
 const SECTION_CORE_KEY := "core_started"
+const SECTION_CRADLE_KEY := "cradled"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
@@ -83,6 +84,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray(gs.met_automatons.keys()))
 	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray(gs.seated_sections.keys()))
 	cfg.set_value(SECTION_SECTION, SECTION_CORE_KEY, gs.core_started)
+	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, gs.cradled)
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -241,6 +243,27 @@ static func load_seated_sections(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray()))
 
+## Writes a Component released into SR-7's Cradle into an existing save the moment it
+## happens, like a seated Section: what is in the Cradle, and the saved Freight without that
+## Component, so a reload never brings it back loose as well as in the Cradle. With no save
+## yet this does nothing; the next full save() writes it.
+static func save_cradled(id: String, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, id)
+	var rows: Array = cfg.get_value("wreck", "freight", [])
+	cfg.set_value("wreck", "freight", rows.filter(func(row): return not (row is Dictionary and row.get("component", "") == id)))
+	cfg.save(file)
+
+## The Component in SR-7's Cradle, or "". A save from before the Cradle has none.
+static func load_cradled(path: String = "") -> String:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return ""
+	return str(cfg.get_value(SECTION_SECTION, SECTION_CRADLE_KEY, ""))
+
 ## Writes SR-7's core cold start into an existing save the moment it catches: it happens in
 ## flight, with no dock to hang a full save off. With no save yet the next full save() writes it.
 static func save_core_started(started: bool, path: String = "") -> void:
@@ -303,6 +326,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	for designation in load_met_automatons():
 		gs.mark_automaton_met(designation)
 	gs.restore_station(load_seated_sections(), load_core_started())
+	gs.cradled = load_cradled()
 	RobotRadio.guide_awake = gs.core_started
 	
 	# Load inventory into InventoryManager

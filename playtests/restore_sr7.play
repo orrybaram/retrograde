@@ -60,7 +60,7 @@ assert pt.state_name() == "CarryingState" "the tank is clamped"
 assert get_node("/root/NavSystem").get_target().node == pt.mount("fuel_tank") "clamping it tracks its Mount"
 eval pt.stage_at_mount("fuel_tank", Vector2(15, -6), 8.0)
 frames 3
-assert pt._action_message == "RELEASE" "RELEASE at the tank's cradle"
+assert pt._action_message == "RELEASE" "RELEASE at the tank's gap"
 screenshot restore_2_tank_approach
 hold action 1.0
 assert pt.mount("fuel_tank").seated "the tank is seated"

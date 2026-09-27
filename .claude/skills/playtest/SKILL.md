@@ -82,16 +82,18 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 
 `playtests/restore_sr7.play` is Act 1's repair: a new game docks at the head of SR-7's refuel boom, the FUEL TANK, SOLAR ARRAY and DORSAL ARM hang dead on one line in Rook's debris, each is fetched and seated in its Mount, and the hanging right wing is pushed home by thrusting into it (`ArrayNudge`); all of it survives reloads. Helpers: `pt.mount(id)`, `pt.section(id)`, `pt.stage_at_mount(id, offset, turn_deg)`, `pt.nudge()`, `pt.stage_nudge()`. Point the nose at a Lug with `(-f.lug_facing_global()).angle()` - Lugs face different ways.
 
+`playtests/cradle.play` delivers the Cargo Bay to SR-7's Cradle, slung under the refuel boom: clamping it tracks `CRADLE`, it is pushed in from outboard until the end plate stops it, released, pulled home and kept (`gs.cradled`), and a reload leaves it there with no copy back on Veld. Helpers: `pt.cradle()`, `pt.stage_at_cradle(id, offset, turn_deg)` (offset in the Cradle's frame, +x outboard; digs a buried piece out first).
+
 `playtests/void.play` flies past the last orbit into the Void: the robot's warning, loitering safely at the fringe (there is no clock), the stars draining and the dashboard rotting as the ship goes deeper, turning back, then reaching the deep line and being consumed (`ConsumedState`, no wreck and no derelict) and relaunching. Everything runs off depth. State is under `state.void` (`inside`, `depth`, `shroud`, `distance_left`); the autoload is `get_node("/root/VoidZone")`.
 
 `playtests/waypoint.play` sets tracking points on the star chart: the mark starts on the ship, the arrow keys drive it out into
 empty space (`pt.node("system_map").cursor_world`), ENTER takes it as a `WAYPOINT`, ENTER over a body tracks the body instead so
 the target rides its orbit, and DEL hands tracking back to home base (`.playtest/mark_*.png`).
 
-`playtests/gate.play` flies in on Veld's dormant Gate, docks in its cradle, pays the 600 ST, and checks the
+`playtests/gate.play` flies in on Veld's dormant Gate, docks in its berth, pays the 600 ST, and checks the
 boot log brings the Module online (`gs.titan_influence()`), the ring lights purple, ESC leaves the terminal
 without pausing, and the Module survives a reload (`.playtest/gate_*.png`). Helpers: `pt.gate("Veld")`,
-`pt.park_at_gate(planet, dist)` (lined up on the cradle, matched to the Gate's orbit). FlyingState refuses to
+`pt.park_at_gate(planet, dist)` (lined up on the berth, matched to the Gate's orbit). FlyingState refuses to
 dock for ~2s after an undock, so park, `wait 2.2`, park again, then `press action`.
 
 `playtests/chart.play` checks the star chart starts blank and fills in: home and its station alone on a new

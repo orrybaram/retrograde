@@ -29,7 +29,7 @@ const DATA := {
 		"lug_position": Vector2(-58, 0),
 		"lug_facing": Vector2.LEFT,
 		"pull_threshold": 1.6,
-		"pull_time": 4.5,
+		"pull_time": 4.25,
 		"answer_range": 5000.0,
 		"needs_power": true,
 	},

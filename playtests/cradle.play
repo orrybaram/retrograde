@@ -1,0 +1,64 @@
+# SR-7's Cradle takes the Cargo Bay (docs/adr/0012, docs/OPENING.md §9). The Cradle is
+# slung under the refuel boom's root, open outboard. Clamping the Cargo Bay tracks the
+# Cradle; flown in under the dock's head and let go of in tolerance, it is pulled home and
+# stays there, as itself, through a reload - and the hauler on Veld never puts another back.
+# Run: tools/play.sh --headless playtests/cradle.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+eval pt.skip_opening()
+wait_until pt.state_name() == "LandedState" 5
+wait 0.1
+assert pt.cradle() != null and pt.cradle().visible "the Cradle hangs off the arm, out"
+assert not pt.cradle().is_full() and gs.cradled == "" "empty on a new game"
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "undocked"
+
+# --- Clamped, the Cargo Bay tracks the Cradle ---
+eval pt.stage_at_cradle("cargo_bay", Vector2(260, 0))
+wait 0.1
+assert pt.state_name() == "CarryingState" "carrying the Cargo Bay"
+assert get_node("/root/NavSystem").get_target().get_label() == "CRADLE" "it tracks the Cradle"
+assert get_node("/root/NavSystem").get_target().node == pt.cradle() "SR-7's Cradle"
+assert pt._action_message == "" "out of reach: no RELEASE"
+
+# --- Pushed in from outboard, under the dock's head, until the end plate stops it ---
+eval pt.stage_at_cradle("cargo_bay", Vector2(140, 0))
+wait 0.1
+hold thrust 0.35
+wait_until pt._action_message == "RELEASE" 15
+assert pt._action_message == "RELEASE" "RELEASE once it is in the Cradle's reach"
+wait_until pt.cradle().to_local(pt.component("cargo_bay").global_position).x < 2.0 15
+wait 2.0
+assert pt.state_name() == "CarryingState" "never knocked loose on the way in"
+assert pt.cradle().to_local(pt.component("cargo_bay").global_position).x > -12.0 "the end plate stops it in the seat"
+assert pt._action_message == "RELEASE" "and it can be let go of there"
+screenshot cradle_1_pushed_in
+hold action 1.0
+wait 0.1
+assert pt.state_name() == "FlyingState" "let go"
+assert gs.cradled == "cargo_bay" "the Cradle has it"
+assert pt.cradle().is_full() "and holds it"
+assert pt.component_count("cargo_bay") == 0 "no longer loose Freight"
+assert pt.chart_marks().is_empty() "not marked on the Chart"
+wait 1.0
+assert pt.cradle().piece.global_position.distance_to(pt.cradle().global_position) < 1.0 "pulled home"
+eval ship.set("linear_velocity", pt.node("space_stations").linear_velocity + Vector2(80, 0))
+wait 2.0
+assert pt.cradle().piece.global_position.distance_to(pt.cradle().global_position) < 1.0 "and it stays"
+screenshot cradle_2_seated
+
+# --- A reload keeps it in the Cradle, and the hauler leaves no copy on Veld ---
+eval pt.save_now()
+reload
+wait 0.5
+assert gs.cradled == "cargo_bay" "still in the Cradle after a reload"
+assert pt.cradle().is_full() "shown there"
+assert pt.cradle().piece.global_position.distance_to(pt.cradle().global_position) < 1.0 "in place"
+assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"
+quit
