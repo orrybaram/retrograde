@@ -7,8 +7,8 @@ class_name GateTerminal
 ##
 ## UP/DOWN select, ENTER confirms, ESC leaves. Powering runs a short boot log the
 ## launch key skips, and then the hub comes back showing the Module online. Once it is,
-## the hub carries the two things a link is good for: transit to another powered Gate,
-## and a tank the Titan fills for nothing while the ship sits in the cradle.
+## the hub carries what a link is good for: transit to another powered Gate. A Gate
+## gives no fuel; that is SR-7's (docs/OPENING.md §9).
 ##
 ## The Core's Gate at the Sun Station reads the same terminal, but its row asks for
 ## Modules instead of credits and does nothing yet: see `_core_row()`.
@@ -19,8 +19,6 @@ signal terminal_closed
 signal gate_powered(gate: Gate)
 ## A destination was chosen off the transit list; GateDockedState flies it.
 signal transit_requested(destination: Gate)
-## The free fill was asked for; GateDockedState runs the clock on it.
-signal refuel_requested
 
 const WINDOW_SIZE := Vector2(560, 300)
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
@@ -182,7 +180,6 @@ func _refresh_hub() -> void:
 			"right": "%d LINKED" % _linked_count(),
 			"right_color": Colors.TITAN if _linked_count() > 0 else Colors.PRIMARY_DIM,
 		})
-		_menu_items.append(_refuel_item())
 	else:
 		var affordable := gate != null and gs != null and gate.can_afford(gs)
 		_menu_items.append({
@@ -195,22 +192,6 @@ func _refresh_hub() -> void:
 	_menu_items.append({"enabled": true, "action": close, "label": "DEPART", "right": "UNDOCK"})
 	_selected_index = clampi(_selected_index, 0, _menu_items.size() - 1)
 	_refresh_rows()
-
-## Nothing is charged for the fill, so the row only ever reads FREE or FULL. The
-## percentage takes its place while the tank is filling (see set_refuel_readout).
-func _refuel_item() -> Dictionary:
-	var ship := _ship()
-	var full := ship == null or ship.fuel >= ship.max_fuel
-	return {
-		"enabled": not full,
-		"action": _on_refuel_pressed,
-		"label": "REFUEL",
-		"right": "FULL" if full else "FREE",
-		"right_color": Colors.PRIMARY_DIM if full else Colors.PRIMARY,
-	}
-
-func _ship() -> Ship:
-	return get_tree().get_first_node_in_group("ship") as Ship
 
 func _linked_count() -> int:
 	return GateTransit.destinations(gate, get_tree()).size() if gate else 0
@@ -257,32 +238,6 @@ func _on_destination_pressed(destination: Gate) -> void:
 	if not GateTransit.can_transit(gate, destination):
 		return
 	transit_requested.emit(destination)
-
-# --- Refuelling --------------------------------------------------------------
-
-func _on_refuel_pressed() -> void:
-	refuel_requested.emit()
-
-## Redraws whichever list is up; used when the tank tops off and the row goes FULL.
-func refresh() -> void:
-	if not visible:
-		return
-	if _view == View.TRANSIT:
-		_refresh_transit()
-	else:
-		_refresh_hub()
-
-## Counts the tank up in the REFUEL row's right column while it fills, without
-## rebuilding the rows sixty times a second.
-func set_refuel_readout(text: String) -> void:
-	if _view != View.HUB:
-		return
-	for i in _menu_items.size():
-		if _menu_items[i].get("label", "") != "REFUEL":
-			continue
-		if i < _right_labels.size() and _right_labels[i]:
-			_right_labels[i].text = text
-		return
 
 ## The Core is the Titan's sixth part, not a Module, so it gets its own headline.
 func _status_line(core: bool, powered: bool) -> String:

@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Tests for transit between powered Gates and the free fill while docked at one.
+## Tests for transit between powered Gates, and that docking at one gives no fuel.
 ##
 ## Transit only exists between Modules that are already online, and the Titan carries
 ## the ship itself: the point of these tests is that the trip lands the ship in the
@@ -129,18 +129,18 @@ func test_one_powered_gate_on_its_own_has_nowhere_to_go() -> void:
 	assert_bool(terminal._menu_items[0]["enabled"]).is_false()
 
 
-## The hub only offers transit and the free fill once the Module is online; a dormant
-## Gate has nothing but its price.
+## The hub only offers transit once the Module is online; a dormant Gate has nothing but
+## its price. Neither offers fuel.
 func test_a_dormant_gates_hub_offers_neither_transit_nor_fuel() -> void:
 	var terminal := _terminal()
 	terminal.open(_gate("Veld", 253125.0))
 	assert_array(_labels(terminal._menu_items)).contains_exactly(["POWER GATE", "DEPART"])
 
 
-func test_a_powered_gates_hub_offers_transit_and_a_free_fill() -> void:
+func test_a_powered_gates_hub_offers_transit_but_no_fuel() -> void:
 	var terminal := _terminal()
 	terminal.open(_power(_gate("Veld", 253125.0)))
-	assert_array(_labels(terminal._menu_items)).contains_exactly(["TRANSIT", "REFUEL", "DEPART"])
+	assert_array(_labels(terminal._menu_items)).contains_exactly(["TRANSIT", "DEPART"])
 
 
 # --- The trip itself ---------------------------------------------------------
@@ -193,44 +193,19 @@ func test_arriving_never_powers_anything_down_or_up() -> void:
 	assert_bool(there.is_powered()).is_true()
 
 
-# --- The free fill -----------------------------------------------------------
+# --- No fuel at a Gate ------------------------------------------------------
 
-func test_the_gate_fills_the_tank_and_deducts_nothing() -> void:
+## Fuel is SR-7's to give (docs/OPENING.md §9); a Gate's cradle leaves the tank as it was,
+## even with SR-7's core running.
+func test_a_gate_dock_does_not_refuel() -> void:
+	_gs.core_started = true
 	var gate := _power(_gate("Veld", 253125.0))
 	var ship := _ship()
-	_dock_at(ship, gate)
 	ship.fuel = 0.0
-	_gs.credits = 500
-	var state := ship.state_machine.current_state as GateDockedState
-
-	state._on_refuel_requested()
-	assert_bool(state._refuelling).is_true()
-	for i in 10:
-		state._refuel(GateDockedState.REFUEL_TIME / 8.0)
-
-	assert_float(ship.fuel).is_equal(ship.max_fuel)
-	assert_bool(state._refuelling).is_false()
-	assert_int(_gs.credits).is_equal(500)
-
-
-## A port's pace, without a port's bill.
-func test_the_fill_takes_the_same_time_a_port_takes() -> void:
-	assert_float(GateDockedState.REFUEL_TIME).is_equal(LandedState.REFUEL_TIME)
-	var gate := _power(_gate("Veld", 253125.0))
-	var ship := _ship()
 	_dock_at(ship, gate)
-	ship.fuel = 0.0
 	var state := ship.state_machine.current_state as GateDockedState
-	state._on_refuel_requested()
-	state._refuel(GateDockedState.REFUEL_TIME / 2.0)
-	assert_float(ship.fuel).is_equal_approx(ship.max_fuel / 2.0, 0.001)
-
-
-func test_a_full_tank_asks_for_nothing() -> void:
-	var gate := _power(_gate("Veld", 253125.0))
-	var ship := _ship()
-	_dock_at(ship, gate)
-	ship.fuel = ship.max_fuel
-	var state := ship.state_machine.current_state as GateDockedState
-	state._on_refuel_requested()
-	assert_bool(state._refuelling).is_false()
+	for i in 120:
+		ship.global_position = gate.get_dock_position()
+		state.physics_process(1.0 / 60.0)
+	assert_str(ship.state_machine.get_current_state_name()).is_equal("GateDockedState")
+	assert_float(ship.fuel).is_equal(0.0)

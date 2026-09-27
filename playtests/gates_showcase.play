@@ -112,17 +112,10 @@ press m
 wait 0.8
 
 # --- 7. Transit ----------------------------------------------------------------
-eval pt.caption("What a link is good for: transit, and a tank the Titan fills for nothing")
+eval pt.caption("What a link is good for: transit")
 press action
 wait_until pt.visible_ui().has("GateTerminal") 3
 wait 2.4
-eval ship.set("fuel", 20.0)
-press down
-wait 1.2
-eval pt.caption("REFUEL reads FREE. Stations charge. The machine does not.")
-wait 2.6
-press up
-wait 0.6
 eval pt.caption("TRANSIT  //  every other powered Gate, one hop, no fuel")
 press enter
 wait_until pt.visible_ui().has("GateTerminal") 2
