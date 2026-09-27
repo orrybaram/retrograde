@@ -86,7 +86,7 @@ assert not get_tree().paused "closing the tutorial unpauses"
 
 # Explosion: the next clone comes up on its own, then the guide calls
 eval gs.set("stores", 500)
-eval ship.set("fuel", 150.0)
+eval ship.set("fuel", 0.5)
 eval ship.take_damage(100000.0)
 wait_until main.current_game_state == 2 10
 assert not get_tree().root.get_node("RobotRadio").is_active() "nothing on the radio while the ship is lost"
@@ -109,7 +109,10 @@ wait 1
 assert not get_tree().paused "the call closing unpauses"
 assert pt.visible_ui().is_empty() "the closing SPACE doesn't open the dock menu"
 assert gs.death_count == 1 "the loss counts as a death"
-assert gs.stores == 500 "dying costs no Stores"
+# Dying takes nothing. The relaunch docks at SR-7, which buys the tank past its free
+# quarter out of Stores (issue #137): 112.5 fuel at 0.3 ST, 34 ST at most
+wait_until ship.fuel == ship.max_fuel 5
+assert gs.stores >= 500 - 34 and gs.stores < 500 "dying costs no Stores; only the tank past its quarter does"
 
 # Hold fills mid-harvest while SPACE is being mashed: the hold-full tutorial waits
 # until the player backs off, then pauses in view (gem popups don't hide the radio)

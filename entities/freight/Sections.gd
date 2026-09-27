@@ -91,6 +91,13 @@ static func detail(art: String, outline: PackedVector2Array) -> Array[Line2D]:
 			for f: float in [0.25, 0.5, 0.75]:
 				var x := box.position.x + box.size.x * f
 				out.append(_line(Vector2(x, box.position.y + 3), Vector2(x, box.end.y - 3), Colors.HULL_DARK, 1.5))
+		"bay":
+			# The Cargo Bay (Components): a hauler's hold - heavy ribs, and the seam of its
+			# doors down the middle
+			for f: float in [0.15, 0.38, 0.62, 0.85]:
+				var x := box.position.x + box.size.x * f
+				out.append(_line(Vector2(x, box.position.y + 2), Vector2(x, box.end.y - 2), Colors.HULL_DARK, 3.0))
+			out.append(_line(Vector2(box.position.x + 6, 0), Vector2(box.end.x - 10, 0), Color(Colors.HULL_LIGHT, 0.45), 1.0))
 	return out
 
 static func _line(a: Vector2, b: Vector2, color: Color, width: float) -> Line2D:
