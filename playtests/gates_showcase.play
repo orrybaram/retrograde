@@ -12,6 +12,8 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 wait_until pt.state_name() == "LandedState" 20
 eval gs.set("stores", 5000)
 
@@ -43,9 +45,21 @@ eval pt.caption("In scanner range it is only a contact  //  a ring with no name 
 eval pt.park_at_gate("Veld", 2600.0)
 wait 3.6
 
-eval pt.caption("Fly to it and it is finally named")
+eval pt.caption("Fly to it and the guide finally names it")
 eval pt.park_at_gate("Veld", 520.0)
-wait 3.0
+# gate_identified does not pause the game, so SPACE is not its key: a non-pausing tip
+# is advanced with TAB (radio_next) and auto-dismisses on RadioLine.read_time() anyway.
+wait_until get_tree().root.get_node("RobotRadio").queue.current != null 6
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.2
+press radio_next
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.2
+press radio_next
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.2
+press radio_next
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 20
 wait 1.0
 
 # --- 4. Dock and power ---------------------------------------------------------
@@ -116,6 +130,19 @@ wait 1.0
 eval pt.caption("Out of the dark, already in Crom's cradle  //  no fuel, no hull, no Stores")
 wait 3.4
 
+# The guide calls about the first transit, and that call pauses the game: let it play
+# and see it out, or everything after this renders behind a paused radio panel.
+wait_until get_tree().root.get_node("RobotRadio").queue.current != null 8
+wait_until not pt.node("radio_panel").is_typing() 10
+wait 1.0
+press space
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.0
+press space
+wait_until not pt.node("radio_panel").is_typing() 8
+wait 1.0
+press space
+wait_until not get_tree().paused 6
 wait 1.0
 
 # --- 8. Titan Influence ---------------------------------------------------------

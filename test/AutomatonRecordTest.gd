@@ -273,6 +273,7 @@ func test_a_met_automaton_earns_the_cursor_keys() -> void:
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
 	radio.persist = false
+	radio.guide_awake = true  # asleep, it takes no calls at all
 	add_child(radio)
 	return radio
 

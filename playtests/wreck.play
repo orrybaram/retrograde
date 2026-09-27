@@ -12,6 +12,8 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
@@ -37,10 +39,18 @@ wait 0.3
 assert ship.global_position.distance_to(pt.explosion().global_position) < 1.0 "camera stays on the blast"
 wait_until pt.explosion()._debris[0].node.position.length() > 200.0 2
 wait_until main.current_game_state == 2 10
-assert get_tree().root.get_node("RobotRadio").queue.current == null "nobody radios about it"
-# The next clone comes up on its own: nothing to confirm
+# The next clone comes up on its own, and then the guide says what happened
 wait_until main.current_game_state == 1 30
 wait_until pt.state_name() == "LandedState" 5
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_destroyed" 3
+assert not get_tree().root.get_node("RobotRadio").current_line().is_confirm() "nothing to confirm"
+wait_until not pt.node("radio_panel").is_typing() 5
+press enter
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+press enter
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 3
+wait_until not get_tree().paused 3
 assert pt.wreck_gem_count() == 23 "wreck gems survive the respawn"
 assert inv.get_total_value() == 0 "hold was lost"
 wait 32

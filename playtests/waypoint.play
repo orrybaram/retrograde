@@ -12,6 +12,8 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 wait_until pt.state_name() == "LandedState" 5
 assert get_node("/root/NavSystem").get_target() == null "nothing is tracked on a new game"
 
@@ -61,8 +63,9 @@ screenshot mark_4_cleared
 press m
 wait_until not pt.node("log_ui").is_on_map() 2
 
-# Dying with the chart up is no dead end: nobody radios, nothing waits on an answer,
-# and the next clone comes up on its own.
+# Dying with the chart up used to be a dead end: the radio panel steps aside for
+# menus, so a transmission that pauses the game got stuck behind the map with no
+# way to answer it. The chart gets out of the way instead.
 hold thrust 1.2
 wait_until pt.state_name() == "FlyingState" 3
 press m
@@ -70,12 +73,21 @@ wait 0.6
 assert pt.node("log_ui").is_on_map() "map open"
 eval ship.explode()
 wait_until main.current_game_state == 2 10
-screenshot mark_5_game_over
+# The next clone comes up on its own; the guide's call after it pauses the game
 wait_until main.current_game_state == 1 30
-assert get_tree().root.get_node("RobotRadio").queue.current == null "no call to answer"
-eval pt.node("log_ui").close_log() if pt.node("log_ui").visible else null
-wait 0.3
-assert not get_tree().paused "the relaunch leaves nothing holding the pause"
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_destroyed" 5
+wait_until not pt.node("log_ui").is_on_map() 3
+wait_until pt.node("radio_panel").visible 3
+assert pt.node("radio_panel").visible "the robot's call is readable, not hidden behind the chart"
+screenshot mark_5_game_over
+wait_until not pt.node("radio_panel").is_typing() 5
+press enter
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+press enter
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 3
+wait_until not get_tree().paused 3
+assert not get_tree().paused "the pause clears once the call is answered"
 state
 
 # Reaching a waypoint clears it: tracking falls back to home

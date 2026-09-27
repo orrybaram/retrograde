@@ -137,6 +137,33 @@ func test_a_ship_sitting_on_the_line_stays_in_one_state() -> void:
 	assert_bool(inside).is_true()
 
 
+# --- The warning -------------------------------------------------------------
+
+func test_the_edge_warning_goes_out_on_every_crossing() -> void:
+	# It's the only warning for something that kills. A `once`
+	# flag would spend it the first time — including on a crossing the player
+	# never saw, because RobotRadio marks once-conversations seen when they are
+	# merely queued, and a game over clears the queue.
+	var conv := load("res://entities/Robot/radio/messages/void_edge.tres") as RadioConversation
+	assert_bool(conv.once).is_false()
+	assert_int(conv.priority).is_equal(RadioConversation.Priority.URGENT)
+	assert_bool(conv.pause_game).is_false()  # you have to be able to fly out of it
+
+
+# --- The last transmission ---------------------------------------------------
+
+func test_the_game_over_call_never_gets_a_word_through() -> void:
+	var conv := load("res://entities/Robot/radio/messages/void_consumed.tres") as RadioConversation
+	assert_int(conv.lines.size()).is_greater(0)
+	for line: RadioLine in conv.lines:
+		assert_bool(line.garbled).override_failure_message(line.text).is_true()
+		# Red face: RobotView paints `lost` in Colors.DANGER.
+		assert_str(String(line.expression)).is_equal("lost")
+		assert_str(line.display_text()).is_not_equal(line.text)
+	# Nothing to confirm: the next clone is already up when it plays
+	assert_bool(conv.lines[-1].is_confirm()).is_false()
+
+
 func test_scrambling_keeps_the_shape_of_speech() -> void:
 	var source := "Stay inside the orbits and I'll stay talking."
 	var noise := RadioLine.scramble(source)

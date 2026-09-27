@@ -38,6 +38,9 @@ var _inside := false
 var _taken := false  ## latched so `consumed` only fires once per ship
 var _ship: Ship = null
 var _sun: Node2D = null
+## Loaded on first crossing rather than preloaded: an autoload that pulls in the
+## radio at parse time drags RobotRadio's own message preloads into a cycle.
+var _edge_warning: Resource = null
 
 func _ready() -> void:
 	EventBus.ship_respawned.connect(reset)
@@ -95,6 +98,9 @@ func _process(delta: float) -> void:
 
 	if _inside and not was_inside:
 		entered.emit()
+		if _edge_warning == null:
+			_edge_warning = load("res://entities/Robot/radio/messages/void_edge.tres")
+		EventBus.radio_message_requested.emit(_edge_warning)
 	elif was_inside and not _inside:
 		exited.emit()
 

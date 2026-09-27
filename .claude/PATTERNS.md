@@ -139,7 +139,7 @@ VoidZone (autoload: depth / dread / shroud, the 30s clock)
   -> VoidShroud (CanvasLayer 40)       the dark closes in, static, tears
   -> VoidGlitch (child of HUD)         readouts rot, panel jitters and cuts out
   -> SystemMap._draw_void              diagonal hazard hatching + boundary arcs
-  -> Main._on_void_consumed            ConsumedState, a beat of silence, then relaunch
+  -> Main._on_void_consumed            ConsumedState, a beat of silence, relaunch, then the robot's call
 ```
 
 `depth` is distance past `EDGE_RADIUS`; `dread` is the survival clock; `shroud = max(depth, dread)` is what every visual reads. `EDGE_RADIUS` must stay clear of the home station's apoapsis (~295000) — `VoidZoneTest` guards that.
@@ -155,12 +155,13 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
   Bundled messages live in `entities/Robot/radio/messages/*.tres`. `{key:<action>}` in text becomes the bound key.
 - Higher priority interrupts (the interrupted one replays after); otherwise queued by priority, FIFO.
 - `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
-- UNIT-7's only call is the wake-up (`MSG_WAKE`, `wake_guide()` when SR-7's core catches in Act 1).
-  Every other tip, alarm and game-over call is disconnected; a lost ship relaunches on its own (`Main.show_game_over`).
+- UNIT-7 is off until SR-7's core cold start reboots it at the end of Act 1 (`wake_guide()`,
+  `MSG_WAKE`): until then `RobotRadio.request()` drops every call, tips, the Void and Gates included.
+- Built-in triggers in `scripts/RobotRadio.gd`: low fuel (not while docked), low hull, hold full, scrap in range, boost hint.
 - Continue: SPACE (TAB/ENTER aliases) finishes the speech, then moves on (next / confirm / close).
   SPACE is also the flight action key, so it only drives conversations that pause the game or
   contain a confirm; other tips take TAB/ENTER and auto-dismiss after `RadioLine.read_time()`.
-- `pause_game` conversations (the wake-up) pause the tree and never
+- `pause_game` conversations (every `once` tutorial: scrap, low fuel, hold full; the game-over calls) pause the tree and never
   time out. The unpause waits two physics frames so the closing SPACE isn't read as dock/harvest.
   A pausing conversation requested while a flight key (action/thrust/turn/boost) is down is held
   back until the keys have been up for `RobotRadio.PAUSE_GRACE_SEC` (1s), so mashing SPACE mid-harvest
@@ -169,6 +170,9 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
   pickup popups) join the `hud_overlay` group so they don't count as menus.
 - Confirm lines (`RadioLine.confirm`) show `> ACTION` and can't time out.
   `RobotRadio.confirm()` clears the radio, then emits `confirmed(id)`. Nothing bundled uses one now.
+- A lost ship (destroyed, or taken by the Void) relaunches on its own: `Main.show_game_over` runs
+  `reset_game()` with nothing to confirm, then requests the call for that reason (`Main.GAME_OVER_MESSAGES`).
+  Abandoning ship and the tractor-beam tow are gone.
 - `{name}` placeholders come from `conv.with_vars({...})`.
 
 ## Ore seams & Landing (DESIGN.md 4.10)
@@ -225,7 +229,8 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
 - Unidentified (docs/GLOSSARY.md): a Gate reads `? ? ?` on the minimap until the ship comes within
   `Identifiable.RANGE` of it, at which point `Gate.identify()` records it in
   `GameState.identified_gates` (saved as `[gates] identified`) and the label flips to `GATE`.
-  Naming is silent. Flying to it is the only trigger — nothing
+  The guide's line (`gate_identified.tres`) is `once`, so only the first Gate the player ever
+  reaches is spoken for; the rest flip silently. Flying to it is the only trigger — nothing
   points at a Gate beforehand. `scripts/Identifiable.gd` holds the range and the label drawing
   so later finds read the same way.
 

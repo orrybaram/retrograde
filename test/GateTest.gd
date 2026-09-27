@@ -6,6 +6,8 @@ extends GdUnitTestSuite
 ## it does it, and both of those surviving a save.
 
 const SAVE_FILE := "user://gate_test_save.cfg"
+const RADIO_SCRIPT := preload("res://scripts/RobotRadio.gd")
+const MSG_IDENTIFIED := "res://entities/Robot/radio/messages/gate_identified.tres"
 
 var _gs: GameState
 var _radio_persisted := true
@@ -86,6 +88,13 @@ func _bearing_from(planet: Planet, body: Node2D) -> Vector2:
 
 
 ## A radio of its own, so a test can watch what the guide would do with a request.
+func _radio() -> Node:
+	var radio: Node = auto_free(RADIO_SCRIPT.new())
+	radio.persist = false
+	radio.guide_awake = true
+	return radio
+
+
 func _ship() -> Ship:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	add_child(ship)
@@ -215,18 +224,31 @@ func test_flying_close_enough_gets_the_gate_named() -> void:
 	assert_bool(gate.is_identified()).is_true()
 
 
-## Reaching it names the Gate, and nobody radios about it.
-func test_reaching_a_gate_names_it_silently() -> void:
+## Reaching it is the only trigger — the guide never points at a Gate beforehand
+## (docs/adr/0002), and it only ever has to be named once.
+func test_reaching_a_gate_asks_the_guide_to_name_it_once() -> void:
 	var gate := _gate(_planet("Veld"))
 	var requested: Array[RadioConversation] = []
 	var heard := func(conv: RadioConversation) -> void: requested.append(conv)
 	EventBus.radio_message_requested.connect(heard)
-	assert_bool(gate.identify_if_near(gate.global_position + Vector2(Identifiable.RANGE + 50.0, 0.0))).is_false()
-	assert_bool(gate.identify_if_near(gate.global_position)).is_true()
-	assert_bool(gate.identify_if_near(gate.global_position)).is_false()
-	EventBus.radio_message_requested.disconnect(heard)
-	assert_bool(gate.is_identified()).is_true()
+	gate.identify_if_near(gate.global_position + Vector2(Identifiable.RANGE + 50.0, 0.0))
 	assert_array(requested).is_empty()
+	gate.identify_if_near(gate.global_position)
+	gate.identify_if_near(gate.global_position)
+	EventBus.radio_message_requested.disconnect(heard)
+	assert_int(requested.size()).is_equal(1)
+	assert_str(str(requested[0].id)).is_equal("gate_identified")
+
+
+## The first Gate the player reaches gets the line; every later one flips silently,
+## because the conversation is show-once for the whole save.
+func test_only_the_first_gate_named_gets_the_guides_line() -> void:
+	var conv := load(MSG_IDENTIFIED) as RadioConversation
+	assert_bool(conv.once).is_true()
+	assert_bool(conv.pause_game).is_false()  # the player is mid-flight when it lands
+	var radio := _radio()
+	assert_int(radio.request(conv)).is_equal(RadioQueue.Result.STARTED)
+	assert_int(radio.request(conv)).is_equal(RadioQueue.Result.REJECTED)
 
 
 ## Powering is a separate thing: a named Gate is still dormant until it is paid for.

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Been watching you crawl around out there. Nothing wrong with it."
+expression = &"neutral"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "But hold {key:boost} while you're burning. She's got more in her than that."
+expression = &"happy"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "Drinks fuel like you wouldn't believe. Worth it when you're in a hurry."
+expression = &"wink"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"boost_hint"
+priority = 1
+once = true
+pause_game = true
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])

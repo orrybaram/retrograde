@@ -1,5 +1,5 @@
-# The Void: the dark past the last orbit. Crossing the edge is silent: nobody radios
-# a warning. There is no clock: the deeper the ship goes, the more the stars thin and
+# The Void: the dark past the last orbit. Crossing the edge brings the robot's
+# warning. There is no clock: the deeper the ship goes, the more the stars thin and
 # the dashboard rots and drops out, and at DEEP_RADIUS there is nothing left.
 # Loitering at the fringe is safe; turning back gets it all returned.
 # Run: tools/play.sh playtests/void.play   (frames land in .playtest/void_*.png)
@@ -13,6 +13,8 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 wait_until pt.state_name() == "LandedState" 5
 
 # The home dock rides Rook around Veld and swings out a long way. It still has to
@@ -35,7 +37,11 @@ eval pt.warp_to(Vector2(342000, 0))
 wait 0.5
 assert get_node("/root/VoidZone").is_inside() "past the edge"
 assert get_node("/root/VoidZone").depth > 0.0 "depth reads past the edge"
-assert get_tree().root.get_node("RobotRadio").queue.current == null "no warning on the radio"
+# On air and on screen, not merely queued — a queued warning can be cleared away
+# unseen, which is how this went missing the first time.
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_edge" 3
+assert pt.node("radio_panel").visible "the warning is actually on screen"
+assert pt.node("radio_panel").message_text().contains("past the last orbit") "and it reads"
 
 # At the fringe it's eerie, and nothing more: no clock is running
 wait 6
@@ -70,7 +76,7 @@ wait 2
 screenshot void_4_recovered
 
 # Now go all the way: at the deep line the dark takes the ship. The relaunch after it
-# runs the wake's dark, so the check below can see what comes up under it.
+# runs the wake's dark, so the checks below can see what comes up under it.
 eval main.set("force_wake_sequence", true)
 eval pt.warp_to(Vector2(359000, 0))
 eval ship.set("linear_velocity", Vector2(400, 0))
@@ -80,7 +86,6 @@ assert pt.wreck_gem_count() == 0 "nothing is left behind out there"
 assert pt.derelict_count() == 0 "no hull to salvage either"
 wait 1
 screenshot void_5_consumed
-assert get_tree().root.get_node("RobotRadio").queue.current == null "nobody radios about it"
 
 # A beat of silence, then the next clone comes up on its own: the wake's dark comes up
 # clean, with nothing of the Void left under it
@@ -94,5 +99,22 @@ wait_until main.current_game_state == 1 30
 eval main.set("force_wake_sequence", false)
 wait_until pt.state_name() == "LandedState" 10
 assert get_node("/root/VoidZone").shroud == 0.0 "respawn clears the dark"
+
+# Then the robot tries to say what happened, and none of it gets through
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_consumed" 10
+wait_until not pt.node("radio_panel").is_typing() 5
+assert get_tree().root.get_node("RobotRadio").current_line().garbled "nothing gets through from out there"
+assert get_tree().root.get_node("RobotRadio").current_line().expression == "lost" "red lost face"
+assert not get_tree().root.get_node("RobotRadio").current_line().is_confirm() "nothing to confirm"
+press space
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+press space
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+assert not pt.node("radio_panel").message_text().contains("Stay inside the orbits") "the words never arrive"
+assert pt.node("radio_panel").message_text().length() > 20 "but the shape of speech does"
+press space
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 3
 wait 1
 screenshot void_7_relaunched

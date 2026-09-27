@@ -21,6 +21,12 @@ enum MainGameState {
 @onready var hud: Control = $"CanvasLayer/HUD"
 @onready var encounter_field: EncounterField = $EncounterField
 
+## What UNIT-7 radios once the next clone is up, per game-over reason. Nothing to
+## confirm: the relaunch has already happened (and RobotRadio drops it before Act 1 ends).
+const GAME_OVER_MESSAGES := {
+	"Ship Destroyed": RobotRadio.MSG_SHIP_DESTROYED,
+	"Consumed": RobotRadio.MSG_VOID_CONSUMED,
+}
 ## The dark takes a moment to finish closing before the next clone comes up.
 const CONSUMED_SILENCE := 2.4
 ## Waking up (docs/DESIGN.md "Minute 1-2"): the screen holds dark for a beat before
@@ -160,7 +166,7 @@ func _on_fuel_depleted() -> void:
 
 ## Thirty seconds past the last orbit and the dark has the ship. Nothing explodes
 ## and nothing is left behind, so there's no wreck to salvage — just a beat of
-## silence before the next clone comes up.
+## silence before the next clone comes up and the robot works out what happened.
 func _on_void_consumed() -> void:
 	if current_game_state != MainGameState.PLAYING or game_over_pending:
 		return
@@ -429,8 +435,8 @@ func _show_game_over_delayed(reason: String) -> void:
 	await get_tree().create_timer(3.2).timeout
 	show_game_over(reason)
 
-## The ship is lost: count it and relaunch straight away. Nobody radios about it and
-## there is nothing to confirm (UNIT-7's only call is the wake-up).
+## The ship is lost: count it and relaunch straight away, with nothing to confirm. Once
+## the next clone is up, UNIT-7 has its say about what happened.
 func show_game_over(reason: String) -> void:
 	last_game_over_reason = reason
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
@@ -441,6 +447,7 @@ func show_game_over(reason: String) -> void:
 	game_over_pending = false
 	RobotRadio.silence()
 	await reset_game()
+	RobotRadio.request(GAME_OVER_MESSAGES.get(reason, RobotRadio.MSG_SHIP_DESTROYED))
 
 func reset_game() -> void:
 	game_over_pending = false

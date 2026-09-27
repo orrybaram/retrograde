@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## Tests for the robot radio: queue ordering and priority, show-once flags and
-## their save round trip, and the one call UNIT-7 still makes (the wake-up).
+## their save round trip, the event triggers, and the message data.
 
 const RADIO_SCRIPT := preload("res://scripts/RobotRadio.gd")
 const SAVE_FILE := "user://radio_test_save.cfg"
@@ -23,8 +23,34 @@ func _conv(id: StringName, priority: Priority = Priority.HINT, line_count: int =
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
 	radio.persist = false
+	# Most of these are about the tips, which only an awake guide gives
 	radio.guide_awake = true
 	return radio
+
+
+func test_a_sleeping_guide_gives_no_tips() -> void:
+	# UNIT-7 is off when the game opens (docs/OPENING.md §5): nobody is on the comms.
+	var radio := _radio()
+	radio.guide_awake = false
+	radio.check_fuel(1.0, 100.0)
+	radio.check_hull(10.0, 100.0)
+	radio.check_cargo(50.0, 50.0)
+	radio._on_harvest_available_changed(true)
+	radio.watch_for_boost()
+	radio.tick_boost_watch(radio.BOOST_HINT_AFTER + 1.0, false, true)
+	assert_bool(radio.is_active()).is_false()
+	# Nor anything asked of it directly: the Void, a Gate, a lost ship
+	assert_int(radio.request(_conv(&"call", Priority.URGENT))).is_equal(Result.REJECTED)
+	assert_int(radio.request(RADIO_SCRIPT.MSG_SHIP_DESTROYED)).is_equal(Result.REJECTED)
+	assert_bool(radio.is_active()).is_false()
+
+
+func test_the_wake_up_is_its_first_call() -> void:
+	var radio := _radio()
+	radio.guide_awake = false
+	radio.wake_guide()
+	assert_bool(radio.guide_awake).is_true()
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_WAKE)
 
 
 # --- RadioQueue ------------------------------------------------------------------
@@ -333,7 +359,171 @@ func test_confirming_a_paused_call_unpauses() -> void:
 	assert_bool(radio.is_pausing()).is_false()
 
 
+# --- Triggers --------------------------------------------------------------------
+
+func test_boost_hint_waits_out_the_clock_then_fires_in_flight() -> void:
+	var radio := _radio()
+	radio.watch_for_boost()
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER - 1.0, false, true)
+	assert_bool(radio.is_active()).override_failure_message("fired early").is_false()
+	radio.tick_boost_watch(1.0, false, true)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_BOOST_HINT)
+
+
+func test_boost_hint_never_fires_once_the_player_boosts() -> void:
+	var radio := _radio()
+	radio.watch_for_boost()
+	radio.tick_boost_watch(1.0, true, true)
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, true)
+	assert_bool(radio.is_active()).override_failure_message("hinted at a player who boosts").is_false()
+
+
+func test_boost_hint_holds_until_the_ship_is_flying() -> void:
+	var radio := _radio()
+	radio.watch_for_boost()
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, false)
+	assert_bool(radio.is_active()).override_failure_message("cut across a dock").is_false()
+	radio.tick_boost_watch(0.1, false, true)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_BOOST_HINT)
+
+
+func test_boost_hint_is_not_rearmed_once_seen() -> void:
+	var radio := _radio()
+	radio.mark_seen(RADIO_SCRIPT.MSG_BOOST_HINT.id)
+	radio.watch_for_boost()
+	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, true)
+	assert_bool(radio.is_active()).is_false()
+
+
+func test_low_fuel_fires_below_threshold_and_interrupts_tips() -> void:
+	var radio := _radio()
+	radio.check_fuel(100.0, 100.0)
+	assert_bool(radio.is_active()).is_false()
+	radio.request(RADIO_SCRIPT.MSG_SCRAP)
+	radio.check_fuel(100.0 * LowFuelEffect.LOW_RATIO, 100.0)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_LOW_FUEL)
+	assert_int(radio.queue.pending_count()).is_equal(1)
+
+
+func test_cargo_full_fires_when_hold_fills() -> void:
+	var radio := _radio()
+	radio.check_cargo(80.0, 160.0)
+	assert_bool(radio.is_active()).is_false()
+	radio.check_cargo(160.0, 160.0)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_CARGO_FULL)
+
+
+func test_low_hull_fires_below_threshold() -> void:
+	var radio := _radio()
+	radio.check_hull(100.0, 100.0)
+	assert_bool(radio.is_active()).is_false()
+	radio.check_hull(100.0 * LowHullEffect.LOW_RATIO, 100.0)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_LOW_HULL)
+
+
+func test_dropping_straight_into_the_red_leads_with_the_alarm() -> void:
+	# A single hard hit can skip the LOW band entirely. Both calls fire, and because
+	# the alarm outranks the briefing it interrupts it: the player hears "one more hit"
+	# while it still matters, and gets the what-to-do-about-it afterwards.
+	var radio := _radio()
+	radio.check_hull(5.0, 100.0)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_HULL_CRITICAL)
+	assert_int(radio.queue.pending_count()).is_equal(1)
+	radio.advance()
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_LOW_HULL)
+
+
+func test_both_hull_calls_are_show_once() -> void:
+	# Hull sits low for long stretches and ship_hull_changed fires on every scratch;
+	# without the flags the player would be radioed continuously.
+	var radio := _radio()
+	radio.check_hull(10.0, 100.0)
+	radio.silence()
+	radio.check_hull(10.0, 100.0)
+	assert_bool(radio.is_active()).is_false()
+
+
+func test_a_destroyed_hull_is_not_a_low_hull_warning() -> void:
+	# Zero hull is the explosion's business, not the alarm's.
+	var radio := _radio()
+	radio.check_hull(0.0, 100.0)
+	assert_bool(radio.is_active()).is_false()
+
+
+func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
+	var radio := _radio()
+	radio._on_harvest_available_changed(false)
+	assert_bool(radio.is_active()).is_false()
+	radio._on_harvest_available_changed(true)
+	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_SCRAP)
+
+
 # --- Data ------------------------------------------------------------------------
+
+const TIPS := [RADIO_SCRIPT.MSG_WAKE, RADIO_SCRIPT.MSG_BOOST_HINT, RADIO_SCRIPT.MSG_LOW_FUEL,
+	RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP,
+	RADIO_SCRIPT.MSG_LOW_HULL]
+## Not tutorials: one-line alarms that fire mid-flight and deliberately do not pause.
+const ALARMS := [RADIO_SCRIPT.MSG_HULL_CRITICAL]
+## What the guide says once a lost ship's next clone is up (Main.GAME_OVER_MESSAGES).
+const GAME_OVER_CALLS := [RADIO_SCRIPT.MSG_SHIP_DESTROYED, RADIO_SCRIPT.MSG_VOID_CONSUMED]
+
+
+func test_bundled_messages_are_valid() -> void:
+	for conv: RadioConversation in TIPS + GAME_OVER_CALLS + ALARMS:
+		assert_str(String(conv.id)).is_not_empty()
+		assert_bool(conv.lines.is_empty()).is_false()
+		var vars := {"salvage": "Salvage it."}
+		for line in conv.lines:
+			var shown := line.display_text(vars) + line.confirm_text(vars)
+			assert_bool(RobotFaces.has_face(line.expression)).override_failure_message("%s: %s" % [conv.id, line.expression]).is_true()
+			assert_str(line.display_text(vars)).is_not_empty()
+			assert_bool(shown.contains("{")).override_failure_message(shown).is_false()
+	for conv: RadioConversation in TIPS:
+		assert_bool(conv.once).is_true()
+		assert_bool(conv.pause_game).override_failure_message("tutorial %s must pause" % conv.id).is_true()
+		for line in conv.lines:
+			assert_bool(line.is_confirm()).is_false()
+	for conv: RadioConversation in ALARMS:
+		# Show-once like the tips, but they must never take the controls away: these
+		# fire exactly when the player needs to be flying.
+		assert_bool(conv.once).is_true()
+		assert_bool(conv.pause_game).override_failure_message("alarm %s must not pause" % conv.id).is_false()
+		for line in conv.lines:
+			assert_bool(line.is_confirm()).is_false()
+
+
+func test_game_over_calls_have_nothing_to_confirm() -> void:
+	# The relaunch has already happened by the time they play
+	for conv: RadioConversation in GAME_OVER_CALLS:
+		assert_bool(conv.once).override_failure_message(String(conv.id)).is_false()
+		assert_int(conv.priority).is_equal(Priority.URGENT)
+		for line in conv.lines:
+			assert_bool(line.is_confirm()).override_failure_message(String(conv.id)).is_false()
+
+
+func test_tutorials_and_game_over_pause_but_alarms_do_not() -> void:
+	assert_bool(RADIO_SCRIPT.MSG_WAKE.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_BOOST_HINT.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_LOW_HULL.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_CARGO_FULL.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_SHIP_DESTROYED.pause_game).is_true()
+	assert_bool(RADIO_SCRIPT.MSG_VOID_CONSUMED.pause_game).is_true()
+	# Freezing the game one hit from death would be a worse warning than none.
+	assert_bool(RADIO_SCRIPT.MSG_HULL_CRITICAL.pause_game).is_false()
+
+
+func test_low_fuel_outranks_tips() -> void:
+	assert_int(RADIO_SCRIPT.MSG_LOW_FUEL.priority).is_greater(RADIO_SCRIPT.MSG_SCRAP.priority)
+
+
+func test_a_critical_hull_outranks_every_other_warning() -> void:
+	# It is the only one of these where the next few seconds decide the run.
+	assert_int(RADIO_SCRIPT.MSG_HULL_CRITICAL.priority).is_greater(RADIO_SCRIPT.MSG_LOW_HULL.priority)
+	assert_int(RADIO_SCRIPT.MSG_HULL_CRITICAL.priority).is_greater(RADIO_SCRIPT.MSG_LOW_FUEL.priority)
+
 
 func test_vars_fill_text_and_confirm_label() -> void:
 	var line := RadioLine.make("Fee is {penalty} ST.", &"neutral", false, "PAY {penalty}")
@@ -373,13 +563,13 @@ func test_beeper_tone_has_expected_length() -> void:
 	assert_int(wav.format).is_equal(AudioStreamWAV.FORMAT_16_BITS)
 
 
-func test_the_wake_up_is_the_only_call() -> void:
+func test_a_docked_ship_gets_no_low_fuel_call() -> void:
 	var radio := _radio()
-	radio.guide_awake = false
-	radio.wake_guide()
-	assert_bool(radio.guide_awake).is_true()
-	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_WAKE)
-	assert_bool(RADIO_SCRIPT.MSG_WAKE.pause_game).is_true()
-	for line in RADIO_SCRIPT.MSG_WAKE.lines:
-		assert_bool(RobotFaces.has_face(line.expression)).is_true()
-		assert_str(line.display_text()).is_not_empty()
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	add_child(ship)
+	radio._ship = ship
+	# Seated on the dock without a port to dock at (entering would bounce back to flying)
+	ship.state_machine.current_state = ship.state_machine.states["LandedState"]
+	# Filling up at the dock from a low tank, as a relaunch does
+	radio.check_fuel(0.0, 100.0)
+	assert_bool(radio.is_active()).is_false()

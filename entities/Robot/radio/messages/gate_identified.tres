@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "Hold up. That thing you're coming up on — that's an old transit gate."
+expression = &"surprise"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Nobody's used those in ages. Dead as the rest of it, by the look of her."
+expression = &"neutral"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "Still. Dock up and have a read of the terminal. Could be worth your while."
+expression = &"wink"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"gate_identified"
+priority = 1
+once = true
+pause_game = false
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])
