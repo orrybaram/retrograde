@@ -4,7 +4,7 @@ class_name Ship
 ## Player ship entity. Owns fuel, hull (via HealthComponent), cargo weight, and
 ## input intent flags. Behavior is delegated to states via StateMachine:
 ## FlyingState → LandedState (docked) / PlanetLandedState (on a landing site) /
-## HarvestingState / StrandedState / DestroyedState.
+## HarvestingState / DestroyedState.
 ## Signals: fuel_changed, fuel_depleted, cargo_changed.
 
 @export var thrust_power: float = 262.5

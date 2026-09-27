@@ -934,6 +934,13 @@ func derelict_count() -> int:
 	return total
 
 ## The ship the player abandoned, ignoring any deep-space wreck that happens to be loaded.
+## Leave an empty, armed derelict hull `offset` px from the ship, at rest.
+func spawn_derelict(offset: Vector2) -> DerelictShip:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	var none: Array[String] = []
+	return DerelictShip.spawn(ship.get_parent(), ship.ship_polygon, none, ship.global_position + offset,
+		Vector2.ZERO, 0.0, 0.0, ScrapNode.NORMAL_HITS)
+
 func abandoned_ship() -> DerelictShip:
 	for node in get_tree().get_nodes_in_group("derelicts"):
 		if node is DerelictShip and not (node as DerelictShip).transient:

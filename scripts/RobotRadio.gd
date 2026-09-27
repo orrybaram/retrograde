@@ -20,19 +20,6 @@ signal confirmed(id: StringName)
 const SPEAKER_NAME := "UNIT-7"
 
 const MSG_WAKE := preload("res://entities/Robot/radio/messages/first_wake.tres")
-const MSG_BOOST_HINT := preload("res://entities/Robot/radio/messages/boost_hint.tres")
-const MSG_LOW_FUEL := preload("res://entities/Robot/radio/messages/first_low_fuel.tres")
-const MSG_LOW_HULL := preload("res://entities/Robot/radio/messages/first_low_hull.tres")
-const MSG_HULL_CRITICAL := preload("res://entities/Robot/radio/messages/hull_critical.tres")
-const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
-const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
-const MSG_FIRST_TRANSIT := preload("res://entities/Robot/radio/messages/first_transit.tres")
-const MSG_OUT_OF_FUEL := preload("res://entities/Robot/radio/messages/out_of_fuel.tres")
-const MSG_OUT_OF_FUEL_BEAM := preload("res://entities/Robot/radio/messages/out_of_fuel_beam.tres")
-const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_destroyed.tres")
-const MSG_SHIP_ABANDONED := preload("res://entities/Robot/radio/messages/ship_abandoned.tres")
-const MSG_TRACTOR_RESCUE := preload("res://entities/Robot/radio/messages/tractor_rescue.tres")
-const MSG_VOID_CONSUMED := preload("res://entities/Robot/radio/messages/void_consumed.tres")
 
 var queue := RadioQueue.new()
 ## Save file for show-once flags; empty uses the game save (Playtest.save_path()).
@@ -41,30 +28,18 @@ var save_path := ""
 var persist := true
 
 ## UNIT-7 is off when the game opens (docs/OPENING.md §5): the station is dead and nobody
-## is on the comms. Until it wakes, its tutorial tips and alarms stay parked - the
-## triggers below drop them - and MSG_WAKE waits for it. The radio itself still carries
-## the calls the game needs (relaunch, tow, the Void), and is the comms system to reuse.
+## is on the comms. Its one call is MSG_WAKE, when SR-7's core catches in Act 1; every
+## other tip, alarm and game-over call is disconnected. The radio itself is the comms
+## system to reuse (EventBus.radio_message_requested).
 ## The core's cold start sets it (wake_guide); a load sets it from GameState.core_started.
 var guide_awake := false
 
-## Nothing teaches boosting any more — the wake-up call is story, not controls. If the
-## player hasn't found it after this much play, the guide mentions it.
-const BOOST_HINT_AFTER := 300.0
-
 var _seen: Dictionary = {}  # StringName -> true
-var _ship: Ship = null
 var _pausing := false  # this radio paused the tree
 var _pause_started := 0.0
-var _played := 0.0  # seconds of unpaused play since the session began
-var _watching_boost := false
 
 func _ready() -> void:
 	EventBus.radio_message_requested.connect(request)
-	EventBus.harvest_available_changed.connect(_on_harvest_available_changed)
-	EventBus.ship_respawned.connect(_bind_ship)
-	# Hull comes off the bus, not off _bind_ship: it has to be heard on whichever ship
-	# is flying, including one that respawned before the binding caught up.
-	EventBus.ship_hull_changed.connect(check_hull)
 
 ## Queues a conversation. Show-once conversations already seen are dropped.
 ## Tips go on air the moment they're triggered, even mid-flight: RadioPanel keeps a
@@ -165,7 +140,7 @@ func _mark_guide_met() -> void:
 		Save.save_met_automatons(PackedStringArray(gs.met_automatons.keys()), save_path)
 
 ## SR-7's core has caught and the power is up (CoreHousing): UNIT-7 comes on the comms
-## for the first time, and from here its tips and alarms are live.
+## for the first time. It is the only call UNIT-7 makes.
 func wake_guide() -> void:
 	guide_awake = true
 	request(MSG_WAKE)
@@ -194,7 +169,6 @@ func load_seen(ids: PackedStringArray) -> void:
 	for id in ids:
 		_seen[StringName(id)] = true
 	silence()
-	watch_for_boost()
 
 ## New game: every tip plays again.
 func reset() -> void:
@@ -202,7 +176,6 @@ func reset() -> void:
 	if persist:
 		Save.save_radio_seen(seen_ids(), save_path)
 	silence()
-	watch_for_boost()
 
 func silence() -> void:
 	var was_active := queue.is_active()
@@ -210,71 +183,3 @@ func silence() -> void:
 	_sync_pause(false)
 	if was_active:
 		transmission_ended.emit()
-
-# --- Triggers ------------------------------------------------------------------
-
-func _bind_ship() -> void:
-	var ship := get_tree().get_first_node_in_group("ship") as Ship
-	if ship == _ship or ship == null:
-		return
-	_ship = ship
-	ship.fuel_changed.connect(func() -> void: check_fuel(ship.fuel, ship.max_fuel))
-	ship.cargo_changed.connect(check_cargo)
-
-## Starts the boost clock for a session. Nothing happens if the hint is already spent.
-func watch_for_boost() -> void:
-	_played = 0.0
-	_watching_boost = not has_seen(MSG_BOOST_HINT.id)
-
-## Pausable, so time spent reading a transmission or sitting in a menu doesn't count.
-func _process(delta: float) -> void:
-	if not _watching_boost or _ship == null:
-		return
-	tick_boost_watch(delta, _ship.want_boost and _ship.want_thrust,
-			_ship.state_machine.current_state is FlyingState)
-
-## One step of the boost clock, taken apart from the ship so it can be driven directly.
-## The hint is held back until the player is actually flying, so it doesn't cut across
-## a dock or a seam.
-func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
-	if not _watching_boost or not guide_awake:
-		return
-	if boosting:
-		_watching_boost = false  # they worked it out on their own
-		return
-	_played += delta
-	if _played >= BOOST_HINT_AFTER and flying:
-		_watching_boost = false
-		request(MSG_BOOST_HINT)
-
-func check_fuel(fuel: float, max_fuel: float) -> void:
-	# A docked ship is filling up, not running dry: a relaunched clone comes up on an
-	# empty tank at the dock, and that is no moment for the low-fuel briefing.
-	if is_instance_valid(_ship) and _ship.state_machine and _ship.state_machine.current_state is LandedState:
-		return
-	if guide_awake and max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:
-		request(MSG_LOW_FUEL)
-
-## Two steps, both show-once: the first venting gets the full briefing with the game
-## held, and dropping into the red gets a single line that does NOT pause — being
-## frozen mid-fight one hit from death would be a worse warning than no warning.
-func check_hull(hull: float, max_hull: float) -> void:
-	# A hull at zero is a destroyed ship, and MSG_SHIP_DESTROYED has that conversation.
-	if not guide_awake or max_hull <= 0.0 or hull <= 0.0:
-		return
-	match LowHullEffect.level_for(hull, max_hull):
-		LowHullEffect.Level.CRITICAL:
-			request(MSG_LOW_HULL)
-			request(MSG_HULL_CRITICAL)
-		LowHullEffect.Level.LOW:
-			request(MSG_LOW_HULL)
-		_:
-			pass
-
-func check_cargo(weight: float, max_weight: float) -> void:
-	if guide_awake and max_weight > 0.0 and weight >= max_weight:
-		request(MSG_CARGO_FULL)
-
-func _on_harvest_available_changed(can_harvest: bool) -> void:
-	if guide_awake and can_harvest:
-		request(MSG_SCRAP)

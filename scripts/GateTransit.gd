@@ -75,8 +75,6 @@ static func run(ship: Ship, destination: Gate) -> void:
 	_persist(ship)
 	if main and main.has_method("_wake_from_black"):
 		await main._wake_from_black()
-	# The guide only has something to say about it the first time it happens
-	RobotRadio.request(RobotRadio.MSG_FIRST_TRANSIT)
 
 ## Coming out of the dock the Titan put the ship in is worth keeping: a transit moves
 ## the ship across the system without so much as a burn to show for it.

@@ -1,200 +1,58 @@
-# Robot radio. Tutorials pause the game and wait for the player:
-# SPACE (TAB/ENTER aliases) finishes the speech, then moves on. Unpaused tips auto-dismiss
-# and leave SPACE to the ship. Running dry and losing the ship are radio calls whose
-# confirm line abandons ship / relaunches.
-# Run: tools/play.sh playtests/radio.play   (frames land in .playtest/radio_*.png)
+# UNIT-7's only call is the wake-up, when SR-7's core catches in Act 1
+# (playtests/core_cold_start.play). Every tip, alarm and game-over call is disconnected:
+# with the guide awake, running low, filling the hold, finding scrap and losing the ship
+# all pass in silence, and a lost ship relaunches with nothing to confirm.
+# Run: tools/play.sh playtests/radio.play
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
-# UNIT-7 is off on a new game and gives no tips (docs/OPENING.md §5); this scenario is
-# about the radio itself, so it wakes the guide by hand.
-eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
-# the opening: skip it, and start docked at a running station.
+# the opening: skip it, and start docked at a running station, with the guide awake.
 eval pt.skip_opening()
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 wait_until pt.state_name() == "LandedState" 5
-assert not pt.node("radio_panel").visible "radio quiet while docked"
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
 press enter
 wait_until pt.visible_ui().is_empty() 2
-assert not pt.node("radio_panel").visible "no transmission before departure"
-
-# Undocking says nothing any more: the opening transmission is the whole tutorial
-# and it plays at the dock (playtests/intro.play), not on the way out.
 hold thrust 0.6
 assert pt.state_name() == "FlyingState" "undocked"
 wait 1
-assert not pt.node("radio_panel").visible "departure is quiet now"
+assert not pt.node("radio_panel").visible "departure is quiet"
 
-# Low fuel: a tutorial, so it pauses and SPACE drives it
-# Thrust no longer touches the gauge, so the tank is nudged directly to trip the warning
+# Low fuel: no call
 eval ship.set("fuel", 30.0)
 eval ship.consume_fuel(0.1)
-wait_until pt.node("radio_panel").visible 3
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_low_fuel" "low-fuel tutorial on air"
-assert get_tree().paused "low-fuel tutorial pauses the game"
 wait 1
-screenshot radio_04_low_fuel
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait 0.2
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "SPACE moves the low-fuel tutorial on"
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait 0.3
-assert not get_tree().root.get_node("RobotRadio").is_active() "low-fuel tutorial finished"
-assert not get_tree().paused "closing the low-fuel tutorial unpauses"
+assert not get_tree().root.get_node("RobotRadio").is_active() "no low-fuel call"
+assert not get_tree().paused "nothing pauses"
 
-# Scrap tutorial pauses the game and waits for the player. It lands the moment the
-# scrap is in range, with thrust still held -- not seconds later once the player coasts.
+# Scrap in range: no call
 eval ship.set("fuel", 150.0)
-down thrust
 stage_harvest 40
-frames 3
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_scrap" "scrap tip on air mid-thrust"
-assert get_tree().paused "scrap tutorial pauses the game"
-up thrust
-assert pt.node("radio_panel").visible "scrap tip visible right away"
-wait 1.5
-screenshot radio_05_scrap_tip
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait 0.2
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 1 "SPACE moves the tutorial on"
-press space
-frames 2
-press space
-wait_until pt.node("radio_panel").robot.expression == "glitch" 2
-wait 0.8
-screenshot radio_06_glitch_line
-# Pause menu on top of the tutorial: resuming keeps the tutorial's pause
-press escape
-wait_until pt.node("pause_menu").visible 2
-assert not pt.node("radio_panel").visible "radio hides behind the pause menu"
-press escape
-wait_until not pt.node("pause_menu").visible 2
-assert get_tree().paused "tutorial still holds the pause after resume"
-wait_until pt.node("radio_panel").visible 2
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait 0.3
-assert not get_tree().root.get_node("RobotRadio").is_active() "tutorial finished"
-assert not get_tree().paused "closing the tutorial unpauses"
+wait 1
+assert not get_tree().root.get_node("RobotRadio").is_active() "no scrap tip"
 
-# Out of fuel: the robot offers to abandon ship (a confirm call), game keeps running
-eval gs.set("stores", 500)
-eval ship.set("fuel", 0.5)
-# Thrust is free now, so a dry tank no longer strands the ship on its own. The state is
-# entered directly; what this scenario covers is the radio traffic once it is.
-eval ship.consume_fuel(ship.fuel + 1.0)
-eval ship.state_machine.change_state("StrandedState")
-wait_until pt.state_name() == "StrandedState" 3
-frames 5
-assert not bus.is_harvest_available() "a stranded ship can't harvest the scrap beside it"
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 3
-assert not get_tree().paused "abandon offer doesn't pause (you may be drifting home)"
-assert pt.node("radio_panel").choice_text() == "" "no confirm row on the intro line"
-press i
-wait_until pt.visible_ui().has("LogUI") 2
-frames 2
-assert not pt.node("radio_panel").visible "radio hides behind menus"
-press i
-wait_until pt.node("radio_panel").visible 2
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
-assert pt.state_name() == "StrandedState" "SPACE on the radio doesn't start a harvest"
-wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_07_abandon_offer
-assert pt.node("radio_panel").choice_text().contains("ABANDON SHIP") "confirm row shown"
-wait 10
-assert get_tree().root.get_node("RobotRadio").current_line().is_confirm() "confirm never times out"
-assert main.current_game_state == 1 "nothing happens until confirmed"
-press radio_next
-wait_until main.current_game_state == 2 10
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
-assert get_tree().paused "game-over call pauses"
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
-wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_08_abandoned
-assert pt.node("radio_panel").choice_text().contains("RELAUNCH") "relaunch offered"
-assert not pt.node("radio_panel").choice_text().contains("-") "relaunching costs nothing"
-press enter
-wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
-wait 0.3
-assert not get_tree().paused "relaunch unpauses"
-assert not get_tree().root.get_node("RobotRadio").is_active() "radio quiet after relaunch"
+# The hold fills: no call
+eval inv.add_item("shard", int(ship.max_cargo_weight))
+wait 1
+assert not get_tree().root.get_node("RobotRadio").is_active() "no hold-full call"
 
-# Explosion: relaunch call
-press action
-wait_until pt.visible_ui().has("SpacePortDialogue") 2
-press down
-press enter
-wait_until pt.visible_ui().is_empty() 2
-hold thrust 0.5
-wait_until pt.state_name() == "FlyingState" 3
+# The hull drops into the red: no call
+eval ship.take_damage(85.0)
+wait 1
+assert not get_tree().root.get_node("RobotRadio").is_active() "no hull alarm"
+assert not get_tree().paused "nothing pauses"
+
+# Lost: the next clone comes up on its own
 eval ship.take_damage(100000.0)
 wait_until main.current_game_state == 2 10
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_destroyed" 3
-wait 0.5
-screenshot radio_09_destroyed
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
-wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_10_relaunch
-assert pt.node("radio_panel").choice_text().contains("RELAUNCH") "relaunch offered"
-assert not pt.node("radio_panel").choice_text().contains("-") "relaunching costs nothing"
-press space
-wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
+assert not get_tree().root.get_node("RobotRadio").is_active() "no game-over call"
+wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 15
+assert not get_tree().paused "the relaunch leaves nothing paused"
+assert not pt.node("radio_panel").visible "radio quiet after relaunch"
+assert gs.death_count == 1 "the loss still counts"
 # Let the dock's save-indicator timer finish so nothing is pending at quit
 wait 1
-assert not get_tree().paused "relaunch unpauses"
-assert pt.visible_ui().is_empty() "the confirming SPACE doesn't open the dock menu"
-assert gs.death_count == 2 "abandoning and exploding both count as deaths"
-assert gs.stores == 500 "dying costs no Stores"
-
-# Hold fills mid-harvest while SPACE is being mashed: the hold-full tutorial waits
-# until the player backs off, then pauses in view (gem popups don't hide the radio)
-press action
-wait_until pt.visible_ui().has("SpacePortDialogue") 2
-press down
-press enter
-wait_until pt.visible_ui().is_empty() 2
-hold thrust 0.5
-wait_until pt.state_name() == "FlyingState" 3
-eval inv.add_item("shard", int(ship.max_cargo_weight) - 1)
-stage_harvest 40
-down action
-wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start() 3
-up action
-wait_until inv.get_total_weight() >= ship.max_cargo_weight 5
-frames 2
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_cargo_full" "hold-full tutorial on air the moment the hold fills"
-assert get_tree().paused "hold-full tutorial pauses"
-# SPACE is still in flight from harvesting: it must not dismiss the line that just landed
-down action
-frames 5
-up action
-frames 5
-assert get_tree().root.get_node("RobotRadio").is_active() "a SPACE still in flight doesn't dismiss it"
-assert get_tree().root.get_node("RobotRadio").queue.line_index == 0 "and doesn't skip past the first line"
-assert pt.node("radio_panel").visible "radio visible over the gem popups"
-wait 1
-screenshot radio_11_hold_full
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait 0.2
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait 0.3
-assert not get_tree().root.get_node("RobotRadio").is_active() "hold-full tutorial finished"
-assert not get_tree().paused "closing the hold-full tutorial unpauses"
 quit

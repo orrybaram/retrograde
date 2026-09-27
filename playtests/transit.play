@@ -76,19 +76,10 @@ assert inv.get_total_value() == pt.recall("hold") "transit takes nothing out of 
 assert gs.stores == 400 "transit costs no Stores"
 assert gs.titan_influence() == 2 "both Modules are still online"
 
-# The guide has something to say the first time, and only the first time
-wait_until get_tree().root.get_node("RobotRadio").queue.current != null 10
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_transit" "the guide calls about the transit"
-wait_until not pt.node("radio_panel").is_typing() 10
+# Nobody radios about it
+wait 1
+assert get_tree().root.get_node("RobotRadio").queue.current == null "no call about the transit"
 screenshot transit_4_arrived
-press space
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait_until not pt.node("radio_panel").is_typing() 10
-press space
-wait 0.3
-assert not get_tree().root.get_node("RobotRadio").is_active() "the call finishes"
-wait_until not get_tree().paused 5
-assert get_tree().root.get_node("RobotRadio").has_seen("first_transit") "it never plays again this save"
-assert pt.state_name() == "GateDockedState" "the call leaves the ship where it landed"
+assert not get_tree().paused "nothing holds the game"
+assert pt.state_name() == "GateDockedState" "the ship stays where it landed"
 state

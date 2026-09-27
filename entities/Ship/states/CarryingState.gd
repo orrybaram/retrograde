@@ -6,9 +6,8 @@ class_name CarryingState
 ## that `action` means one thing here: hold it to let go, anywhere - a deliberate hold, so
 ## a tap never drops the load. Let go within tolerance of its Mount, a Section is pulled
 ## home (Mount.seat), and the prompt reads RELEASE there before the hold starts. A carrying ship cannot Sweep, dock, harvest or touch down.
-## Leaving this state lets go of the load, except into StrandedState - a ship that loses
-## power keeps what is on its nose, and an abandoned hull keeps it after that (ADR 0011) -
-## and ConsumedState, where the Void hands it back inside the edge.
+## Leaving this state lets go of the load, except into ConsumedState, where the Void
+## hands it back inside the edge.
 
 ## Seconds `action` must be held to let go.
 const RELEASE_HOLD := 0.8

@@ -1,4 +1,4 @@
-# A Gate goes unnamed until the player flies up to it and the guide says what it is.
+# A Gate goes unnamed until the player flies up to it. Naming it is silent.
 # Run: tools/play.sh playtests/gate_identify.play   (frames land in .playtest/identify_*.png)
 
 press enter
@@ -32,18 +32,16 @@ screenshot identify_0_unknown
 eval pt.park_at_gate("Veld", 900.0)
 frames 2
 assert pt.gate("Veld").is_identified() "reaching a Gate is what names it"
-assert get_tree().root.get_node("RobotRadio").is_active() "the guide comes on the radio"
-assert get_tree().root.get_node("RobotRadio").queue.current.id == "gate_identified" "and it is the naming call"
-assert not get_tree().paused "the call doesn't stop the ship mid-flight"
+assert not get_tree().root.get_node("RobotRadio").is_active() "silently: nobody radios about it"
+assert not get_tree().paused "the ship keeps flying"
 wait 0.6
 screenshot identify_1_named
 
-# Every later Gate is named without a word: the call is show-once for the save
-eval get_tree().root.get_node("RobotRadio").silence()
+# Every Gate is named the same way
 eval pt.park_at_gate("Crom", 900.0)
 frames 2
 assert pt.gate("Crom").is_identified() "Crom's Gate is named by being reached too"
-assert not get_tree().root.get_node("RobotRadio").is_active() "but the guide has said its piece"
+assert not get_tree().root.get_node("RobotRadio").is_active() "without a word"
 
 # Named Gates survive a reload, with no dock in between to hang a full save off
 reload

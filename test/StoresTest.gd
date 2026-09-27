@@ -5,11 +5,6 @@ extends GdUnitTestSuite
 ## left behind, and dying costs none of them.
 
 const SAVE_FILE := "user://stores_test_save.cfg"
-const GAME_OVER_CALLS := [
-	"res://entities/Robot/radio/messages/ship_destroyed.tres",
-	"res://entities/Robot/radio/messages/ship_abandoned.tres",
-	"res://entities/Robot/radio/messages/void_consumed.tres",
-]
 
 var _gs: GameState
 var _was_active: bool
@@ -66,6 +61,3 @@ func test_an_old_saves_credits_are_left_behind() -> void:
 func test_relaunching_has_no_fee() -> void:
 	var main := load("res://scripts/Main.gd") as GDScript
 	assert_bool(main.get_script_constant_map().has("RELAUNCH_PENALTY")).is_false()
-	for path: String in GAME_OVER_CALLS:
-		var conv := load(path) as RadioConversation
-		assert_str(conv.lines[-1].confirm_text()).override_failure_message(path).is_equal("RELAUNCH")

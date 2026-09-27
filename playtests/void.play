@@ -1,5 +1,5 @@
-# The Void: the dark past the last orbit. Crossing the edge brings the robot's
-# warning. There is no clock: the deeper the ship goes, the more the stars thin and
+# The Void: the dark past the last orbit. Crossing the edge is silent: nobody radios
+# a warning. There is no clock: the deeper the ship goes, the more the stars thin and
 # the dashboard rots and drops out, and at DEEP_RADIUS there is nothing left.
 # Loitering at the fringe is safe; turning back gets it all returned.
 # Run: tools/play.sh playtests/void.play   (frames land in .playtest/void_*.png)
@@ -35,11 +35,7 @@ eval pt.warp_to(Vector2(342000, 0))
 wait 0.5
 assert get_node("/root/VoidZone").is_inside() "past the edge"
 assert get_node("/root/VoidZone").depth > 0.0 "depth reads past the edge"
-# On air and on screen, not merely queued — a queued warning can be cleared away
-# unseen, which is how this went missing the first time.
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_edge" 3
-assert pt.node("radio_panel").visible "the warning is actually on screen"
-assert pt.node("radio_panel").message_text().contains("past the last orbit") "and it reads"
+assert get_tree().root.get_node("RobotRadio").queue.current == null "no warning on the radio"
 
 # At the fringe it's eerie, and nothing more: no clock is running
 wait 6
@@ -73,35 +69,21 @@ assert main.get_node("CanvasLayer/HUD/TrackingIndicator").modulate.a == 1.0 "lit
 wait 2
 screenshot void_4_recovered
 
-# Now go all the way: at the deep line the dark takes the ship
+# Now go all the way: at the deep line the dark takes the ship. The relaunch after it
+# runs the wake's dark, so the check below can see what comes up under it.
+eval main.set("force_wake_sequence", true)
 eval pt.warp_to(Vector2(359000, 0))
 eval ship.set("linear_velocity", Vector2(400, 0))
-wait_until main.current_game_state == 2 40
-assert pt.state_name() == "ConsumedState" "taken, not exploded"
-assert get_node("/root/VoidZone").shroud == 1.0 "and the dark holds"
+wait_until pt.state_name() == "ConsumedState" 40
+assert get_node("/root/VoidZone").shroud == 1.0 "taken, not exploded, and the dark holds"
 assert pt.wreck_gem_count() == 0 "nothing is left behind out there"
 assert pt.derelict_count() == 0 "no hull to salvage either"
-wait 3
+wait 1
 screenshot void_5_consumed
+assert get_tree().root.get_node("RobotRadio").queue.current == null "nobody radios about it"
 
-# The robot talks the pilot back into a new hull
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_consumed" 5
-press space
-frames 2
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 5
-wait_until not pt.node("radio_panel").is_typing() 5
-assert get_tree().root.get_node("RobotRadio").current_line().garbled "nothing gets through from out there"
-assert get_tree().root.get_node("RobotRadio").current_line().expression == "lost" "red lost face"
-assert not pt.node("radio_panel").message_text().contains("Stay inside the orbits") "the words never arrive"
-assert pt.node("radio_panel").message_text().length() > 20 "but the shape of speech does"
-assert get_tree().get_first_node_in_group("void_shroud").visible "the dark still holds before the relaunch"
-# Relaunch: the wake's dark comes up clean, with nothing of the Void left under it (no boot
-# terminal: SR-7 is unpowered)
-eval main.set("force_wake_sequence", true)
-press space
+# A beat of silence, then the next clone comes up on its own: the wake's dark comes up
+# clean, with nothing of the Void left under it
 wait_until main.get_node("FadeLayer/FadeRect").visible 10
 assert not get_tree().get_first_node_in_group("void_shroud").visible "the Void's overlay is gone before the wake"
 assert get_node("/root/VoidZone").shroud == 0.0 "and so is the dark behind it"

@@ -29,7 +29,6 @@ class_name Gate
 ## waits on all five Modules rather than on Stores (`is_core`).
 
 const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
-const MSG_IDENTIFIED = preload("res://entities/Robot/radio/messages/gate_identified.tres")
 
 ## Ring radius; the Gate reads about 200 px across.
 const RADIUS := 100.0
@@ -191,16 +190,13 @@ func is_identified() -> bool:
 	var gs := _game_state()
 	return gs != null and gs.is_gate_identified(save_key())
 
-## Names the Gate. The Guide's line is `once` per save, so only the first Gate the
-## player ever reaches gets a word about it; every later one flips silently.
-## Returns true when this call is what identified it.
+## Names the Gate, silently. Returns true when this call is what identified it.
 func identify() -> bool:
 	var gs := _game_state()
 	var key := save_key()
 	if gs == null or key == "" or gs.is_gate_identified(key):
 		return false
 	gs.mark_gate_identified(key)
-	EventBus.radio_message_requested.emit(MSG_IDENTIFIED)
 	if persist:
 		Save.save_identified_gates(PackedStringArray(gs.identified_gates.keys()))
 	return true
