@@ -162,6 +162,7 @@ func sonar_point() -> Vector2:
 func on_sonar_touched(strength := 1.0, clarity := 1.0) -> void:
 	if not _lug_line:
 		return
+	EventBus.freight_answered.emit()
 	SonarEcho.answer_ping(_visual, lug_position, strength, Colors.TITAN, clarity)
 	if _lug_glow:
 		_lug_glow.kill()

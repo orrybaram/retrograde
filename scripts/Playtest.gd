@@ -866,6 +866,7 @@ func rel_speed(planet_name: String) -> float:
 ## player who had brought it home would have, so the ship has its hold; `fit_cargo_bay`
 ## false leaves it buried on Veld and the ship with no hold.
 func skip_opening(fit_cargo_bay := true) -> void:
+	get_tree().call_group("boot_log", "forget")
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	gs.core_started = true
 	Save.save_core_started(true)

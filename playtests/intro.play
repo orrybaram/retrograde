@@ -4,6 +4,8 @@
 # Run: tools/play.sh playtests/intro.play
 
 eval main.set("force_wake_sequence", true)
+# And the manual diagnostic, as a real new game has: it locks the controls through the wake
+eval main.set("force_boot_log", true)
 assert main.current_game_state == 0 "boots to menu"
 press enter
 
@@ -28,6 +30,10 @@ screenshot 01_dark_after_intro
 wait_until main.current_game_state == 1 15
 assert not main.booted_last_spawn "the spawn never booted"
 assert main.get_node("FadeLayer/FadeRect").visible "screen is dark when the world arrives"
+assert pt.node("boot_log").has_locks() and not pt.node("boot_log").is_running() "controls locked from the first frame, before the diagnostic starts"
+eval pt.remember("v", ship.linear_velocity)
+hold thrust 0.4
+assert (ship.linear_velocity - pt.recall("v")).length() < 1.0 "so nothing flies during the wake"
 screenshot 02_dark
 wait_until not main.get_node("FadeLayer/FadeRect").visible 8
 assert pt.state_name() == "FlyingState" "the ship wakes adrift, not docked"

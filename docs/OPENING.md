@@ -120,11 +120,13 @@ enter, and they never stop being the ship.
 ## 3. The Dead Station
 
 **The ship wakes adrift** (decided 2026-09-25, replacing the docked start). The sabotage
-was who knows how long ago; the ship comes to hanging just off the end of SR-7's belly,
-turning slowly over among fine flakes of debris that thin and are gone within a couple of
-minutes (`WakeDrift`). The player has the stick from the first second: the tumble is
-the ship's own momentum, and the first touch of a turn key stops it
-(`Ship.drift_spin`, `ShipSpawner.spawn_adrift`).
+was who knows how long ago; the ship comes to hanging below and out past SR-7's belly,
+the station just off the top of the screen and Rook's debris ring out of view (revised
+2026-09-27), turning slowly over
+among fine flakes of debris that thin and are gone within a couple of minutes
+(`WakeDrift`). The stick is locked until the ship's manual diagnostic hands it back (§6,
+revised 2026-09-27): the tumble is the ship's own momentum, and the first touch of a turn
+key after that stops it (`Ship.drift_spin`, `ShipSpawner.spawn_adrift`).
 
 Where the dock should be there is nothing. The refuel boom's arm is run in, back inside the
 hull, so SR-7 has no dock at all and nothing offers DOCK (`DockArm`, `SpacePort.deployed`).
@@ -179,8 +181,9 @@ objective with zero instruction.
 
 Placement (revised 2026-09-22), nearest first:
 
-- **FUEL TANK**: adrift just off screen to the right of where the ship wakes, keeping pace with SR-7
-  (not Rook). The first thing found by simply flying out.
+- **FUEL TANK**: adrift in view ahead of where the ship wakes, 600 px to its right and well
+  clear of Rook's debris ring (revised 2026-09-27, from just off screen, where it sat in
+  the ring), keeping pace with SR-7 (not Rook). The first thing found by simply flying out.
 - **DORSAL ARM**: adrift in Rook's debris ring (3000 px out), going round with the ring
   at the ring's own speed for that distance (`Mount.start_in_orbit`), so it has to be
   caught up with rather than flown to.
@@ -383,6 +386,59 @@ The boot text is the load-bearing one, and it promotes the Boot Terminal from
 `docs/IDEAS.md` out of the late game. The first thing the player ever reads is the ship
 talking to itself - which means that by the time they wonder whether that terminal accepts
 input, they have been reading it since minute one.
+
+### The manual diagnostic (decided 2026-09-27)
+
+The boot text's in-flight half (`BootLog`, `BootChecklist`, `ControlLock`). A beat after a
+new game hands over control, the ship types its own manual diagnostic into the HUD's
+bottom-right corner (on top of UNIT-7's panel while that is up), growing upward, in bare
+terminal text with no frame:
+
+```
+MANUAL DIAGNOSTIC
+CTRL AUTH ................. SYSTEM
+
+PROPULSION
+THRUST ....... [UP]          [ OK ]
+REVERSE ...... [DOWN]        [ -- ]
+YAW .......... [LEFT][RIGHT] [ -- ]
+```
+
+A terse flight-computer readout, no sentences: status fields right-aligned under the
+stamps, headings naming the hardware under test (PROPULSION, SONAR, CLAMP, RCS, CLAMP
+RELEASE), rows the control that exercises it.
+
+**The controls are locked until their test.** Nothing answers until PROPULSION's heading has
+typed; then the stick comes back. Each later section gives back its own: SONAR the Sweep,
+CLAMP the magnet, RCS the strafe, CLAMP RELEASE the let-go. The locks go on with the new
+game's first frame, so the wake from black is not a window to fly in. While CTRL AUTH is
+the system's, thrust is held to 50 m/s relative to SR-7 (the frame the station, the tank
+and its Mount all move in) and the boost is held off. Finishing, a load, a new game or a
+quit clears every lock and the cap, so none can outlive the log. A ship lost mid-diagnostic
+comes back locked where it left off: the next clone reruns it with what had passed on
+file, and the rest runs again from its triggers (the tank is never lost, ADR 0012).
+
+Each row stamps `[ OK ]` the first time the pilot uses it, so the controls are taught as a
+checklist the player ticks off, not as popups. YAW and STRAFE need both ways. A section
+whose rows are all OK clears a moment later, so the log only holds what is still to do,
+and its system name joins a running list of passes under the header
+(`PROPULSION ..... [ OK ]`), which stays up to the end. `CTRL AUTH` is an aside: smaller
+than the log, and dim.
+Later sections **unfold** when their moment comes: SONAR when a loose piece's Lug is just
+outside a tapped Sweep's reach (a Sweep that reaches it logs `CONTACT ... FREIGHT`), CLAMP
+when the nose is close to a Lug (the stamp fills as a bar while the magnet pulls), RCS a
+beat after the pickup, CLAMP RELEASE when the load is close to its Mount (its stamp fills with
+the release hold). A row left waiting flickers now and then; nothing else nags. With every
+section cleared it prints `DIAGNOSTIC ... PASS` / `CTRL AUTH ... PILOT`, holds, and
+fades for good.
+
+It runs on a new game only and is never saved: a continue does not bring it back. It never
+names a place or a goal - only the ship's own controls, which §6 already assigns to it.
+Considered and set aside (prototyped 2026-09-27): stacked on the dashboard (moved to the
+corner after a play), overlay key cards and prompts pinned to
+the ship (the popups this section rules out), every section listed from the start (tells
+the player the shape of Act 1 before they have seen a tank), and the POST panel folding
+into the corner (the dark new-game start has no POST to fold).
 
 ## 7. What Veld Withholds
 

@@ -274,7 +274,7 @@ func _drive_sonar() -> void:
 ## to harvesting; a scrap or a seam in the rings is what makes a ping a harvest. The state
 ## decides (ShipState.allows_sonar), and a menu over the game takes the key.
 func wants_sonar() -> bool:
-	if not Input.is_action_pressed("action"):
+	if not Input.is_action_pressed("action") or not ControlLock.allows(ControlLock.SWEEP):
 		return false
 	var state := state_machine.current_state as ShipState if state_machine else null
 	if state == null or not state.allows_sonar():

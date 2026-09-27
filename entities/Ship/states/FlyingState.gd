@@ -76,13 +76,17 @@ func physics_process(delta: float) -> void:
 
 ## Sample the flight keys into `ship`'s wants.
 static func read_stick(ship: Ship) -> void:
-	ship.want_turn_left = Input.is_action_pressed("turn_left")
-	ship.want_turn_right = Input.is_action_pressed("turn_right")
-	ship.want_strafe_left = Input.is_action_pressed("strafe_left")
-	ship.want_strafe_right = Input.is_action_pressed("strafe_right")
+	ship.want_turn_left = _stick("turn_left")
+	ship.want_turn_right = _stick("turn_right")
+	ship.want_strafe_left = _stick("strafe_left")
+	ship.want_strafe_right = _stick("strafe_right")
 	ship.want_boost = Input.is_action_pressed("boost")
-	ship.want_thrust = Input.is_action_pressed("thrust")
-	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
+	ship.want_thrust = _stick("thrust")
+	ship.want_reverse_thrust = _stick("reverse_thrust")
+
+## Held, and not locked by the manual diagnostic (ControlLock).
+static func _stick(action: StringName) -> bool:
+	return Input.is_action_pressed(action) and ControlLock.allows(action)
 
 ## Is the player working the stick at all (turning, strafing or thrusting)?
 static func has_stick_input(ship: Ship) -> bool:
@@ -152,7 +156,7 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	var strafe := strafe_axis(ship)
 	if strafe != 0.0:
 		var side := Vector2(0.0, strafe).rotated(ship.rotation) * ship.thrust_power * STRAFE_POWER
-		state.linear_velocity = cruise_velocity(state.linear_velocity, side * state.inverse_mass * state.step, ship.cruise_speed)
+		state.linear_velocity = _held(state.linear_velocity, side * state.inverse_mass * state.step)
 
 	if _coupled and is_instance_valid(_coupled):
 		_hold_coupled(state)
@@ -181,12 +185,20 @@ static func turned_spin(spin: float, turn: float, turn_speed: float, ratio: floa
 ## Ordinary thrust is held to `ship.cruise_speed` (see cruise_velocity); the boost is not.
 func _apply_thrust(state: PhysicsDirectBodyState2D, local_direction: Vector2) -> void:
 	var force := local_direction.rotated(ship.rotation) * ship.thrust_power
-	if _boosting():
+	if _boosting() and not ControlLock.is_capped():
 		if ship.consume_fuel(ship.fuel_consumption_rate * ship.boost_fuel_multiplier * state.step):
 			state.apply_central_force(force * ship.boost_power_multiplier)
 			return
 	var dv := force * state.inverse_mass * state.step
-	state.linear_velocity = cruise_velocity(state.linear_velocity, dv, ship.cruise_speed)
+	state.linear_velocity = _held(state.linear_velocity, dv)
+
+## Ordinary thrust's velocity: held to cruise speed, or - while the diagnostic holds
+## control (ControlLock) - to its slower cap, counted relative to SR-7's frame.
+func _held(velocity: Vector2, dv: Vector2) -> Vector2:
+	if ControlLock.is_capped():
+		var frame := ControlLock.frame_velocity
+		return cruise_velocity(velocity - frame, dv, ControlLock.speed_cap) + frame
+	return cruise_velocity(velocity, dv, ship.cruise_speed)
 
 ## Velocity after ordinary thrust adds `dv` to `velocity`, held to `cap`: it may speed the
 ## ship up to the cap, but never past it, and never faster than it already was once over
@@ -375,7 +387,8 @@ var _latched := false
 const COUPLE_GAIN := 9.0
 
 func _update_magnet() -> void:
-	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available()
+	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available() \
+		and ControlLock.allows(ControlLock.CLAMP)
 	var fresh_press := holding and not _was_holding
 	_was_holding = holding
 	if not holding:
@@ -412,6 +425,14 @@ func _update_magnet() -> void:
 		_magnet_locked = false
 		ship.set_meta("pending_freight", f)
 		ship.state_machine.change_state("CarryingState")
+
+## How far the magnet has drawn a piece in, 0 to 1: the Lug's gap to the nose against the
+## magnet's reach. 0 with nothing in its pull (the manual check's CLAMP row, BootLog).
+func magnet_progress() -> float:
+	if _magnet_target == null or not is_instance_valid(_magnet_target):
+		return 0.0
+	var gap := ship.to_global(Ship.NOSE).distance_to(_magnet_target.lug_global())
+	return clampf(1.0 - gap / Freight.MAGNET_RANGE, 0.0, 1.0)
 
 ## A hold of `action` that is working the magnet - pulling a piece in, coupled onto a
 ## buried one, or the press that coupled on or let go - belongs to that, not the Sweep:
