@@ -13,7 +13,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 20
-eval gs.set("credits", 5000)
+eval gs.set("stores", 5000)
 
 # --- 1. The chart starts blank -------------------------------------------------
 eval pt.caption("THE SOLAR SYSTEM IS THE TITAN  //  shut down at the end of the war, one Module per planet")
@@ -74,7 +74,7 @@ press action
 wait_until pt.state_name() == "GateDockedState" 3
 wait 1.4
 
-eval pt.caption("The Gate's own terminal  //  600 CR to bring Veld's Module online")
+eval pt.caption("The Gate's own terminal  //  600 ST to bring Veld's Module online")
 wait 3.0
 press enter
 wait_until gs.titan_influence() == 1 4
@@ -125,7 +125,7 @@ press enter
 wait 0.6
 wait_until ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 80 15
 wait 1.0
-eval pt.caption("Out of the dark, already in Crom's cradle  //  no fuel, no hull, no credits")
+eval pt.caption("Out of the dark, already in Crom's cradle  //  no fuel, no hull, no Stores")
 wait 3.4
 
 # The guide calls about the first transit, and that call pauses the game: let it play
@@ -146,7 +146,7 @@ wait 1.0
 # --- 8. Titan Influence ---------------------------------------------------------
 eval pt.caption("Two Modules in, the dashboard never quite reads clean again")
 # Sonder 2000 + Roke 3200 + TERRA-0 5000 still to pay for
-eval gs.set("credits", 20000)
+eval gs.set("stores", 20000)
 wait 3.0
 
 eval pt.caption("Every Module you switch on shows  //  the HUD dims and blinks a little more")

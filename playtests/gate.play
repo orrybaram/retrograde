@@ -24,8 +24,8 @@ assert get_tree().get_nodes_in_group("gates").size() == 6 "one Gate per planet, 
 assert pt.gate("Veld").minimap_target != null "the Gate is on the minimap"
 assert gs.titan_influence() == 0 "every Module starts offline"
 assert not pt.gate("Veld").is_powered() "Veld's Gate starts dormant"
-assert pt.gate("Veld").power_cost == 600 "Veld's Gate asks for 600 CR"
-eval gs.set("credits", 1000)
+assert pt.gate("Veld").power_cost == 600 "Veld's Gate asks for 600 ST"
+eval gs.set("stores", 1000)
 
 # In scanner range of Veld's Gate: nothing on the minimap until Veld has been scanned,
 # then it shows as a ring with its blinker
@@ -55,7 +55,7 @@ screenshot gate_2_terminal
 # POWER GATE is the first row; ENTER takes it
 press enter
 wait_until gs.titan_influence() == 1 2
-assert gs.credits == 400 "the Gate took its 600 CR"
+assert gs.stores == 400 "the Gate took its 600 ST"
 assert pt.gate("Veld").is_powered() "Veld's Module is online"
 wait 0.9
 screenshot gate_3_boot_log
@@ -88,6 +88,6 @@ reload
 wait_until main.current_game_state == 1 10
 assert gs.titan_influence() == 1 "the Module is still online after a reload"
 assert pt.gate("Veld").is_powered() "Veld's Gate is still lit after a reload"
-assert gs.credits == 400 "the credits it cost are still spent"
+assert gs.stores == 400 "the Stores it cost are still spent"
 assert pt.state_name() == "GateDockedState" "a saved Gate dock comes back as a Gate dock"
 state

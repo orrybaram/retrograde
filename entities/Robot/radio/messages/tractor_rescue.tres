@@ -5,7 +5,7 @@
 
 [sub_resource type="Resource" id="line_1"]
 script = ExtResource("2_line")
-text = "Gotcha! The station's tractor beam has you. Cargo and credits are safe."
+text = "Gotcha! The station's tractor beam has you. Your cargo's safe."
 expression = &"happy"
 confirm = "DOCK"
 

@@ -37,7 +37,7 @@ func _world_to_screen(world_pos: Vector2) -> Vector2:
 	return get_viewport().get_canvas_transform() * world_pos
 
 ## `tier_name` is the unit after the number ("" shows just "+N"). `style` picks the
-## pop: "crystal" / "artifact" gem ids or "CR" for a cash-in.
+## pop: "crystal" / "artifact" gem ids or "ST" for a Deposit.
 func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tier_name: String = "", tier_color: Color = Colors.PRIMARY, style: String = "") -> void:
 	# Ensure nodes are ready (in case called before _ready)
 	if not amount_label:
@@ -64,7 +64,7 @@ func show_gain(amount: int, _resource_kind: String, world_position: Vector2, tie
 	match style:
 		"crystal": tier_scale_bonus = 0.2
 		"artifact": tier_scale_bonus = 0.5
-		"CR": tier_scale_bonus = 0.3
+		"ST": tier_scale_bonus = 0.3
 
 	# Calculate scale based on amount
 	var target_scale = base_scale + (amount * scale_multiplier) + tier_scale_bonus

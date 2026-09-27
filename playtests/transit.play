@@ -27,7 +27,7 @@ wait_until pt.state_name() == "FlyingState" 3
 # Powering a Gate for real means docking at it, which means flying inside Identifiable.RANGE
 # first, so a transit destination is always already identified. Shortcutting the flight here
 # would leave Crom unidentified and fire the guide's identify call on arrival instead.
-eval gs.set("credits", 1000)
+eval gs.set("stores", 1000)
 eval gs.mark_gate_powered(pt.gate("Crom").save_key())
 eval gs.mark_gate_identified(pt.gate("Crom").save_key())
 eval gs.mark_gate_identified(pt.gate("Veld").save_key())
@@ -44,7 +44,7 @@ wait_until pt.visible_ui().has("GateTerminal") 2
 press enter
 wait_until gs.titan_influence() == 2 3
 wait_until not pt.node("gate_terminal").is_booting() 8
-assert gs.credits == 400 "Veld's Gate took its 600 CR"
+assert gs.stores == 400 "Veld's Gate took its 600 ST"
 
 # A Gate gives no fuel: that is SR-7's (docs/OPENING.md §9)
 assert pt.node("gate_terminal")._menu_items.size() == 2 "a powered Gate offers transit and the door, no fuel"
@@ -73,7 +73,7 @@ assert ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 6
 assert ship.fuel == pt.recall("fuel") "transit burns no fuel"
 assert ship.hull_strength == pt.recall("hull") "transit costs no hull"
 assert inv.get_total_value() == pt.recall("hold") "transit takes nothing out of the hold"
-assert gs.credits == 400 "transit costs no credits"
+assert gs.stores == 400 "transit costs no Stores"
 assert gs.titan_influence() == 2 "both Modules are still online"
 
 # The guide has something to say the first time, and only the first time

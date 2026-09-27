@@ -21,8 +21,6 @@ enum MainGameState {
 @onready var hud: Control = $"CanvasLayer/HUD"
 @onready var encounter_field: EncounterField = $EncounterField
 
-## Relaunch fee per game-over reason (a tractor-beam rescue is free).
-const RELAUNCH_PENALTY := {"Ship Destroyed": 20, "Ship Abandoned": 10, "Consumed": 30}
 ## What the robot radios after each game-over reason. Its confirm line relaunches.
 const GAME_OVER_MESSAGES := {
 	"Ship Destroyed": RobotRadio.MSG_SHIP_DESTROYED,
@@ -433,7 +431,7 @@ func load_game() -> void:
 	# Wait a frame for scene to initialize
 	await get_tree().process_frame
 
-	# Load game state (credits, ship stats, inventory)
+	# Load game state (Stores, ship stats, inventory)
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	var clamped: Freight = null
 	if gs and ship:
@@ -499,7 +497,7 @@ func _show_game_over_delayed(reason: String) -> void:
 	show_game_over(reason)
 
 func show_game_over(reason: String) -> void:
-	# Store reason for cost calculation on relaunch
+	# Kept until relaunch, which needs to know whether this was a rescue
 	last_game_over_reason = reason
 
 	# Increment death counter (skip for tractor beam rescue)
@@ -515,7 +513,7 @@ func show_game_over(reason: String) -> void:
 	# The hold isn't cleared until relaunch, so it still says what an abandoned hull carries
 	var salvage := "Your cargo's still aboard, so salvage the wreck to get it back." \
 			if InventoryManager.get_total_value() > 0 else "Salvage the empty hull for scrap sometime."
-	RobotRadio.request(message.with_vars({"penalty": RELAUNCH_PENALTY.get(reason, 0), "salvage": salvage}))
+	RobotRadio.request(message.with_vars({"salvage": salvage}))
 
 func reset_game() -> void:
 	game_over_pending = false
@@ -531,22 +529,11 @@ func reset_game() -> void:
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
 
-	# Calculate relaunch costs before resetting ship
+	# A relaunch costs no Stores, whatever the reason
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	var penalty_cost: int = 0
-
 	var is_tractor_beam_rescue = last_game_over_reason == "Tractor Beam"
+	last_game_over_reason = ""
 
-	if ship and gs:
-		# Penalty based on game over reason (no penalty for tractor beam)
-		penalty_cost = RELAUNCH_PENALTY.get(last_game_over_reason, 0)
-
-		# Deduct penalty from credits
-		gs.credits = max(0, gs.credits - penalty_cost)
-
-		# Clear the reason after using it
-		last_game_over_reason = ""
-	
 	# Reset ship state
 	if ship:
 		ship.hull_strength = ship.max_hull
@@ -573,8 +560,7 @@ func reset_game() -> void:
 		# Reset boost particles material to original state
 		ship.reset_boost_particles()
 	
-	# Reset GameState (cargo only, preserve credits) - skip for tractor beam rescue
-	# Note: gs was already retrieved above for cost calculation
+	# Reset GameState (cargo only, preserve Stores) - skip for tractor beam rescue
 	if gs and not is_tractor_beam_rescue:
 		gs.clear_cargo()
 	
@@ -601,7 +587,7 @@ func reset_game() -> void:
 	get_tree().paused = false
 	current_game_state = MainGameState.PLAYING
 
-	# Save game after respawn (penalty already applied, ship reset at dock)
+	# Save game after respawn (ship reset at dock)
 	var save_gs = get_tree().get_first_node_in_group("game_state") as GameState
 	if save_gs and ship:
 		Save.save(save_gs, ship)

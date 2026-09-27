@@ -1,6 +1,6 @@
 extends Node
 ## Singleton for the ship's hold: gem quantities keyed by item_id. An item's weight is
-## the hold space it takes (see GemData). The hold is cashed in for credits on docking.
+## the hold space it takes (see GemData). The hold is deposited into Stores on docking.
 
 signal inventory_changed(item_id: String, new_quantity: int)
 ## Emitted when an item's quantity changes in the inventory.
@@ -120,12 +120,12 @@ func can_add_item(item_id: String, amount: int, max_cargo_weight: float) -> bool
 	var new_total = get_total_weight() + additional_weight
 	return new_total <= max_cargo_weight
 
-## Credits the hold is worth right now.
+## Stores the hold is worth right now.
 func get_total_value() -> int:
 	return GemData.hold_value(_inventory)
 
-## Empty the hold and return its credit value (the caller banks it).
-func cash_in() -> int:
+## Empty the hold and return what it is worth (the caller adds it to the Stores).
+func deposit() -> int:
 	var value := get_total_value()
 	clear_inventory()
 	return value

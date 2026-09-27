@@ -2,7 +2,7 @@ extends Node
 class_name ResourceManager
 
 ## Floating "+N" text over the ship: every gem pickup, shown as a count in that gem's
-## color, and the credits earned when the hold is cashed in at a port. Pickups within
+## color, and the Stores earned when the hold is deposited at a port. Pickups within
 ## BATCH_WINDOW merge into one line per tier, and lines still on screen push new ones
 ## upward so they never overlap.
 
@@ -20,7 +20,7 @@ var _live: Array[ResourceGainIndicator] = []
 func _ready() -> void:
 	add_to_group("resource_manager")
 	EventBus.gem_collected.connect(_on_gem_collected)
-	EventBus.hold_cashed_in.connect(_on_hold_cashed_in)
+	EventBus.hold_deposited.connect(_on_hold_deposited)
 
 func spawn_all_resources() -> void:
 	# Manually trigger spawning on all ResourceSpawners (useful if auto_spawn is disabled)
@@ -45,10 +45,10 @@ func _flush_pending() -> void:
 			show_gain_indicator(_pending[id], ship.global_position, "", GemData.color_of(id), id)
 	_pending.clear()
 
-func _on_hold_cashed_in(credits: int) -> void:
+func _on_hold_deposited(stores: int) -> void:
 	var ship := get_tree().get_first_node_in_group("ship") as Node2D
 	if ship:
-		show_gain_indicator(credits, ship.global_position, "CR", Colors.PRIMARY, "CR")
+		show_gain_indicator(stores, ship.global_position, "ST", Colors.PRIMARY, "ST")
 
 ## `label` is the unit shown after the amount ("" for just the number); `style` picks the pop.
 func show_gain_indicator(amount: int, position: Vector2, label: String, color: Color, style: String = "") -> void:
@@ -72,7 +72,7 @@ func show_gain_indicator(amount: int, position: Vector2, label: String, color: C
 		push_error("Failed to instantiate ResourceGainIndicator")
 		return
 
-	# Pickups and cash-ins happen at the ship, which keeps flying: pin the text to it.
+	# Pickups and Deposits happen at the ship, which keeps flying: pin the text to it.
 	indicator.follow = get_tree().get_first_node_in_group("ship") as Node2D
 	shown.append({"amount": amount, "color": color, "style": style})
 	_live = _live.filter(func(i): return is_instance_valid(i))

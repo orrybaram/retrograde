@@ -63,17 +63,17 @@ Expressions are Godot `Expression`s with `ship`, `main`, `gs` (GameState), `inv`
 
 ## Harvest iteration
 `tools/play.sh playtests/harvest.play` skips all flying: boot → depart → `stage_harvest`, then timed hits
-(three PERFECT hits breaking a node, early release + re-hold on a trophy, OVERLOAD) and a dock cash-in.
+(three PERFECT hits breaking a node, early release + re-hold on a trophy, OVERLOAD) and a dock Deposit.
 Scrap takes 3 hits (trophy 5); each hit is a release and re-arms a fresh zone, and `pt.staged.hits_left` counts down.
 The ship stays in `HarvestingState` (zoomed, velocity-locked) between hits; it returns to `FlyingState` ~0.8s after
 the break or once it leaves harvest range (flight input releases the lock but keeps focus).
 Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged.timing.perfect_start()`
 (also `zone_start`, `zone_end`). Frames land in `.playtest/harvest_*.png`; the transcript logs
-`harvest_hit {grade, gems, final}`, `gem_collected {gem}` and `hold_cashed_in {credits}` events.
+`harvest_hit {grade, gems, final}`, `gem_collected {gem}` and `hold_deposited {stores}` events.
 
 `playtests/magnet.play` drops gems around the flying ship and checks the magnet pulls them in (range, fly-by, full hold).
 
-`playtests/dock.play` redocks with a stocked hold and empty tank: gems arc into the port while HUD credits roll up, the dialogue waits for the cash-in, SR-7 tops the tank up to its free quarter and stops, and leaves a tank above the quarter alone (`.playtest/dock_*.png`).
+`playtests/dock.play` redocks with a stocked hold and empty tank: gems arc into the port while HUD Stores roll up, the dialogue waits for the Deposit, SR-7 tops the tank up to its free quarter and stops, and leaves a tank above the quarter alone (`.playtest/dock_*.png`).
 
 `playtests/wreck.play` blows the ship up with a stocked hold: 70% of it stays at the wreck through respawn, the loose-gem lifetime and a save reload, then gets collected (`pt.wreck_gem_count()`, `pt.warp_to_wreck()`).
 
@@ -89,7 +89,7 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 empty space (`pt.node("system_map").cursor_world`), ENTER takes it as a `WAYPOINT`, ENTER over a body tracks the body instead so
 the target rides its orbit, and DEL hands tracking back to home base (`.playtest/mark_*.png`).
 
-`playtests/gate.play` flies in on Veld's dormant Gate, docks in its cradle, pays the 600 CR, and checks the
+`playtests/gate.play` flies in on Veld's dormant Gate, docks in its cradle, pays the 600 ST, and checks the
 boot log brings the Module online (`gs.titan_influence()`), the ring lights purple, ESC leaves the terminal
 without pausing, and the Module survives a reload (`.playtest/gate_*.png`). Helpers: `pt.gate("Veld")`,
 `pt.park_at_gate(planet, dist)` (lined up on the cradle, matched to the Gate's orbit). FlyingState refuses to
@@ -137,5 +137,5 @@ but orbits run on the wall clock, so without it the physics and the planets drif
 - Scenario runs have a 300s real-time watchdog (`--timeout S` to change).
 - Reloading: use `reload`, not `eval main.call_deferred("load_game")` + a wait. Loads are async, and a docked ship autosaves while it refuels, so sentinel values can end up in the save.
 - Flight keys are read in physics ticks: headless runs uncapped, so a `press thrust` tap can fall between ticks. Use `hold thrust 0.1`.
-- Expressions can't assign: use `eval gs.set("credits", 100)`. Start coroutines with `eval main.call_deferred("load_game")`.
+- Expressions can't assign: use `eval gs.set("stores", 100)`. Start coroutines with `eval main.call_deferred("load_game")`.
 - After adding driver commands, update the doc comment at the top of `scripts/Playtest.gd` and this file.

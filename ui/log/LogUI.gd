@@ -48,7 +48,7 @@ func _ready() -> void:
 
 	# Live updates while open
 	if gs:
-		gs.credits_changed.connect(_refresh)
+		gs.stores_changed.connect(_refresh)
 	if inventory_manager:
 		inventory_manager.inventory_changed.connect(_refresh)
 	# A survey landing while the Log is up fills that Body's Record where the player can

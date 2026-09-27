@@ -103,7 +103,7 @@ func _ready() -> void:
 		last_drops = gems
 		_emit({"event": "harvest_hit", "grade": HarvestTiming.Grade.keys()[grade], "gems": gems, "final": final}))
 	EventBus.gem_collected.connect(func(id: String, _pos): _emit({"event": "gem_collected", "gem": id}))
-	EventBus.hold_cashed_in.connect(func(cr: int): _emit({"event": "hold_cashed_in", "credits": cr}))
+	EventBus.hold_deposited.connect(func(st: int): _emit({"event": "hold_deposited", "stores": st}))
 
 	var pace_fps := float(_arg_value("--playtest-fps", "0"))
 	if pace_fps > 0.0:
@@ -617,7 +617,7 @@ func snapshot() -> Dictionary:
 		"main_state": main.MainGameState.keys()[main.current_game_state] if main else null,
 		"ui_open": visible_ui(),
 		"action_message": _action_message,
-		"credits": gs.credits if gs else null,
+		"stores": gs.stores if gs else null,
 		"inventory": InventoryManager.get_all_items(),
 		"hold_value": InventoryManager.get_total_value(),
 		"loose_gems": Gem.active.size(),

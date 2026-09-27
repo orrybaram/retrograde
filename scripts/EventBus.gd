@@ -49,8 +49,8 @@ signal sonar_pulsed(origin: Vector2)
 signal gem_collected(item_id: String, world_position: Vector2)
 ## Emitted when the ship picks up a loose gem (after it is added to the hold).
 
-signal hold_cashed_in(credits: int)
-## Emitted when docking at a port converts the hold into credits.
+signal hold_deposited(stores: int)
+## Emitted when docking at a port converts the hold into Stores.
 
 signal planet_scanned(planet: Planet)
 ## Emitted when the Planetary Scanner finishes mapping a planet (once per planet).

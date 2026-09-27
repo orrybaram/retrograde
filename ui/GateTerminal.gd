@@ -3,7 +3,7 @@ class_name GateTerminal
 
 ## The Gate's own terminal, opened by GateDockedState while the ship sits in the cradle.
 ## No robot, no shopfront: the Titan's hardware talking to itself, and one row asking
-## for the credits to bring this planet's Module online.
+## for the Stores to bring this planet's Module online.
 ##
 ## UP/DOWN select, ENTER confirms, ESC leaves. Powering runs a short boot log the
 ## launch key skips, and then the hub comes back showing the Module online. Once it is,
@@ -11,7 +11,7 @@ class_name GateTerminal
 ## gives no fuel; that is SR-7's (docs/OPENING.md §9).
 ##
 ## The Core's Gate at the Sun Station reads the same terminal, but its row asks for
-## Modules instead of credits and does nothing yet: see `_core_row()`.
+## Modules instead of Stores and does nothing yet: see `_core_row()`.
 ##
 ## Built in code; the scene tree holds only the root.
 
@@ -165,7 +165,7 @@ func _refresh_hub() -> void:
 	var powered := gate != null and gate.is_powered()
 	_status.text = TerminalWindow.spaced(_status_line(core, powered))
 	_status.add_theme_color_override("font_color", Colors.TITAN if powered else Colors.PRIMARY)
-	# The HUD already carries the credit balance; the terminal doesn't repeat it.
+	# The HUD already carries the Stores balance; the terminal doesn't repeat it.
 	_subhead.visible = false
 	_frame.set_hint(Controls.menu_hint("CONFIRM", "LEAVE"))
 
@@ -186,7 +186,7 @@ func _refresh_hub() -> void:
 			"enabled": affordable,
 			"action": _on_power_pressed,
 			"label": "POWER GATE",
-			"right": "%d CR" % (gate.power_cost if gate else 0),
+			"right": "%d ST" % (gate.power_cost if gate else 0),
 			"right_color": Colors.PRIMARY if affordable else Colors.DANGER,
 		})
 	_menu_items.append({"enabled": true, "action": close, "label": "DEPART", "right": "UNDOCK"})
@@ -245,7 +245,7 @@ func _status_line(core: bool, powered: bool) -> String:
 		return "CORE OFFLINE"
 	return "MODULE ONLINE" if powered else "MODULE OFFLINE"
 
-## The Core's Gate asks for Modules, not credits. Until all five are online the row is
+## The Core's Gate asks for Modules, not Stores. Until all five are online the row is
 ## dim and says only that; the player counts the Modules from the Gates themselves, not
 ## from a tally here. At five it offers the Core. Taking it does nothing yet — what
 ## happens when the Core comes online is a later endgame issue — so the row logs a

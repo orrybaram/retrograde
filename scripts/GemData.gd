@@ -3,11 +3,11 @@ class_name GemData
 
 ## Gem tiers: the currency knocked loose from scrap. Bigger gems are worth more and
 ## take more hold space. Each harvest hit drops a handful (a chip); the final hit
-## breaks the scrap into a bigger burst. The hold is cashed in for credits on docking.
+## breaks the scrap into a bigger burst. The hold is deposited into Stores on docking.
 
 enum Tier { SHARD, GEM, CRYSTAL, ARTIFACT }
 
-## value: credits when cashed in. space: hold units. size: drawn half-width in px.
+## value: Stores when deposited. space: hold units. size: drawn half-width in px.
 const TIERS := {
 	Tier.SHARD:    {"item_id": "shard",    "display_name": "Shard",    "value": 2,   "space": 1, "size": 3.2},
 	Tier.GEM:      {"item_id": "gem",      "display_name": "Gem",      "value": 8,   "space": 1, "size": 4.4},
@@ -169,7 +169,7 @@ static func wreck_drops(items: Dictionary) -> Array[String]:
 				ids.append(id)
 	return ids
 
-## Credits a set of {item_id: quantity} is worth. Non-gem ids count for nothing.
+## Stores a set of {item_id: quantity} is worth. Non-gem ids count for nothing.
 static func hold_value(items: Dictionary) -> int:
 	var total := 0
 	for id in items:

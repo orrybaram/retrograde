@@ -2,7 +2,7 @@
 # Skips all flying so harvest feel can be iterated on quickly.
 # Run: tools/play.sh playtests/harvest.play             (burst frames land in .playtest/harvest_*.png)
 #      tools/play.sh --headless playtests/harvest.play  (logic only)
-# .playtest/transcript.jsonl logs harvest_hit {grade, gems, final} / gem_collected / hold_cashed_in events.
+# .playtest/transcript.jsonl logs harvest_hit {grade, gems, final} / gem_collected / hold_deposited events.
 # Timing: hold `action` to sweep pt.staged.timing.progress; release inside the zone. Each release is a hit;
 # scrap takes 3 hits (5 for trophies) and every hit gets a fresh zone.
 
@@ -98,12 +98,12 @@ eval pt.popup_counts()
 eval inv.get_all_items()
 assert pt.popup_counts() == inv.get_all_items() "popup numbers match collected gems"
 
-# --- F: docking at a port cashes the hold in ---
+# --- F: docking at a port deposits the hold ---
 eval inv.add_item("gem", 1)
-assert gs.credits == 0 and inv.get_total_value() > 0 "fresh game: no credits, gems in hold"
+assert gs.stores == 0 and inv.get_total_value() > 0 "fresh game: no Stores, gems in hold"
 eval ship.set_meta("pending_dockable", pt.node("space_ports"))
 eval ship.state_machine.change_state("LandedState")
 frames 2
-wait_until inv.get_total_value() == 0 and gs.credits > 0 5
-assert gs.credits > 0 "dock flies the hold into the port as credits"
+wait_until inv.get_total_value() == 0 and gs.stores > 0 5
+assert gs.stores > 0 "dock flies the hold into the port as Stores"
 state

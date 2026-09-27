@@ -55,12 +55,12 @@ func test_meeting_the_guide_again_adds_nothing() -> void:
 
 func test_met_automatons_round_trip_through_the_save() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 42)
+	cfg.set_value("stats", "stores", 42)
 	cfg.save(SAVE_FILE)
 	Save.save_met_automatons(PackedStringArray(["UNIT-7"]), SAVE_FILE)
 	assert_array(Array(Save.load_met_automatons(SAVE_FILE))).contains_exactly(["UNIT-7"])
 	cfg.load(SAVE_FILE)
-	assert_int(cfg.get_value("stats", "credits")).is_equal(42)
+	assert_int(cfg.get_value("stats", "stores")).is_equal(42)
 	# Meeting an Automaton is not powering a Gate: the lists are kept apart
 	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
 
@@ -73,7 +73,7 @@ func test_met_automatons_need_an_existing_save() -> void:
 
 func test_a_save_from_before_records_reads_as_nobody_met() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 7)
+	cfg.set_value("stats", "stores", 7)
 	cfg.save(SAVE_FILE)
 	assert_int(Save.load_met_automatons(SAVE_FILE).size()).is_equal(0)
 
@@ -208,7 +208,7 @@ func test_raising_modules_online_reveals_further_notes() -> void:
 ## the save already carries. Reloading those gives the same Notes back.
 func test_unlocked_notes_come_back_with_the_powered_gates() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 0)
+	cfg.set_value("stats", "stores", 0)
 	cfg.save(SAVE_FILE)
 	_power_modules(3)
 	Save.save_powered_gates(PackedStringArray(_gs.powered_gates.keys()), SAVE_FILE)

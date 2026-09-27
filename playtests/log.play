@@ -31,7 +31,7 @@ wait_until not pt.visible_ui().has("LogUI") 2
 eval inv.add_item("shard", 12)
 eval inv.add_item("gem", 5)
 eval inv.add_item("crystal", 2)
-eval gs.set("credits", 1240)
+eval gs.set("stores", 1240)
 press i
 wait_until pt.visible_ui().has("LogUI") 2
 wait 0.6

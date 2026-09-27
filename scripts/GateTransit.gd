@@ -6,7 +6,7 @@ class_name GateTransit
 ## destination list is exactly the other powered Gates.
 ##
 ## The Titan carries the ship, so nothing aboard pays for it: no fuel, no hull, no hold,
-## no credits. The screen cuts to black and the ship comes out of the dark already in
+## no Stores. The screen cuts to black and the ship comes out of the dark already in
 ## the destination's cradle. Nothing is reloaded or reset on the way — orbits, the
 ## encounter field and every Gate's own clock keep running through the cut.
 

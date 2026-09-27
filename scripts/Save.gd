@@ -2,7 +2,7 @@ extends Node
 class_name Save
 
 ## Static save/load helpers using ConfigFile (user://save.cfg).
-## Serializes GameState (credits, death count), Ship stats (fuel, hull, cargo),
+## Serializes GameState (Stores, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, Visited Bodies, dug-out ore seams
 ## (seconds until they refill), powered and identified Gates, the Automatons the player
 ## has met, which radio tips were seen, which Sections are seated in their Mounts, and every
@@ -30,7 +30,7 @@ const SECTION_CORE_KEY := "core_started"
 
 static func save(gs: GameState, ship: Ship) -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", gs.credits)
+	cfg.set_value("stats", "stores", gs.stores)
 	cfg.set_value("stats", "death_count", gs.death_count)
 	if ship:
 		cfg.set_value("stats", "fuel", ship.fuel)
@@ -283,7 +283,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	if cfg.load(Playtest.save_path()) != OK:
 		return
 	
-	gs.credits = int(cfg.get_value("stats", "credits", 0))
+	gs.stores = int(cfg.get_value("stats", "stores", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
 	RobotRadio.load_seen(load_radio_seen())
 	# Surveys are not kept: an old save's planetary scans stay behind, so its seams stay

@@ -111,19 +111,19 @@ func test_the_deepest_body_earns_the_record() -> void:
 
 func test_visited_bodies_round_trip_through_the_save() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 12)
+	cfg.set_value("stats", "stores", 12)
 	cfg.save(SAVE_FILE)
 	Save.save_visited_planets(PackedStringArray(["Veld/Rook", "Sun"]), SAVE_FILE)
 	assert_array(Array(Save.load_visited_planets(SAVE_FILE))).contains_exactly(["Veld/Rook", "Sun"])
 	cfg.load(SAVE_FILE)
-	assert_int(cfg.get_value("stats", "credits")).is_equal(12)
+	assert_int(cfg.get_value("stats", "stores")).is_equal(12)
 
 
 ## Reaching a Body in open flight writes it straight away — there is no dock to hang a
 ## full save off.
 func test_marking_writes_the_save_on_the_spot() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 12)
+	cfg.set_value("stats", "stores", 12)
 	cfg.save(SAVE_FILE)
 	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
 	_planet_log().mark_at(Vector2(planet.scan_radius() - 1.0, 0), SAVE_FILE)

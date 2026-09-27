@@ -13,7 +13,7 @@ glitch = true
 script = ExtResource("2_line")
 text = "Phew. Got you out in time. I always do! Your spare ship is fueled up and waiting."
 expression = &"happy"
-confirm = "RELAUNCH  -{penalty} CR"
+confirm = "RELAUNCH"
 
 [resource]
 script = ExtResource("1_conv")
