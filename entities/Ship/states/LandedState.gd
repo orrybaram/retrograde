@@ -16,9 +16,20 @@ var _deposit: HoldDeposit = null
 var _refueling := false
 ## Where this dock's fill stops: SR-7's free quarter (Ship.free_fuel_floor).
 var _refuel_target := 0.0
+## After the Deposit, SR-7 spends Stores on the ship with no menu (issue #137): the hull
+## is patched first, then the tank is topped up past the free quarter, as far as the
+## Stores allow.
+var _repairing := false
+var _topping_up := false
+var _gs: GameState = null
+## Stores spent but not yet taken off the count: a hull or fuel point costs a fraction
+## of a Store per frame, and only whole Stores come off.
+var _owed := 0.0
 
 ## Seconds for a port to fill an empty tank; the free quarter takes a quarter of that.
 const REFUEL_TIME := 5.0
+## Seconds for SR-7 to patch a hull from nothing to whole.
+const REPAIR_TIME := 3.0
 
 ## Docked: `action` is the port's key, not the sonar's.
 func allows_sonar() -> bool:
@@ -81,9 +92,7 @@ func enter() -> void:
 	if at_port:
 		_start_refuel(gs)
 		if port_open:
-			_deposit = HoldDeposit.begin(locked_dockable, ship, gs)
-			if _deposit:
-				_deposit.finished.connect(_on_deposit_finished)
+			_begin_deposit(gs)
 		EventBus.resources_refresh_requested.emit()
 
 	# Auto-save on landing (wait a frame to ensure position is set)
@@ -114,6 +123,10 @@ func exit() -> void:
 	_deposit = null
 	_refueling = false
 	_refuel_target = 0.0
+	_repairing = false
+	_topping_up = false
+	_settle()
+	_gs = null
 	_close_core_terminal()
 	# Close dialogue if open
 	if _dialogue and is_instance_valid(_dialogue):
@@ -161,8 +174,7 @@ func physics_process(delta: float) -> void:
 		_exit_to_flying()
 		return
 	
-	if _refueling:
-		_refuel(delta)
+	_service(delta)
 
 	# Reset camera shake
 	if ship.camera:
@@ -328,7 +340,97 @@ func _refuel(delta: float) -> void:
 		_refueling = false
 		_autosave()
 
-func _on_deposit_finished(_total: int) -> void:
+## Fly the hold into the port; once it is in, spend Stores on the ship. An empty hold
+## goes straight to the spending.
+func _begin_deposit(gs: GameState) -> void:
+	_deposit = HoldDeposit.begin(locked_dockable, ship, gs)
+	if _deposit:
+		_deposit.finished.connect(_on_deposit_finished.bind(gs))
+	else:
+		_start_service(gs)
+
+func _on_deposit_finished(_total: int, gs: GameState) -> void:
+	_autosave()
+	# Taking off mid Deposit finishes it from exit(): the ship has left, nothing to spend on
+	if locked_dockable:
+		_start_service(gs)
+
+## One frame of the dock's work: the free quarter fills alongside everything; Stores go
+## to the hull first, and to the tank past the quarter once the hull is done and the
+## free fill has stopped.
+func _service(delta: float) -> void:
+	if _refueling:
+		_refuel(delta)
+	if _repairing:
+		_repair(delta)
+	elif _topping_up and not _refueling:
+		_top_up(delta)
+
+## Start spending Stores on the ship: hull first, then fuel. With no Stores, or nothing
+## to fix, nothing happens.
+func _start_service(gs: GameState) -> void:
+	if not is_ship_valid() or gs == null or gs.stores <= 0:
+		return
+	_gs = gs
+	_owed = 0.0
+	_repairing = ship.hull_strength < ship.max_hull
+	_topping_up = ship.fuel < ship.max_fuel
+
+func _repair(delta: float) -> void:
+	var cost := float(Economy.REPAIR_COST_PER_POINT)
+	var points := minf(ship.max_hull / REPAIR_TIME * delta, ship.max_hull - ship.hull_strength)
+	points = minf(points, _affordable(cost))
+	if points > 0.0:
+		ship.hull_strength += points
+		_charge(points * cost)
+	if ship.hull_strength >= ship.max_hull:
+		_repairing = false
+	elif _affordable(cost) <= AFFORD_EPSILON:
+		# Out of Stores with the hull still open: nothing left for the tank either
+		_repairing = false
+		_topping_up = false
+	if not _repairing and not _topping_up:
+		_finish_service()
+
+func _top_up(delta: float) -> void:
+	var cost := Economy.REFUEL_COST_PER_POINT
+	var points := minf(ship.max_fuel / REFUEL_TIME * delta, ship.max_fuel - ship.fuel)
+	points = minf(points, _affordable(cost))
+	if points > 0.0:
+		ship.fuel += points
+		ship.fuel_changed.emit()
+		_charge(points * cost)
+	if ship.fuel >= ship.max_fuel or _affordable(cost) <= AFFORD_EPSILON:
+		_topping_up = false
+		_finish_service()
+
+## Below this many points, the Stores are spent.
+const AFFORD_EPSILON := 0.0001
+
+## How many points at `cost` each the Stores still cover.
+func _affordable(cost: float) -> float:
+	if _gs == null:
+		return 0.0
+	return maxf(0.0, (float(_gs.stores) - _owed) / cost)
+
+## Run up `amount` Stores; whole Stores come off the count as they add up, so the HUD
+## ticks down while the gauges fill.
+func _charge(amount: float) -> void:
+	_owed += amount
+	var whole := int(floor(_owed))
+	if whole > 0 and _gs:
+		_gs.stores = maxi(0, _gs.stores - whole)
+		_owed -= whole
+
+## Take the last fraction of a Store for what was bought. A fraction never costs a Store
+## the ship could not afford: spending is capped at what the Stores cover.
+func _settle() -> void:
+	if _gs and _owed > AFFORD_EPSILON:
+		_gs.stores = maxi(0, _gs.stores - int(ceil(_owed - AFFORD_EPSILON)))
+	_owed = 0.0
+
+func _finish_service() -> void:
+	_settle()
 	_autosave()
 
 func _autosave() -> void:
@@ -437,9 +539,7 @@ func _on_reboot_requested() -> void:
 	# The first thing a running SR-7 does for the ship on its dock is the free quarter
 	_start_refuel(gs)
 	if _port_is_open():
-		_deposit = HoldDeposit.begin(locked_dockable, ship, gs)
-		if _deposit:
-			_deposit.finished.connect(_on_deposit_finished)
+		_begin_deposit(gs)
 		_show_enter_spaceport_message()
 
 func _show_enter_spaceport_message() -> void:

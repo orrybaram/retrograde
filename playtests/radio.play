@@ -159,7 +159,10 @@ wait 1
 assert not get_tree().paused "relaunch unpauses"
 assert pt.visible_ui().is_empty() "the confirming SPACE doesn't open the dock menu"
 assert gs.death_count == 2 "abandoning and exploding both count as deaths"
-assert gs.stores == 500 "dying costs no Stores"
+# Dying takes nothing. Each relaunch docks at SR-7, which buys the tank past its free
+# quarter out of Stores (issue #137): 112.5 fuel at 0.3 ST, 34 ST at most per relaunch
+wait_until ship.fuel == ship.max_fuel 5
+assert gs.stores >= 500 - 2 * 34 and gs.stores < 500 "dying costs no Stores; only the tank past its quarter does"
 
 # Hold fills mid-harvest while SPACE is being mashed: the hold-full tutorial waits
 # until the player backs off, then pauses in view (gem popups don't hide the radio)

@@ -475,7 +475,9 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > **TODO**: What the dock offers *after* the wake is ADR 0007's, not this document's:
 > there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the
 > player brings. The store is gone (#132); the hub the wake opens offers only `DEPART`
-> until fitting lands.
+> until fitting lands. After the Deposit, a running SR-7 spends Stores on the ship with
+> no menu (#137): the hull first, then the tank past the free quarter, as far as the
+> Stores go (`LandedState._start_service`).
 > **TODO**: UNIT-7's functional calls (relaunch, tow, the Void) still come from UNIT-7
 > before the core's cold start wakes it (`RobotRadio.wake_guide`), and need a speaker of
 > their own.
