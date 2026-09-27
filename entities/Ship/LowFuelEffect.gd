@@ -3,8 +3,9 @@ class_name LowFuelEffect
 
 ## Makes the ship itself signal a low tank. Added by Ship at runtime.
 ## - Vapor: faint puffs leak from the hull and hang in space behind the ship.
-## - Sputter: while thrusting, the engine coughs — thrust and plume cut out, a backfire
-##   spits sparks and smoke, and the hull jolts. FlyingState stops the plume emitting
+## - Sputter: while boosting, the engine coughs — the boost and its plume cut out, a backfire
+##   spits sparks and smoke, and the hull jolts. Ordinary thrust runs on aux power and never
+##   coughs: a low or empty tank costs the boost and nothing else. FlyingState drops the boost
 ##   during a cough (particles already out finish naturally). Rare when LOW, frequent when CRITICAL.
 ## Only runs in flight; docking refuels and clears it. Puffs are drawn in world space.
 
@@ -77,13 +78,14 @@ func _emit_vapor(delta: float) -> void:
 		})
 
 func _update_sputter(delta: float) -> void:
-	var thrusting := (_ship.want_thrust or _ship.want_reverse_thrust) and _ship.fuel > 0.0
+	# Only a burn draws on the tank, so only a burn can cough
+	var burning := (_ship.want_thrust or _ship.want_reverse_thrust) and _ship.want_boost and _ship.fuel > 0.0
 	if _cough_left > 0.0:
 		_cough_left -= delta
 		if _cough_left <= 0.0:
 			_end_cough()
 		return
-	if not thrusting:
+	if not burning:
 		return
 	if _next_cough <= 0.0:
 		_next_cough = randf_range(COUGH_GAP[_level].x, COUGH_GAP[_level].y) * 0.5
