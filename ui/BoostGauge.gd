@@ -5,7 +5,8 @@ class_name BoostGauge
 ## boost, so the tank reads as blocks climbing the rim (one per FUEL_PER_BLOCK, the same
 ## unit as the hull bar), and a bar outside their lower half shows what the engine is
 ## putting out right now: 1x on ordinary thrust, the boost multiplier on a burn. Ordinary
-## thrust runs on aux power, so a low-fuel cough only drops the bar back to 1x.
+## thrust runs on aux power, so a low-fuel cough only drops the bar back to 1x. The stretch
+## up to the 1x notch is labelled AUX.
 ##
 ## Shares the minimap's centre and sits outside its clip mask, so the arcs can draw past
 ## the scope's edge. HUD feeds it the tank through set_fuel; it reads the ship's wants
@@ -28,6 +29,17 @@ const ENGINE_RISE := 10.0
 const ENGINE_FALL := 4.0
 ## How far the bar flutters on a burn, in multiplier units.
 const FLUTTER := 0.15
+## The notch where ordinary thrust tops out. It cuts across the bar and stands off its
+## outer edge, so it still reads with the fill running through it.
+const CRUISE_NOTCH_WIDTH := 2.0
+const CRUISE_NOTCH_LENGTH := 5.0  # past the bar's outer edge
+## "AUX" curved along the arc outside the aux-power stretch of the bar (0x to 1x), one
+## letter at each of these fractions of it. Tops face the minimap, like lettering round
+## the bottom of a badge, so it reads upward from the 0x end.
+const AUX_LETTERS := "AUX"
+const AUX_AT := [0.15, 0.45, 0.75]
+const AUX_SIZE := 8
+const AUX_OFFSET := 7.0  # letter centres, px outside the bar's outer edge
 ## Alpha the fuel blocks drop to on the dim half of a low-fuel blink.
 const BLINK_DIM := 0.35
 
@@ -133,10 +145,23 @@ func _draw_engine() -> void:
 	var shown := clampf(engine + _flutter, 0.0, ENGINE_SCALE)
 	if shown > 0.03:
 		_arc(r, _engine_angle(0.0), _engine_angle(shown), Colors.CREAM if _burning else Colors.MUSTARD_PALE, ENGINE_WIDTH)
-	# One tick where ordinary thrust tops out
-	var cruise := Vector2.from_angle(_engine_angle(1.0))
 	var outer := r + ENGINE_WIDTH / 2.0
-	draw_line(rim_center + cruise * (outer + 1.0), rim_center + cruise * (outer + 4.0), Colors.PRIMARY, 1.0)
+	var cruise := Vector2.from_angle(_engine_angle(1.0))
+	draw_line(rim_center + cruise * (r - ENGINE_WIDTH / 2.0 - 1.0), rim_center + cruise * (outer + CRUISE_NOTCH_LENGTH),
+			Colors.PRIMARY, CRUISE_NOTCH_WIDTH)
+	_draw_aux_label(outer + AUX_OFFSET)
+
+## A fixed label, not a light: it names the stretch and never reacts to the engine.
+func _draw_aux_label(radius: float) -> void:
+	var font := get_theme_default_font()
+	for i in AUX_LETTERS.length():
+		var letter := AUX_LETTERS[i]
+		var angle := _engine_angle(AUX_AT[i])
+		var glyph := font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, AUX_SIZE)
+		draw_set_transform(rim_center + Vector2.from_angle(angle) * radius, angle - PI / 2.0)
+		draw_string(font, Vector2(-glyph.x / 2.0, font.get_ascent(AUX_SIZE) - glyph.y / 2.0), letter,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, AUX_SIZE, Colors.PRIMARY_DIM)
+	draw_set_transform(Vector2.ZERO)
 
 ## 0x sits at the bottom of the fuel arc, ENGINE_SCALE at 3 o'clock.
 func _engine_angle(multiplier: float) -> float:
