@@ -184,9 +184,12 @@ Placement (revised 2026-09-22), nearest first:
   harvest is met by accident, on the way to something else.
 - **SOLAR ARRAY**: buried in Rook's ground on its sunlit face - the far side of Rook from
   where SR-7 starts - with only its Lug end sticking out (`Mount.start_buried`). The
-  magnet reaches it but can't lift it: each hold of the key is one tug that shudders it
-  and knocks the ship back, and the third rips it out of the ground in a burst of dust,
-  rock and sparks, leaving a scar (`Freight.tug`, `GroundBreakFX`).
+  magnet reaches it but can't lift it: the ship clamps its Lug and flies away from the
+  ground. Short of the piece's pull threshold it only strains - the ground shudders and
+  throws dust, the camera shakes; held past it, the pull tears it out in a burst of dust,
+  rock and sparks, leaving a scar (`Freight.pull`, `GroundBreakFX`). The threshold is per
+  piece (`Mount.buried_pull_threshold`): the array is light and comes free on the Aux; a
+  heavier one can demand the Burn.
 
 Each hangs dead in its frame until the magnet first takes it.
 

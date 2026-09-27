@@ -67,9 +67,13 @@ const ALARM_LAMP_SETBACK := 7.0
 ## that finds the Section is likely to find the scrap too.
 @export var start_beside_scrap := false
 ## With `start_on_planet`: buried in the planet's ground on its sunlit face, the Lug end
-## sticking out, taking Freight.BURY_TUGS tugs to pull free. `section_start_offset` is
+## sticking out: a ship coupled onto the Lug has to fly away pulling past
+## `buried_pull_threshold` to tear it free. `section_start_offset` is
 ## ignored; `section_start_rotation` leans it off straight up.
 @export var start_buried := false
+## How hard a buried Section holds in the ground (Freight.pull_threshold): a share of the
+## Aux's full thrust straight out. Under 1 the Aux tears it free; over 1 it takes the Burn.
+@export var buried_pull_threshold := Freight.DEFAULT_PULL_THRESHOLD
 
 var seated := false
 var _minimap_target: SectionMinimapTarget = null
@@ -201,10 +205,10 @@ func ensure_section() -> void:
 		piece = Freight.spawn_section(world, section, anchor.to_global(offset), anchor.global_rotation + turn)
 		piece.lodge_in(anchor, offset, start_spin(anchor, offset))
 		if start_buried and anchor is Planet:
-			piece.bury_in(anchor, Freight.BURY_TUGS)
+			piece.bury_in(anchor, buried_pull_threshold)
 	elif piece.lodged and anchor:
 		piece.lodge_in(anchor, piece.lodged_offset, piece.lodged_spin)
-		piece.bury_in(anchor)
+		piece.bury_in(anchor, buried_pull_threshold if piece.is_buried() else 0.0)
 	if start_beside_scrap and piece and piece.lodged and not piece.handled and not piece.beside_spent:
 		_leave_scrap_beside.call_deferred(piece)
 
