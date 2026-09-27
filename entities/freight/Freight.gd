@@ -61,6 +61,18 @@ var handled := false
 var section := ""
 ## How a Section is drawn over its body (Sections.detail): "" for plain Freight.
 var art := ""
+## Which Component this is (Components.gd), or "" for any other Freight. A Component goes
+## home to SR-7's Cradle, not a Mount.
+var component := ""
+
+## How far off (px) a Sweep still gets an answer from it, past where the ring itself
+## reaches: faint and broken at the edge, firming up closer (answer_clarity). 0 answers
+## only where a ring reaches, like any piece.
+var answer_range := 0.0
+## Dead to the Sweep until SR-7's core is cold-started (the Cargo Bay, docs/OPENING.md §9).
+var answers_needs_power := false
+## How clear (0..1) an answer is from the very edge of `answer_range`.
+const FAINTEST_ANSWER := 0.2
 
 ## Lodged: held at `lodged_offset` in `lodged_in`'s frame (a new game's Section, floating
 ## dead beside SR-7) so it keeps pace with it instead of being left behind as it moves on
@@ -86,6 +98,8 @@ var pull_threshold := DEFAULT_PULL_THRESHOLD
 ## the progress drains away when the pull eases off.
 const PULL_TIME := 1.3
 const PULL_EASE := 0.6
+## This piece's own PULL_TIME: a heavier one takes longer to tear out (Components).
+var pull_time := PULL_TIME
 ## 0..1: how far the pull has got. Not saved - a load starts the pull over.
 var pull_progress := 0.0
 ## The pull draws it up out of the ground this far (px) on its way to tearing free. It
@@ -143,18 +157,43 @@ func sonar_point() -> Vector2:
 	return lug_global()
 
 ## The Lug answers as the ring passes: it lights up in the Titan's purple, pings back with
-## a ring as strong as the one that reached it, and fades.
-func on_sonar_touched(strength := 1.0) -> void:
+## a ring as strong as the one that reached it, and fades. A `clarity` under 1 is an answer
+## from past the ring's reach (answer_clarity): fainter, and broken up.
+func on_sonar_touched(strength := 1.0, clarity := 1.0) -> void:
 	if not _lug_line:
 		return
-	SonarEcho.answer_ping(_visual, lug_position, strength)
+	SonarEcho.answer_ping(_visual, lug_position, strength, Colors.TITAN, clarity)
 	if _lug_glow:
 		_lug_glow.kill()
-	_lug_line.default_color = Colors.TITAN
-	_lug_line.width = 5.0
+	_lug_line.default_color = Color(Colors.HULL_LIGHT.lerp(Colors.TITAN, clarity), 1.0)
+	_lug_line.width = 3.0 + 2.0 * clarity
 	_lug_glow = _visual.create_tween().set_parallel()
 	_lug_glow.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, LUG_GLOW_TIME)
 	_lug_glow.tween_property(_lug_line, "width", 3.0, LUG_GLOW_TIME)
+
+## Whether a Sweep can get an answer from it at all: a piece that needs SR-7's power is
+## dead to it until the core's cold start.
+func answers_sweep() -> bool:
+	if not answers_needs_power:
+		return true
+	return StationPower.is_powered(get_tree().get_first_node_in_group("game_state") as GameState)
+
+## How clearly it answers a ring whose edge dies at `ring_reach` px, sent from `distance`
+## px off (SonarPulse): 1 where the ring reaches, 0 where it doesn't answer at all.
+func answer_clarity(distance: float, ring_reach: float) -> float:
+	if not answers_sweep():
+		return 0.0
+	return long_answer_clarity(distance, ring_reach, answer_range)
+
+## 1 inside `ring_reach`; past it, out to `answer_reach`, fading from 1 to FAINTEST_ANSWER;
+## 0 beyond `answer_reach` (or past the ring when there is none).
+static func long_answer_clarity(distance: float, ring_reach: float, answer_reach: float) -> float:
+	if distance <= ring_reach:
+		return 1.0
+	if distance > answer_reach:
+		return 0.0
+	var t := (distance - ring_reach) / maxf(answer_reach - ring_reach, 0.001)
+	return lerpf(1.0, FAINTEST_ANSWER, t)
 
 ## The clunk of being clamped or let go: a short punch in scale. `amount` is how far past
 ## its own size it jolts.
@@ -257,9 +296,9 @@ func pull(force: float, dt: float) -> bool:
 	if not is_buried():
 		return true
 	if force >= pull_threshold:
-		pull_progress = minf(pull_progress + dt / PULL_TIME, 1.0)
+		pull_progress = minf(pull_progress + dt / pull_time, 1.0)
 	else:
-		pull_progress = maxf(pull_progress - dt / PULL_TIME * PULL_EASE, 0.0)
+		pull_progress = maxf(pull_progress - dt / pull_time * PULL_EASE, 0.0)
 	if pull_progress > _risen and lodged_in:
 		var up := lodged_in.global_transform.basis_xform_inv(ground_point() - lodged_in.global_position).normalized()
 		lodged_offset += up * (pull_progress - _risen) * PULL_RISE
@@ -354,7 +393,8 @@ func tracking_target() -> NodeTrackingTarget:
 		_tracking = NodeTrackingTarget.new(self, label, 60.0)
 	return _tracking
 
-## Where a clamped piece is headed: a Section's Mount, or (until the Cradle exists) home.
+## Where a clamped piece is headed: a Section's Mount, or (until the Cradle exists) home -
+## a Component included.
 func destination() -> TrackingTarget:
 	var mount := Mount.for_section(get_tree(), section) if section != "" else null
 	return mount.tracking_target() if mount else NavSystem.home_target()
@@ -416,12 +456,13 @@ func to_row() -> Dictionary:
 		"vx": v.x, "vy": v.y, "spin": angular_velocity if is_loose() else 0.0,
 		"label": label, "handled": handled, "clamped": is_clamped(),
 		"section": section, "lodged": lodged, "lodged_x": lodged_offset.x, "lodged_y": lodged_offset.y,
-		"lodged_spin": lodged_spin, "buried": buried,
+		"lodged_spin": lodged_spin, "buried": buried, "component": component,
 	}
 
 static func from_row(world: Node, row: Dictionary) -> Freight:
 	var f := Freight.new()
 	Sections.apply(f, str(row.get("section", "")))
+	Components.apply(f, str(row.get("component", "")))
 	f.label = str(row.get("label", f.label))
 	f.lodged = bool(row.get("lodged", false))
 	f.lodged_offset = Vector2(float(row.get("lodged_x", 0.0)), float(row.get("lodged_y", 0.0)))

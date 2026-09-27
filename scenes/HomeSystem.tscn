@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://entities/resources/OrbitalRingSpawner.tscn" id="2_vpsiu"]
 [ext_resource type="PackedScene" path="res://entities/structures/Gate.tscn" id="3_gate"]
 [ext_resource type="PackedScene" path="res://entities/structures/SunStation.tscn" id="4_sunst"]
+[ext_resource type="Script" path="res://entities/structures/HaulerWreck.gd" id="5_hauler"]
 
 [node name="HomeSystem" type="Node2D" unique_id=1363253957]
 
@@ -126,6 +127,9 @@ orbital_distance = 253125.0
 orbital_speed = 0.22
 initial_angle = 3.5
 eccentricity = 0.06
+
+[node name="HaulerWreck" type="Node2D" parent="Sun/Veld" unique_id=200000020]
+script = ExtResource("5_hauler")
 
 [node name="Rook" parent="Sun/Veld" unique_id=200000010 instance=ExtResource("1")]
 position = Vector2(7200, 0)

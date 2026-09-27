@@ -18,6 +18,11 @@ class_name SonarPulse
 ## ring's strength, so an answer can match it (SonarEcho.answer_ping). Scrap listens but does not
 ## answer: a ring only lights it up out of the debris, with one cream echo (ScrapNode.reveal).
 ##
+## A listener with `answer_clarity(distance, ring_reach)` decides for itself whether it
+## answers and how clearly (Freight): 0 is silence, even inside the ring. One that answers
+## from past the ring's reach hears it as the ring dies, and gets
+## `on_sonar_touched(strength, clarity)` with a strength that carries its answer back to the ship.
+##
 ## A Commit (Resonance) is a ring that carries Marks. Listeners with `on_procedure(marks)`
 ## get those instead of `on_sonar_touched` when it reaches them; the rest hear an ordinary ring.
 
@@ -99,7 +104,17 @@ func _reach_listeners(origin: Vector2, strength: float, marks: Array[int] = []) 
 	for node in get_tree().get_nodes_in_group("sonar_listeners"):
 		if not node.has_method("sonar_point") or not node.has_method("on_sonar_touched"):
 			continue
-		var delay := time_to_reach(origin.distance_to(node.sonar_point()), strength)
+		var distance := origin.distance_to(node.sonar_point())
+		var delay := time_to_reach(distance, strength)
+		var clarity := -1.0
+		var answer_strength := strength
+		if node.has_method("answer_clarity"):
+			clarity = node.answer_clarity(distance, END_RADIUS * strength)
+			if clarity <= 0.0:
+				continue
+			if delay < 0.0:
+				delay = LIFETIME * strength
+				answer_strength = long_answer_strength(distance, strength)
 		if delay < 0.0:
 			continue
 		var id := node.get_instance_id()
@@ -108,8 +123,15 @@ func _reach_listeners(origin: Vector2, strength: float, marks: Array[int] = []) 
 			if listener and is_instance_valid(listener):
 				if not marks.is_empty() and listener.has_method("on_procedure"):
 					listener.on_procedure(marks)
+				elif clarity >= 0.0:
+					listener.on_sonar_touched(answer_strength, clarity)
 				else:
 					listener.on_sonar_touched(strength))
+
+## The strength an answer from `distance` px off, past the reach of a ring of `strength`,
+## is sent back with: enough that its ring (SonarEcho.answer_ping) comes back to the ship.
+static func long_answer_strength(distance: float, strength := 1.0) -> float:
+	return maxf(strength, distance / (END_RADIUS * SonarEcho.ANSWER_REACH))
 
 ## Seconds after leaving the ship that a ring of `strength` reaches `distance`; -1 if it
 ## never does.

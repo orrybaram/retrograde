@@ -955,9 +955,10 @@ func stage_freight(gap := 6.0) -> Freight:
 func freight() -> Array:
 	return get_tree().get_nodes_in_group("freight").filter(func(n): return not n.is_queued_for_deletion())
 
-## Every piece that is not a Section of SR-7 (a new game already has those out there).
+## Every piece that is not a Section of SR-7 or a Component (a new game already has
+## those out there).
 func test_freight() -> Array:
-	return freight().filter(func(f): return f.section == "")
+	return freight().filter(func(f): return f.section == "" and f.component == "")
 
 ## Section `id`'s Freight, wherever it is (Sections.FUEL_TANK is "fuel_tank"); null once seated.
 func section(id: String) -> Freight:
@@ -968,6 +969,28 @@ func section(id: String) -> Freight:
 
 func mount(id: String) -> Mount:
 	return Mount.for_section(get_tree(), id)
+
+## Component `id`'s Freight, wherever it is (Components.CARGO_BAY is "cargo_bay").
+func component(id: String) -> Freight:
+	for f in freight():
+		if f.component == id:
+			return f
+	return null
+
+## How many pieces of Component `id` there are in the world (only ever one).
+func component_count(id: String) -> int:
+	return freight().filter(func(f): return f.component == id).size()
+
+## The crashed hauler on Veld the Cargo Bay is buried in.
+func hauler() -> HaulerWreck:
+	return HaulerWreck.find(get_tree())
+
+## How many answers (SonarEcho) are on `f` right now, and how many of those are broken.
+func answers(f: Freight) -> int:
+	return f._visual.get_children().filter(func(c): return c is SonarEcho).size()
+
+func broken_answers(f: Freight) -> int:
+	return f._visual.get_children().filter(func(c): return c is SonarEcho and not c.arcs.is_empty()).size()
 
 ## Put the ship, carrying Section `id` (clamped first if it isn't), where the Section
 ## sits `offset` px from its Mount (in the Mount's frame) turned `turn_deg` off its
