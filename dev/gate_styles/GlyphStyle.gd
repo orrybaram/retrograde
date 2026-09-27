@@ -44,7 +44,7 @@ func draw_gate(c: CanvasItem, glow: float, clock: float) -> void:
 
 	_draw_script(c, glow, clock)
 	draw_halo(c, glow, RADIUS + WIDTH / 2.0 + 4.0)
-	draw_cradle(c, glow)
+	draw_berth(c, glow)
 	draw_blinker(c, glow, clock, polar(-PI / 2.0, RADIUS + WIDTH / 2.0 + 10.0))
 
 ## The reading head: a bright band travelling the ring, with the characters behind it

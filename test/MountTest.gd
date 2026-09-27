@@ -85,7 +85,7 @@ func test_each_lug_faces_open_space_once_seated() -> void:
 		var facing: Vector2 = m.transform.basis_xform(Sections.DATA[id]["lug_facing"])
 		assert_float(facing.dot(m.position)).is_greater(0.0)
 
-func test_the_tank_was_cut_from_its_strut_and_both_cradle_bars() -> void:
+func test_the_tank_was_cut_from_its_strut_and_both_saddle_bars() -> void:
 	var m := _mount(Sections.FUEL_TANK)
 	var edges := Mount.cut_edges(Freight.bounds(m._gaps[0]), m._covers())
 	assert_array(edges.map(func(e): return e[2])).contains_exactly_in_any_order([Vector2.RIGHT, Vector2.DOWN, Vector2.UP])

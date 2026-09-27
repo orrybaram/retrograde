@@ -7,7 +7,7 @@ class_name GateTransit
 ##
 ## The Titan carries the ship, so nothing aboard pays for it: no fuel, no hull, no hold,
 ## no Stores. The screen cuts to black and the ship comes out of the dark already in
-## the destination's cradle. Nothing is reloaded or reset on the way — orbits, the
+## the destination's berth. Nothing is reloaded or reset on the way — orbits, the
 ## encounter field and every Gate's own clock keep running through the cut.
 
 ## How long the dark holds before the destination comes up.
@@ -45,7 +45,7 @@ static func can_transit(from: Gate, to: Gate) -> bool:
 	return from.is_powered() and to.is_powered()
 
 ## The move itself, with nothing around it: the ship is set down in the destination's
-## cradle and locked there. Costs nothing and touches nothing else aboard.
+## berth and locked there. Costs nothing and touches nothing else aboard.
 static func arrive(ship: Ship, destination: Gate) -> void:
 	if ship == null or not is_instance_valid(destination):
 		return
@@ -60,7 +60,7 @@ static func arrive(ship: Ship, destination: Gate) -> void:
 		ship.state_machine.change_state("GateDockedState")
 
 ## The whole transit as the player sees it: dark, the move, then waking up in the
-## other cradle. The tree is never paused, so the system keeps turning underneath.
+## other berth. The tree is never paused, so the system keeps turning underneath.
 static func run(ship: Ship, destination: Gate) -> void:
 	if ship == null or not ship.is_inside_tree() or not is_instance_valid(destination):
 		return

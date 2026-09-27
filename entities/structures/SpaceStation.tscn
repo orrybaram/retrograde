@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://entities/structures/StationPower.gd" id="10_power"]
 [ext_resource type="Script" path="res://entities/structures/CoreHousing.gd" id="11_core"]
 [ext_resource type="Script" path="res://entities/structures/DockArm.gd" id="12_arm"]
+[ext_resource type="Script" path="res://entities/structures/Cradle.gd" id="16_cradle"]
 [ext_resource type="Script" path="res://entities/structures/TankBreach.gd" id="13_breach"]
 [ext_resource type="Script" path="res://entities/structures/FuelGauge.gd" id="14_gauge"]
 [ext_resource type="Script" path="res://entities/structures/HullDamage.gd" id="15_damage"]
@@ -1139,11 +1140,11 @@ polygon = PackedVector2Array(-126, 6, -110, 6, -110, 30, -126, 30)
 color = Color(0.184, 0.173, 0.145, 1)
 polygon = PackedVector2Array(110, 6, 126, 6, 126, 30, 110, 30)
 
-[node name="CradleTop" type="Polygon2D" parent="Visuals"]
+[node name="TankSaddleTop" type="Polygon2D" parent="Visuals"]
 color = Color(0.184, 0.173, 0.145, 1)
 polygon = PackedVector2Array(122, -54, 182, -54, 182, -46, 122, -46)
 
-[node name="CradleBottom" type="Polygon2D" parent="Visuals"]
+[node name="TankSaddleBottom" type="Polygon2D" parent="Visuals"]
 color = Color(0.184, 0.173, 0.145, 1)
 polygon = PackedVector2Array(122, 84, 186, 84, 186, 92, 122, 92)
 
@@ -1703,6 +1704,11 @@ rotation = 1.5707964
 scale = Vector2(0.6, 0.6)
 needs_core = true
 dock_offset = Vector2(0, -10)
+
+[node name="Cradle" type="Node2D" parent="."]
+position = Vector2(236, 178)
+script = ExtResource("16_cradle")
+arm = NodePath("../DockArm")
 
 [node name="CoreHousing" type="Node2D" parent="."]
 position = Vector2(0, 15)

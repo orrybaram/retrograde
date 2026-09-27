@@ -1,4 +1,4 @@
-# Powering a dormant Gate: fly in on Veld's Gate, dock in its cradle, pay for it, watch
+# Powering a dormant Gate: fly in on Veld's Gate, dock in its berth, pay for it, watch
 # the boot log bring the Module online, and check it is still online after a reload.
 # Run: tools/play.sh playtests/gate.play   (frames land in .playtest/gate_*.png)
 
@@ -37,7 +37,7 @@ frames 2
 assert pt.gate("Veld").minimap_target.is_minimap_visible() "scanned, its Gate shows"
 screenshot gate_0_minimap
 
-# Lined up on the cradle, matched to the Gate's orbit, the way flying in leaves you
+# Lined up on the berth, matched to the Gate's orbit, the way flying in leaves you
 eval pt.park_at_gate("Veld", 30.0)
 frames 2
 screenshot gate_1_dormant
@@ -69,7 +69,7 @@ assert ship.hull_strength == ship.max_hull "powering a Gate costs no hull"
 press esc
 wait_until pt.visible_ui().is_empty() 2
 assert not get_tree().paused "ESC closes the terminal instead of pausing"
-assert pt.state_name() == "GateDockedState" "still in the cradle"
+assert pt.state_name() == "GateDockedState" "still in the berth"
 press action
 wait_until pt.visible_ui().has("GateTerminal") 2
 

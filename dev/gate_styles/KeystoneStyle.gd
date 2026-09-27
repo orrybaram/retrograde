@@ -85,7 +85,7 @@ func draw_gate(c: CanvasItem, glow: float, clock: float) -> void:
 
 	draw_halo(c, glow, RADIUS + WIDTH / 2.0)
 	_draw_keystone_mark(c, stone, glow, clock)
-	_draw_heavy_cradle(c, stone, glow)
+	_draw_heavy_berth(c, stone, glow)
 	draw_blinker(c, glow, clock, polar(_bounds[KEY]["mid"], RADIUS + WIDTH / 2.0 + KEY_PROUD + 9.0))
 
 ## One block: the rock, the shadow it throws outward, the lip that catches light on the
@@ -154,8 +154,8 @@ func _draw_keystone_mark(c: CanvasItem, stone: Color, glow: float, clock: float)
 			stone.darkened(0.45), 2.0)
 
 ## Quarried footings with a cut stone laid across them.
-func _draw_heavy_cradle(c: CanvasItem, stone: Color, glow: float) -> void:
-	for x in [-CRADLE_HALF, CRADLE_HALF]:
+func _draw_heavy_berth(c: CanvasItem, stone: Color, glow: float) -> void:
+	for x in [-BERTH_HALF, BERTH_HALF]:
 		var foot := PackedVector2Array([
 			Vector2(x - 9, RADIUS + 3), Vector2(x + 9, RADIUS + 4),
 			Vector2(x * 1.28 + 10, RADIUS + 26), Vector2(x * 1.28 - 10, RADIUS + 25),
@@ -163,10 +163,10 @@ func _draw_heavy_cradle(c: CanvasItem, stone: Color, glow: float) -> void:
 		c.draw_colored_polygon(foot, stone.darkened(0.3))
 		c.draw_polyline(foot, stone.darkened(0.55), 2.0, true)
 	var slab := PackedVector2Array([
-		Vector2(-CRADLE_HALF - 10, RADIUS - 8), Vector2(CRADLE_HALF + 9, RADIUS - 9),
-		Vector2(CRADLE_HALF + 12, RADIUS + 8), Vector2(-CRADLE_HALF - 13, RADIUS + 7),
+		Vector2(-BERTH_HALF - 10, RADIUS - 8), Vector2(BERTH_HALF + 9, RADIUS - 9),
+		Vector2(BERTH_HALF + 12, RADIUS + 8), Vector2(-BERTH_HALF - 13, RADIUS + 7),
 	])
 	c.draw_colored_polygon(slab, stone.lightened(0.05))
 	c.draw_polyline(slab, stone.darkened(0.55), 2.4, true)
-	c.draw_line(Vector2(-CRADLE_HALF, RADIUS - 4), Vector2(CRADLE_HALF, RADIUS - 4),
+	c.draw_line(Vector2(-BERTH_HALF, RADIUS - 4), Vector2(BERTH_HALF, RADIUS - 4),
 		Color(Colors.PRIMARY, 0.12).lerp(Color(Colors.TITAN, 0.8), glow), 2.0)

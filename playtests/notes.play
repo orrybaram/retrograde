@@ -41,7 +41,7 @@ screenshot notes_0_modules
 press escape
 wait_until not pt.visible_ui().has("LogUI") 2
 
-# --- Out of the cradle, so the dev panel will open ----------------------------
+# --- Out of the berth, so the dev panel will open ----------------------------
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down

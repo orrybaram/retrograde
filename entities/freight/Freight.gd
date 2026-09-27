@@ -393,11 +393,17 @@ func tracking_target() -> NodeTrackingTarget:
 		_tracking = NodeTrackingTarget.new(self, label, 60.0)
 	return _tracking
 
-## Where a clamped piece is headed: a Section's Mount, or (until the Cradle exists) home -
-## a Component included.
+## Where a clamped piece is headed: a Section's Mount, a Component's Cradle, or home.
 func destination() -> TrackingTarget:
-	var mount := Mount.for_section(get_tree(), section) if section != "" else null
-	return mount.tracking_target() if mount else NavSystem.home_target()
+	if section != "":
+		var mount := Mount.for_section(get_tree(), section)
+		if mount:
+			return mount.tracking_target()
+	elif component != "":
+		var cradle := Cradle.find(get_tree())
+		if cradle:
+			return cradle.tracking_target()
+	return NavSystem.home_target()
 
 ## Don't collide with `body` for `seconds`: they were touching when they parted.
 func part_from(body: PhysicsBody2D, seconds := 0.6) -> void:

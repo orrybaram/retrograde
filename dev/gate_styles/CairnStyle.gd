@@ -81,12 +81,12 @@ func draw_gate(c: CanvasItem, glow: float, clock: float) -> void:
 			Color(lit, 0.05 + glow * 0.4), 1.6)
 
 	draw_halo(c, glow, RADIUS + WIDTH / 2.0)
-	_draw_stone_cradle(c, stone, lit, glow)
+	_draw_stone_berth(c, stone, lit, glow)
 	draw_blinker(c, glow, clock, polar(-PI / 2.0, RADIUS + WIDTH / 2.0))
 
 ## Two cairn footings with a single long stone laid across them.
-func _draw_stone_cradle(c: CanvasItem, stone: Color, lit: Color, glow: float) -> void:
-	for x in [-CRADLE_HALF, CRADLE_HALF]:
+func _draw_stone_berth(c: CanvasItem, stone: Color, lit: Color, glow: float) -> void:
+	for x in [-BERTH_HALF, BERTH_HALF]:
 		for course in 2:
 			var y := RADIUS + 6.0 + course * 10.0
 			var w := 17.0 - course * 2.0
@@ -97,10 +97,10 @@ func _draw_stone_cradle(c: CanvasItem, stone: Color, lit: Color, glow: float) ->
 			c.draw_colored_polygon(quad, stone.darkened(0.3 - 0.06 * course))
 			c.draw_polyline(quad, stone.darkened(0.55), 1.8, true)
 	var slab := PackedVector2Array([
-		Vector2(-CRADLE_HALF - 12, RADIUS - 6), Vector2(CRADLE_HALF + 10, RADIUS - 7),
-		Vector2(CRADLE_HALF + 13, RADIUS + 7), Vector2(-CRADLE_HALF - 14, RADIUS + 8),
+		Vector2(-BERTH_HALF - 12, RADIUS - 6), Vector2(BERTH_HALF + 10, RADIUS - 7),
+		Vector2(BERTH_HALF + 13, RADIUS + 7), Vector2(-BERTH_HALF - 14, RADIUS + 8),
 	])
 	c.draw_colored_polygon(slab, stone.lightened(0.04))
 	c.draw_polyline(slab, stone.darkened(0.55), 2.2, true)
-	c.draw_line(Vector2(-CRADLE_HALF - 8, RADIUS + 7), Vector2(CRADLE_HALF + 8, RADIUS + 6),
+	c.draw_line(Vector2(-BERTH_HALF - 8, RADIUS + 7), Vector2(BERTH_HALF + 8, RADIUS + 6),
 		Color(lit, 0.1 + glow * 0.7), 2.0)

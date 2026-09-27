@@ -81,7 +81,7 @@ func draw_gate(c: CanvasItem, glow: float, clock: float) -> void:
 		_draw_strut(c, a, b, hull, lit, glow, pulse)
 
 	draw_halo(c, glow, RADIUS + WIDTH / 2.0)
-	_draw_clamp_cradle(c, hull, stone, lit, glow)
+	_draw_clamp_berth(c, hull, stone, lit, glow)
 	draw_blinker(c, glow, clock, polar(-PI / 2.0, RADIUS))
 
 ## A strut bridging one gap: a plate across the rock faces with a lit core.
@@ -101,14 +101,14 @@ func _draw_strut(c: CanvasItem, a: float, b: float, hull: Color, lit: Color,
 	if glow > 0.0:
 		c.draw_circle(polar(mid, RADIUS), 9.0, Color(Colors.TITAN, glow * 0.16 * pulse))
 
-## The cradle is one more strut, the longest of them, spanning the mouth.
-func _draw_clamp_cradle(c: CanvasItem, hull: Color, stone: Color, lit: Color, glow: float) -> void:
-	var left := Vector2(-CRADLE_HALF, RADIUS)
-	var right := Vector2(CRADLE_HALF, RADIUS)
+## The berth is one more strut, the longest of them, spanning the mouth.
+func _draw_clamp_berth(c: CanvasItem, hull: Color, stone: Color, lit: Color, glow: float) -> void:
+	var left := Vector2(-BERTH_HALF, RADIUS)
+	var right := Vector2(BERTH_HALF, RADIUS)
 	c.draw_line(left, right, Colors.SPACE_BG, 14.0)
 	c.draw_line(left, right, hull, 11.0)
 	c.draw_line(left + Vector2(0, -5), right + Vector2(0, -5), Color(lit, 0.12 + glow * 0.7), 2.0)
-	for x in [-CRADLE_HALF, CRADLE_HALF]:
+	for x in [-BERTH_HALF, BERTH_HALF]:
 		c.draw_line(Vector2(x, RADIUS - 12), Vector2(x, RADIUS + 12), hull.darkened(0.3), 6.0)
 		var foot := PackedVector2Array([
 			Vector2(x - 6, RADIUS + 8), Vector2(x + 6, RADIUS + 9),

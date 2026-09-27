@@ -1,6 +1,7 @@
 # Handled Freight is marked and tracked (docs/adr/0012): letting go of a piece marks it
 # on the Chart and tracks it at once, over a manual waypoint; clamping it again clears
-# the mark and tracks its destination (HOME until Mounts and the Cradle exist). A piece
+# the mark and tracks its destination (a Section's Mount, a Component's Cradle, HOME for
+# anything else). A piece
 # the ship never touched has no mark.
 # Run: PLAYTEST_PORT=7791 tools/play.sh --headless playtests/freight_track.play
 

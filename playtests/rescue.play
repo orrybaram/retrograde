@@ -31,7 +31,7 @@ frames 2
 press action
 wait_until pt.state_name() == "GateDockedState" 3
 wait_until pt.visible_ui().has("GateTerminal") 2
-assert ship.state_machine.current_state.locked_dockable == pt.gate("Veld") "clamped in Veld's cradle"
+assert ship.state_machine.current_state.locked_dockable == pt.gate("Veld") "clamped in Veld's berth"
 eval pt.save_now()
 screenshot rescue_0_gate
 
@@ -62,7 +62,7 @@ screenshot rescue_2_rescued
 press enter
 wait_until main.current_game_state == 1 30
 wait_until pt.state_name() == "LandedState" 10
-assert pt.state_name() == "LandedState" "the tow ends on a port, not in a Gate cradle"
+assert pt.state_name() == "LandedState" "the tow ends on a port, not in a Gate berth"
 assert pt.recall("home").is_ancestor_of(ship.state_machine.current_state.locked_dockable) "towed home to the station that caught the ship"
 assert ship.global_position.distance_to(pt.recall("home").global_position) < 600 "respawned at the station, not out at Veld"
 screenshot rescue_3_home

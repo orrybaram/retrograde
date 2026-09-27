@@ -89,7 +89,7 @@ wait_until not pt.node("dev_panel").visible 2
 assert not get_tree().paused "a warp hands the game back unpaused"
 wait 0.2
 assert pt.state_name() == "FlyingState" "still flying after the warp"
-# Tolerant on purpose: the cradle is a ring-radius off the Gate's origin, which is
+# Tolerant on purpose: the berth is a ring-radius off the Gate's origin, which is
 # what `nearest` measures to, and the Gate is still under way in its orbit.
 assert pt.nearest("gates").distance < 1000 "the warp parked the ship on a Gate"
 screenshot 05_at_a_gate

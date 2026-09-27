@@ -61,7 +61,7 @@ wait_until not get_tree().root.get_node("RobotRadio").is_active() 20
 wait 1.0
 
 # --- 4. Dock and power ---------------------------------------------------------
-eval pt.caption("Veld's Gate: dark hull, one slow amber blinker, a cradle across the mouth")
+eval pt.caption("Veld's Gate: dark hull, one slow amber blinker, a berth across the mouth")
 eval pt.park_at_gate("Veld", 220.0)
 eval ship.set("linear_velocity", ship.linear_velocity + Vector2(0, 45))
 wait 3.0
@@ -125,7 +125,7 @@ press enter
 wait 0.6
 wait_until ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 80 15
 wait 1.0
-eval pt.caption("Out of the dark, already in Crom's cradle  //  no fuel, no hull, no Stores")
+eval pt.caption("Out of the dark, already in Crom's berth  //  no fuel, no hull, no Stores")
 wait 3.4
 
 # The guide calls about the first transit, and that call pauses the game: let it play

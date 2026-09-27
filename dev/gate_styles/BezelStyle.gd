@@ -47,15 +47,15 @@ func draw_gate(c: CanvasItem, glow: float, clock: float) -> void:
 	if glow > 0.0:
 		c.draw_arc(Vector2.ZERO, RADIUS - WIDTH / 2.0, start(), start() + span(), 96,
 			Color(Colors.TITAN, glow * 0.65), 2.0, true)
-	_draw_heavy_cradle(c, hull, rim)
+	_draw_heavy_berth(c, hull, rim)
 	draw_blinker(c, glow, clock)
 
-## The cradle gets the same treatment: a thick bar with a lip, on braced legs.
-func _draw_heavy_cradle(c: CanvasItem, hull: Color, rim: Color) -> void:
-	var left := Vector2(-CRADLE_HALF, RADIUS)
-	var right := Vector2(CRADLE_HALF, RADIUS)
+## The berth gets the same treatment: a thick bar with a lip, on braced legs.
+func _draw_heavy_berth(c: CanvasItem, hull: Color, rim: Color) -> void:
+	var left := Vector2(-BERTH_HALF, RADIUS)
+	var right := Vector2(BERTH_HALF, RADIUS)
 	c.draw_line(left, right, hull, 13.0)
 	c.draw_line(left + Vector2(0, -6), right + Vector2(0, -6), rim, 2.0)
 	c.draw_line(left + Vector2(0, 6), right + Vector2(0, 6), hull.darkened(0.45), 3.0)
-	for x in [-CRADLE_HALF + 7.0, CRADLE_HALF - 7.0]:
+	for x in [-BERTH_HALF + 7.0, BERTH_HALF - 7.0]:
 		c.draw_line(Vector2(x, RADIUS + 4), Vector2(x * 1.3, RADIUS + 20.0), hull, 7.0)

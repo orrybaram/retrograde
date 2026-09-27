@@ -44,6 +44,10 @@ var met_automatons: Dictionary = {}
 ## Sections of SR-7 seated back in their Mounts, keyed by Sections id. Permanent.
 var seated_sections: Dictionary = {}
 
+## The Component released into SR-7's Cradle and waiting there to be fitted (Components
+## id), or "" while the Cradle is empty. Permanent until it is fitted.
+var cradled := ""
+
 ## SR-7's core has been cold-started (docs/OPENING.md §5): the station has power, UNIT-7
 ## is awake, and SR-7's dock is crewed again. The world fact, not the radio's. Permanent -
 ## a station does not go back to being dead.
@@ -163,6 +167,7 @@ func reset_all_state() -> void:
 	identified_gates.clear()
 	met_automatons.clear()
 	seated_sections.clear()
+	cradled = ""
 	core_started = false
 	death_count = 0
 	InventoryManager.clear_inventory()
