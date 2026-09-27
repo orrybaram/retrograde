@@ -38,7 +38,11 @@ And it is a bar the player fills by hand. Each Section is Freight: clamped rigid
 hull, flown home with its mass and shape dragging the ship's handling, and **released into
 its own gap in the silhouette**. Not docked, not fitted from a menu - flown into the hole.
 Components (ship upgrades) are delivered the same way, into the station's Cradle, and fitted
-from the station's menus once docked. One delivery gesture for all Freight.
+from the station's menus once docked. One delivery gesture for all Freight. SR-7's Cradle
+(decided 2026-09-26) is slung under the refuel boom's root: a frame hanging off the boom,
+closed at the hull end and open outboard, so a Component is pushed in under the dock's head
+until the end plate stops it, and let go of. It hangs off the arm, so it is only there once
+the arm is out.
 
 ### Seating a Section
 
@@ -47,7 +51,7 @@ from the station's menus once docked. One delivery gesture for all Freight.
   beads of slag. A gap in a silhouette does not read as a hole; a cut edge does. No ghost
   outline, no glowing socket. It is a *cut* and never a tear because SR-7 was not damaged,
   it was taken apart (§2, "Why it is broken").
-- **One Section, one Mount.** The tank only goes in the empty tank cradle.
+- **One Section, one Mount.** The tank only goes in the empty tank saddle.
 - **The flying is the hard part; the last few pixels are free.** Within about 40 px of its
   Mount and 30° of its rotation (the docking tolerance), the action prompt reads
   **RELEASE**. On release the Mount pulls it home over half a second, with a clunk, and the
@@ -68,7 +72,7 @@ Chosen from the silhouette lab (claude.ai/artifact/CCVHLMG6SyGxY5Shks5aSG, round
 - **Arm block**: three pressurised modules, flanked by cold scissor **radiator fans**.
 - **Hub** with a docking port at each end.
 - **Core** in the middle, with a **long cylindrical tank** on each side of it. The right
-  one is the **FUEL TANK** Section; its empty cradle is where the **refuel boom** comes off.
+  one is the **FUEL TANK** Section; its empty saddle is where the **refuel boom** comes off.
 - **Refuel boom**: a telescoping truss out to the right ending in a docking head. **The ship
   docks here** (replacing the `SpacePort` docking) - but not at first: a new game finds it
   run in, back inside the belly, and it only comes out once the station is whole (§3, §5;

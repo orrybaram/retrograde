@@ -1,5 +1,5 @@
 # Transit between powered Gates, and no fuel while docked at one. Power Veld's
-# Gate, bring Crom's Module online too, then take the link from one cradle to the other
+# Gate, bring Crom's Module online too, then take the link from one berth to the other
 # and check the trip cost nothing.
 # Run: tools/play.sh playtests/transit.play   (frames land in .playtest/transit_*.png)
 
@@ -33,7 +33,7 @@ eval gs.mark_gate_identified(pt.gate("Crom").save_key())
 eval gs.mark_gate_identified(pt.gate("Veld").save_key())
 assert gs.titan_influence() == 1 "Crom's Module is online"
 
-# Dock in Veld's cradle and pay for its Gate
+# Dock in Veld's berth and pay for its Gate
 wait 2.2
 eval pt.park_at_gate("Veld", 30.0)
 eval ship.set("fuel", 10.0)
@@ -49,7 +49,7 @@ assert gs.stores == 400 "Veld's Gate took its 600 ST"
 # A Gate gives no fuel: that is SR-7's (docs/OPENING.md §9)
 assert pt.node("gate_terminal")._menu_items.size() == 2 "a powered Gate offers transit and the door, no fuel"
 wait 1.0
-assert ship.fuel == 10.0 "the cradle leaves the tank as it was"
+assert ship.fuel == 10.0 "the berth leaves the tank as it was"
 assert ship.hull_strength == ship.max_hull "a Gate has no hull shop"
 screenshot transit_1_hub
 
@@ -60,7 +60,7 @@ assert pt.node("gate_terminal")._menu_items.size() == 1 "one linked Gate to go t
 assert pt.screen_text()["GateTerminal"].has("CROM") "Crom's Gate is the destination"
 screenshot transit_2_destinations
 
-# Take it: black-out, then the ship is in Crom's cradle having spent nothing
+# Take it: black-out, then the ship is in Crom's berth having spent nothing
 eval pt.remember("fuel", ship.fuel)
 eval pt.remember("hull", ship.hull_strength)
 eval pt.remember("hold", inv.get_total_value())
@@ -69,7 +69,7 @@ wait 0.5
 screenshot transit_3_black
 wait_until ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 60 12
 assert pt.state_name() == "GateDockedState" "the ship comes out of the dark already docked"
-assert ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 60 "in Crom's cradle"
+assert ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 60 "in Crom's berth"
 assert ship.fuel == pt.recall("fuel") "transit burns no fuel"
 assert ship.hull_strength == pt.recall("hull") "transit costs no hull"
 assert inv.get_total_value() == pt.recall("hold") "transit takes nothing out of the hold"

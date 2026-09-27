@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 ##
 ## Transit only exists between Modules that are already online, and the Titan carries
 ## the ship itself: the point of these tests is that the trip lands the ship in the
-## other cradle having spent nothing at all.
+## other berth having spent nothing at all.
 
 var _gs: GameState
 
@@ -21,7 +21,7 @@ func after_test() -> void:
 
 
 ## A planet at `orbit` from the sun, with a Gate around it. Orbiting is off so the
-## cradle stays put for the assertions.
+## berth stays put for the assertions.
 func _gate(planet_name: String, orbit: float) -> Gate:
 	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
 	planet.name = planet_name
@@ -195,7 +195,7 @@ func test_arriving_never_powers_anything_down_or_up() -> void:
 
 # --- No fuel at a Gate ------------------------------------------------------
 
-## Fuel is SR-7's to give (docs/OPENING.md §9); a Gate's cradle leaves the tank as it was,
+## Fuel is SR-7's to give (docs/OPENING.md §9); a Gate's berth leaves the tank as it was,
 ## even with SR-7's core running.
 func test_a_gate_dock_does_not_refuel() -> void:
 	_gs.core_started = true

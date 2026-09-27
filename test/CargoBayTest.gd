@@ -168,6 +168,18 @@ func test_the_wreck_buries_the_cargo_bay_lug_up_in_veld() -> void:
 	var count := get_tree().get_nodes_in_group("freight").filter(func(n): return n is Freight and n.component == Components.CARGO_BAY).size()
 	assert_int(count).is_equal(1)
 
+func test_once_it_is_in_the_cradle_the_wreck_leaves_no_copy() -> void:
+	var veld := _veld()
+	var wreck: HaulerWreck = auto_free(HaulerWreck.new())
+	veld.add_child(wreck)
+	wreck.ensure_cargo_bay()
+	var stale := wreck.find_piece()
+	auto_free(stale)
+	_gs.cradled = Components.CARGO_BAY
+	wreck.ensure_cargo_bay()
+	assert_object(wreck.find_piece()).is_null()
+	assert_bool(stale.is_queued_for_deletion()).is_true()
+
 func test_a_saved_cargo_bay_keeps_what_it_is() -> void:
 	var f := _bay()
 	f.bury_in(_ground(), 5.0)

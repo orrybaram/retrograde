@@ -209,7 +209,7 @@ OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend(
 
 ```
 Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
-  -> FlyingState._attempt_dock -> GateDockedState (clamps to the cradle, owns zoom)
+  -> FlyingState._attempt_dock -> GateDockedState (clamps to the berth, owns zoom)
     -> GateTerminal (CanvasLayer) -> Gate.power(gs) -> GameState.powered_gates -> Save `[gates] powered`
 ```
 
@@ -217,7 +217,7 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   `save_key()` is the planet's, so the Module and its planet share one key.
 - `GameState.titan_influence()` is how many Modules are online (0-5); the Core in the sun is a
   separate final state, not step 6. A Module never goes back offline.
-- The dock surface is the cradle at the bottom of the ring, not the node origin:
+- The dock surface is the berth at the bottom of the ring, not the node origin:
   `Gate.get_dock_transform()`. Approach rules are the port's (distance 60, same alignment).
 - The Gate is deliberately not pinned to the minimap rim - the minimap shows scanner range and
   nothing more, so a Gate has to be flown to (docs/adr/0002).

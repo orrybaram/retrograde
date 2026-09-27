@@ -772,7 +772,7 @@ func gate(planet_name: String) -> Gate:
 		return null
 	return p.get_node_or_null("Gate") as Gate
 
-## Park the ship on the approach to a Gate's cradle: `dist` px off it, lined up on the
+## Park the ship on the approach to a Gate's berth: `dist` px off it, lined up on the
 ## dock and matched to its orbit, which is where a player flying in ends up.
 func park_at_gate(planet_name: String, dist := 30.0) -> void:
 	var g := gate(planet_name)
@@ -996,17 +996,34 @@ func broken_answers(f: Freight) -> int:
 ## sits `offset` px from its Mount (in the Mount's frame) turned `turn_deg` off its
 ## heading, moving with the station: the last moment of an approach.
 func stage_at_mount(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void:
-	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	var m := mount(id)
-	var f := section(id)
+	_stage_load(section(id), m.global_transform * Transform2D(deg_to_rad(turn_deg), offset), m.get_parent() as RigidBody2D)
+
+## SR-7's Cradle, where a Component is released.
+func cradle() -> Cradle:
+	return Cradle.find(get_tree())
+
+## Put the ship, carrying Component `id` (clamped first if it isn't, dug out if it is
+## buried), where the piece sits `offset` px from the Cradle (in the Cradle's frame, +x
+## outboard) Lug outboard, turned `turn_deg`, moving with the station.
+func stage_at_cradle(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void:
+	var c := cradle()
+	var f := component(id)
+	f.buried = false
+	f.lodged = false
+	f.lodged_in = null
+	_stage_load(f, c.global_transform * Transform2D(PI + deg_to_rad(turn_deg), offset), c.get_parent() as RigidBody2D)
+
+## Carrying `f` (clamped first if it isn't), put the ship where `f` sits at `at`, moving
+## with `station`.
+func _stage_load(f: Freight, at: Transform2D, station: RigidBody2D) -> void:
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if not ship.is_carrying():
 		ship.clamp_freight(f, true)
 		ship.state_machine.change_state("CarryingState")
-	var seat := m.global_transform * Transform2D(deg_to_rad(turn_deg), offset)
 	# The ship's transform that puts its load exactly there
-	var ship_xf := seat * f.transform.affine_inverse()
+	var ship_xf := at * f.transform.affine_inverse()
 	var rid := ship.get_rid()
-	var station := m.get_parent() as RigidBody2D
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, ship_xf)
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, station.linear_velocity)
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)

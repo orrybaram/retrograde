@@ -87,20 +87,20 @@ func draw_gate(c: CanvasItem, glow: float, clock: float) -> void:
 			c.draw_polyline(line, Color(Colors.PRIMARY, 0.07), 1.2)
 
 	draw_halo(c, glow, RADIUS + WIDTH / 2.0)
-	_draw_stone_cradle(c, stone, lit, glow)
+	_draw_stone_berth(c, stone, lit, glow)
 	draw_blinker(c, glow, clock, polar(-PI / 2.0, RADIUS))
 
 ## A slab of the same rock wedged across the mouth, with the fault running under it.
-func _draw_stone_cradle(c: CanvasItem, stone: Color, lit: Color, glow: float) -> void:
+func _draw_stone_berth(c: CanvasItem, stone: Color, lit: Color, glow: float) -> void:
 	var slab := PackedVector2Array([
-		Vector2(-CRADLE_HALF - 4, RADIUS - 7), Vector2(CRADLE_HALF + 2, RADIUS - 6),
-		Vector2(CRADLE_HALF + 6, RADIUS + 7), Vector2(-CRADLE_HALF - 7, RADIUS + 6),
+		Vector2(-BERTH_HALF - 4, RADIUS - 7), Vector2(BERTH_HALF + 2, RADIUS - 6),
+		Vector2(BERTH_HALF + 6, RADIUS + 7), Vector2(-BERTH_HALF - 7, RADIUS + 6),
 	])
 	c.draw_colored_polygon(slab, stone.darkened(0.2))
 	c.draw_polyline(slab, stone.darkened(0.5), 2.0, true)
-	c.draw_line(Vector2(-CRADLE_HALF, RADIUS - 2), Vector2(CRADLE_HALF, RADIUS - 3),
+	c.draw_line(Vector2(-BERTH_HALF, RADIUS - 2), Vector2(BERTH_HALF, RADIUS - 3),
 		Color(lit, 0.1 + glow * 0.8), 1.5)
-	for x in [-CRADLE_HALF, CRADLE_HALF]:
+	for x in [-BERTH_HALF, BERTH_HALF]:
 		var leg := PackedVector2Array([
 			Vector2(x - 4, RADIUS + 4), Vector2(x + 4, RADIUS + 4),
 			Vector2(x * 1.35 + 5, RADIUS + 22), Vector2(x * 1.35 - 5, RADIUS + 22),

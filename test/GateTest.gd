@@ -293,8 +293,8 @@ func test_docking_at_a_gate_clamps_the_ship_to_it() -> void:
 	assert_object(state.locked_dockable).is_same(gate)
 
 
-## The cradle sits at the bottom of the ring, and that is what the ship docks to.
-func test_the_dock_point_is_the_cradle_not_the_ring_centre() -> void:
+## The berth sits at the bottom of the ring, and that is what the ship docks to.
+func test_the_dock_point_is_the_berth_not_the_ring_centre() -> void:
 	var gate := _gate(_planet("Veld"))
 	gate.global_position = Vector2(500, -200)
 	assert_vector(gate.get_dock_position()).is_equal_approx(
@@ -302,7 +302,7 @@ func test_the_dock_point_is_the_cradle_not_the_ring_centre() -> void:
 	assert_float(gate.get_dock_distance()).is_equal(60.0)
 
 
-func test_drifting_out_of_the_cradle_releases_the_ship() -> void:
+func test_drifting_out_of_the_berth_releases_the_ship() -> void:
 	var gate := _gate(_planet("Veld"))
 	var ship := _ship()
 	_dock_at(ship, gate)
@@ -329,7 +329,7 @@ func test_docking_without_a_gate_falls_straight_back_to_flying() -> void:
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
 
 
-## Flying in names a Gate long before the cradle, but a ship that spawns docked at one
+## Flying in names a Gate long before the berth, but a ship that spawns docked at one
 ## never made the approach — so docking names it too, before the terminal takes over.
 func test_docking_at_a_gate_names_it_first() -> void:
 	var gate := _gate(_planet("Veld"))

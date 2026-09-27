@@ -636,7 +636,7 @@ func _warp_rows() -> Array[Dictionary]:
 		var planet_name := gate.parent_planet.name
 		rows.append(_action_row(
 			"CORE GATE" if gate.is_core else "GATE: %s" % planet_name.to_upper(),
-			"Parks on the approach to that Gate's cradle, lined up and matched to its orbit.",
+			"Parks on the approach to that Gate's berth, lined up and matched to its orbit.",
 			func() -> void: _warp(func() -> void: Playtest.park_at_gate(planet_name))
 		))
 

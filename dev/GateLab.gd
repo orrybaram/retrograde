@@ -2,7 +2,7 @@ extends Node2D
 ## Gate Lab — a bench for arguing about what a Gate looks like.
 ##
 ## Every variant lives in `dev/gate_styles/` and draws the same Gate: same radius, same
-## mouth at the bottom, same cradle across it, so the only thing under test is the
+## mouth at the bottom, same berth across it, so the only thing under test is the
 ## construction. Nothing here is in the shipped game; when a look wins, it gets ported
 ## into `entities/structures/Gate.gd` and the lab keeps the losers around for reference.
 ##
@@ -128,7 +128,7 @@ func _draw_solo(size: Vector2) -> void:
 	_label(Vector2(size.x / 2.0, size.y - 74.0), _current().title, Colors.PRIMARY, 22)
 	_label(Vector2(size.x / 2.0, size.y - 52.0), _current().blurb, Colors.TEXT_MUTED, 13)
 
-## The ship parked in the cradle, so chunkiness can be judged against the thing that
+## The ship parked in the berth, so chunkiness can be judged against the thing that
 ## has to fit there. Same silhouette the HUD uses: a nose-up wedge.
 func _draw_ship_for_scale() -> void:
 	var at := Vector2(0, RADIUS - 12.0)
