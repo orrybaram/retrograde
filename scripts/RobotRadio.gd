@@ -248,6 +248,10 @@ func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
 		request(MSG_BOOST_HINT)
 
 func check_fuel(fuel: float, max_fuel: float) -> void:
+	# A docked ship is filling up, not running dry: a relaunched clone comes up on an
+	# empty tank at the dock, and that is no moment for the low-fuel briefing.
+	if is_instance_valid(_ship) and _ship.state_machine and _ship.state_machine.current_state is LandedState:
+		return
 	if guide_awake and max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:
 		request(MSG_LOW_FUEL)
 

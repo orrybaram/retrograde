@@ -166,10 +166,11 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 				fuel_progress_bar.bar_color = Colors.FUEL_THREE_QUARTERS
 			else:
 				fuel_progress_bar.bar_color = Colors.FUEL_FULL
-			# Blink the gauge once it's low; faster when critical.
+			# Blink the gauge once it's low; faster when critical. A dry tank holds still:
+			# a new game starts on one, and a gauge flashing from the first frame is noise.
 			var fuel_level := LowFuelEffect.level_for(fuel, max_fuel)
 			var blink_period := 0.5 if fuel_level == LowFuelEffect.Level.CRITICAL else 1.0
-			var dim := fuel_level != LowFuelEffect.Level.OK and fmod(Time.get_ticks_msec() / 1000.0, blink_period) > blink_period * 0.6
+			var dim := fuel > 0.0 and fuel_level != LowFuelEffect.Level.OK and fmod(Time.get_ticks_msec() / 1000.0, blink_period) > blink_period * 0.6
 			fuel_progress_bar.modulate.a = 0.35 if dim else 1.0
 
 		# Update hull segment bar

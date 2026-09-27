@@ -553,3 +553,15 @@ func test_beeper_tone_has_expected_length() -> void:
 	var samples := int(0.05 * RobotBeeper.MIX_RATE)
 	assert_int(wav.data.size()).is_equal(samples * 2 * 2)
 	assert_int(wav.format).is_equal(AudioStreamWAV.FORMAT_16_BITS)
+
+
+func test_a_docked_ship_gets_no_low_fuel_call() -> void:
+	var radio := _radio()
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	add_child(ship)
+	radio._ship = ship
+	# Seated on the dock without a port to dock at (entering would bounce back to flying)
+	ship.state_machine.current_state = ship.state_machine.states["LandedState"]
+	# Refuelling from a dry tank at the dock, as a relaunch does
+	radio.check_fuel(0.0, 100.0)
+	assert_bool(radio.is_active()).is_false()

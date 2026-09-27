@@ -121,7 +121,8 @@ func _update_systems() -> void:
 
 	var fuel_ratio := ship.fuel / ship.max_fuel if ship.max_fuel > 0 else 0.0
 	var fuel_level := LowFuelEffect.level_for(ship.fuel, ship.max_fuel)
-	_fuel_gauge.set_fill(fuel_ratio, _fuel_color(fuel_ratio), 20, fuel_level != LowFuelEffect.Level.OK)
+	_fuel_gauge.set_fill(fuel_ratio, _fuel_color(fuel_ratio), 20,
+			ship.fuel > 0.0 and fuel_level != LowFuelEffect.Level.OK)
 	_fuel_value.text = "%d / %d" % [int(ship.fuel), int(ship.max_fuel)]
 
 	# No hold at all reads as no row, not 0 / 0
