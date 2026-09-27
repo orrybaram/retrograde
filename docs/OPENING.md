@@ -187,6 +187,10 @@ Placement (revised 2026-09-22), nearest first:
   magnet reaches it but can't lift it: each hold of the key is one tug that shudders it
   and knocks the ship back, and the third rips it out of the ground in a burst of dust,
   rock and sparks, leaving a scar (`Freight.tug`, `GroundBreakFX`).
+  **To change (decided 2026-09-26): the tug becomes a pull.** Clamped to a buried piece,
+  the ship tears it out by flying away from the ground; there is no separate tug key. The
+  array is light and Rook is small, so the Aux is enough. This is the same verb that later
+  fails on Veld, where the **Cargo Bay** only comes out under the Burn.
 
 Each hangs dead in its frame until the magnet first takes it.
 
@@ -454,6 +458,53 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 - No answer to the survey marker.
 - The Heartbeat audible but not actionable - "faint, ignorable, but present."
 - No third Procedure. The core and the Gate are the only two, and they share their verbs.
+
+## 9. The Cargo Bay (decided 2026-09-26)
+
+The ship wakes with **nothing**: an empty tank and no hold. Not a small hold - none. No
+cargo readout on the HUD, no HOLD row in the Log, and no scrap, derelict, container or seam
+will harvest. A Sweep still lights them up and puts them on the minimap; there is simply
+nothing to put anything in. Act 1 does not need one, and so the first thing after the wake
+is to go and get one.
+
+**The Cargo Bay is the first Component**, and ADR 0007's model case made literal. It lies
+buried in Veld's surface inside a crashed hauler, Lug up. It is in the world from minute
+one and dead to the Sweep until SR-7's cold start; after that it answers from well beyond
+harvest range, the array's warmer-colder lesson reused.
+
+1. **Cold start.** SR-7 lights. From now on it tops the tank up to **a quarter** every time
+   the ship docks or relaunches, never higher. A dead SR-7 gives nothing.
+2. **The need.** The first time a Sweep finds scrap that will not harvest, UNIT-7 names the
+   problem, never the place: there is nothing to put it in. It is sincere; it does not know
+   where a hold is. On close approach it names the wreck flatly (`HAULER, DOWN` or similar).
+3. **The pull.** The player lands, clamps the Lug and flies away from the ground. On the Aux
+   the ship strains at the end of the clamp and the ground shudders and holds. Only the Burn
+   tears it free. Tuning: the tear-out costs about 20% of `max_fuel`, so the free quarter is
+   just enough with a little over. Once free it lifts off Veld on the Aux.
+4. **Home.** Flown back as Freight, heavy (ADR 0012), and released into SR-7's **Cradle**.
+5. **Fitting.** Docked, SR-7's menu offers `FIT CARGO BAY`. UNIT-7 fits it: the hold becomes
+   50, the cargo readout appears, and everything harvests.
+
+**The same pull on Rook.** The solar array's key-press tugs (§4) become the same verb: clamp
+and fly away. The array is light and Rook is small, so the Aux does it. The lesson learned in
+minute four is the one that fails on Veld.
+
+**There is no store** (ADR 0007, now in full). Credits become SR-7's **Stores**. The hold
+empties into them on docking (the **Deposit**, the old cash-in count re-aimed), and docking
+spends them automatically, with no menu: the hull patched first, then the tank topped past
+the free quarter. The ring pays for the trip, and the Cargo Bay is what lets it pay at all.
+Tuning target: one full hold of ordinary gems is about a full tank from empty. With the
+store go every `UpgradeItem`, so `max_hull` and `max_fuel` are fixed until Components exist,
+and the hold is 50 for good.
+
+**For now:** the planetary scan is removed and seams stay dormant with it - the store was
+the scanner's only source, and `ECHO` (`docs/SWEEP.md`) is not designed far enough to
+replace it. Visiting and Records are untouched; they never needed the scanner.
+
+**Open:** where the Cradle sits on SR-7; whether fitting stays a menu row; `ECHO` and the
+seams; old saves (credits, bought upgrades, a 50-unit hold with no Cargo Bay). The Gate's
+docking surface is also called a cradle in code (`Gate.CRADLE_HALF`, `GateTransit`) and
+should be renamed before SR-7's Cradle is built.
 
 ---
 

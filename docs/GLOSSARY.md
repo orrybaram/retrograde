@@ -77,11 +77,31 @@ _Avoid_: minigame, ping, scan
 A sequence of **Marks** laid down with the **Sweep** that a piece of hardware answers. Powering a **Gate** is running its **Procedure**. Printed as **Notation** on the hardware itself.
 _Avoid_: code, combo, puzzle, spell
 
+**Aux**:
+The ship's solar-electric drive: always on offer, never runs out, and has no gauge. Weak thrust, not low top speed — the ship is slow to get moving and slow to stop (docs/adr/0010).
+_Avoid_: thrust, main engine, normal engine
+
+**Burn**:
+The ship's chemical drive, and the only thing fuel is ever spent on: enormous thrust that drains the tank fast. An empty tank does not strand the ship, it makes it clumsy — except where only the Burn is strong enough, such as tearing a buried **Cargo Bay** out of Veld (docs/adr/0010).
+_Avoid_: boost, booster, afterburner, booster fuel
+
 ## Freight and SR-7
 
 **Component**:
 A physical object recovered from the world and fitted to the ship at a station through the station's menus — the only way the ship is ever upgraded. There is no currency and nothing is bought (docs/adr/0007). A Component is a destination, not a size: it may be found as **Freight** and flown home clamped to the hull.
 _Avoid_: credits, loot, crafting material, resource
+
+**Cargo Bay**:
+The ship's hold, and the first **Component** the player recovers: the ship starts with none, so nothing is stowed and no scrap can be harvested until it is fitted. It lies buried in Veld's surface in a crashed hauler, Lug up, and is torn out with the **Burn** and flown home to SR-7's **Cradle** as **Freight**; it can only be recovered after SR-7's cold start.
+_Avoid_: hold section, container module, cargo module, hold upgrade
+
+**Stores**:
+SR-7's stock of what the player has brought home in the hold. Docking spends it on the trip, automatically and with no menu — patching the hull first, then topping the tank past the free quarter — and on nothing else. It replaces credits; there is no store and nothing is bought (docs/adr/0007).
+_Avoid_: credits, money, currency, bank, inventory
+
+**Deposit**:
+The hold emptying into SR-7's **Stores** on docking, counted up as it goes: the punctuation of a trip.
+_Avoid_: cash-in, sell, trade
 
 **Freight**:
 An object too big for the hold, **clamped** rigidly to the outside of the hull and flown home by hand; while clamped, its mass and shape become the ship's — slower to speed up, slower to turn, slower to stop. Freight is a physical category, not a purpose — a **Section** and a **Component** can both arrive as Freight.
@@ -130,6 +150,9 @@ _Avoid_: lore, bio, log entry, description
 - Powering a **Gate** brings its **Module** online; there is no way to power a **Module** down again.
 - **Freight** is flown, never stowed: it never enters the hold and never counts against cargo capacity. While clamped, the ship is the ship plus the Freight — heavier and slower to turn, but never lopsided: the nose goes where the player points it.
 - A found **Component** too big for the hold is **Freight** until it is released at a station; it becomes part of the ship only when fitted there through the menus.
+- Buried **Freight** is torn out of the ground by clamping its **Lug** and flying away from the surface. The **Aux** is enough for the solar array on Rook; the **Cargo Bay** on Veld holds until the **Burn** pulls.
+- A new game starts with an empty tank. After its cold start, SR-7 tops the tank up to a quarter every time the ship docks or relaunches, and never above (a dead SR-7 gives nothing): enough to tear the **Cargo Bay** out of Veld with a little to spare. Every drop beyond that is paid for from SR-7's **Stores**, which only the hold fills. Once free, the **Cargo Bay** lifts off Veld on the **Aux**; only the tear-out needs the **Burn**.
+- A ship without a **Cargo Bay** has no hold at all: a **Sweep** still reveals scrap, derelicts and seams, but none of them can be harvested and nothing is stowed. Fitting the **Cargo Bay** is the one gate on all harvesting. The **Cargo Bay** is the one thing that must arrive as **Freight** before the ship can carry anything inside it.
 - **Freight** is never lost. Released, it coasts on as the ship was moving — same velocity, same heading, plus a slow drift off the nose — and gravity never bends its path. A clamp will not hold past the edge of the **Void**, so all Freight is always inside the system.
 - A ship abandoned or destroyed with **Freight** clamped leaves it there; a **Void**-consumed ship never has any, because the clamp let go at the edge.
 - **Freight** the ship has clamped and then let go of — released, or left on an abandoned or destroyed hull — is marked on the **Chart** and tracked at once. These are the ship's own marks, drawn over the Titan's map whether or not the region is **Charted**; **Freight** never touched is never marked. Clamping it again clears the mark and tracks its destination instead: a **Section**'s **Mount**, or the **Cradle** for a **Component**.
