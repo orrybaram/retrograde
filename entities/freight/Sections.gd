@@ -38,16 +38,19 @@ const DATA := {
 		"lug_position": Vector2(-73, 0),
 		"lug_facing": Vector2.LEFT,
 	},
-	# A pressurised module, held by its top end: it goes in nose-first, down onto its plate.
+	# The claw's knuckle boom (DorsalClaw), folded the way it stows: the boom up from the
+	# shoulder, the forearm back down beside it, the claw by the shoulder. Held by the elbow
+	# end, it goes in shoulder-first, down onto the turntable. Long and thin, it turns far
+	# worse than the others (docs/adr/0012) - the hardest carry of the three.
 	DORSAL_ARM: {
 		"label": "DORSAL ARM",
 		"mass": 2.0,
-		"art": "arm",
+		"art": "claw",
 		"outline": [
-			Vector2(-54, -32), Vector2(54, -32), Vector2(58, -28), Vector2(58, 28),
-			Vector2(54, 32), Vector2(-54, 32), Vector2(-58, 28), Vector2(-58, -28),
+			Vector2(118, 33), Vector2(118, -20), Vector2(-110, -32), Vector2(-118, -26),
+			Vector2(-118, -9), Vector2(28, 17), Vector2(28, 33),
 		],
-		"lug_position": Vector2(-58, 0),
+		"lug_position": Vector2(-118, -17),
 		"lug_facing": Vector2.LEFT,
 	},
 }
@@ -87,10 +90,13 @@ static func detail(art: String, outline: PackedVector2Array) -> Array[Line2D]:
 				var x := box.position.x + box.size.x * i / cols
 				out.append(_line(Vector2(x, box.position.y), Vector2(x, box.end.y), Colors.HULL_MID, 1.0))
 			out.append(_line(Vector2(box.position.x, 0), Vector2(box.end.x, 0), Color(Colors.HULL_LIGHT, 0.5), 1.5))
-		"arm":
-			for f: float in [0.25, 0.5, 0.75]:
-				var x := box.position.x + box.size.x * f
-				out.append(_line(Vector2(x, box.position.y + 3), Vector2(x, box.end.y - 3), Colors.HULL_DARK, 1.5))
+		"claw":
+			# The folded arm (DorsalClaw's stowed pose): the boom from the shoulder to the
+			# elbow, the forearm back down to the wrist, and the claw's two jaws
+			out.append(_line(Vector2(101, 8), Vector2(-108, -23), Colors.HULL_DARK, 3.0))
+			out.append(_line(Vector2(-108, -23), Vector2(75, 26), Colors.HULL_DARK, 2.5))
+			for x: float in [37.0, 113.0]:
+				out.append(_line(Vector2(x, 18), Vector2(x, -18), Color(Colors.HULL_LIGHT, 0.7), 2.0))
 		"bay":
 			# The Cargo Bay (Components): a hauler's hold - heavy ribs, and the seam of its
 			# doors down the middle

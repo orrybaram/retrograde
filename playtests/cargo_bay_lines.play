@@ -61,7 +61,7 @@ screenshot cargo_bay_lines_2_named
 eval get_tree().root.get_node("RobotRadio").silence()
 
 # --- Fitting: a word from UNIT-7 as the menu closes ---
-eval gs.set("cradled", "cargo_bay")
+eval gs.set("cradled", PackedStringArray(["cargo_bay"]))
 eval pt.cradle().refresh()
 eval pt.redock()
 wait_until pt.state_name() == "LandedState" 10

@@ -151,7 +151,7 @@ func ensure_cargo_bay() -> void:
 		return
 	var piece := find_piece()
 	var gs := _game_state()
-	if gs and (gs.cradled == component or gs.is_fitted(component)):
+	if gs and (component in gs.cradled or gs.is_fitted(component)):
 		if piece:  # already home: a stale copy must not linger
 			piece.remove_from_group("freight")
 			piece.queue_free()

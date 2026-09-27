@@ -1,9 +1,11 @@
-# SR-7's Cradle takes the Cargo Bay (docs/adr/0012, docs/OPENING.md §9). The Cradle is
-# slung under the refuel boom's root, open outboard. Clamping the Cargo Bay tracks the
-# Cradle; flown in under the dock's head and let go of in tolerance, it is pulled home and
-# stays there, as itself, through a reload - and the hauler on Veld never puts another back.
-# Docked, `FIT CARGO BAY` fits it: the hold becomes 50, the readout shows, and it stays
-# fitted through a reload.
+# SR-7's Cradle takes the Cargo Bay (docs/adr/0012, docs/OPENING.md §9): a drop bay in the
+# container strip, worked by the DORSAL ARM's claw (DorsalClaw). Clamping the Cargo Bay
+# tracks the drop point off the right mast; the glide slope lamps there say how level the
+# load is; flown in anywhere near it, at an angle, the arm reaches out and closes on it.
+# Let go of, it is the Cradle's at once, and the claw carries it round and down into the
+# bay, which takes it below and is open again for the next. It stays there through a
+# reload - and the hauler on Veld never puts another back. Docked, `FIT CARGO BAY` fits it:
+# the hold becomes 50, and it stays fitted through a reload.
 # Run: tools/play.sh --headless playtests/cradle.play
 
 press enter
@@ -13,55 +15,60 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+eval pt.seat_sr7()
 eval pt.skip_opening(false)
 wait_until pt.state_name() == "LandedState" 5
 wait 0.1
-assert pt.cradle() != null and pt.cradle().visible "the Cradle hangs off the arm, out"
-assert not pt.cradle().is_full() and gs.cradled == "" "empty on a new game"
+assert pt.cradle() is DorsalClaw and pt.cradle().arm_home() "SR-7's Cradle is the DORSAL ARM's claw, and the arm is home"
+assert not pt.cradle().is_full() and gs.cradled.is_empty() "empty on a new game"
+assert pt.cradle().is_open() and not pt.cradle().beam_on() "open, and dark with nothing coming"
 hold thrust 1.5
 assert pt.state_name() == "FlyingState" "undocked"
 
-# --- Clamped, the Cargo Bay tracks the Cradle ---
-eval pt.stage_at_cradle("cargo_bay", Vector2(260, 0))
+# --- Clamped, the Cargo Bay tracks the drop point; out of reach, the lamps guide it in ---
+eval pt.stage_at_cradle("cargo_bay", Vector2(260, -80))
 wait 0.1
 assert pt.state_name() == "CarryingState" "carrying the Cargo Bay"
 assert get_node("/root/NavSystem").get_target().get_label() == "CRADLE" "it tracks the Cradle"
-assert get_node("/root/NavSystem").get_target().node == pt.cradle() "SR-7's Cradle"
+assert get_node("/root/NavSystem").get_target().node.global_position.distance_to(pt.cradle().drop_pose().origin) < 1.0 "at the drop point"
 assert pt._action_message == "" "out of reach: no RELEASE"
+assert pt.cradle().slope_reading() == "HIGH" "too high: the top lamp is red"
+assert pt.cradle().beam_on() "a laden ship near: the bay lights"
+assert pt.cradle().state_machine.get_current_state_name() == "ClawStowed" "the arm waits"
 
-# --- Pushed in from outboard, under the dock's head, until the end plate stops it ---
-eval pt.stage_at_cradle("cargo_bay", Vector2(140, 0))
+# --- Flown in, a little off level and turned: the arm reaches out and closes on it ---
+eval pt.stage_at_cradle("cargo_bay", Vector2(150, 20), 20.0)
 wait 0.1
-hold thrust 0.35
+assert pt.cradle().slope_reading() == "LEVEL" "level: both lamps green"
+hold thrust 0.4
 wait_until pt._action_message == "RELEASE" 15
-assert pt._action_message == "RELEASE" "RELEASE once it is in the Cradle's reach"
-wait_until pt.cradle().to_local(pt.component("cargo_bay").global_position).x < 2.0 15
-wait 2.0
-assert pt.state_name() == "CarryingState" "never knocked loose on the way in"
-assert pt.cradle().to_local(pt.component("cargo_bay").global_position).x > -12.0 "the end plate stops it in the seat"
-assert pt._action_message == "RELEASE" "and it can be let go of there"
-screenshot cradle_1_pushed_in
+wait_until pt.cradle().state_machine.get_current_state_name() == "ClawReaching" 1
+assert pt.cradle().state_machine.get_current_state_name() == "ClawReaching" "the arm reaches for it"
+wait_until pt.cradle().jaw >= 1.0 5
+assert pt.state_name() == "CarryingState" "still the ship's until it is let go of"
+screenshot cradle_1_claw_closed
 hold action 1.0
 wait 0.1
 assert pt.state_name() == "FlyingState" "let go"
-assert gs.cradled == "cargo_bay" "the Cradle has it"
-assert pt.cradle().is_full() "and holds it"
+assert gs.cradled == PackedStringArray(["cargo_bay"]) "the Cradle has it"
 assert pt.component_count("cargo_bay") == 0 "no longer loose Freight"
 assert pt.chart_marks().is_empty() "not marked on the Chart"
-wait 1.0
-assert pt.cradle().piece.global_position.distance_to(pt.cradle().global_position) < 1.0 "pulled home"
-eval ship.set("linear_velocity", pt.node("space_stations").linear_velocity + Vector2(80, 0))
-wait 2.0
-assert pt.cradle().piece.global_position.distance_to(pt.cradle().global_position) < 1.0 "and it stays"
-screenshot cradle_2_seated
+assert pt.cradle().state_machine.get_current_state_name() == "ClawDelivering" "the claw carries it"
+wait 1.6
+screenshot cradle_2_delivering
+wait_until pt.cradle().piece == null 10
+assert gs.cradled == PackedStringArray(["cargo_bay"]) "gone below, still the Cradle's"
+wait_until not pt.cradle().is_full() 5
+assert pt.cradle().state_machine.get_current_state_name() == "ClawStowed" "the arm folds away"
+assert pt.cradle().is_open() and not pt.cradle().beam_on() "open for the next, and dark again"
+screenshot cradle_3_open_again
 
 # --- A reload keeps it in the Cradle, and the hauler leaves no copy on Veld ---
 eval pt.save_now()
 reload
 wait 0.5
-assert gs.cradled == "cargo_bay" "still in the Cradle after a reload"
-assert pt.cradle().is_full() "shown there"
-assert pt.cradle().piece.global_position.distance_to(pt.cradle().global_position) < 1.0 "in place"
+assert gs.cradled == PackedStringArray(["cargo_bay"]) "still in the Cradle after a reload"
+assert not pt.cradle().is_full() "the bay is ready"
 assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"
 
 # --- Docked at SR-7, FIT CARGO BAY: the ship has its hold ---
@@ -70,18 +77,17 @@ eval pt.redock()
 wait_until pt.state_name() == "LandedState" 10
 wait_until pt.visible_ui().has("SpacePortDialogue") 10
 assert str(pt.screen_text()).contains("> FIT CARGO BAY") "FIT CARGO BAY offered, selected"
-screenshot cradle_3_fit_offered
+screenshot cradle_4_fit_offered
 press enter
 wait 0.1
 assert ship.max_cargo_weight == 50.0 "the hold is 50"
-assert gs.is_fitted("cargo_bay") and gs.cradled == "" "fitted, out of the Cradle"
-assert not pt.cradle().is_full() "the Cradle is empty"
+assert gs.is_fitted("cargo_bay") and gs.cradled.is_empty() "fitted, out of the Cradle"
 assert not str(pt.screen_text()).contains("FIT CARGO BAY") "nothing more to fit"
 press enter
 wait 0.2
 assert not pt.visible_ui().has("SpacePortDialogue") "departed the menu"
 assert str(pt.screen_text()).contains("/50") "the cargo readout shows"
-screenshot cradle_4_fitted
+screenshot cradle_5_fitted
 
 # --- Fitted through a reload, and nothing loose on Veld ---
 eval pt.save_now()
@@ -89,6 +95,6 @@ reload
 wait 0.5
 assert gs.is_fitted("cargo_bay") "still fitted after a reload"
 assert ship.max_cargo_weight == 50.0 "and the hold is 50"
-assert not pt.cradle().is_full() "the Cradle stays empty"
+assert gs.cradled.is_empty() "the Cradle stays empty"
 assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"
 quit

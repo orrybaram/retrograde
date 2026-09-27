@@ -39,10 +39,10 @@ hull, flown home with its mass and shape dragging the ship's handling, and **rel
 its own gap in the silhouette**. Not docked, not fitted from a menu - flown into the hole.
 Components (ship upgrades) are delivered the same way, into the station's Cradle, and fitted
 from the station's menus once docked. One delivery gesture for all Freight. SR-7's Cradle
-(decided 2026-09-26) is slung under the refuel boom's root: a frame hanging off the boom,
-closed at the hull end and open outboard, so a Component is pushed in under the dock's head
-until the end plate stops it, and let go of. It hangs off the arm, so it is only there once
-the arm is out.
+(decided 2026-09-27, ADR 0013) is a drop bay in the container strip, worked by the DORSAL
+ARM: brought near the drop point off the right mast, at any angle, the load is met by the
+arm's claw, let go of, and carried round into the bay, which takes it below. It only works
+once the arm is home and the core is running.
 
 ### Seating a Section
 
@@ -66,7 +66,9 @@ Chosen from the silhouette lab (claude.ai/artifact/CCVHLMG6SyGxY5Shks5aSG, round
 **CYLINDERS**). Top to bottom:
 
 - **Twin masts** on the top bar, a dish on each. Both stand; neither is a Section.
-- **Container strip**, and standing up off its middle like a fin, the **DORSAL ARM**.
+- **Container strip**: solid deck with stock crates on it (art only) and the Cradle's bay
+  in it, and on a turntable in its middle the **DORSAL ARM**, a knuckle boom folded upright
+  (ADR 0013).
 - **Ring pods**: eight habitat pods with berthing collars between them. Permanent, not a
   Section.
 - **Arm block**: three pressurised modules, flanked by cold scissor **radiator fans**.
@@ -169,13 +171,13 @@ objective with zero instruction.
 | Missing | Section | Teaches |
 |---|---|---|
 | `FUEL TANK — ABSENT` | right cylindrical tank | flight under load; the harvest Sweep (it is fused into a rock) |
-| `DORSAL ARM — ABSENT` | the fin on the container strip | debris is not scrap - it is tangled in things that hurt |
+| `DORSAL ARM — ABSENT` | the arm on the container strip's turntable | debris is not scrap - it is tangled in things that hurt |
 | `SOLAR ARRAY — ABSENT` | left keel wing | the Sweep as a **search** tool - it is dark and beyond visual range |
 
 | Section | Size (px) | Mass | Accel | Lug |
 |---|---|---|---|---|
 | FUEL TANK | 130 × 50 capsule | 3.0 (full - fuel is heavy) | ×0.50 | middle of the outer flank, facing out; slides in sideways from the boom side |
-| DORSAL ARM | 120 × 68 module | 2.0 | ×0.60 | top end, facing up; goes in nose-first from above |
+| DORSAL ARM | 236 × 65 folded arm | 2.0 | ×0.60 | elbow end, facing up; goes in shoulder-first from above; long and thin, the worst to turn |
 | SOLAR ARRAY | 150 × 50 wing | 1.0 | ×0.75 | outer tip, facing out; light but long, so it swings like a lance |
 | right wing (nudge) | 150 × 50 | - | push | none: it is still attached, and pushed home |
 
@@ -562,7 +564,7 @@ and the hold is 50 for good.
 the scanner's only source, and `ECHO` (`docs/SWEEP.md`) is not designed far enough to
 replace it. Visiting and Records are untouched; they never needed the scanner.
 
-**Open:** where the Cradle sits on SR-7; whether fitting stays a menu row; `ECHO` and the
+**Open:** whether fitting stays a menu row; `ECHO` and the
 seams; old saves (credits, bought upgrades, a 50-unit hold with no Cargo Bay). The Gate's
 docking surface is also called a cradle in code (`Gate.CRADLE_HALF`, `GateTransit`) and
 should be renamed before SR-7's Cradle is built.

@@ -175,7 +175,7 @@ func test_once_it_is_in_the_cradle_the_wreck_leaves_no_copy() -> void:
 	wreck.ensure_cargo_bay()
 	var stale := wreck.find_piece()
 	auto_free(stale)
-	_gs.cradled = Components.CARGO_BAY
+	_gs.cradled = PackedStringArray([Components.CARGO_BAY])
 	wreck.ensure_cargo_bay()
 	assert_object(wreck.find_piece()).is_null()
 	assert_bool(stale.is_queued_for_deletion()).is_true()

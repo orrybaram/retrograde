@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## FIT CARGO BAY (docs/OPENING.md §9): with the Cargo Bay in SR-7's Cradle, docking there
-## offers to fit it. Fitted, it is the ship's 50-unit hold - kept through a save and a load,
+## FIT CARGO BAY (docs/OPENING.md §9): with the Cargo Bay waiting in SR-7's Cradle, docking
+## there offers to fit it - one FIT row for each Component waiting. Fitted, it is the ship's 50-unit hold - kept through a save and a load,
 ## and gone again on a new game - and the wreck on Veld never puts another one back.
 
 const SAVE_FILE := "user://fit_cargo_bay_test_save.cfg"
@@ -56,13 +56,21 @@ func test_an_empty_cradle_offers_nothing_to_fit() -> void:
 	assert_array(_labels(_dialogue(_port()))).contains_exactly(["DEPART"])
 
 func test_the_cargo_bay_in_the_cradle_offers_fit_cargo_bay_first() -> void:
-	_gs.cradled = Components.CARGO_BAY
+	_gs.cradled = PackedStringArray([Components.CARGO_BAY])
 	var dialogue := _dialogue(_port())
 	assert_array(_labels(dialogue)).contains_exactly(["FIT CARGO BAY", "DEPART"])
 	assert_int(dialogue._selected_index).is_equal(0)
 
+func test_each_component_waiting_gets_its_own_row() -> void:
+	_gs.cradled = PackedStringArray([Components.CARGO_BAY, Components.CARGO_BAY])
+	var dialogue := _dialogue(_port())
+	assert_array(_labels(dialogue)).contains_exactly(["FIT CARGO BAY", "FIT CARGO BAY", "DEPART"])
+	dialogue._activate_selection()
+	assert_array(_gs.cradled).contains_exactly([Components.CARGO_BAY])
+	assert_array(_labels(dialogue)).contains_exactly(["FIT CARGO BAY", "DEPART"])
+
 func test_only_sr7s_dock_offers_it() -> void:
-	_gs.cradled = Components.CARGO_BAY
+	_gs.cradled = PackedStringArray([Components.CARGO_BAY])
 	var elsewhere := auto_free(load("res://entities/structures/SpacePort.tscn").instantiate()) as SpacePort
 	add_child(elsewhere)
 	assert_array(_labels(_dialogue(elsewhere))).contains_exactly(["DEPART"])
@@ -71,7 +79,7 @@ func test_only_sr7s_dock_offers_it() -> void:
 func test_fitting_from_the_menu_gives_the_ship_its_hold() -> void:
 	var ship := _ship()
 	assert_bool(ship.has_hold()).is_false()
-	_gs.cradled = Components.CARGO_BAY
+	_gs.cradled = PackedStringArray([Components.CARGO_BAY])
 	_cradle().refresh()
 	var dialogue := _dialogue(_port())
 	var hold := [-1.0]
@@ -81,7 +89,7 @@ func test_fitting_from_the_menu_gives_the_ship_its_hold() -> void:
 	assert_bool(ship.has_hold()).is_true()
 	assert_float(hold[0]).override_failure_message("the readout hears of it").is_equal(50.0)
 	assert_bool(_gs.is_fitted(Components.CARGO_BAY)).is_true()
-	assert_str(_gs.cradled).is_empty()
+	assert_array(_gs.cradled).is_empty()
 	assert_bool(_cradle().is_full()).override_failure_message("the Cradle is empty again").is_false()
 	# And the row is gone
 	assert_array(_labels(dialogue)).contains_exactly(["DEPART"])
@@ -90,11 +98,11 @@ func test_fitting_from_the_menu_gives_the_ship_its_hold() -> void:
 # --- keeping it ---
 
 func test_fitting_is_written_to_the_save_at_once() -> void:
-	_gs.cradled = Components.CARGO_BAY
+	_gs.cradled = PackedStringArray([Components.CARGO_BAY])
 	Save.save(_gs, null)
 	_cradle().fit()
 	assert_array(Save.load_fitted(SAVE_FILE)).contains_exactly([Components.CARGO_BAY])
-	assert_str(Save.load_cradled(SAVE_FILE)).is_empty()
+	assert_array(Save.load_cradled(SAVE_FILE)).is_empty()
 
 func test_a_load_keeps_the_hold() -> void:
 	_gs.mark_fitted(Components.CARGO_BAY)

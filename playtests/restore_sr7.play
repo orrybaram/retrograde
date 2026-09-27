@@ -135,7 +135,7 @@ wait 0.7
 assert not pt.mount("solar_array").alarm.active "its alarm stops once it is home"
 assert not pt.recall("station").get_node("StationPower").powered "one wing is not enough power"
 
-# --- DORSAL ARM, lowered nose-first onto its plate ---
+# --- DORSAL ARM, folded, lowered shoulder-first onto its turntable ---
 wait 0.2
 eval ship.set("rotation", (-pt.section("dorsal_arm").lug_facing_global()).angle())
 eval pt.warp_to(pt.section("dorsal_arm").lug_global() + pt.section("dorsal_arm").lug_facing_global() * 26.0)
@@ -146,7 +146,7 @@ wait 0.1
 assert pt.state_name() == "CarryingState" "the arm is clamped"
 eval pt.stage_at_mount("dorsal_arm", Vector2(-14, 8), 6.0)
 frames 3
-assert pt._action_message == "RELEASE" "RELEASE on the fin plate"
+assert pt._action_message == "RELEASE" "RELEASE over the turntable"
 hold action 1.0
 assert pt.mount("dorsal_arm").seated "the arm is seated"
 wait 0.7

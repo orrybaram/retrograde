@@ -19,7 +19,7 @@ class_name HullDamage
 @export var damage_seed := 347
 
 ## Parts that stay clean: the Sections, and the core's bay.
-const SKIP: Array[String] = ["FuelTank", "SolarArray", "DorsalArm", "CentralCore", "FinPlate"]
+const SKIP: Array[String] = ["FuelTank", "SolarArray", "DorsalArm", "CentralCore"]
 ## Marks are only ever this big, px, and never on a part too thin to hold one.
 const SIZE := Vector2(2.5, 9.0)
 const MIN_PART_AREA := 400.0
