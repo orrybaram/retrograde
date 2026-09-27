@@ -58,8 +58,8 @@ wait_until ship.hull_strength == ship.max_hull 3
 wait_until ship.fuel > ship.max_fuel * 0.25 1
 screenshot dock_4_topup
 wait_until ship.fuel == ship.max_fuel 5
-# 60 hull at 3 ST, 112.5 fuel at 0.3 ST (33.75, rounded up)
-assert gs.stores == 456 - 180 - 34 "hull and tank bought out of the Deposit"
+# 60 hull at 3 ST, 112.5 fuel at 2 ST
+assert gs.stores == 456 - 180 - 225 "hull and tank bought out of the Deposit"
 assert pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar").size.x == pt.recall("fuel_bar_w") "fuel meter keeps its width through the spend"
 screenshot dock_5_serviced
 
