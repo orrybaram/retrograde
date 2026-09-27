@@ -34,7 +34,7 @@ const SWEEP_NEAR := SonarPulse.END_RADIUS + 80.0
 ## The nose this close to a loose piece's Lug opens MAGNET (the magnet itself takes at 25).
 const MAGNET_NEAR := 50.0
 ## Seconds carrying before LATERAL opens: a beat after the pickup, once MAGNET has cleared.
-const LATERAL_BEAT := 1.6
+const LATERAL_BEAT := 2.4
 ## A carried Section this close to one of its Mount's seats opens RELEASE (it seats at 40).
 const RELEASE_NEAR := 150.0
 

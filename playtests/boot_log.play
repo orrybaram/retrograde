@@ -46,7 +46,7 @@ assert pt.recall("log").text().contains("[ OK ]") "stamped on screen"
 hold turn_right 0.2
 wait 0.3
 assert pt.recall("log").checklist.is_done("turn") "both ways is"
-wait 1.5
+wait 2.3
 assert pt.recall("log").checklist.is_cleared("flight") and not pt.recall("log").text().contains("THRUST") "a finished section clears"
 wait 1.0
 assert pt.recall("log").text().contains("PROPULSION ") and pt.recall("log").text().contains("[ OK ]") "and joins the list of passes"
@@ -73,7 +73,7 @@ hold action 0.1
 wait 1.5
 assert pt.recall("log").checklist.is_done("sweep") "a Sweep stamps it"
 assert pt.recall("log").text().contains("FREIGHT") "and the tank answering logs the contact"
-wait 1.5
+wait 2.5
 assert pt.recall("log").checklist.is_cleared("sonar") "then SONAR clears"
 
 # --- Lost mid-diagnostic: the next clone comes up locked where this one left off ---
@@ -113,7 +113,7 @@ hold action 1.0
 assert pt.state_name() == "CarryingState" "and so is letting go"
 
 # --- LATERAL: a beat after the pickup ---
-wait 0.5
+wait 1.2
 assert pt.recall("log").checklist.is_cleared("magnet") "MAGNET has cleared"
 assert pt.recall("log").checklist.is_open("lateral") "then LATERAL opens"
 wait 1.0
@@ -124,7 +124,7 @@ hold strafe_right 0.2
 wait 0.5
 assert pt.recall("log").checklist.is_done("strafe") "both sides is"
 assert not pt.recall("log").checklist.is_open("let_go") "far from the Mount, no RELEASE"
-wait 1.5
+wait 2.3
 assert pt.recall("log").checklist.is_cleared("lateral") "LATERAL clears"
 
 # --- RELEASE: close to the Mount ---

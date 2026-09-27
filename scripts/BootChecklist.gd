@@ -92,7 +92,7 @@ const NUDGE_AFTER := 7.0
 const NUDGE_EVERY := 6.0
 const NUDGE_FOR := 1.4
 ## A finished section stays up this long after its last stamp (or SONAR's contact), then clears.
-const CLEAR_DELAY := 1.2
+const CLEAR_DELAY := 2.0
 ## How long the result holds before the log is finished.
 const COMPLETE_HOLD := 3.5
 
