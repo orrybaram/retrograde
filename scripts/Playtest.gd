@@ -47,8 +47,8 @@ extends Node
 ##   ship, main, gs (GameState), inv (InventoryManager), bus (EventBus),
 ##   pt (this node: pt.state_name(), pt.item_count(), pt.gem_count(), pt.spawn_gem(id, offset, [rel_vel]), pt.popup_counts(), pt.last_drops, pt.visible_ui(),
 ##       pt.screen_text(), pt.controls_ui(), pt.nearest(group), pt.node(group), pt.planet(name),
-##       pt.park_near_planet(name, dist, [angle_deg]), pt.scanner(), pt.redock(),
-##       pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.seam(),
+##       pt.park_near_planet(name, dist, [angle_deg]), pt.redock(),
+##       pt.survey(planet) (surface its dormant seams), pt.ore(planet), pt.hover_over_ore(planet, height, [tilt_deg], [descent]), pt.altitude(planet), pt.rel_speed(planet), pt.seam(),
 ##       pt.stage_freight([gap]) (test Freight on the nose, ready to clamp), pt.spawn_freight(pos, [rot], [vel]),
 ##       pt.freight() (every piece), pt.test_freight() (every piece that is not a Section), pt.freight_near(pos, [radius]),
 ##       pt.chart_marks() (the ship's own marks on the Chart), pt.section(id) (a Section's Freight), pt.mount(id),
@@ -618,7 +618,6 @@ func snapshot() -> Dictionary:
 		"ui_open": visible_ui(),
 		"action_message": _action_message,
 		"credits": gs.credits if gs else null,
-		"upgrades": gs.upgrade_levels if gs else {},
 		"inventory": InventoryManager.get_all_items(),
 		"hold_value": InventoryManager.get_total_value(),
 		"loose_gems": Gem.active.size(),
@@ -835,6 +834,15 @@ func seam() -> OreDeposit:
 	var landed := ship.state_machine.current_state as PlanetLandedState
 	return landed.ore if landed else null
 
+## Survey a planet by hand, surfacing its ore seams. Nothing surveys in play now (the
+## planetary scan is gone until `ECHO`, docs/OPENING.md §9), so scenarios about the
+## dormant seams wake them this way.
+func survey(planet_name: String) -> void:
+	var p := planet(planet_name)
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	gs.mark_planet_scanned(p.save_key())
+	EventBus.planet_scanned.emit(p)
+
 ## The first ore seam on a planet.
 func ore(planet_name: String) -> OreDeposit:
 	return planet(planet_name).get_ore_deposits()[0]
@@ -878,11 +886,6 @@ func redock() -> void:
 	warp_to(port.get_dock_position())
 	ship.set_meta("pending_dockable", port)
 	ship.state_machine.change_state("LandedState")
-
-## The ship's PlanetScanner (pt.scanner().progress(), .target()).
-func scanner() -> PlanetScanner:
-	var ship := get_tree().get_first_node_in_group("ship")
-	return ship.get_node_or_null("PlanetScanner") if ship else null
 
 ## Show `text` as a caption at the top of the screen (for recorded videos); "" hides it.
 func caption(text: String) -> void:

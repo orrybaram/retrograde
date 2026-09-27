@@ -49,10 +49,9 @@ func _ready() -> void:
 	# Live updates while open
 	if gs:
 		gs.credits_changed.connect(_refresh)
-		gs.upgrade_level_changed.connect(_refresh)
 	if inventory_manager:
 		inventory_manager.inventory_changed.connect(_refresh)
-	# A scan landing while the Log is up fills that Body's Record where the player can
+	# A survey landing while the Log is up fills that Body's Record where the player can
 	# see it, without closing and reopening.
 	EventBus.planet_scanned.connect(_refresh)
 	_connect_ship()

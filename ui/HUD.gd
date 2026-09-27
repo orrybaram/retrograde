@@ -31,7 +31,6 @@ func _ready() -> void:
 	add_child(HarvestMeter.new())
 	add_child(ResonanceMeter.new())
 	add_child(PlacardPanel.new())
-	add_child(ScanPanel.new())
 	var radio := RadioPanel.new()
 	var tracking := TrackingIndicator.new()
 	tracking.blockers = [dashboard, radio]

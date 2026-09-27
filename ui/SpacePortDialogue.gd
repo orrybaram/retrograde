@@ -1,8 +1,8 @@
 extends Control
 class_name SpacePortDialogue
 
-## Space Port hub menu - small left-side panel for NPC selection.
-## Selecting an NPC opens the combined NPC+Store UI (StoreUI).
+## Space Port hub menu - small left-side panel listing what the dock offers.
+## There is no store (docs/adr/0007): for now the only row is DEPART.
 
 var ship: Ship = null
 var spaceport: SpacePort = null
@@ -10,8 +10,6 @@ var gs: GameState = null
 
 var _selected_index: int = 0
 var _menu_items: Array[Dictionary] = []
-var _stores: Array[Store] = []
-var _store_ui: StoreUI = null
 
 signal dialogue_closed
 
@@ -105,10 +103,6 @@ func _input(event: InputEvent) -> void:
 	if not visible:
 		return
 
-	# Don't process input while StoreUI is open
-	if _store_ui and is_instance_valid(_store_ui) and _store_ui.visible:
-		return
-
 	match Controls.menu_action(event):
 		&"menu_up":
 			_move_selection(-1)
@@ -151,26 +145,15 @@ func _activate_selection() -> void:
 
 func open_dialogue(target_spaceport: SpacePort) -> void:
 	spaceport = target_spaceport
-	_gather_stores()
 	_selected_index = 0
 	_update_hub_display()
 	visible = true
 	EventBus.action_message_changed.emit("")
 
 func close_dialogue() -> void:
-	if _store_ui and is_instance_valid(_store_ui) and _store_ui.visible:
-		_store_ui.close_dialogue()
 	visible = false
 	spaceport = null
 	dialogue_closed.emit()
-
-func _gather_stores() -> void:
-	_stores.clear()
-	if not spaceport:
-		return
-	for child in spaceport.get_children():
-		if child is Store:
-			_stores.append(child as Store)
 
 func _clear_container(container: VBoxContainer) -> void:
 	while container.get_child_count() > 0:
@@ -182,19 +165,10 @@ func _update_hub_display() -> void:
 	_menu_items.clear()
 	_clear_container(_hub_items_container)
 
-	for i in range(_stores.size()):
-		var store = _stores[i]
-		_menu_items.append({
-			"enabled": true,
-			"action": _select_store.bind(store),
-			"label": _get_store_label(store),
-		})
-
 	_menu_items.append({
 		"enabled": true,
 		"action": close_dialogue,
 		"label": "DEPART",
-		"separator_before": true,
 	})
 
 	if _selected_index >= _menu_items.size():
@@ -244,22 +218,3 @@ func _make_separator() -> Control:
 	var sep = Control.new()
 	sep.custom_minimum_size = Vector2(0, 8)
 	return sep
-
-func _get_store_label(store: Store) -> String:
-	return store.get_store_name().to_upper()
-
-func _select_store(store: Store) -> void:
-	if not _store_ui or not is_instance_valid(_store_ui):
-		_store_ui = get_tree().get_first_node_in_group("store_ui") as StoreUI
-
-	if _store_ui:
-		if not _store_ui.dialogue_closed.is_connected(_on_store_closed):
-			_store_ui.dialogue_closed.connect(_on_store_closed)
-		visible = false
-		_store_ui.open_dialogue(store)
-
-func _on_store_closed() -> void:
-	# Re-show hub menu after store closes
-	visible = true
-	_selected_index = 0
-	_update_hub_display()

@@ -1,7 +1,7 @@
 extends Resource
 class_name NPCData
 
-## One Automaton: how it looks and talks at the station it is stationed at, and the
+## One Automaton: how it looks, the station it is stationed at, and the
 ## Record the player keeps about it in the Log (docs/GLOSSARY.md: Automaton, Record, Note).
 
 @export var npc_name: String = ""
@@ -12,8 +12,6 @@ class_name NPCData
 ## its Record says where the player met it.
 @export var station: String = ""
 @export_multiline var ascii_art: String = ""
-@export var greeting: String = ""
-@export var talk_topics: Array[String] = []
 
 ## The Notes on this Automaton's Record, in the player's own voice. Note i appears once
 ## Titan Influence reaches note_influence[i], which is how a Record sours as the Titan

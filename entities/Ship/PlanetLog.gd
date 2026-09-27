@@ -1,15 +1,11 @@
 extends Node
 class_name PlanetLog
 
-## Marks a Body Visited. Flying into a Body's inner orbit (Planet.scan_radius(), the
-## same reach the Planetary Scanner needs) earns it its Record in the Log — scanner or
-## no scanner. The Record starts out carrying no survey; scanning fills it in
-## (docs/adr/0003). Permanent, and written to the save the moment it happens, because a
-## Body is reached in open flight with no dock to hang a full save off.
-##
-## This cannot live in PlanetScanner: that node is inert until
-## GameState.has_planet_scanner, and Visiting has to work from the first minute.
-## Added to the Ship at runtime.
+## Marks a Body Visited. Flying into a Body's inner orbit (Planet.scan_radius()) earns
+## it its Record in the Log. The Record carries no survey (docs/adr/0003). Permanent, and
+## written to the save the moment it happens, because a Body is reached in open flight
+## with no dock to hang a full save off. Works from the first minute. Added to the Ship
+## at runtime.
 
 var _ship: Ship = null
 var _gs: GameState = null

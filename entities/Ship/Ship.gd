@@ -19,13 +19,14 @@ class_name Ship
 
 @export var max_hull: float = 100.0
 @export var crash_damage_multiplier: float = 0.5  # Damage per unit of collision velocity
-@export var damage_threshold: float = 50.0  # Minimum impact speed to take damage (can be upgraded)
+@export var damage_threshold: float = 50.0  # Minimum impact speed to take damage
 
 @export var max_fuel: float = 150.0  # Maximum fuel capacity
 
 @export var max_cargo_weight: float = 50.0  # Hold space (gems take 1-3 units each)
 
-# Base stats (stored at initialization, never modified by upgrades)
+# Base stats (stored at initialization). The ship's limits are fixed: nothing is bought
+# (docs/adr/0007).
 var base_max_hull: float = 100.0
 var base_max_fuel: float = 150.0
 var base_max_cargo_weight: float = 50.0
@@ -67,7 +68,7 @@ var hull_strength: float:
 	set(value):
 		if health_component:
 			health_component.current_hp = clamp(value, 0.0, health_component.max_hp)
-			# A repair, a save being restored or an upgrade all land here rather than
+			# A repair or a save being restored all land here rather than
 			# in take_damage, so this is where the readouts have to be told.
 			health_component.hp_changed.emit(health_component.current_hp, health_component.max_hp)
 var fuel: float = 200.0
@@ -189,12 +190,7 @@ func _ready() -> void:
 	magnet.name = "GemMagnet"
 	add_child(magnet)
 
-	var scanner := PlanetScanner.new()
-	scanner.name = "PlanetScanner"
-	add_child(scanner)
-
-	# Visiting a Body is not the scanner's job — it works from the first minute,
-	# before the array is ever bought (docs/adr/0003).
+	# Visiting a Body works from the first minute (docs/adr/0003).
 	var planet_log := PlanetLog.new()
 	planet_log.name = "PlanetLog"
 	add_child(planet_log)
@@ -571,75 +567,10 @@ func get_cargo_weight() -> float:
 func is_cargo_full() -> bool:
 	return InventoryManager.get_total_weight() >= max_cargo_weight
 
-## Reapply all upgrades based on upgrade levels in GameState.
-## This ensures upgrades persist through load/respawn.
-func reapply_all_upgrades(game_state: GameState) -> void:
-	if not game_state:
-		return
-	
-	# Reset ship stats to base values
-	max_hull = base_max_hull
-	max_fuel = base_max_fuel
-	max_cargo_weight = base_max_cargo_weight
-	
-	# Get the scene tree to search for stores
-	var tree = get_tree()
-	if not tree:
-		return
-	
-	# Iterate through all upgrade paths and reapply upgrades in tier order
-	for upgrade_path in game_state.upgrade_levels.keys():
-		var current_tier = game_state.get_upgrade_level(upgrade_path)
-		
-		# Apply all upgrades up to and including current tier
-		for tier in range(1, current_tier + 1):
-			var upgrade = UpgradeItem.find_upgrade_by_path_and_tier(tree, upgrade_path, tier)
-			if upgrade:
-				# Apply the upgrade effect without updating upgrade_levels (already set)
-				match upgrade.effect_type:
-					UpgradeItem.EffectType.ADD_STAT:
-						_apply_add_stat_from_upgrade(upgrade)
-					UpgradeItem.EffectType.MULTIPLY_STAT:
-						_apply_multiply_stat_from_upgrade(upgrade)
-					UpgradeItem.EffectType.UNLOCK_FEATURE:
-						upgrade._apply_unlock_feature(game_state)
-	
-	# Update hull and fuel to match new max values
-	health_component.max_hp = max_hull
-	health_component.current_hp = min(health_component.current_hp, max_hull)
-	fuel = min(fuel, max_fuel)
-	
-	# Update cargo signal
-	cargo_changed.emit(get_cargo_weight(), max_cargo_weight)
-
-## Helper to apply ADD_STAT upgrade effect (without updating GameState)
-func _apply_add_stat_from_upgrade(upgrade: UpgradeItem) -> void:
-	match upgrade.effect_target:
-		"max_hull":
-			max_hull += int(upgrade.effect_value)
-		"max_fuel":
-			max_fuel += upgrade.effect_value
-		"max_cargo_weight":
-			max_cargo_weight += upgrade.effect_value
-		_:
-			push_warning("Ship: Unknown ADD_STAT target: %s" % upgrade.effect_target)
-
-## Helper to apply MULTIPLY_STAT upgrade effect (without updating GameState)
-func _apply_multiply_stat_from_upgrade(upgrade: UpgradeItem) -> void:
-	match upgrade.effect_target:
-		"max_hull":
-			max_hull = int(max_hull * upgrade.effect_value)
-		"max_fuel":
-			max_fuel *= upgrade.effect_value
-		"max_cargo_weight":
-			max_cargo_weight *= upgrade.effect_value
-		_:
-			push_warning("Ship: Unknown MULTIPLY_STAT target: %s" % upgrade.effect_target)
-
 ## Reset ship to initial state for a new game.
-## Clears all upgrades and resets stats to base values.
+## Resets stats to base values.
 func reset_to_initial_state() -> void:
-	# Reset stats to base values (no upgrades)
+	# Reset stats to base values
 	max_hull = base_max_hull
 	max_fuel = base_max_fuel
 	max_cargo_weight = base_max_cargo_weight

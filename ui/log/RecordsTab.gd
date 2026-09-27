@@ -23,10 +23,10 @@ const EMPTY_STATE := [
 	"AN AUTOMATON EARNS ONE WHEN YOU MEET IT.",
 ]
 
-## What a Record reads before the Planetary Scanner has surveyed the Body. The Body
-## itself is known — the player flew into its orbit and the row carries its name; it is
-## the survey that is missing. Scanning fills it in and the row carries the survey in
-## one line (PlanetScan.summary_line) instead.
+## What a Record reads before the Body has been surveyed. The Body itself is known — the
+## player flew into its orbit and the row carries its name; it is the survey that is
+## missing. A survey (none in play yet; the planetary scan is gone) would fill it in and
+## the row carries the survey in one line (PlanetScan.summary_line) instead.
 const NO_SURVEY := "UNSURVEYED"
 ## The keys this tab owns, laid before the shell's in the bottom border.
 static func cursor_keys() -> String:
@@ -213,9 +213,8 @@ func _draw_detail() -> void:
 		_draw_body_detail(_visited[_cursor])
 
 ## The selected Body's Record: the designation, what a moon orbits, and either the
-## survey the scanner wrote or the fact that nothing has surveyed this Body yet. A
-## survey is the same rows the ScanPanel types out as the scan lands — one survey format
-## in the game, and the sun reads through it honestly rather than being special-cased.
+## survey or the fact that nothing has surveyed this Body yet. A survey is
+## PlanetScan.readout_lines — one survey format in the game, and the sun reads through it honestly rather than being special-cased.
 func _draw_body_detail(key: String) -> void:
 	var body := Planet.find_by_key(get_tree(), key)
 	var lines: PackedStringArray

@@ -17,8 +17,8 @@ func test_hull_levels_step_at_the_documented_ratios() -> void:
 	assert_int(LowHullEffect.level_for(0.0, 100.0)).is_equal(LowHullEffect.Level.CRITICAL)
 
 
-func test_hull_levels_scale_with_an_upgraded_hull() -> void:
-	# An upgrade must not quietly move the warning: the levels are ratios, not HP.
+func test_hull_levels_scale_with_a_bigger_hull() -> void:
+	# A bigger hull must not quietly move the warning: the levels are ratios, not HP.
 	assert_int(LowHullEffect.level_for(71.0, 200.0)).is_equal(LowHullEffect.Level.OK)
 	assert_int(LowHullEffect.level_for(70.0, 200.0)).is_equal(LowHullEffect.Level.LOW)  # exactly 35%
 	assert_int(LowHullEffect.level_for(30.0, 200.0)).is_equal(LowHullEffect.Level.CRITICAL)

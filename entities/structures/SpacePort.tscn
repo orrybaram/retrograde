@@ -1,8 +1,6 @@
-[gd_scene load_steps=7 format=3 uid="uid://bk33hils8ufhh"]
+[gd_scene load_steps=5 format=3 uid="uid://bk33hils8ufhh"]
 
 [ext_resource type="Script" uid="uid://xcs2jg80xqg2" path="res://entities/structures/SpacePort.gd" id="1"]
-[ext_resource type="Script" uid="uid://b8ca0re18prf6" path="res://entities/Store/Store.gd" id="2"]
-[ext_resource type="Resource" path="res://entities/Store/SR7Store.tres" id="3"]
 [ext_resource type="Script" uid="uid://ce8cae75cf31" path="res://scripts/ShipSpawn.gd" id="4"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
@@ -56,10 +54,6 @@ monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="LandingArea"]
 shape = SubResource("RectangleShape2D_1")
-
-[node name="Store" type="Node" parent="."]
-script = ExtResource("2")
-store_data = ExtResource("3")
 
 [node name="ShipSpawn" type="Node" parent="."]
 script = ExtResource("4")

@@ -9,7 +9,7 @@ class_name Automatons
 ## UNIT-7, the Guide: stationed at SR-7 over Rook and the first Automaton the player
 ## meets (docs/DESIGN.md 5.3, NPC #1). The player holds its Record from the first
 ## transmission, so the Records tab is never empty (docs/adr/0003).
-const GUIDE := preload("res://entities/Store/CheerfulGuideNPC.tres")
+const GUIDE := preload("res://entities/Robot/CheerfulGuideNPC.tres")
 
 ## Every Automaton in the game, in the order the player meets them. Records are listed
 ## in this order, not in the order they happened to be met.
