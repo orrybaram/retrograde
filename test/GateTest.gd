@@ -91,6 +91,7 @@ func _bearing_from(planet: Planet, body: Node2D) -> Vector2:
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
 	radio.persist = false
+	radio.guide_awake = true
 	return radio
 
 

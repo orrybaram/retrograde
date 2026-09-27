@@ -42,15 +42,6 @@ var _tracking: NodeTrackingTarget
 
 ## Leave `ship` adrift with its hold aboard (a bare hull if the hold is empty).
 ## A load on the nose stays on it, and the hull becomes the tracked target.
-static func abandon(ship: Ship) -> DerelictShip:
-	var items := HoldDeposit.launch_order(InventoryManager.get_all_items())
-	var hits := HITS if not items.is_empty() else ScrapNode.NORMAL_HITS
-	var derelict := spawn(ship.get_parent(), ship.ship_polygon, items, ship.global_position,
-		ship.linear_velocity, ship.rotation, randf_range(-MAX_SPIN, MAX_SPIN), hits, false)
-	if ship.is_carrying():
-		derelict.hold_freight(ship.hand_freight_to(derelict))
-	return derelict
-
 ## `armed` false keeps it out of harvest range detection until the player respawns.
 static func spawn(world: Node, hull: Node2D, gems: Array[String], pos: Vector2, velocity: Vector2,
 		rot: float, spin_speed: float, hits: int, armed := true) -> DerelictShip:

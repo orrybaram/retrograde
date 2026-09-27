@@ -2,7 +2,7 @@ extends Node2D
 
 ## Root scene controller. Owns the MainGameState enum (MENU / PLAYING / GAME_OVER)
 ## and orchestrates transitions between StartMenu, active gameplay, PauseMenu,
-## and the game-over radio call (RobotRadio). Connects ship signals (fuel_depleted)
+## and the relaunch after a game over. Connects ship signals (fuel_depleted)
 ## and EventBus events.
 
 enum MainGameState {
@@ -21,14 +21,13 @@ enum MainGameState {
 @onready var hud: Control = $"CanvasLayer/HUD"
 @onready var encounter_field: EncounterField = $EncounterField
 
-## What the robot radios after each game-over reason. Its confirm line relaunches.
+## What UNIT-7 radios once the next clone is up, per game-over reason. Nothing to
+## confirm: the relaunch has already happened (and RobotRadio drops it before Act 1 ends).
 const GAME_OVER_MESSAGES := {
 	"Ship Destroyed": RobotRadio.MSG_SHIP_DESTROYED,
-	"Ship Abandoned": RobotRadio.MSG_SHIP_ABANDONED,
-	"Tractor Beam": RobotRadio.MSG_TRACTOR_RESCUE,
 	"Consumed": RobotRadio.MSG_VOID_CONSUMED,
 }
-## The dark takes a moment to finish closing before the robot tries the radio.
+## The dark takes a moment to finish closing before the next clone comes up.
 const CONSUMED_SILENCE := 2.4
 ## Waking up (docs/DESIGN.md "Minute 1-2"): the screen holds dark for a beat before
 ## the world comes up, so a run opens on silence instead of a cut.
@@ -37,10 +36,6 @@ const WAKE_FADE_TIME := 1.8
 
 var current_game_state: MainGameState = MainGameState.MENU
 var last_game_over_reason: String = ""
-## The station whose tractor beam caught the ship. A rescue puts the next clone back
-## on that station, not on whatever the ship last docked with (which may be a Gate
-## on the far side of the system).
-var _rescue_station: Node2D = null
 ## Waking up runs on a real playthrough, but not under the playtest driver: it would
 ## darken every scenario's opening frames and push back its first key press.
 ## playtests/intro.play sets this to cover the sequence itself.
@@ -58,7 +53,6 @@ func _ready() -> void:
 	if start_menu:
 		start_menu.start_game.connect(_on_start_game)
 		start_menu.load_game.connect(_on_load_game)
-	RobotRadio.confirmed.connect(_on_radio_confirmed)
 	RobotRadio.line_started.connect(_on_radio_line_started)
 	if pause_menu:
 		pause_menu.quit_to_menu.connect(_on_quit_to_menu)
@@ -66,9 +60,6 @@ func _ready() -> void:
 	# Connect ship signals
 	if ship:
 		ship.fuel_depleted.connect(_on_fuel_depleted)
-
-	# Stranded ship: abandon it (or get towed inside a tractor beam)
-	EventBus.abandon_ship_requested.connect(_on_abandon_ship_requested)
 
 	# The Void ran its clock out
 	VoidZone.consumed.connect(_on_void_consumed)
@@ -168,66 +159,14 @@ func is_game_over() -> bool:
 func is_playing() -> bool:
 	return current_game_state == MainGameState.PLAYING
 
-func _on_radio_confirmed(id: StringName) -> void:
-	if not is_game_over():
-		return
-	for conv: RadioConversation in GAME_OVER_MESSAGES.values():
-		if conv.id == id:
-			reset_game()
-			return
-
 ## Running the tank dry no longer takes the ship away. Fuel is only ever spent on the
 ## boost, so an empty tank costs the boost and nothing else - ordinary thrust still flies.
-## StrandedState is left in place (the dev panel and the salvage scenarios still enter it
-## directly); it just has no trigger of its own any more.
 func _on_fuel_depleted() -> void:
 	pass
 
-func is_within_tractor_beam() -> bool:
-	return tractor_beam_station() != null
-
-## A station's own port: the dock a tractor beam rescue drops the next clone on.
-## The station itself isn't dockable, so the beam has to hand off to one of its ports.
-func _station_port(station: Node2D) -> Node2D:
-	# SR-7's rides out on its dock arm (DockArm), so look below the station's own children
-	for port in get_tree().get_nodes_in_group("space_ports"):
-		if station.is_ancestor_of(port):
-			return port as Node2D
-	return null
-
-## The station currently holding the ship in its tractor beam, or null.
-func tractor_beam_station() -> Node2D:
-	if not ship or not is_instance_valid(ship):
-		return null
-	var stations = get_tree().get_nodes_in_group("space_stations")
-	for station in stations:
-		var tractor_beam = station.get_node_or_null("TractorBeamArea/TractorBeamCollision")
-		if tractor_beam and tractor_beam.shape is CircleShape2D:
-			var radius = tractor_beam.shape.radius
-			var distance = ship.global_position.distance_to(station.global_position)
-			if distance <= radius:
-				return station as Node2D
-	return null
-
-func _on_abandon_ship_requested() -> void:
-	if current_game_state == MainGameState.PLAYING and not game_over_pending:
-		game_over_pending = true
-		# If within tractor beam range, rescue instead of death
-		var rescuer := tractor_beam_station()
-		if rescuer:
-			_rescue_station = rescuer
-			_show_game_over_delayed("Tractor Beam")
-			return
-		# The ship stays adrift with its hold aboard, to be salvaged later
-		var derelict := DerelictShip.abandon(ship) if ship else null
-		var stranded := ship.state_machine.current_state as StrandedState if ship else null
-		if derelict and stranded:
-			stranded.abandon_to(derelict)
-		_show_game_over_delayed("Ship Abandoned")
-
 ## Thirty seconds past the last orbit and the dark has the ship. Nothing explodes
-## and nothing is left behind, so there's no wreck to salvage — just the silence
-## before the robot works out what happened.
+## and nothing is left behind, so there's no wreck to salvage — just a beat of
+## silence before the next clone comes up and the robot works out what happened.
 func _on_void_consumed() -> void:
 	if current_game_state != MainGameState.PLAYING or game_over_pending:
 		return
@@ -492,33 +431,28 @@ func load_game() -> void:
 		await _wake_from_black()
 
 func _show_game_over_delayed(reason: String) -> void:
-	# Let the explosion play out before the robot calls in
+	# Let the explosion play out before the next clone comes up
 	await get_tree().create_timer(3.2).timeout
 	show_game_over(reason)
 
+## The ship is lost: count it and relaunch straight away, with nothing to confirm. Once
+## the next clone is up, UNIT-7 has its say about what happened.
 func show_game_over(reason: String) -> void:
-	# Kept until relaunch, which needs to know whether this was a rescue
 	last_game_over_reason = reason
-
-	# Increment death counter (skip for tractor beam rescue)
-	if reason != "Tractor Beam":
-		var gs = get_tree().get_first_node_in_group("game_state") as GameState
-		if gs:
-			gs.death_count += 1
+	var gs = get_tree().get_first_node_in_group("game_state") as GameState
+	if gs:
+		gs.death_count += 1
 
 	current_game_state = MainGameState.GAME_OVER
 	game_over_pending = false
 	RobotRadio.silence()
-	var message: RadioConversation = GAME_OVER_MESSAGES.get(reason, RobotRadio.MSG_SHIP_DESTROYED)
-	# The hold isn't cleared until relaunch, so it still says what an abandoned hull carries
-	var salvage := "Your cargo's still aboard, so salvage the wreck to get it back." \
-			if InventoryManager.get_total_value() > 0 else "Salvage the empty hull for scrap sometime."
-	RobotRadio.request(message.with_vars({"salvage": salvage}))
+	await reset_game()
+	RobotRadio.request(GAME_OVER_MESSAGES.get(reason, RobotRadio.MSG_SHIP_DESTROYED))
 
 func reset_game() -> void:
 	game_over_pending = false
 	clear_screen_effects()
-	# Towed home with a load still on the nose: it stays out here, where the ship was
+	# Lost with a load still on the nose: it stays out here, where the ship was
 	if ship and ship.is_carrying():
 		ship.release_freight()
 	Gem.clear_all(true)  # wreck gems stay where the ship blew up
@@ -531,7 +465,6 @@ func reset_game() -> void:
 
 	# A relaunch costs no Stores, whatever the reason
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	var is_tractor_beam_rescue = last_game_over_reason == "Tractor Beam"
 	last_game_over_reason = ""
 
 	# Reset ship state
@@ -560,25 +493,19 @@ func reset_game() -> void:
 		# Reset boost particles material to original state
 		ship.reset_boost_particles()
 	
-	# Reset GameState (cargo only, preserve Stores) - skip for tractor beam rescue
-	if gs and not is_tractor_beam_rescue:
+	# Reset GameState (cargo only, preserve Stores)
+	if gs:
 		gs.clear_cargo()
 	
-	# A rescue lands on the station that did the rescuing; everything else comes back
-	# at the saved dock, or the default if that one is gone.
+	# The next clone comes back at the saved dock, or the default if that one is gone.
 	if ship_spawner:
-		var dock: Node2D = null
-		if is_tractor_beam_rescue and _rescue_station and is_instance_valid(_rescue_station):
-			dock = _station_port(_rescue_station)
-		if not dock:
-			dock = await ship_spawner.find_saved_dock()
+		var dock: Node2D = await ship_spawner.find_saved_dock()
 		if not dock:
 			dock = await ship_spawner.find_default_dock()
 		if dock:
 			await _spawn_home(dock)
 		else:
 			push_warning("No dock found for respawn")
-	_rescue_station = null
 
 	await _uncover_spawn(booting, wake)
 	if ship and ship.ship_polygon:

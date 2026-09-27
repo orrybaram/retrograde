@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## Freight is never lost (docs/adr/0012): saved where it is, stopped at the Void's edge,
-## marked and tracked once handled, and kept on a hull abandoned while carrying it.
+## marked and tracked once handled, and kept on a derelict hull holding it.
 
 const EDGE := 340_000.0
 
@@ -159,33 +159,7 @@ func test_a_clamped_load_is_saved_clamped_and_handed_back() -> void:
 	assert_bool(_ship.is_carrying()).is_true()
 	assert_array(_pieces()).has_size(1)
 
-# --- abandoned while carrying ---
-
-func test_a_ship_stranded_with_a_load_keeps_it() -> void:
-	_ship.state_machine.change_state("CarryingState")
-	_ship.clamp_freight(_piece(), true)
-	_ship.state_machine.change_state("StrandedState")
-	assert_bool(_ship.is_carrying()).is_true()
-	_ship.state_machine.change_state("FlyingState")
-	assert_bool(_ship.is_carrying()).is_false()
-
-func test_abandoning_while_carrying_leaves_the_load_on_the_hull() -> void:
-	var f := _piece()
-	_ship.clamp_freight(f, true)
-	var d := DerelictShip.abandon(_ship)
-	assert_bool(_ship.is_carrying()).is_false()
-	assert_bool(d.is_holding_freight()).is_true()
-	assert_bool(f.is_aboard_derelict()).is_true()
-	assert_bool(f.is_marked()).is_false()
-	assert_object(NavSystem.get_target()).is_same(d.tracking_target())
-	var marks := SystemMap.freight_marks(get_tree())
-	assert_array(marks).has_size(1)
-	assert_bool(marks[0]["hull"]).is_true()
-	assert_str(marks[0]["label"]).contains(f.label)
-
-func test_a_derelict_without_freight_is_unmarked() -> void:
-	DerelictShip.abandon(_ship)
-	assert_array(SystemMap.freight_marks(get_tree())).is_empty()
+# --- a derelict holding freight (saves from before abandoning was removed) ---
 
 func test_a_hull_holding_freight_damps_to_a_full_stop() -> void:
 	var v := Vector2(200, 0)
@@ -196,37 +170,6 @@ func test_a_hull_holding_freight_damps_to_a_full_stop() -> void:
 	for i in 600:
 		empty = DerelictShip.damped_drift(empty, 1.0 / 30.0, false)
 	assert_float(empty.length()).is_equal_approx(DerelictShip.RESIDUAL_DRIFT, 0.5)
-
-func test_a_hull_holding_freight_round_trips_with_it() -> void:
-	var f := _piece()
-	_ship.clamp_freight(f, true)
-	var d := DerelictShip.abandon(_ship)
-	var at := f.global_position
-	var rows := DerelictShip.snapshot_all(get_tree())
-	assert_array(Freight.snapshot_all(get_tree())).is_empty()
-	DerelictShip.clear_all(get_tree())
-	Freight.clear_all(get_tree())
-	await get_tree().process_frame
-	DerelictShip.restore_all(_world, _ship.ship_polygon, rows)
-	var back := get_tree().get_nodes_in_group("derelicts")
-	assert_array(back).has_size(1)
-	var r := back[0] as DerelictShip
-	assert_bool(r.is_holding_freight()).is_true()
-	assert_vector(r.freight.global_position).is_equal_approx(at, Vector2(0.05, 0.05))
-	assert_array(_pieces()).has_size(1)
-
-func test_salvaging_the_hull_frees_the_freight_beside_it() -> void:
-	var f := _piece()
-	_ship.clamp_freight(f, true)
-	var d := DerelictShip.abandon(_ship)
-	var at := f.global_position
-	d.resource_depleted.emit()
-	assert_bool(d.is_holding_freight()).is_false()
-	assert_bool(f.is_loose()).is_true()
-	assert_bool(f.is_marked()).is_true()
-	assert_vector(f.global_position).is_equal_approx(at, Vector2(0.05, 0.05))
-	assert_vector(f.linear_velocity).is_equal(Vector2.ZERO)
-	assert_object(NavSystem.get_target()).is_same(f.tracking_target())
 
 # --- drag ---
 

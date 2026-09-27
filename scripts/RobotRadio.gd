@@ -27,11 +27,7 @@ const MSG_HULL_CRITICAL := preload("res://entities/Robot/radio/messages/hull_cri
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
 const MSG_FIRST_TRANSIT := preload("res://entities/Robot/radio/messages/first_transit.tres")
-const MSG_OUT_OF_FUEL := preload("res://entities/Robot/radio/messages/out_of_fuel.tres")
-const MSG_OUT_OF_FUEL_BEAM := preload("res://entities/Robot/radio/messages/out_of_fuel_beam.tres")
 const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_destroyed.tres")
-const MSG_SHIP_ABANDONED := preload("res://entities/Robot/radio/messages/ship_abandoned.tres")
-const MSG_TRACTOR_RESCUE := preload("res://entities/Robot/radio/messages/tractor_rescue.tres")
 const MSG_VOID_CONSUMED := preload("res://entities/Robot/radio/messages/void_consumed.tres")
 
 var queue := RadioQueue.new()
@@ -41,9 +37,9 @@ var save_path := ""
 var persist := true
 
 ## UNIT-7 is off when the game opens (docs/OPENING.md §5): the station is dead and nobody
-## is on the comms. Until it wakes, its tutorial tips and alarms stay parked - the
-## triggers below drop them - and MSG_WAKE waits for it. The radio itself still carries
-## the calls the game needs (relaunch, tow, the Void), and is the comms system to reuse.
+## is on the comms. Until the core's cold start at the end of Act 1 reboots it, every
+## call - tips, alarms, the Void, a lost ship - is dropped (request() refuses them), and
+## MSG_WAKE is the first thing it says. The radio is the comms system to reuse.
 ## The core's cold start sets it (wake_guide); a load sets it from GameState.core_started.
 var guide_awake := false
 
@@ -66,11 +62,12 @@ func _ready() -> void:
 	# is flying, including one that respawned before the binding caught up.
 	EventBus.ship_hull_changed.connect(check_hull)
 
-## Queues a conversation. Show-once conversations already seen are dropped.
+## Queues a conversation. Show-once conversations already seen are dropped, and so is
+## everything while UNIT-7 is still off.
 ## Tips go on air the moment they're triggered, even mid-flight: RadioPanel keeps a
 ## held or mashed SPACE from dismissing a line that just appeared.
 func request(conv: RadioConversation) -> RadioQueue.Result:
-	if conv == null:
+	if conv == null or not guide_awake:
 		return RadioQueue.Result.REJECTED
 	if conv.once and has_seen(conv.id):
 		return RadioQueue.Result.REJECTED
@@ -248,6 +245,10 @@ func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
 		request(MSG_BOOST_HINT)
 
 func check_fuel(fuel: float, max_fuel: float) -> void:
+	# A docked ship is filling up, not running dry: a relaunched clone comes up on a low
+	# tank at the dock, and that is no moment for the low-fuel briefing.
+	if is_instance_valid(_ship) and _ship.state_machine and _ship.state_machine.current_state is LandedState:
+		return
 	if guide_awake and max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:
 		request(MSG_LOW_FUEL)
 

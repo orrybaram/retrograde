@@ -22,6 +22,7 @@ var _fuel_gauge: SegmentGauge
 var _fuel_value: Label
 var _hold_gauge: SegmentGauge
 var _hold_value: Label
+var _hold_row: Control
 var _flight_stats: Label
 var _cargo_rows: VBoxContainer
 var _hold_total: Label
@@ -54,7 +55,8 @@ func _build() -> void:
 	var hold := _gauge_row("HOLD")
 	_hold_gauge = hold[0]
 	_hold_value = hold[1]
-	add_child(hold[2])
+	_hold_row = hold[2]
+	add_child(_hold_row)
 	_flight_stats = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
 	add_child(_flight_stats)
 
@@ -119,9 +121,12 @@ func _update_systems() -> void:
 
 	var fuel_ratio := ship.fuel / ship.max_fuel if ship.max_fuel > 0 else 0.0
 	var fuel_level := LowFuelEffect.level_for(ship.fuel, ship.max_fuel)
-	_fuel_gauge.set_fill(fuel_ratio, _fuel_color(fuel_ratio), 20, fuel_level != LowFuelEffect.Level.OK)
+	_fuel_gauge.set_fill(fuel_ratio, _fuel_color(fuel_ratio), 20,
+			ship.fuel > 0.0 and fuel_level != LowFuelEffect.Level.OK)
 	_fuel_value.text = "%d / %d" % [int(ship.fuel), int(ship.max_fuel)]
 
+	# No hold at all reads as no row, not 0 / 0
+	_hold_row.visible = ship.has_hold()
 	var weight := inventory_manager.get_total_weight() if inventory_manager else 0.0
 	var hold_ratio := weight / ship.max_cargo_weight if ship.max_cargo_weight > 0 else 0.0
 	_hold_gauge.set_fill(hold_ratio, _hold_color(hold_ratio), 20, hold_ratio >= 1.0)

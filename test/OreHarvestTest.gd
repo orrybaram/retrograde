@@ -230,6 +230,7 @@ func test_gems_knocked_loose_fly_into_the_hold() -> void:
 
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	add_child(ship)
+	ship.max_cargo_weight = 50.0  # the ship starts with no hold; give it one
 	ship.global_position = ore.global_position + ore.normal() * PlanetLandedState.LANDED_HEIGHT
 	ship.set_meta("pending_ore", ore)
 	ship.state_machine.change_state("PlanetLandedState")

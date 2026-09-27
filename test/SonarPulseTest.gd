@@ -14,6 +14,22 @@ func before_test() -> void:
 func after_test() -> void:
 	Input.action_release("action")
 
+## A state that refuses the ping and does nothing else, like the dock or the hold that
+## lets Freight go, without needing a dock or a load to stay in.
+class BusyState extends ShipState:
+	func allows_sonar() -> bool:
+		return false
+
+func _enter_busy() -> void:
+	var sm := _ship.state_machine
+	if not sm.states.has("BusyState"):
+		var busy := BusyState.new()
+		busy.name = "BusyState"
+		busy.entity = _ship
+		sm.add_child(busy)
+		sm.states["BusyState"] = busy
+	sm.change_state("BusyState")
+
 func _hold_action(held: bool) -> void:
 	if held:
 		Input.action_press("action")
@@ -63,33 +79,30 @@ func test_free_states_allow_sonar_and_tied_up_states_refuse_it() -> void:
 	var states: Dictionary = _ship.state_machine.states
 	for free in ["FlyingState", "HarvestingState", "PlanetLandedState"]:
 		assert_bool((states[free] as ShipState).allows_sonar()).override_failure_message(free).is_true()
-	for busy in ["LandedState", "GateDockedState", "StrandedState", "DestroyedState", "ConsumedState", "CarryingState"]:
+	for busy in ["LandedState", "GateDockedState", "DestroyedState", "ConsumedState", "CarryingState"]:
 		assert_bool((states[busy] as ShipState).allows_sonar()).override_failure_message(busy).is_false()
 
 func test_a_state_that_refuses_sonar_keeps_the_key_from_it() -> void:
-	# StrandedState only radios an offer on enter; safe to enter cold.
-	_ship.state_machine.change_state("StrandedState")
+	_enter_busy()
 	await _hold_action(true)
 	assert_bool(_ship.wants_sonar()).is_false()
 	assert_bool(_ship.sonar.charging).is_false()
 	await _hold_action(false)
 	assert_int(_ship.sonar.ring_count()).is_equal(0)
-	RobotRadio.silence()
 
 func test_a_charge_the_key_is_taken_from_is_dropped_not_fired() -> void:
 	await _hold_action(true)
 	assert_bool(_ship.sonar.charging).is_true()
-	_ship.state_machine.change_state("StrandedState")
+	_enter_busy()
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	assert_bool(_ship.sonar.charging).is_false()
 	assert_int(_ship.sonar.ring_count()).is_equal(0)
-	RobotRadio.silence()
 
 func test_a_hold_that_was_refused_stays_ignored_until_let_go() -> void:
-	# Holding through a state that refuses the ping (here stranded; in play, the hold that
-	# lets Freight go) and back into flight: the rest of that hold charges nothing.
-	_ship.state_machine.change_state("StrandedState")
+	# Holding through a state that refuses the ping (the hold that lets Freight go) and
+	# back into flight: the rest of that hold charges nothing.
+	_enter_busy()
 	await _hold_action(true)
 	_ship.state_machine.change_state("FlyingState")
 	await get_tree().physics_frame
@@ -99,4 +112,3 @@ func test_a_hold_that_was_refused_stays_ignored_until_let_go() -> void:
 	assert_int(_ship.sonar.ring_count()).is_equal(0)
 	await _hold_action(true)
 	assert_bool(_ship.sonar.charging).is_true()
-	RobotRadio.silence()

@@ -106,6 +106,7 @@ func test_landed_pose_is_held_within_reach_of_the_seam() -> void:
 func _landed_ship(planet: Planet, ore: OreDeposit) -> Ship:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	add_child(ship)
+	ship.max_cargo_weight = 50.0  # the ship starts with no hold; give it one
 	ship.global_position = ore.global_position + ore.normal() * 20.0
 	ship.set_meta("pending_ore", ore)
 	ship.state_machine.change_state("PlanetLandedState")

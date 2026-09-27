@@ -10,6 +10,8 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 wait_until pt.state_name() == "LandedState" 5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2

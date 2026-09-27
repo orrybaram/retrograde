@@ -160,8 +160,8 @@ func test_the_game_over_call_never_gets_a_word_through() -> void:
 		# Red face: RobotView paints `lost` in Colors.DANGER.
 		assert_str(String(line.expression)).is_equal("lost")
 		assert_str(line.display_text()).is_not_equal(line.text)
-	# The confirm label is its own widget, so RELAUNCH still reads through the noise.
-	assert_str(conv.lines[-1].confirm_text()).contains("RELAUNCH")
+	# Nothing to confirm: the next clone is already up when it plays
+	assert_bool(conv.lines[-1].is_confirm()).is_false()
 
 
 func test_scrambling_keeps_the_shape_of_speech() -> void:

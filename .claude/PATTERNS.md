@@ -27,7 +27,7 @@ Ship._drive_sonar -> Ship.wants_sonar() -> SonarPulse.charging (held) -> fire() 
   scrap, or sitting on a seam. Holding charges that single ring (`SonarPulse.strength_for`: +1x reach
   per `CHARGE_TIME`, uncapped) and it fires on release; there is no continuous emission. It is not gated on a harvest target; harvesting is what a ping does
   when a scrap or seam is in the rings. Puzzles that answer a ping listen on `EventBus.sonar_pulsed`.
-- A state opts out by overriding `ShipState.allows_sonar()` (docked at a port or Gate, stranded,
+- A state opts out by overriding `ShipState.allows_sonar()` (docked at a port or Gate,
   destroyed, consumed and carrying Freight all say no). A menu over the game (`FlyingState._is_ui_blocking_input`)
   also takes the key; a charge the key is taken from mid-hold is cancelled, not fired. Nothing else
   touches `SonarPulse.charging`.
@@ -139,7 +139,7 @@ VoidZone (autoload: depth / dread / shroud, the 30s clock)
   -> VoidShroud (CanvasLayer 40)       the dark closes in, static, tears
   -> VoidGlitch (child of HUD)         readouts rot, panel jitters and cuts out
   -> SystemMap._draw_void              diagonal hazard hatching + boundary arcs
-  -> Main._on_void_consumed            ConsumedState, then the game-over radio
+  -> Main._on_void_consumed            ConsumedState, a beat of silence, relaunch, then the robot's call
 ```
 
 `depth` is distance past `EDGE_RADIUS`; `dread` is the survival clock; `shroud = max(depth, dread)` is what every visual reads. `EDGE_RADIUS` must stay clear of the home station's apoapsis (~295000) — `VoidZoneTest` guards that.
@@ -155,11 +155,13 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
   Bundled messages live in `entities/Robot/radio/messages/*.tres`. `{key:<action>}` in text becomes the bound key.
 - Higher priority interrupts (the interrupted one replays after); otherwise queued by priority, FIFO.
 - `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
-- Built-in triggers in `scripts/RobotRadio.gd`: undock, low fuel, hold full, scrap in range.
+- UNIT-7 is off until SR-7's core cold start reboots it at the end of Act 1 (`wake_guide()`,
+  `MSG_WAKE`): until then `RobotRadio.request()` drops every call, tips, the Void and Gates included.
+- Built-in triggers in `scripts/RobotRadio.gd`: low fuel (not while docked), low hull, hold full, scrap in range, boost hint.
 - Continue: SPACE (TAB/ENTER aliases) finishes the speech, then moves on (next / confirm / close).
   SPACE is also the flight action key, so it only drives conversations that pause the game or
   contain a confirm; other tips take TAB/ENTER and auto-dismiss after `RadioLine.read_time()`.
-- `pause_game` conversations (every `once` tutorial: controls, scrap, low fuel, hold full; game-over calls) pause the tree and never
+- `pause_game` conversations (every `once` tutorial: scrap, low fuel, hold full; the game-over calls) pause the tree and never
   time out. The unpause waits two physics frames so the closing SPACE isn't read as dock/harvest.
   A pausing conversation requested while a flight key (action/thrust/turn/boost) is down is held
   back until the keys have been up for `RobotRadio.PAUSE_GRACE_SEC` (1s), so mashing SPACE mid-harvest
@@ -167,9 +169,10 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 - RadioPanel hides while a menu is open in the HUD's CanvasLayer. Transient overlays there (gem
   pickup popups) join the `hud_overlay` group so they don't count as menus.
 - Confirm lines (`RadioLine.confirm`) show `> ACTION` and can't time out.
-  `RobotRadio.confirm()` clears the radio, then emits `confirmed(id)`. Used for the out-of-fuel offer
-  (StrandedState: abandon ship, or a tractor-beam tow inside a station's beam) and the game-over relaunch call (Main.GAME_OVER_MESSAGES, which replaced GameOverMenu).
-- Only a powered ship (Flying/Harvesting) can harvest, so a stranded ship's SPACE stays with the radio.
+  `RobotRadio.confirm()` clears the radio, then emits `confirmed(id)`. Nothing bundled uses one now.
+- A lost ship (destroyed, or taken by the Void) relaunches on its own: `Main.show_game_over` runs
+  `reset_game()` with nothing to confirm, then requests the call for that reason (`Main.GAME_OVER_MESSAGES`).
+  Abandoning ship and the tractor-beam tow are gone.
 - `{name}` placeholders come from `conv.with_vars({...})`.
 
 ## Ore seams & Landing (DESIGN.md 4.10)

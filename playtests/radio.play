@@ -1,7 +1,8 @@
 # Robot radio. Tutorials pause the game and wait for the player:
 # SPACE (TAB/ENTER aliases) finishes the speech, then moves on. Unpaused tips auto-dismiss
-# and leave SPACE to the ship. Running dry and losing the ship are radio calls whose
-# confirm line abandons ship / relaunches.
+# and leave SPACE to the ship. A lost ship relaunches on its own; the guide's call about
+# it comes after, with nothing to confirm. UNIT-7 is off until the end of Act 1, so this
+# scenario wakes it by hand.
 # Run: tools/play.sh playtests/radio.play   (frames land in .playtest/radio_*.png)
 
 press enter
@@ -83,86 +84,35 @@ wait 0.3
 assert not get_tree().root.get_node("RobotRadio").is_active() "tutorial finished"
 assert not get_tree().paused "closing the tutorial unpauses"
 
-# Out of fuel: the robot offers to abandon ship (a confirm call), game keeps running
+# Explosion: the next clone comes up on its own, then the guide calls
 eval gs.set("stores", 500)
 eval ship.set("fuel", 0.5)
-# Thrust is free now, so a dry tank no longer strands the ship on its own. The state is
-# entered directly; what this scenario covers is the radio traffic once it is.
-eval ship.consume_fuel(ship.fuel + 1.0)
-eval ship.state_machine.change_state("StrandedState")
-wait_until pt.state_name() == "StrandedState" 3
-frames 5
-assert not bus.is_harvest_available() "a stranded ship can't harvest the scrap beside it"
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "out_of_fuel" 3
-assert not get_tree().paused "abandon offer doesn't pause (you may be drifting home)"
-assert pt.node("radio_panel").choice_text() == "" "no confirm row on the intro line"
-press i
-wait_until pt.visible_ui().has("LogUI") 2
-frames 2
-assert not pt.node("radio_panel").visible "radio hides behind menus"
-press i
-wait_until pt.node("radio_panel").visible 2
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
-assert pt.state_name() == "StrandedState" "SPACE on the radio doesn't start a harvest"
-wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_07_abandon_offer
-assert pt.node("radio_panel").choice_text().contains("ABANDON SHIP") "confirm row shown"
-wait 10
-assert get_tree().root.get_node("RobotRadio").current_line().is_confirm() "confirm never times out"
-assert main.current_game_state == 1 "nothing happens until confirmed"
-press radio_next
-wait_until main.current_game_state == 2 10
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_abandoned" 3
-assert get_tree().paused "game-over call pauses"
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
-wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_08_abandoned
-assert pt.node("radio_panel").choice_text().contains("RELAUNCH") "relaunch offered"
-assert not pt.node("radio_panel").choice_text().contains("-") "relaunching costs nothing"
-press enter
-wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
-wait 0.3
-assert not get_tree().paused "relaunch unpauses"
-assert not get_tree().root.get_node("RobotRadio").is_active() "radio quiet after relaunch"
-
-# Explosion: relaunch call
-press action
-wait_until pt.visible_ui().has("SpacePortDialogue") 2
-press down
-press enter
-wait_until pt.visible_ui().is_empty() 2
-hold thrust 0.5
-wait_until pt.state_name() == "FlyingState" 3
 eval ship.take_damage(100000.0)
 wait_until main.current_game_state == 2 10
+assert not get_tree().root.get_node("RobotRadio").is_active() "nothing on the radio while the ship is lost"
+wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 15
 wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_destroyed" 3
+assert get_tree().paused "the call pauses"
 wait 0.5
 screenshot radio_09_destroyed
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 2
 wait_until not pt.node("radio_panel").is_typing() 5
-screenshot radio_10_relaunch
-assert pt.node("radio_panel").choice_text().contains("RELAUNCH") "relaunch offered"
-assert not pt.node("radio_panel").choice_text().contains("-") "relaunching costs nothing"
 press space
-wait_until main.current_game_state == 1 and pt.state_name() == "LandedState" 10
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+assert not get_tree().root.get_node("RobotRadio").current_line().is_confirm() "nothing to confirm"
+assert pt.node("radio_panel").choice_text() == "" "no RELAUNCH row"
+screenshot radio_10_after_relaunch
+press space
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 3
 # Let the dock's save-indicator timer finish so nothing is pending at quit
 wait 1
-assert not get_tree().paused "relaunch unpauses"
-assert pt.visible_ui().is_empty() "the confirming SPACE doesn't open the dock menu"
-assert gs.death_count == 2 "abandoning and exploding both count as deaths"
-# Dying takes nothing. Each relaunch docks at SR-7, which buys the tank past its free
-# quarter out of Stores (issue #137): 112.5 fuel at 2 ST, 225 ST at most per relaunch
+assert not get_tree().paused "the call closing unpauses"
+assert pt.visible_ui().is_empty() "the closing SPACE doesn't open the dock menu"
+assert gs.death_count == 1 "the loss counts as a death"
+# Dying takes nothing. The relaunch docks at SR-7, which buys the tank past its free
+# quarter out of Stores (issue #137): 112.5 fuel at 2 ST, 225 ST at most
 wait_until ship.fuel == ship.max_fuel 5
-assert gs.stores >= 500 - 2 * 225 and gs.stores < 500 "dying costs no Stores; only the tank past its quarter does"
+assert gs.stores >= 500 - 225 and gs.stores < 500 "dying costs no Stores; only the tank past its quarter does"
 
 # Hold fills mid-harvest while SPACE is being mashed: the hold-full tutorial waits
 # until the player backs off, then pauses in view (gem popups don't hide the radio)

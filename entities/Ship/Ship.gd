@@ -4,7 +4,7 @@ class_name Ship
 ## Player ship entity. Owns fuel, hull (via HealthComponent), cargo weight, and
 ## input intent flags. Behavior is delegated to states via StateMachine:
 ## FlyingState → LandedState (docked) / PlanetLandedState (on a landing site) /
-## HarvestingState / StrandedState / DestroyedState.
+## HarvestingState / DestroyedState.
 ## Signals: fuel_changed, fuel_depleted, cargo_changed.
 
 @export var thrust_power: float = 262.5
@@ -23,13 +23,13 @@ class_name Ship
 
 @export var max_fuel: float = 150.0  # Maximum fuel capacity
 
-@export var max_cargo_weight: float = 50.0  # Hold space (gems take 1-3 units each)
+@export var max_cargo_weight: float = 0.0  # Hold space (gems take 1-3 units each); the ship starts with none
 
 # Base stats (stored at initialization). The ship's limits are fixed: nothing is bought
 # (docs/adr/0007).
 var base_max_hull: float = 100.0
 var base_max_fuel: float = 150.0
-var base_max_cargo_weight: float = 50.0
+var base_max_cargo_weight: float = 0.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
 @export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
 
@@ -579,9 +579,14 @@ func _on_cargo_weight_changed(_total_weight: float) -> void:
 func get_cargo_weight() -> float:
 	return InventoryManager.get_total_weight()
 
-## Check if cargo is at capacity
+## Check if cargo is at capacity. A ship with no hold isn't full; it has nothing to fill.
 func is_cargo_full() -> bool:
-	return InventoryManager.get_total_weight() >= max_cargo_weight
+	return has_hold() and InventoryManager.get_total_weight() >= max_cargo_weight
+
+## A new game starts with no hold at all (docs/OPENING.md §9): until one is fitted,
+## nothing harvests and the hold readouts stay hidden.
+func has_hold() -> bool:
+	return max_cargo_weight > 0.0
 
 ## Reset ship to initial state for a new game.
 ## Resets stats to base values.
@@ -591,10 +596,12 @@ func reset_to_initial_state() -> void:
 	max_fuel = base_max_fuel
 	max_cargo_weight = base_max_cargo_weight
 
-	# Reset current values to full
+	# Hull comes back full; the tank starts dry - a new game wakes with no FUEL TANK
+	# seated (docs/OPENING.md), so fuel is something the player has to go and get.
 	health_component.max_hp = max_hull
 	health_component.reset()
-	fuel = max_fuel
+	fuel = 0.0
+	fuel_changed.emit()
 
 	# Reset physics
 	linear_velocity = Vector2.ZERO

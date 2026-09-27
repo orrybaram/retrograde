@@ -13,6 +13,8 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 wait_until pt.state_name() == "LandedState" 5
 
 # The home dock rides Rook around Veld and swings out a long way. It still has to
@@ -73,35 +75,20 @@ assert main.get_node("CanvasLayer/HUD/TrackingIndicator").modulate.a == 1.0 "lit
 wait 2
 screenshot void_4_recovered
 
-# Now go all the way: at the deep line the dark takes the ship
+# Now go all the way: at the deep line the dark takes the ship. The relaunch after it
+# runs the wake's dark, so the checks below can see what comes up under it.
+eval main.set("force_wake_sequence", true)
 eval pt.warp_to(Vector2(359000, 0))
 eval ship.set("linear_velocity", Vector2(400, 0))
-wait_until main.current_game_state == 2 40
-assert pt.state_name() == "ConsumedState" "taken, not exploded"
-assert get_node("/root/VoidZone").shroud == 1.0 "and the dark holds"
+wait_until pt.state_name() == "ConsumedState" 40
+assert get_node("/root/VoidZone").shroud == 1.0 "taken, not exploded, and the dark holds"
 assert pt.wreck_gem_count() == 0 "nothing is left behind out there"
 assert pt.derelict_count() == 0 "no hull to salvage either"
-wait 3
+wait 1
 screenshot void_5_consumed
 
-# The robot talks the pilot back into a new hull
-wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_consumed" 5
-press space
-frames 2
-press space
-frames 2
-press space
-wait_until get_tree().root.get_node("RobotRadio").current_line().is_confirm() 5
-wait_until not pt.node("radio_panel").is_typing() 5
-assert get_tree().root.get_node("RobotRadio").current_line().garbled "nothing gets through from out there"
-assert get_tree().root.get_node("RobotRadio").current_line().expression == "lost" "red lost face"
-assert not pt.node("radio_panel").message_text().contains("Stay inside the orbits") "the words never arrive"
-assert pt.node("radio_panel").message_text().length() > 20 "but the shape of speech does"
-assert get_tree().get_first_node_in_group("void_shroud").visible "the dark still holds before the relaunch"
-# Relaunch: the wake's dark comes up clean, with nothing of the Void left under it (no boot
-# terminal: SR-7 is unpowered)
-eval main.set("force_wake_sequence", true)
-press space
+# A beat of silence, then the next clone comes up on its own: the wake's dark comes up
+# clean, with nothing of the Void left under it
 wait_until main.get_node("FadeLayer/FadeRect").visible 10
 assert not get_tree().get_first_node_in_group("void_shroud").visible "the Void's overlay is gone before the wake"
 assert get_node("/root/VoidZone").shroud == 0.0 "and so is the dark behind it"
@@ -112,5 +99,22 @@ wait_until main.current_game_state == 1 30
 eval main.set("force_wake_sequence", false)
 wait_until pt.state_name() == "LandedState" 10
 assert get_node("/root/VoidZone").shroud == 0.0 "respawn clears the dark"
+
+# Then the robot tries to say what happened, and none of it gets through
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "void_consumed" 10
+wait_until not pt.node("radio_panel").is_typing() 5
+assert get_tree().root.get_node("RobotRadio").current_line().garbled "nothing gets through from out there"
+assert get_tree().root.get_node("RobotRadio").current_line().expression == "lost" "red lost face"
+assert not get_tree().root.get_node("RobotRadio").current_line().is_confirm() "nothing to confirm"
+press space
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+press space
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+assert not pt.node("radio_panel").message_text().contains("Stay inside the orbits") "the words never arrive"
+assert pt.node("radio_panel").message_text().length() > 20 "but the shape of speech does"
+press space
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 3
 wait 1
 screenshot void_7_relaunched
