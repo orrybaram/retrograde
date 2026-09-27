@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://btfs0vii8ixiq"]
 
 [ext_resource type="Script" uid="uid://lwtmx108rwd6" path="res://ui/HUD.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://be06y1pu3xufy" path="res://ui/ProgressBarWidget.tscn" id="2"]
+[ext_resource type="Script" path="res://ui/BoostGauge.gd" id="2_boost"]
 [ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="3_jd13s"]
 [ext_resource type="PackedScene" uid="uid://0qhwlfdltlfp" path="res://ui/minimap/Minimap.tscn" id="4_minimap"]
 [ext_resource type="Script" uid="uid://brkyb1x4rjpsu" path="res://ui/HullSegmentBar.gd" id="5_hull"]
@@ -43,11 +43,29 @@ layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/separation = 4
 
-[node name="Minimap" parent="DashboardAnchor/HBox/LeftColumn" unique_id=2008509394 instance=ExtResource("4_minimap")]
+[node name="MinimapDial" type="Control" parent="DashboardAnchor/HBox/LeftColumn" unique_id=1504871236]
+custom_minimum_size = Vector2(176, 160)
 layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+
+[node name="Minimap" parent="DashboardAnchor/HBox/LeftColumn/MinimapDial" unique_id=2008509394 instance=ExtResource("4_minimap")]
+layout_mode = 0
+
+[node name="BoostGauge" type="Control" parent="DashboardAnchor/HBox/LeftColumn/MinimapDial" unique_id=739214658]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_boost")
 
 [node name="VelocityLabel" type="Label" parent="DashboardAnchor/HBox/LeftColumn" unique_id=1356911807]
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
+size_flags_horizontal = 0
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 10
@@ -59,31 +77,6 @@ clip_text = true
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 8
-
-[node name="FuelRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=1250526577]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="E" type="Label" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=1429954255]
-layout_mode = 2
-theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
-theme_override_font_sizes/font_size = 10
-text = "E"
-
-[node name="FuelProgressBar" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=113507462 instance=ExtResource("2")]
-custom_minimum_size = Vector2(186, 14)
-layout_mode = 2
-theme = ExtResource("3_jd13s")
-background_color = Color(0.42, 0.353, 0.204, 1)
-show_label = false
-
-[node name="F" type="Label" parent="DashboardAnchor/HBox/RightColumn/FuelRow" unique_id=2080482548]
-layout_mode = 2
-theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
-theme_override_font_sizes/font_size = 10
-text = "F"
 
 [node name="HullRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=282324887]
 layout_mode = 2
