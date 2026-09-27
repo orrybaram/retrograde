@@ -1570,7 +1570,7 @@ script = ExtResource("6_mount")
 section = "fuel_tank"
 part = NodePath("../Visuals/FuelTank")
 collision = NodePath("../CollisionShape2D")
-section_start_offset = Vector2(1650, 40)
+section_start_offset = Vector2(2500, 40)
 section_start_rotation = 0.6
 
 [node name="SolarArrayMount" type="Node2D" parent="."]

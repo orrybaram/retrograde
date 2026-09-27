@@ -283,6 +283,10 @@ static func _depth(n: Node) -> int:
 
 func start_game() -> void:
 	clear_screen_effects()
+	# Locked from the first frame, through the wake: the diagnostic hands them back
+	var diagnostic := force_boot_log or not Playtest.active
+	if diagnostic:
+		get_tree().call_group("boot_log", "prepare")
 	if start_menu:
 		start_menu.visible = false
 	Gem.clear_all()
@@ -355,11 +359,12 @@ func start_game() -> void:
 	if wake:
 		await _wake_from_black()
 	# The ship checks its own controls, once, on a new game (docs/OPENING.md §6)
-	if force_boot_log or not Playtest.active:
+	if diagnostic:
 		get_tree().call_group("boot_log", "begin")
 
 func load_game() -> void:
 	clear_screen_effects()
+	get_tree().call_group("boot_log", "forget")  # a continue never owes the diagnostic
 	if start_menu:
 		start_menu.visible = false
 
@@ -458,6 +463,8 @@ func show_game_over(reason: String) -> void:
 func reset_game() -> void:
 	game_over_pending = false
 	clear_screen_effects()
+	# A clone lost mid-diagnostic comes up locked where it left off (BootLog)
+	get_tree().call_group("boot_log", "arm")
 	# Lost with a load still on the nose: it stays out here, where the ship was
 	if ship and ship.is_carrying():
 		ship.release_freight()
@@ -531,3 +538,4 @@ func reset_game() -> void:
 	# Come up out of the dark the same way a new game does
 	if wake:
 		await _wake_from_black()
+	get_tree().call_group("boot_log", "begin")

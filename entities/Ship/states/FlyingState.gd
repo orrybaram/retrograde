@@ -156,7 +156,7 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	var strafe := strafe_axis(ship)
 	if strafe != 0.0:
 		var side := Vector2(0.0, strafe).rotated(ship.rotation) * ship.thrust_power * STRAFE_POWER
-		state.linear_velocity = cruise_velocity(state.linear_velocity, side * state.inverse_mass * state.step, ship.cruise_speed)
+		state.linear_velocity = _held(state.linear_velocity, side * state.inverse_mass * state.step)
 
 	if _coupled and is_instance_valid(_coupled):
 		_hold_coupled(state)
@@ -185,12 +185,20 @@ static func turned_spin(spin: float, turn: float, turn_speed: float, ratio: floa
 ## Ordinary thrust is held to `ship.cruise_speed` (see cruise_velocity); the boost is not.
 func _apply_thrust(state: PhysicsDirectBodyState2D, local_direction: Vector2) -> void:
 	var force := local_direction.rotated(ship.rotation) * ship.thrust_power
-	if _boosting():
+	if _boosting() and not ControlLock.is_capped():
 		if ship.consume_fuel(ship.fuel_consumption_rate * ship.boost_fuel_multiplier * state.step):
 			state.apply_central_force(force * ship.boost_power_multiplier)
 			return
 	var dv := force * state.inverse_mass * state.step
-	state.linear_velocity = cruise_velocity(state.linear_velocity, dv, ship.cruise_speed)
+	state.linear_velocity = _held(state.linear_velocity, dv)
+
+## Ordinary thrust's velocity: held to cruise speed, or - while the diagnostic holds
+## control (ControlLock) - to its slower cap, counted relative to SR-7's frame.
+func _held(velocity: Vector2, dv: Vector2) -> Vector2:
+	if ControlLock.is_capped():
+		var frame := ControlLock.frame_velocity
+		return cruise_velocity(velocity - frame, dv, ControlLock.speed_cap) + frame
+	return cruise_velocity(velocity, dv, ship.cruise_speed)
 
 ## Velocity after ordinary thrust adds `dv` to `velocity`, held to `cap`: it may speed the
 ## ship up to the cap, but never past it, and never faster than it already was once over

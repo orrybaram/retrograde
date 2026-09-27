@@ -120,11 +120,12 @@ enter, and they never stop being the ship.
 ## 3. The Dead Station
 
 **The ship wakes adrift** (decided 2026-09-25, replacing the docked start). The sabotage
-was who knows how long ago; the ship comes to hanging just off the end of SR-7's belly,
-turning slowly over among fine flakes of debris that thin and are gone within a couple of
-minutes (`WakeDrift`). The player has the stick from the first second: the tumble is
-the ship's own momentum, and the first touch of a turn key stops it
-(`Ship.drift_spin`, `ShipSpawner.spawn_adrift`).
+was who knows how long ago; the ship comes to hanging out past the end of SR-7's belly,
+the station just off the left of the screen (revised 2026-09-27), turning slowly over
+among fine flakes of debris that thin and are gone within a couple of minutes
+(`WakeDrift`). The stick is locked until the ship's manual diagnostic hands it back (§6,
+revised 2026-09-27): the tumble is the ship's own momentum, and the first touch of a turn
+key after that stops it (`Ship.drift_spin`, `ShipSpawner.spawn_adrift`).
 
 Where the dock should be there is nothing. The refuel boom's arm is run in, back inside the
 hull, so SR-7 has no dock at all and nothing offers DOCK (`DockArm`, `SpacePort.deployed`).
@@ -179,8 +180,9 @@ objective with zero instruction.
 
 Placement (revised 2026-09-22), nearest first:
 
-- **FUEL TANK**: adrift just off screen to the right of where the ship wakes, keeping pace with SR-7
-  (not Rook). The first thing found by simply flying out.
+- **FUEL TANK**: adrift in view ahead of where the ship wakes, 900 px to its right (revised
+  2026-09-27, from just off screen), keeping pace with SR-7 (not Rook). The first thing
+  found by simply flying out.
 - **DORSAL ARM**: adrift in Rook's debris ring (3000 px out), going round with the ring
   at the ring's own speed for that distance (`Mount.start_in_orbit`), so it has to be
   caught up with rather than flown to.
@@ -407,8 +409,13 @@ RELEASE), rows the control that exercises it.
 
 **The controls are locked until their test.** Nothing answers until PROPULSION's heading has
 typed; then the stick comes back. Each later section gives back its own: SONAR the Sweep,
-CLAMP the magnet, RCS the strafe, CLAMP RELEASE the let-go. Boost is never locked. Finishing,
-a load, a new game or a quit clears every lock, so none can outlive the log.
+CLAMP the magnet, RCS the strafe, CLAMP RELEASE the let-go. The locks go on with the new
+game's first frame, so the wake from black is not a window to fly in. While CTRL AUTH is
+the system's, thrust is held to 50 m/s relative to SR-7 (the frame the station, the tank
+and its Mount all move in) and the boost is held off. Finishing, a load, a new game or a
+quit clears every lock and the cap, so none can outlive the log. A ship lost mid-diagnostic
+comes back locked where it left off: the next clone reruns it with what had passed on
+file, and the rest runs again from its triggers (the tank is never lost, ADR 0012).
 
 Each row stamps `[ OK ]` the first time the pilot uses it, so the controls are taught as a
 checklist the player ticks off, not as popups. YAW and STRAFE need both ways. A section

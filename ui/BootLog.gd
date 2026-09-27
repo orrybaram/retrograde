@@ -9,8 +9,10 @@ class_name BootLog
 ##
 ## While it runs the ship's controls are locked (ControlLock) and come back a section at a
 ## time, as each section's heading types: FLIGHT's stick, SONAR's Sweep, MAGNET's clamp,
-## LATERAL's strafe, RELEASE's let-go. Boost is never locked. Anything that stops the log
-## clears every lock.
+## LATERAL's strafe, RELEASE's let-go. Until it completes, thrust is held to
+## ControlLock.SYSTEM_SPEED in SR-7's frame and the boost is held off. A new game locks from
+## its first frame (prepare); a ship lost mid-diagnostic relaunches locked where it left
+## off, its passes on file (arm, begin). Anything else that stops the log clears every lock.
 ##
 ## Everything it knows it reads, never asks for: the ship's stick flags for the flight
 ## rows, the Sweep and the seating off the EventBus, the magnet and the release holds off
@@ -51,6 +53,10 @@ var _label: RichTextLabel
 var _delay := 0.0
 var _fade: Tween = null
 var _carried := 0.0
+## This game still owes the diagnostic (a new game, until it completes), and the sections
+## it has passed so far, which survive the ship being lost.
+var _owed := false
+var _passed: Array[String] = []
 
 
 func _ready() -> void:
@@ -81,27 +87,64 @@ func _ready() -> void:
 	visible = false
 
 
-## Start the check over: a new game.
+## A new game owes a diagnostic from its first frame: nothing passed yet, and every
+## control locked through the wake, before the log starts typing (begin).
+func prepare() -> void:
+	_passed.clear()
+	_owed = true
+	arm()
+
+
+## Lock every control a section still owed would hand back. A relaunch arms again from its
+## first frame, so a clone lost mid-diagnostic comes up locked where it left off.
+func arm() -> void:
+	if not _owed:
+		return
+	for section in UNLOCKS:
+		if not section in _passed:
+			ControlLock.lock(UNLOCKS[section])
+	# CTRL AUTH is the system's: thrust is held slow until it hands over
+	ControlLock.speed_cap = ControlLock.SYSTEM_SPEED
+	_track_frame()
+
+
+## Start the log, if the game still owes one: the sections already passed (by a clone lost
+## since) come up passed and unlocked, and the rest run again from their triggers.
 func begin() -> void:
+	if not _owed:
+		return
 	checklist = BootChecklist.new()
+	checklist.restore(_passed)
 	_delay = START_DELAY
 	_carried = 0.0
 	_label.text = ""
-	for section in UNLOCKS:
-		ControlLock.lock(UNLOCKS[section])
+	arm()
 	if _fade:
 		_fade.kill()
 	modulate.a = 1.0
 	visible = true
 
 
-## Gone, not finished: a load, a quit, or a scenario that skips the opening.
+## Gone for now - the ship was lost, or a scenario skipped the opening - with every lock
+## off. What had passed is kept for a relaunch; a finished diagnostic is owed no more.
 func stop() -> void:
+	if checklist:
+		_passed = checklist.cleared_sections()
+		if checklist.is_complete():
+			_owed = false
 	checklist = null
 	ControlLock.clear()
 	if _fade:
 		_fade.kill()
 	visible = false
+
+
+## Not this game's any more: a load, or a scenario past the opening. A relaunch after
+## this brings nothing back.
+func forget() -> void:
+	stop()
+	_owed = false
+	_passed.clear()
 
 
 ## Whether anything is still locked (ControlLock), for scenarios.
@@ -128,6 +171,8 @@ func _use(mark: StringName) -> void:
 
 
 func _process(dt: float) -> void:
+	if ControlLock.is_capped():
+		_track_frame()  # through the wake too, before the log starts
 	if checklist == null:
 		return
 	_place()
@@ -152,6 +197,12 @@ func _process(dt: float) -> void:
 		_fade = create_tween()
 		_fade.tween_property(self, "modulate:a", 0.0, FADE_TIME)
 		_fade.tween_callback(stop)
+
+
+## The speed cap counts in SR-7's frame: keep its velocity current.
+func _track_frame() -> void:
+	var station := get_tree().get_first_node_in_group("space_stations") as RigidBody2D
+	ControlLock.frame_velocity = station.linear_velocity if station else Vector2.ZERO
 
 
 ## Bottom right, growing upward: its bottom edge on the corner's margin, or a gap above

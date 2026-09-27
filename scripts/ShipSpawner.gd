@@ -76,8 +76,9 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 	spawn_complete.emit()
 
 ## Where the ship wakes adrift beside SR-7 (docs/OPENING.md §3), in the station's space:
-## just off the end of the belly, where the dock would be if its arm were out.
-const ADRIFT_OFFSET := Vector2(560, 190)
+## out past the end of the belly, far enough that the station (whose dock arm reaches to
+## x 430) sits just off the left of the screen, and the FUEL TANK is in view ahead.
+const ADRIFT_OFFSET := Vector2(1600, 190)
 ## Its heading and slow tumble, rad and rad/s, and how it drifts off the station, px/s.
 const ADRIFT_ROTATION := 2.3
 const ADRIFT_SPIN := 0.32

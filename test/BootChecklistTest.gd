@@ -237,6 +237,22 @@ func test_who_holds_the_controls_is_small_and_dim() -> void:
 	assert_str(bb).not_contains("[color=#%s]%s" % [Colors.hex(Colors.PRIMARY), BootChecklist.AUTHORITY])
 
 
+func test_a_lost_clone_comes_back_with_its_passes_on_file() -> void:
+	var c := _checklist()
+	var passed: Array[String] = [BootChecklist.FLIGHT, BootChecklist.SONAR]
+	c.restore(passed)
+	assert_bool(c.is_cleared(BootChecklist.FLIGHT) and c.is_cleared(BootChecklist.SONAR)).is_true()
+	assert_bool(c.is_live(BootChecklist.FLIGHT)).is_true()
+	assert_bool(c.is_open(BootChecklist.MAGNET)).is_false()
+	c.open(BootChecklist.FLIGHT)
+	_settle(c)
+	var lines := c.plain().split("\n")
+	assert_str(lines[2]).is_equal(_field("PROPULSION", BootChecklist.STAMP_OK))
+	assert_str(lines[3]).is_equal(_field("SONAR", BootChecklist.STAMP_OK))
+	assert_int(lines.size()).is_equal(4)
+	assert_array(c.cleared_sections()).is_equal(passed)
+
+
 func test_keys_are_escaped_for_bbcode() -> void:
 	var c := _checklist()
 	c.open(BootChecklist.FLIGHT)

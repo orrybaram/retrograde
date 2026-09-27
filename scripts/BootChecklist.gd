@@ -134,6 +134,30 @@ func open(section: String) -> void:
 		_add_contact()
 
 
+## Sections a lost clone already passed: open, stamped and cleared, and listed as passes
+## from the start, without typing.
+func restore(passed: Array[String]) -> void:
+	for section in ORDER:
+		if not section in passed:
+			continue
+		_open[section] = true
+		_cleared[section] = true
+		for c in SECTIONS[section]["checks"]:
+			_done[c["id"]] = time
+		var row := _add_field(PASSED, SECTIONS[section]["head"], STAMP_OK, Colors.SUCCESS)
+		row["shown"] = _text_of(row).length()
+		row["reached"] = true
+
+
+## The sections passed and cleared so far, in the order they run.
+func cleared_sections() -> Array[String]:
+	var out: Array[String] = []
+	for section in ORDER:
+		if _cleared.has(section):
+			out.append(section)
+	return out
+
+
 func is_open(section: String) -> bool:
 	return _open.has(section)
 
