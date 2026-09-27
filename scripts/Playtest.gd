@@ -882,7 +882,7 @@ func skip_opening(fit_cargo_bay := true) -> void:
 	if fit_cargo_bay:
 		# Skipped past, so already said: a scenario that woke UNIT-7 first doesn't hear it
 		RobotRadio.mark_seen(RobotRadio.MSG_CARGO_BAY_FITTED.id)
-		gs.cradled = Components.CARGO_BAY
+		gs.cradled = PackedStringArray([Components.CARGO_BAY])
 		cradle().fit()
 		var wreck := hauler()
 		if wreck:
@@ -1026,15 +1026,18 @@ func cradle() -> Cradle:
 	return Cradle.find(get_tree())
 
 ## Put the ship, carrying Component `id` (clamped first if it isn't, dug out if it is
-## buried), where the piece sits `offset` px from the Cradle (in the Cradle's frame, +x
-## outboard) Lug outboard, turned `turn_deg`, moving with the station.
+## buried), where the piece sits `offset` px from the Cradle's drop point (in the station's
+## frame, +x right, away from the hull) Lug outboard, turned `turn_deg`, moving with the
+## station.
 func stage_at_cradle(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> void:
 	var c := cradle()
 	var f := component(id)
 	f.buried = false
 	f.lodged = false
 	f.lodged_in = null
-	_stage_load(f, c.global_transform * Transform2D(PI + deg_to_rad(turn_deg), offset), c.get_parent() as RigidBody2D)
+	var drop := c.drop_pose()
+	var at := Transform2D(drop.get_rotation() + deg_to_rad(turn_deg), drop.origin + c.global_transform.basis_xform(offset))
+	_stage_load(f, at, c.get_parent() as RigidBody2D)
 
 ## Carrying `f` (clamped first if it isn't), put the ship where `f` sits at `at`, moving
 ## with `station`.

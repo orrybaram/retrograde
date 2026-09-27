@@ -151,7 +151,7 @@ func test_the_cradle_says_what_it_fitted() -> void:
 	var was_file := Playtest._save_file
 	Playtest.active = true
 	Playtest._save_file = SAVE_FILE
-	_gs.cradled = Components.CARGO_BAY
+	_gs.cradled = PackedStringArray([Components.CARGO_BAY])
 	Cradle.find(get_tree()).fit()
 	Playtest.active = was_active
 	Playtest._save_file = was_file

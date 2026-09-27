@@ -48,9 +48,10 @@ var met_automatons: Dictionary = {}
 ## Sections of SR-7 seated back in their Mounts, keyed by Sections id. Permanent.
 var seated_sections: Dictionary = {}
 
-## The Component released into SR-7's Cradle and waiting there to be fitted (Components
-## id), or "" while the Cradle is empty. Permanent until it is fitted.
-var cradled := ""
+## The Components let go of into SR-7's Cradle and waiting there to be fitted (Components
+## ids, oldest first). The Cradle is always open, so any number can wait. Each is permanent
+## until it is fitted.
+var cradled := PackedStringArray()
 
 ## Components fitted to the ship from the Cradle, keyed by Components id. Permanent: the
 ## ship's hold is the Cargo Bay's (Ship.refit).
@@ -188,7 +189,7 @@ func reset_all_state() -> void:
 	identified_wrecks.clear()
 	met_automatons.clear()
 	seated_sections.clear()
-	cradled = ""
+	cradled.clear()
 	fitted.clear()
 	core_started = false
 	death_count = 0

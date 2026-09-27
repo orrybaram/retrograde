@@ -265,37 +265,40 @@ static func load_seated_sections(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray()))
 
-## Writes a Component released into SR-7's Cradle into an existing save the moment it
-## happens, like a seated Section: what is in the Cradle, and the saved Freight without that
-## Component, so a reload never brings it back loose as well as in the Cradle. With no save
-## yet this does nothing; the next full save() writes it.
-static func save_cradled(id: String, path: String = "") -> void:
+## Writes what is waiting in SR-7's Cradle into an existing save the moment it changes,
+## like a seated Section: the Components in it, and the saved Freight without any of them,
+## so a reload never brings one back loose as well as in the Cradle. With no save yet this
+## does nothing; the next full save() writes it.
+static func save_cradled(ids: PackedStringArray, path: String = "") -> void:
 	var file := path if path != "" else Playtest.save_path()
 	var cfg := ConfigFile.new()
 	if cfg.load(file) != OK:
 		return
-	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, id)
+	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, ids)
 	var rows: Array = cfg.get_value("wreck", "freight", [])
-	cfg.set_value("wreck", "freight", rows.filter(func(row): return not (row is Dictionary and row.get("component", "") == id)))
+	cfg.set_value("wreck", "freight", rows.filter(func(row): return not (row is Dictionary and row.get("component", "") in ids)))
 	cfg.save(file)
 
-## The Component in SR-7's Cradle, or "". A save from before the Cradle has none.
-static func load_cradled(path: String = "") -> String:
+## The Components waiting in SR-7's Cradle, oldest first. A save from before the Cradle has
+## none; one from when it held a single Component (a String) has that one.
+static func load_cradled(path: String = "") -> PackedStringArray:
 	var cfg := ConfigFile.new()
 	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return ""
-	return str(cfg.get_value(SECTION_SECTION, SECTION_CRADLE_KEY, ""))
+		return PackedStringArray()
+	var v: Variant = cfg.get_value(SECTION_SECTION, SECTION_CRADLE_KEY, PackedStringArray())
+	if v is String:
+		return PackedStringArray([v]) if v != "" else PackedStringArray()
+	return PackedStringArray(v)
 
 ## Writes a Component fitted from the Cradle into an existing save the moment it happens:
-## what is fitted, and the Cradle empty again. With no save yet this does nothing; the next
-## full save() writes it.
+## what is fitted (the Cradle's list is written by save_cradled). With no save yet this does
+## nothing; the next full save() writes it.
 static func save_fitted(ids: PackedStringArray, path: String = "") -> void:
 	var file := path if path != "" else Playtest.save_path()
 	var cfg := ConfigFile.new()
 	if cfg.load(file) != OK:
 		return
 	cfg.set_value(SECTION_SECTION, SECTION_FITTED_KEY, ids)
-	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, "")
 	cfg.save(file)
 
 ## The Components fitted to the ship. A save from before fitting has none.

@@ -168,11 +168,12 @@ func _update_hub_display() -> void:
 
 	var cradle := _cradle()
 	if cradle:
-		_menu_items.append({
-			"enabled": true,
-			"action": _fit,
-			"label": "FIT %s" % Components.label(gs.cradled),
-		})
+		for id in cradle.waiting():
+			_menu_items.append({
+				"enabled": true,
+				"action": _fit.bind(id),
+				"label": "FIT %s" % Components.label(id),
+			})
 
 	_menu_items.append({
 		"enabled": true,
@@ -192,15 +193,15 @@ func _update_hub_display() -> void:
 
 ## SR-7's Cradle, when the ship is docked at SR-7 and something is waiting in it.
 func _cradle() -> Cradle:
-	if gs == null or gs.cradled == "" or not is_inside_tree():
+	if gs == null or gs.cradled.is_empty() or not is_inside_tree():
 		return null
 	var cradle := Cradle.find(get_tree())
 	return cradle if cradle and cradle.serves(spaceport) else null
 
-func _fit() -> void:
+func _fit(id: String) -> void:
 	var cradle := _cradle()
 	if cradle:
-		cradle.fit()
+		cradle.fit(id)
 	_selected_index = 0
 	_update_hub_display()
 
