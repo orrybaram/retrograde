@@ -17,7 +17,7 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 assert pt.planet("Rook").global_position.distance_to(pt.recall("rook")) < 60.0 "a new game puts Rook back where it starts"
 assert pt.planet("Veld").global_position.distance_to(pt.recall("veld")) < 60.0 "and Veld"
 assert pt.state_name() == "FlyingState" "adrift outside SR-7"
-assert ship.global_position.distance_to(pt.node("space_stations").to_global(Vector2(1600, 190))) < 40.0 "beside the station, where a new game wakes"
+assert ship.global_position.distance_to(pt.node("space_stations").to_global(Vector2(700, 1100))) < 40.0 "beside the station, where a new game wakes"
 assert ship.fuel == 0.0 "a new game starts with an empty tank"
 assert ship.max_cargo_weight == 0.0 "and no hold to put anything in"
 assert not pt.node("hud").current_cargo_label.visible "no hold, so no cargo readout on the HUD"

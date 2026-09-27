@@ -120,8 +120,9 @@ enter, and they never stop being the ship.
 ## 3. The Dead Station
 
 **The ship wakes adrift** (decided 2026-09-25, replacing the docked start). The sabotage
-was who knows how long ago; the ship comes to hanging out past the end of SR-7's belly,
-the station just off the left of the screen (revised 2026-09-27), turning slowly over
+was who knows how long ago; the ship comes to hanging below and out past SR-7's belly,
+the station just off the top of the screen and Rook's debris ring out of view (revised
+2026-09-27), turning slowly over
 among fine flakes of debris that thin and are gone within a couple of minutes
 (`WakeDrift`). The stick is locked until the ship's manual diagnostic hands it back (§6,
 revised 2026-09-27): the tumble is the ship's own momentum, and the first touch of a turn
@@ -180,9 +181,9 @@ objective with zero instruction.
 
 Placement (revised 2026-09-22), nearest first:
 
-- **FUEL TANK**: adrift in view ahead of where the ship wakes, 900 px to its right (revised
-  2026-09-27, from just off screen), keeping pace with SR-7 (not Rook). The first thing
-  found by simply flying out.
+- **FUEL TANK**: adrift in view ahead of where the ship wakes, 600 px to its right and well
+  clear of Rook's debris ring (revised 2026-09-27, from just off screen, where it sat in
+  the ring), keeping pace with SR-7 (not Rook). The first thing found by simply flying out.
 - **DORSAL ARM**: adrift in Rook's debris ring (3000 px out), going round with the ring
   at the ring's own speed for that distance (`Mount.start_in_orbit`), so it has to be
   caught up with rather than flown to.

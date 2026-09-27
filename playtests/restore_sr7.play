@@ -17,7 +17,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # --- New game: adrift beside the station, no dock, three cut gaps, a hanging wing ---
 eval pt.remember("station", pt.mount("fuel_tank").get_parent())
 assert pt.state_name() == "FlyingState" "adrift, not docked"
-assert ship.global_position.distance_to(pt.recall("station").to_global(Vector2(1600, 190))) < 40.0 "out past the belly, the station just off screen"
+assert ship.global_position.distance_to(pt.recall("station").to_global(Vector2(700, 1100))) < 40.0 "below and out past the belly, the station just off screen"
 assert not pt.arm().out and not pt.arm().get_port().accepts_docking() "the dock's arm is in: nowhere to dock"
 assert not pt.mount("fuel_tank").seated and not pt.mount("solar_array").seated and not pt.mount("dorsal_arm").seated "all three Mounts empty"
 assert not pt.recall("station").get_node("Visuals/FuelTank").visible "the fuel tank is gone"
@@ -37,8 +37,10 @@ assert pt._action_message != "DOCK" and not pt._action_message.contains("DOCK") 
 # --- The Sections: the tank adrift just past the dock, the arm going round in Rook's
 # debris with the ring, the array lying on Rook's sunlit ground ---
 assert pt.section("fuel_tank").lodged_in == pt.recall("station") "the tank keeps pace with SR-7, not Rook"
-assert pt.section("fuel_tank").global_position.distance_to(pt.recall("station").to_global(Vector2(1600, 190))) > 700.0 and pt.section("fuel_tank").global_position.distance_to(pt.recall("station").to_global(Vector2(1600, 190))) < 1000.0 "in view ahead of where the ship wakes"
-assert pt.section("fuel_tank").global_position.x > pt.recall("station").to_global(Vector2(1600, 190)).x "off to the right"
+assert pt.section("fuel_tank").global_position.distance_to(pt.recall("station").to_global(Vector2(700, 1100))) > 400.0 and pt.section("fuel_tank").global_position.distance_to(pt.recall("station").to_global(Vector2(700, 1100))) < 800.0 "in view ahead of where the ship wakes"
+assert pt.section("fuel_tank").global_position.x > pt.recall("station").to_global(Vector2(700, 1100)).x "off to the right"
+assert pt.section("fuel_tank").global_position.distance_to(pt.planet("Rook").global_position) > pt.planet("Rook").radius + 2000.0 + 500.0 "well clear of Rook's debris ring"
+assert ship.global_position.distance_to(pt.planet("Rook").global_position) > pt.planet("Rook").radius + 2000.0 + 1300.0 "and the ring is out of view of the wake"
 assert pt.section("dorsal_arm").lodged_in == pt.planet("Rook") and pt.section("dorsal_arm").lodged_spin > 0.0 "the arm goes round Rook with the debris"
 eval pt.remember("arm_at", pt.section("dorsal_arm").lodged_offset)
 wait 1.0
