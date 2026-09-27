@@ -2,8 +2,8 @@ extends Node
 class_name Save
 
 ## Static save/load helpers using ConfigFile (user://save.cfg).
-## Serializes GameState (credits, upgrades, death count), Ship stats (fuel, hull, cargo),
-## InventoryManager contents, planet orbital angles, Visited and scanned Bodies, dug-out ore seams
+## Serializes GameState (credits, death count), Ship stats (fuel, hull, cargo),
+## InventoryManager contents, planet orbital angles, Visited Bodies, dug-out ore seams
 ## (seconds until they refill), powered and identified Gates, the Automatons the player
 ## has met, which radio tips were seen, which Sections are seated in their Mounts, and every
 ## piece of Freight, where it is (a load clamped to the ship puts the ship back in flight
@@ -15,8 +15,6 @@ const ENCOUNTER_SECTION := "encounters"
 const ENCOUNTER_CONSUMED_KEY := "consumed"
 const ENCOUNTER_ELAPSED_KEY := "elapsed"
 const ENCOUNTER_CLAIMED_KEY := "claimed"
-const SCAN_SECTION := "scan"
-const SCAN_PLANETS_KEY := "planets"
 const VISIT_SECTION := "visited"
 const VISIT_PLANETS_KEY := "planets"
 const ORE_SECTION := "ore"
@@ -65,11 +63,6 @@ static func save(gs: GameState, ship: Ship) -> void:
 		cfg.set_value("wreck", "derelicts", DerelictShip.snapshot_all(ship.get_tree()))
 		cfg.set_value("wreck", "freight", Freight.snapshot_all(ship.get_tree()))
 
-	# Save upgrades
-	for upgrade_path in gs.upgrade_levels.keys():
-		var level = gs.upgrade_levels[upgrade_path]
-		cfg.set_value("upgrades", upgrade_path, level)
-	
 	# Save planet orbital angles
 	if ship:
 		var tree = ship.get_tree()
@@ -83,7 +76,6 @@ static func save(gs: GameState, ship: Ship) -> void:
 						cfg.set_value("planets", planet_key, planet.orbital_angle)
 
 	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, RobotRadio.seen_ids())
-	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray(gs.scanned_planets.keys()))
 	cfg.set_value(VISIT_SECTION, VISIT_PLANETS_KEY, PackedStringArray(gs.visited_planets.keys()))
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
@@ -132,25 +124,8 @@ static func load_encounters(path: String = "") -> Dictionary:
 		"claimed": PackedStringArray(cfg.get_value(ENCOUNTER_SECTION, ENCOUNTER_CLAIMED_KEY, PackedStringArray())),
 		"elapsed": float(cfg.get_value(ENCOUNTER_SECTION, ENCOUNTER_ELAPSED_KEY, 0.0)),
 	}
-## Writes only the scanned-planet keys into an existing save, keeping the rest, so a
-## scan finished mid-flight is kept without saving the ship's position or hold.
-## With no save yet this does nothing; the next full save() writes them.
-static func save_scanned_planets(keys: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(SCAN_SECTION, SCAN_PLANETS_KEY, keys)
-	cfg.save(file)
-
-static func load_scanned_planets(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(SCAN_SECTION, SCAN_PLANETS_KEY, PackedStringArray()))
-
-## Writes only the Visited Bodies into an existing save, like save_scanned_planets: a
-## Body is reached in open flight, with no dock to hang a full save off.
+## Writes only the Visited Bodies into an existing save, keeping the rest: a Body is
+## reached in open flight, with no dock to hang a full save off.
 ## With no save yet this does nothing; the next full save() writes them.
 static func save_visited_planets(keys: PackedStringArray, path: String = "") -> void:
 	var file := path if path != "" else Playtest.save_path()
@@ -168,7 +143,7 @@ static func load_visited_planets(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(VISIT_SECTION, VISIT_PLANETS_KEY, PackedStringArray()))
 
-## Writes only the spent-ore regrow timers into an existing save, like save_scanned_planets.
+## Writes only the spent-ore regrow timers into an existing save, like save_visited_planets.
 static func save_ore_regrowth(spent: Dictionary, path: String = "") -> void:
 	var file := path if path != "" else Playtest.save_path()
 	var cfg := ConfigFile.new()
@@ -311,9 +286,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.credits = int(cfg.get_value("stats", "credits", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
 	RobotRadio.load_seen(load_radio_seen())
+	# Surveys are not kept: an old save's planetary scans stay behind, so its seams stay
+	# dormant with everyone else's (docs/OPENING.md §9).
 	gs.scanned_planets.clear()
-	for key in load_scanned_planets():
-		gs.mark_planet_scanned(key)
 	gs.visited_planets.clear()
 	for key in load_visited_planets():
 		gs.mark_planet_visited(key)
@@ -330,7 +305,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.restore_station(load_seated_sections(), load_core_started())
 	RobotRadio.guide_awake = gs.core_started
 	
-	# Load inventory into InventoryManager (before reapply so cargo weight is correct)
+	# Load inventory into InventoryManager
 	var inventory_dict: Dictionary = {}
 	if cfg.has_section("cargo"):
 		var cargo_section = cfg.get_section_keys("cargo")
@@ -341,23 +316,8 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 					inventory_dict[k] = int(cfg.get_value("cargo", k, 0))
 	InventoryManager.set_inventory_dict(inventory_dict)
 
-	# Load upgrades FIRST (from a clean slate, so a previous session's unlocks don't leak in)
-	gs.upgrade_levels.clear()
-	gs.has_drone_bay = false
-	gs.has_planet_scanner = false
-	if cfg.has_section("upgrades"):
-		var upgrades_section = cfg.get_section_keys("upgrades")
-		if upgrades_section:
-			for upgrade_path in upgrades_section:
-				var level = int(cfg.get_value("upgrades", upgrade_path, 0))
-				gs.set_upgrade_level(upgrade_path, level)
-	
-	# Reapply all upgrades to ship based on loaded upgrade levels
-	# This sets max_hull, max_fuel, max_cargo_weight correctly
-	if ship and gs:
-		ship.reapply_all_upgrades(gs)
-	
-	# Load current fuel and hull values AFTER reapplication (so they're clamped to max)
+	# Load current fuel and hull values. An old save's bought upgrades are ignored: the
+	# ship's limits are fixed, so a fuller tank or hull is clamped back down to them.
 	if ship:
 		ship.fuel = float(cfg.get_value("stats", "fuel", ship.max_fuel))
 		ship.hull_strength = float(cfg.get_value("stats", "hull_strength", ship.max_hull))

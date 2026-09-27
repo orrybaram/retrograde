@@ -127,13 +127,11 @@ func test_loaded_scans_surface_seams_and_new_games_bury_them() -> void:
 	assert_bool(ore.is_revealed()).is_false()
 
 
-func test_readout_counts_seams_and_scanner_picks_the_nearest() -> void:
+func test_readout_counts_seams() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0)
-	var east := _ore(planet, 0.0)
-	var west := _ore(planet, 180.0)
+	_ore(planet, 0.0)
+	_ore(planet, 180.0)
 	assert_str("\n".join(PlanetScan.readout_lines(planet))).contains("2 SEAMS")
-	assert_object(PlanetScanner.nearest_ore(planet, Vector2(900, 0))).is_same(east)
-	assert_object(PlanetScanner.nearest_ore(planet, Vector2(-900, 50))).is_same(west)
 
 
 func test_seam_ids_are_unique_per_planet() -> void:

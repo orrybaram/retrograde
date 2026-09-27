@@ -1,23 +1,23 @@
 extends Node
 class_name GameState
 
-## Global singleton holding persistent player progression: credits, upgrade levels,
-## death count, Visited and scanned Bodies, dug-out ore seams and the Automatons the
-## player has met. Populated by Save.load() at game start; serialized by Save.save()
-## on dock/game-over. Emits credits_changed and upgrade_level_changed signals.
+## Global singleton holding persistent player progression: credits, death count,
+## Visited Bodies, dug-out ore seams and the Automatons the player has met. Populated by
+## Save.load() at game start; serialized by Save.save() on dock/game-over. Emits
+## credits_changed. There are no upgrades to track: the ship's limits are fixed until a
+## found Component is fitted (docs/adr/0007).
 
 signal credits_changed
-signal upgrade_level_changed(path: String, level: int)
 
 var credits: int = 0 :
 	set(value):
 		credits = value
 		credits_changed.emit()
 
-var has_drone_bay: bool = false
-var has_planet_scanner: bool = false
-
-## Planets the Planetary Scanner has mapped, keyed by Planet.save_key(). Permanent.
+## Bodies that have been surveyed, keyed by Planet.save_key(). Nothing surveys a Body
+## now: the planetary scan is gone and `ECHO` is not designed yet (docs/OPENING.md §9), so
+## this stays empty in play and is not saved. A survey fills in a Record and surfaces the
+## Body's ore seams, which stay dormant until then.
 var scanned_planets: Dictionary = {}
 
 ## Bodies the ship has flown into the inner orbit of, keyed by Planet.save_key(). A
@@ -52,27 +52,12 @@ var core_started: bool = false
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
 
-## Tracks the player's current upgrade level for each upgrade path.
-## Keys are path names (e.g., "hull", "fuel_tank"), values are tier levels (0 = base, 1+ = upgraded)
-var upgrade_levels: Dictionary = {}
-
 func _ready() -> void:
 	add_to_group("game_state")
 
 func _process(delta: float) -> void:
 	# Seams refill on play time: the tree is paused in menus
 	tick_ore_regrowth(delta)
-
-## Get the player's current upgrade level for a given path.
-## Returns 0 (base state) if no upgrades have been purchased for this path.
-func get_upgrade_level(path: String) -> int:
-	return upgrade_levels.get(path, 0)
-
-## Set the player's upgrade level for a given path.
-## Called when an upgrade is purchased.
-func set_upgrade_level(path: String, level: int) -> void:
-	upgrade_levels[path] = level
-	upgrade_level_changed.emit(path, level)
 
 func is_planet_scanned(key: String) -> bool:
 	return scanned_planets.has(key)
@@ -168,15 +153,9 @@ func clear_cargo() -> void:
 	InventoryManager.clear_inventory()
 
 ## Reset all game state to initial values for a new game.
-## This clears credits, upgrades, inventory, and all other persistent state.
+## This clears credits, inventory, and all other persistent state.
 func reset_all_state() -> void:
-	# Store upgrade paths before clearing to emit signals
-	var upgrade_paths = upgrade_levels.keys()
-
-	# Reset all state variables
 	credits = 0
-	has_drone_bay = false
-	has_planet_scanner = false
 	scanned_planets.clear()
 	visited_planets.clear()
 	spent_ore.clear()
@@ -186,10 +165,7 @@ func reset_all_state() -> void:
 	seated_sections.clear()
 	core_started = false
 	death_count = 0
-	upgrade_levels.clear()
 	InventoryManager.clear_inventory()
 
 	# Emit signals for any listeners
 	credits_changed.emit()
-	for path in upgrade_paths:
-		upgrade_level_changed.emit(path, 0)

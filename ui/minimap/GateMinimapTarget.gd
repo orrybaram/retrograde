@@ -2,7 +2,7 @@ extends MinimapTarget
 class_name GateMinimapTarget
 
 ## MinimapTarget for a Gate: a medium echo, and nothing to say whether it is powered.
-## Not shown at all until it has been found: its planet scanned (PlanetScanner), or the Gate
+## Not shown at all until it has been found: its planet surveyed (dormant: nothing surveys yet), or the Gate
 ## itself reached and named (Gate.identify). A Gate is discovered, never pointed at, and it
 ## does not pin to the rim (docs/adr/0002).
 

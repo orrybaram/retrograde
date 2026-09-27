@@ -1,5 +1,5 @@
 # Records: a Body earns its Record in the Log the moment the ship enters its inner
-# orbit, with no Planetary Scanner aboard. The row reads UNSURVEYED until it is scanned.
+# orbit. The row reads UNSURVEYED until it is surveyed (nothing surveys in play yet).
 # Run: tools/play.sh playtests/records.play   (frames land in .playtest/records_*.png)
 
 press enter
@@ -12,7 +12,6 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-assert not gs.has_planet_scanner "new game has no scanner"
 assert gs.visited_planets.is_empty() "a new game has reached nowhere"
 
 # --- Nothing reached yet: the Records tab is empty, and honest about it ---
@@ -27,7 +26,7 @@ screenshot records_1_empty
 press escape
 wait_until not pt.visible_ui().has("LogUI") 2
 
-# --- Flying into Rook's inner orbit earns it a Record, scanner or no scanner ---
+# --- Flying into Rook's inner orbit earns it a Record ---
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 press down
@@ -41,7 +40,6 @@ assert not gs.is_planet_visited("Veld/Rook") "the gravity field is not close eno
 eval pt.park_near_planet("Rook", 2000, 200, true)
 frames 3
 assert gs.is_planet_visited("Veld/Rook") "inner orbit earns Rook its Record"
-assert not gs.has_planet_scanner "and it did so with no scanner aboard"
 assert not gs.is_planet_scanned("Veld/Rook") "the Record carries no survey yet"
 
 # --- Veld too, so the cursor has somewhere to go ---

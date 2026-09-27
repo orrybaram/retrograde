@@ -112,12 +112,12 @@ func _pulse() -> float:
 	var hz: float = PULSE_HZ[_level]
 	return 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * hz)
 
-## Something the player has to be able to read: the chart, a menu, the store, or a
+## Something the player has to be able to read: the chart, a menu, or a
 ## transmission holding the game. The hull isn't getting any worse while they read it.
 func _something_to_read() -> bool:
 	if RobotRadio.is_pausing():
 		return true
-	for group in ["system_map", "pause_menu", "log_ui", "store_ui"]:
+	for group in ["system_map", "pause_menu", "log_ui"]:
 		var panel := get_tree().get_first_node_in_group(group) as CanvasItem
 		if panel and panel.visible:
 			return true

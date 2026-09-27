@@ -2,22 +2,15 @@ class_name ShipTab
 extends LogTab
 
 ## The Log's opening tab: what the ship is carrying and what shape it is in.
-## Ship gauges, the hold manifest and the upgrade tiers, across the full body width.
+## Ship gauges and the hold manifest, across the full body width.
 
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
 const SMALL_SIZE := TerminalWindow.SMALL_SIZE
 const STAT_LABEL_WIDTH := 64.0
 const STAT_VALUE_WIDTH := 96.0
-const MAX_TIER := 3
-## Clear air between the tab's sections, so S Y S T E M S, C A R G O and U P G R A D E S
-## read as three blocks rather than one long column.
+## Clear air between the tab's sections, so S Y S T E M S and C A R G O read as two
+## blocks rather than one long column.
 const SECTION_GAP := 18
-## Known upgrade tracks in display order. Paths bought but not listed here still show.
-const UPGRADE_TRACKS := [
-	["hull", "HULL PLATING"],
-	["fuel_tank", "FUEL TANK"],
-	["cargo", "CARGO HOLD"],
-]
 
 var ship: Ship = null
 var gs: GameState = null
@@ -32,7 +25,6 @@ var _hold_value: Label
 var _flight_stats: Label
 var _cargo_rows: VBoxContainer
 var _hold_total: Label
-var _upgrade_rows: VBoxContainer
 
 
 func _init() -> void:
@@ -79,15 +71,6 @@ func _build() -> void:
 	total.add_child(_hold_total)
 	add_child(total)
 
-	# The filler pushes Upgrades to the bottom of the frame when there is room; the gap
-	# keeps the sections apart when there is not and the filler collapses to nothing.
-	add_child(TerminalWindow.filler())
-	add_child(_section_gap())
-	add_child(TerminalWindow.header("U P G R A D E S"))
-	_upgrade_rows = VBoxContainer.new()
-	_upgrade_rows.add_theme_constant_override("separation", 6)
-	add_child(_upgrade_rows)
-
 
 ## Clear air before the next section heading.
 func _section_gap() -> Control:
@@ -125,7 +108,6 @@ func refresh() -> void:
 		return
 	_update_systems()
 	_update_cargo()
-	_update_upgrades()
 
 
 func _update_systems() -> void:
@@ -173,40 +155,6 @@ func _update_cargo() -> void:
 		row.add_child(worth)
 		_cargo_rows.add_child(row)
 	_hold_total.text = "%d CR" % GemData.hold_value(items)
-
-
-func _update_upgrades() -> void:
-	_clear(_upgrade_rows)
-	var tracks := UPGRADE_TRACKS.duplicate()
-	for path in gs.upgrade_levels:
-		if not UPGRADE_TRACKS.any(func(t: Array) -> bool: return t[0] == path):
-			tracks.append([path, String(path).capitalize().to_upper()])
-	for track in tracks:
-		var level := gs.get_upgrade_level(track[0])
-		var lit := Colors.PRIMARY if level > 0 else Colors.PRIMARY_DIM
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		var name_label := TerminalWindow.label(track[1], TEXT_SIZE, lit)
-		name_label.custom_minimum_size.x = STAT_LABEL_WIDTH + 60
-		row.add_child(name_label)
-		var pips := SegmentGauge.new()
-		pips.custom_minimum_size.x = 60
-		pips.set_fill(float(level) / MAX_TIER, Colors.PRIMARY, MAX_TIER)
-		row.add_child(pips)
-		row.add_child(TerminalWindow.spacer())
-		var tier_label := TerminalWindow.label(tier_name(level, MAX_TIER), SMALL_SIZE, lit)
-		tier_label.custom_minimum_size.x = STAT_VALUE_WIDTH
-		tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		row.add_child(tier_label)
-		_upgrade_rows.add_child(row)
-
-
-static func tier_name(level: int, max_tier: int) -> String:
-	if level <= 0:
-		return "STOCK"
-	if level >= max_tier:
-		return "MAX"
-	return "TIER %s" % "I".repeat(level)
 
 
 func _clear(box: Container) -> void:

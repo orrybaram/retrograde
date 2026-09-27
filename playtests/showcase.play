@@ -1,61 +1,29 @@
-# Planetary Scanner & Landing showcase, captioned, for recording a video:
+# Ore seam & Landing showcase, captioned, for recording a video:
 #   godot --path . --write-movie .playtest/showcase.avi --fixed-fps 30 -- --playtest=res://playtests/showcase.play
-# (see also tools/play.sh). Not an assertion suite; see scanner/sites/landing/seam/regrow.play.
+# (see also tools/play.sh). Not an assertion suite; see ores/landing/seam/regrow.play.
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
-eval get_tree().root.get_node("RobotRadio").mark_seen("scanner_bought")
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 20
-eval gs.set("credits", 6000)
-eval pt.caption("PLANETARY SCANNER  //  buy it at the home station")
-wait 1.5
 press action
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 wait 0.6
 press enter
-wait_until pt.visible_ui().has("StoreUI") 2
-wait 0.8
-press enter
-wait 0.6
-press down
-wait 0.25
-press down
-wait 0.25
-press down
-wait 0.25
-press down
-wait 1.8
-press enter
-wait_until gs.has_planet_scanner 3
-wait 1.2
-press esc
-wait 0.3
-press esc
-wait_until pt.visible_ui().has("SpacePortDialogue") 2
-press down
-wait 0.4
-press enter
 wait_until pt.visible_ui().is_empty() 2
-
-eval pt.caption("Unscanned planets are bare discs on the minimap")
 hold thrust 0.6
-wait 2.5
+wait 1.5
 
-eval pt.caption("Hold inside a gravity field to scan  //  leaving resets the meter")
-eval pt.park_near_planet("Rook", 2000, 20)
-wait 1.6
-eval pt.park_near_planet("Rook", 5200, 20)
-wait 1.4
-eval pt.caption("Stay in the field: the sweep fills the meter")
+eval pt.caption("Rook's seams are dormant: nothing surveys a planet yet")
 eval pt.park_near_planet("Rook", 2000, 20, true)
-wait_until gs.is_planet_scanned("Veld/Rook") 24
-eval pt.caption("Scan complete  //  survey readout + ore seams surfaced")
+wait 2.5
+eval pt.survey("Rook")
+eval pt.caption("Surveyed by hand for the showcase  //  ore seams surfaced")
 wait 3.5
 
 eval pt.caption("Hexagons just under the surface: the ore, tracked and riding the orbit")

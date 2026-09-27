@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## Visited: a Body whose inner orbit the ship has entered earns its Record in the Log,
-## scanner or no scanner (docs/adr/0003). Covers the marking reach, the moon and sun
+## Visited: a Body whose inner orbit the ship has entered earns its Record in the Log
+## (docs/adr/0003). Covers the marking reach, the moon and sun
 ## keys, the save round trip, and the Records tab that reads it back.
 
 const SAVE_FILE := "user://visit_test_save.cfg"
@@ -76,12 +76,10 @@ func test_a_record_is_earned_once() -> void:
 	assert_int(_gs.visited_planets.size()).is_equal(1)
 
 
-## Visiting has to work from the first minute, before the array is ever bought —
-## which is why it cannot live in PlanetScanner (docs/adr/0003).
-func test_visiting_does_not_need_the_planet_scanner() -> void:
+## Visiting works from the first minute and surveys nothing (docs/adr/0003).
+func test_visiting_does_not_survey() -> void:
 	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
 	var planet_log := _planet_log()
-	assert_bool(_gs.has_planet_scanner).is_false()
 	assert_object(planet_log.mark_at(Vector2(planet.scan_radius() - 1.0, 0), SAVE_FILE)).is_same(planet)
 	assert_bool(_gs.is_planet_visited("Crom")).is_true()
 	assert_bool(_gs.is_planet_scanned("Crom")).is_false()
@@ -172,7 +170,7 @@ func test_no_visits_leaves_the_bodies_list_empty() -> void:
 	assert_str(tab.hint()).is_equal(LogTab.shell_keys())
 
 
-## A Body reached with no scanner aboard gets a row, and the row says so.
+## A Body reached with no survey gets a row, and the row says so.
 func test_an_unsurveyed_body_reads_no_survey() -> void:
 	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
 	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
@@ -191,7 +189,7 @@ func test_an_unsurveyed_body_reads_no_survey() -> void:
 	assert_str(detail).contains("VELD")
 
 
-## Scanning fills the Record in: the row drops UNSURVEYED for the survey in one line,
+## A survey fills the Record in: the row drops UNSURVEYED for the survey in one line,
 ## and the detail pane holds the full readout.
 func test_a_surveyed_body_carries_its_survey() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
@@ -207,9 +205,9 @@ func test_a_surveyed_body_carries_its_survey() -> void:
 	assert_str(row).contains(PlanetScan.gravity(planet))
 	assert_str("\n".join(_text(tab._detail))).contains("ICE GIANT")
 
-## There is one survey format in the game: the Record holds exactly the rows the
-## ScanPanel types out as the scan lands.
-func test_the_detail_pane_is_the_scan_panel_readout() -> void:
+## There is one survey format in the game: the Record holds exactly
+## PlanetScan.readout_lines.
+func test_the_detail_pane_is_the_survey_readout() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
 	planet.habitability = 0.25
 	_gs.mark_planet_visited(planet.save_key())

@@ -1,8 +1,8 @@
 extends Node
 class_name Economy
 
-## Global economy constants. Gem values live in GemData; upgrade costs and
-## effects are handled by UpgradeItem resources.
+## Global economy constants. Gem values live in GemData. There is no store and nothing
+## to buy (docs/adr/0007).
 
 ## Service costs
 const REPAIR_COST_PER_POINT: int = 3  # Credits per hull point

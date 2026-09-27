@@ -134,22 +134,6 @@ func test_naming_gates_covers_the_core_too() -> void:
 	assert_int(_gs.identified_gates.size()).is_equal(0)
 
 
-## The sun is never scanned, so it isn't one of the planets this row counts.
-func test_scanning_skips_the_sun() -> void:
-	_planet("Veld")
-	_planet("Crom")
-	_planet("Sun", Planet.PlanetType.SUN)
-	_panel_in_tree()
-
-	_run("PROGRESS", "PLANETS SCANNED", 0)
-	assert_int(_gs.scanned_planets.size()).is_equal(2)
-	assert_bool(_gs.is_planet_scanned("Sun")).is_false()
-	assert_str(_read("PROGRESS", "PLANETS SCANNED")).is_equal("2 / 2")
-
-	_run("PROGRESS", "PLANETS SCANNED", -1)
-	assert_int(_gs.scanned_planets.size()).is_equal(0)
-
-
 func test_refill_ore_seams_clears_every_regrow_timer() -> void:
 	_gs.spend_ore("Veld:0", 120.0)
 	_panel_in_tree()
@@ -166,50 +150,6 @@ func test_death_count_steps_and_floors_at_zero() -> void:
 	_run("PROGRESS", "DEATHS", -1)
 	_run("PROGRESS", "DEATHS", -1)
 	assert_int(_gs.death_count).is_equal(0)
-
-
-# --- Upgrades ----------------------------------------------------------------
-
-## Stepping a track sets its tier; ENTER fits the top one. With no ship in the tree
-## nothing is refitted, but the levels are still what a store purchase would leave.
-func test_upgrade_track_steps_and_tops_out() -> void:
-	_panel_in_tree()
-	_run("UPGRADES", "HULL PLATING", 1)
-	assert_int(_gs.get_upgrade_level("hull")).is_equal(1)
-	_run("UPGRADES", "HULL PLATING", 0)
-	assert_int(_gs.get_upgrade_level("hull")).is_equal(3)
-	_run("UPGRADES", "HULL PLATING", -1)
-	assert_int(_gs.get_upgrade_level("hull")).is_equal(2)
-	assert_str(_read("UPGRADES", "HULL PLATING")).is_equal("TIER 2 / 3")
-
-
-## The scanner's unlock flag is set by refitting the track, and stepping the track
-## back clears it again — a tier that came off must not leave the tool behind.
-func test_scanner_track_sets_and_clears_its_unlock() -> void:
-	# Refitting reads the upgrade table off the stores in the tree.
-	var store := auto_free(Store.new()) as Store
-	store.store_data = load("res://entities/Store/SR7Store.tres") as StoreData
-	add_child(store)
-	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
-	add_child(ship)
-	_panel_in_tree()
-
-	_run("UPGRADES", "PLANET SCANNER", 1)
-	assert_bool(_gs.has_planet_scanner).is_true()
-	_run("UPGRADES", "PLANET SCANNER", -1)
-	assert_bool(_gs.has_planet_scanner).is_false()
-
-
-## The drone bay has no upgrade to buy, so its flag is the row itself, and a
-## refitted track must not knock it back off.
-func test_drone_bay_flag_survives_an_upgrade_refit() -> void:
-	_panel_in_tree()
-	_run("UPGRADES", "DRONE BAY", 1)
-	assert_bool(_gs.has_drone_bay).is_true()
-	_run("UPGRADES", "HULL PLATING", 1)
-	assert_bool(_gs.has_drone_bay).is_true()
-	_run("UPGRADES", "DRONE BAY", -1)
-	assert_bool(_gs.has_drone_bay).is_false()
 
 
 # --- Ship --------------------------------------------------------------------

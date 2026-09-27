@@ -26,7 +26,6 @@ const SMALL_SIZE := TerminalWindow.SMALL_SIZE
 const ROW_HEIGHT := 22.0
 const SECTION_WIDTH := 140.0
 const VALUE_WIDTH := 150.0
-const PIPS_WIDTH := 44.0
 
 ## LEFT/RIGHT on a gauge moves it this fraction of its maximum.
 const GAUGE_STEP := 0.1
@@ -40,13 +39,6 @@ const CREDIT_JUMP := 25000
 const GRAVITY_STEP := 1.25
 ## How far a gravity row can be pushed either way, so a slip can always be walked back.
 const GRAVITY_LIMIT := Vector2(0.01, 100.0)
-## Upgrade tracks in display order: path, label, top tier.
-const UPGRADE_TRACKS := [
-	["hull", "HULL PLATING", 3],
-	["fuel_tank", "FUEL TANK", 3],
-	["cargo", "CARGO HOLD", 3],
-	["planet_scanner", "PLANET SCANNER", 1],
-]
 ## How far off a planet's centre an orbit warp parks, as a multiple of its scan radius.
 const ORBIT_DISTANCE := 1.0
 ## Warping to the Void parks this far inside its edge, so the clock is already running.
@@ -156,13 +148,6 @@ func _make_row(row: Dictionary, selected: bool) -> Control:
 	line.add_child(name_label)
 	line.add_child(TerminalWindow.spacer())
 
-	if row.has("max_tier"):
-		var pips := SegmentGauge.new()
-		pips.custom_minimum_size.x = PIPS_WIDTH
-		var top: int = row["max_tier"]
-		pips.set_fill(float(row["tier"].call()) / top, Colors.PRIMARY, top)
-		line.add_child(pips)
-
 	var value: Callable = row.get("value", Callable())
 	var text := str(value.call()) if value.is_valid() else ("<>" if row["arrows"] else "RUN")
 	var value_label := TerminalWindow.label(text, TEXT_SIZE, Colors.TEXT if value.is_valid() else Colors.PRIMARY_DIM)
@@ -271,7 +256,6 @@ func _build_sections() -> void:
 	_sections = [
 		{"name": "SHIP", "build": _ship_rows},
 		{"name": "GRAVITY", "build": _gravity_rows},
-		{"name": "UPGRADES", "build": _upgrade_rows},
 		{"name": "PROGRESS", "build": _progress_rows},
 		{"name": "WARP", "build": _warp_rows},
 		{"name": "SAVE", "build": _save_rows},
@@ -451,49 +435,6 @@ func _fill_hold(ship: Ship) -> void:
 	InventoryManager.add_item(id, floori(room / each))
 
 
-# --- UPGRADES ----------------------------------------------------------------
-
-func _upgrade_rows() -> Array[Dictionary]:
-	var rows: Array[Dictionary] = []
-	if gs == null:
-		return rows
-	for track in UPGRADE_TRACKS:
-		var path: String = track[0]
-		var top: int = track[2]
-		var row := _value_row(
-			track[1],
-			"Arrows step the tier, ENTER fits the top one. The ship is refitted from scratch.",
-			func() -> String: return "TIER %d / %d" % [gs.get_upgrade_level(path), top],
-			func(direction: int) -> void:
-				var tier := top if direction == 0 else clampi(gs.get_upgrade_level(path) + direction, 0, top)
-				_set_upgrade_tier(path, tier)
-		)
-		row["tier"] = func() -> int: return gs.get_upgrade_level(path)
-		row["max_tier"] = top
-		rows.append(row)
-
-	rows.append(_toggle_row(
-		"DRONE BAY",
-		"The bay's own flag. Nothing sells it yet, so this is the only way to hold one.",
-		func() -> bool: return gs.has_drone_bay,
-		func(on: bool) -> void: gs.has_drone_bay = on
-	))
-	return rows
-
-
-## Set a track's tier and refit the ship from the whole upgrade table, the way a
-## load does. Unlock flags are cleared first so stepping a track back clears them.
-func _set_upgrade_tier(path: String, tier: int) -> void:
-	gs.set_upgrade_level(path, tier)
-	var drone_bay := gs.has_drone_bay
-	gs.has_planet_scanner = false
-	gs.has_drone_bay = false
-	var ship := _ship()
-	if ship:
-		ship.reapply_all_upgrades(gs)
-	gs.has_drone_bay = gs.has_drone_bay or drone_bay
-
-
 # --- PROGRESS ----------------------------------------------------------------
 
 func _progress_rows() -> Array[Dictionary]:
@@ -546,17 +487,6 @@ func _progress_rows() -> Array[Dictionary]:
 	))
 
 	rows.append(_value_row(
-		"PLANETS SCANNED",
-		"RIGHT or ENTER maps every planet; LEFT wipes the survey.",
-		func() -> String: return "%d / %d" % [gs.scanned_planets.size(), _scannable_planets().size()],
-		func(direction: int) -> void:
-			gs.scanned_planets.clear()
-			if direction >= 0:
-				for planet in _scannable_planets():
-					gs.mark_planet_scanned(planet.save_key())
-	))
-
-	rows.append(_value_row(
 		"DEATHS",
 		"The death counter. Nothing shows it, but the save carries it.",
 		func() -> String: return str(gs.death_count),
@@ -603,7 +533,7 @@ func _set_modules(count: int) -> void:
 		gs.mark_gate_powered(gates[i].save_key())
 
 
-func _scannable_planets() -> Array[Planet]:
+func _orbit_planets() -> Array[Planet]:
 	var planets: Array[Planet] = []
 	for node in get_tree().get_nodes_in_group("planets"):
 		var planet := node as Planet
@@ -710,7 +640,7 @@ func _warp_rows() -> Array[Dictionary]:
 			func() -> void: _warp(func() -> void: Playtest.park_at_gate(planet_name))
 		))
 
-	for planet in _scannable_planets():
+	for planet in _orbit_planets():
 		var planet_name := planet.name
 		var distance := planet.scan_radius() * ORBIT_DISTANCE
 		rows.append(_action_row(
@@ -776,7 +706,7 @@ func _save_rows() -> Array[Dictionary]:
 	))
 	rows.append(_action_row(
 		"RESET ALL STATE",
-		"Credits, upgrades, hold and every flag back to a fresh run.",
+		"Credits, hold and every flag back to a fresh run.",
 		func() -> void:
 			if gs:
 				gs.reset_all_state()

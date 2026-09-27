@@ -25,16 +25,16 @@ hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 eval get_node("/root/NavSystem").track(null)
 
-# --- A buried (unscanned) seam can't be landed on ---
+# --- A buried (unsurveyed) seam can't be landed on ---
 eval pt.hover_over_ore("Rook", 4)
 wait 2
-assert pt.state_name() == "FlyingState" "no landing before the scan"
+assert pt.state_name() == "FlyingState" "no landing before the survey"
 
-# Scan Rook (scanner granted: this scenario is about landing)
-eval gs.set("has_planet_scanner", true)
+# Seams are dormant (no planetary scan until ECHO): survey Rook by hand to surface them
+eval pt.survey("Rook")
+# Lift clear of the ground before the next teleport, so the old contact isn't reused
 eval pt.park_near_planet("Rook", 2000, 30, true)
-wait_until gs.is_planet_scanned("Veld/Rook") 24
-assert pt.snapshot().tracking.label == "ORE" "tracking the seam"
+frames 5
 
 # --- Too fast: hull damage and a bounce ---
 eval ship.set("hull_strength", ship.max_hull)
@@ -55,7 +55,7 @@ frames 5
 eval pt.hover_over_ore("Rook", 150)
 frames 2
 assert pt.state_name() == "FlyingState" "starts in flight above the seam"
-# The scan tracks whichever seam was nearest; aim the tracker at the one we land on
+# Aim the tracker at the seam we land on
 eval get_node("/root/NavSystem").track(pt.ore("Rook").tracking_target())
 land Rook 15 15
 assert pt.state_name() == "PlanetLandedState" "touched down"

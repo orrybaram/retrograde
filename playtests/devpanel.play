@@ -57,23 +57,10 @@ assert not ship.is_destroyed() "an invulnerable hull shrugs off a killing hit"
 press left
 assert not ship.dev_invulnerable "LEFT switches it back off"
 
-# --- UPGRADES ----------------------------------------------------------------
+# --- GRAVITY: nothing to drive here, just step past it ---------------------
 press tab
 wait 0.1
-screenshot 02_upgrades
-press enter
-assert gs.get_upgrade_level("hull") == 3 "ENTER fits the top hull tier"
-assert ship.max_hull > 100 "the hull upgrade is refitted onto the ship"
-press left
-assert gs.get_upgrade_level("hull") < 3 "LEFT steps the tier back"
-
-press down
-press down
-press down
-press right
-assert gs.has_planet_scanner "the scanner track sets its unlock flag"
-press left
-assert not gs.has_planet_scanner "stepping the track back clears it again"
+screenshot 02_gravity
 
 # --- PROGRESS ----------------------------------------------------------------
 press tab
@@ -85,16 +72,12 @@ press left
 assert gs.titan_influence() < 5 "LEFT takes one back off"
 
 press down
+press down
+press down
 press enter
 assert gs.identified_gates.size() == 6 "ENTER names every Gate, Core included"
 press left
 assert gs.identified_gates.size() == 0 "LEFT puts them all back to unnamed"
-
-press down
-press enter
-assert gs.scanned_planets.size() == 10 "ENTER maps every planet but the sun"
-press left
-assert gs.scanned_planets.size() == 0 "LEFT wipes the survey"
 
 # --- WARP: closes the panel and moves the ship -------------------------------
 press tab

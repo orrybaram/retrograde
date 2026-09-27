@@ -475,8 +475,8 @@ discoverable later, and in the meantime they will remember it for twenty hours.
 > Aux exists, which it does not, or an empty tank before the tank is home is a soft-lock.
 > **TODO**: What the dock offers *after* the wake is ADR 0007's, not this document's:
 > there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the
-> player brings. `Store.gd`, `StoreData.gd` and `SR7Store.tres` are still in the tree, so
-> the hub the wake opens is the superseded shopfront until that lands.
+> player brings. The store is gone (#132); the hub the wake opens offers only `DEPART`
+> until fitting lands.
 > **TODO**: UNIT-7's functional calls (relaunch, tow, the Void) still come from UNIT-7
 > before the core's cold start wakes it (`RobotRadio.wake_guide`), and need a speaker of
 > their own.

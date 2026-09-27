@@ -433,7 +433,7 @@ func load_game() -> void:
 	# Wait a frame for scene to initialize
 	await get_tree().process_frame
 
-	# Load game state (credits, ship stats, inventory, upgrades)
+	# Load game state (credits, ship stats, inventory)
 	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	var clamped: Freight = null
 	if gs and ship:
@@ -549,10 +549,6 @@ func reset_game() -> void:
 	
 	# Reset ship state
 	if ship:
-		# Reapply upgrades first to ensure max values are correct
-		if gs:
-			ship.reapply_all_upgrades(gs)
-		
 		ship.hull_strength = ship.max_hull
 		ship.fuel = ship.max_fuel
 		ship.linear_velocity = Vector2.ZERO

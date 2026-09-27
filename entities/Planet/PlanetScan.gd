@@ -1,42 +1,20 @@
 extends RefCounted
 class_name PlanetScan
 
-## Scan meter for the Planetary Scanner. Fills while the same planet stays in range and
-## resets when it drops out (or another planet takes over). Pure logic: PlanetScanner
-## feeds it the planet whose inner orbit holds the ship each physics tick.
+## What there is to know about a Body, as rows of text: the inner-orbit reach that marks
+## it Visited, and the survey format its Record in the Log shows. Pure logic. Nothing
+## surveys a Body in play now - the planetary scan is gone until `ECHO` is designed
+## (docs/OPENING.md §9) - so the survey rows only show for a Body marked scanned.
 
-const SCAN_TIME := 20.0
 ## Width of the class column in a one-line summary, so a column of them lines up.
 const CLASS_COLUMN := 11
 ## Width of the label column in a readout row, so the values line up in monospace.
 const LABEL_COLUMN := 13
 
-var target: Planet = null
-var progress := 0.0
-
-## Advance with `planet` (null when none is in range). Returns true on the tick the scan
-## completes; the meter is then cleared for the next planet.
-func update(planet: Planet, delta: float) -> bool:
-	if planet != target:
-		target = planet
-		progress = 0.0
-	if target == null:
-		return false
-	progress = minf(progress + delta / SCAN_TIME, 1.0)
-	if progress < 1.0:
-		return false
-	target = null
-	progress = 0.0
-	return true
-
-func reset() -> void:
-	update(null, 0.0)
-
 ## The Body whose inner orbit `pos` sits deepest in (relative to that Body's scan
 ## range, so a moon wins inside its parent's field), or null when none holds it.
 ## Inner orbit is the whole of the reach: flying past the edge of the gravity field is
-## not enough. This is one rule, shared - the Planetary Scanner reaches exactly this
-## far, and entering it is what marks a Body Visited (docs/adr/0003).
+## not enough. Entering it is what marks a Body Visited (docs/adr/0003).
 static func deepest(pos: Vector2, planets: Array) -> Planet:
 	var best: Planet = null
 	var best_depth := INF
@@ -50,15 +28,6 @@ static func deepest(pos: Vector2, planets: Array) -> Planet:
 			best_depth = depth
 	return best
 
-## The unsurveyed Body in reach, for the scanner to work on. The sun is a Body like any
-## other and is surveyed by the same rule; its survey honestly reports no ore and no
-## habitability (docs/GLOSSARY.md, Body).
-static func pick(pos: Vector2, planets: Array) -> Planet:
-	var unscanned := planets.filter(func(node: Variant) -> bool:
-		var planet := node as Planet
-		return planet != null and not planet.is_scanned())
-	return deepest(pos, unscanned)
-
 ## The rows every Record carries whether or not it holds a survey: what the Body is
 ## called, and for a moon what it orbits. `orbits` is "" for anything but a moon.
 static func identity_lines(designation: String, orbits: String) -> PackedStringArray:
@@ -68,8 +37,8 @@ static func identity_lines(designation: String, orbits: String) -> PackedStringA
 	return lines
 
 ## Survey readout rows for a scanned planet, label column padded for monospace. This is
-## the one survey format in the game: the ScanPanel types it out as the scan lands and
-## the Body's Record in the Log holds the same rows afterwards.
+## the one survey format in the game: the Body's Record in the Log holds these rows. The
+## sun is surveyed like any other Body and honestly reports no ore (docs/GLOSSARY.md).
 static func readout_lines(planet: Planet) -> PackedStringArray:
 	var lines := identity_lines(planet.planet_name.to_upper(),
 			planet.parent_planet.planet_name.to_upper() if planet.is_moon() else "")

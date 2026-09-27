@@ -119,7 +119,6 @@ func test_hint_comes_from_the_active_tab() -> void:
 func test_no_robot_on_the_log() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
-	assert_int(_count(log_ui, "RobotCard")).is_equal(0)
 	assert_int(_count(log_ui, "RobotView")).is_equal(0)
 
 

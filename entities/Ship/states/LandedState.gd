@@ -144,16 +144,15 @@ func physics_process(delta: float) -> void:
 	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
 	
 	# Handle dialogue keypress (ui_accept - Space/Enter)
-	# Don't toggle dialogue if store UI is open (Space is used for menu selection there)
-	if Input.is_action_just_pressed("action") and not _is_store_open():
+	if Input.is_action_just_pressed("action"):
 		if _awaiting_reboot():
 			_toggle_core_terminal()
 		else:
 			_toggle_dialogue()
 	
 	# Release lock if thrusting - transition back to FlyingState
-	# Don't allow takeoff if any UI is open (dialogue, store, etc.)
-	var is_ui_blocking = (_dialogue and _dialogue.visible) or _is_store_open() or _is_terminal_open()
+	# Don't allow takeoff if any UI is open (dialogue, terminal)
+	var is_ui_blocking = (_dialogue and _dialogue.visible) or _is_terminal_open()
 	if (ship.want_thrust or ship.want_reverse_thrust) and not is_ui_blocking:
 		_exit_to_flying()
 		return
@@ -436,12 +435,3 @@ func _show_enter_spaceport_message() -> void:
 
 func _on_dialogue_closed() -> void:
 	_show_enter_spaceport_message()
-
-func _is_store_open() -> bool:
-	if not ship or not is_instance_valid(ship):
-		return false
-	var tree = ship.get_tree()
-	if not tree:
-		return false
-	var store_ui = tree.get_first_node_in_group("store_ui") as StoreUI
-	return store_ui and store_ui.visible

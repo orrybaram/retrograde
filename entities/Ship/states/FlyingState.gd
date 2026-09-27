@@ -692,11 +692,6 @@ func _is_ui_blocking_input() -> bool:
 	if spaceport_dialogue and spaceport_dialogue.visible:
 		return true
 
-	# Check StoreUI
-	var store_ui = tree.get_first_node_in_group("store_ui") as StoreUI
-	if store_ui and store_ui.visible:
-		return true
-
 	# Check StartMenu
 	var start_menu = tree.get_first_node_in_group("start_menu") as StartMenu
 	if start_menu and start_menu.visible:

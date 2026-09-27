@@ -26,7 +26,6 @@ const MSG_LOW_HULL := preload("res://entities/Robot/radio/messages/first_low_hul
 const MSG_HULL_CRITICAL := preload("res://entities/Robot/radio/messages/hull_critical.tres")
 const MSG_CARGO_FULL := preload("res://entities/Robot/radio/messages/first_cargo_full.tres")
 const MSG_SCRAP := preload("res://entities/Robot/radio/messages/first_scrap.tres")
-const MSG_SCANNER := preload("res://entities/Robot/radio/messages/scanner_bought.tres")
 const MSG_FIRST_TRANSIT := preload("res://entities/Robot/radio/messages/first_transit.tres")
 const MSG_OUT_OF_FUEL := preload("res://entities/Robot/radio/messages/out_of_fuel.tres")
 const MSG_OUT_OF_FUEL_BEAM := preload("res://entities/Robot/radio/messages/out_of_fuel_beam.tres")
@@ -221,22 +220,6 @@ func _bind_ship() -> void:
 	_ship = ship
 	ship.fuel_changed.connect(func() -> void: check_fuel(ship.fuel, ship.max_fuel))
 	ship.cargo_changed.connect(check_cargo)
-	ship.state_machine.state_changed.connect(on_ship_state_changed)
-
-func on_ship_state_changed(from: State, to: State) -> void:
-	check_undock(from, to, _has_planet_scanner())
-
-## The scanner briefing waits for the undock after the purchase: the store menu is no
-## place for it, and a planet is where the thing gets used. Show-once, so it lands on
-## the first departure with the array aboard and never again. Taking off from a planet
-## isn't an undock (PlanetLandedState), so it can't fire there.
-func check_undock(from: State, to: State, has_scanner: bool) -> void:
-	if guide_awake and has_scanner and from is LandedState and to is FlyingState:
-		request(MSG_SCANNER)
-
-func _has_planet_scanner() -> bool:
-	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	return gs != null and gs.has_planet_scanner
 
 ## Starts the boost clock for a session. Nothing happens if the hint is already spent.
 func watch_for_boost() -> void:

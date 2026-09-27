@@ -123,10 +123,10 @@ Action rows:
    ACTION NAME                    COST/VALUE    (unavailable/owned: Colors.PRIMARY_DIM #6B5A34)
 ```
 
-Full-screen terminal menus (the Log, the store) are built in code from shared parts:
+Full-screen terminal menus (the Log) are built in code from shared parts:
 - `TerminalWindow` (`ui/TerminalWindow.gd`): dimmed backdrop, centered bordered window, title/hint notches, `add_tabs()` for a row of tab notches in the top-left border, `animate_in()`, plus static builders (`label`, `header`, `rule`, `spacer`, `filler`, `box`).
-- `RobotCard` (`ui/RobotCard.gd`): left column with the robot portrait, status tag, `say(text, expression)` typed dialogue and credits. The store uses it; the Log does not. No Automaton speaks from inside the Log -- it is the player's own instrument, read alone.
-- `SegmentGauge` (`ui/SegmentGauge.gd`): segmented bar / tier pips.
+- No Automaton speaks from inside the Log -- it is the player's own instrument, read alone. There is no store (docs/adr/0007).
+- `SegmentGauge` (`ui/SegmentGauge.gd`): segmented bar.
 - `LogUI` + `LogTab` (`ui/log/`): the Log's tabbed shell. Adding a tab is one `LogTab` subclass plus one entry in `LogUI.TABS`. The shell owns the notches, `TAB` / `Shift+TAB` cycling and the bottom-border hint; a tab owns its title, hint, contents and keys. UP / DOWN route into the active tab (Records moves its cursor with them). The Map tab (`MapTab`) wraps the `SystemMap` star chart and takes all four arrows for its mark; `M` opens the Log straight onto it (`LogUI.open_map()`).
 
 `Typewriter` lays text out after shaping (`VC_CHARS_AFTER_SHAPING`) so wrapped words don't jump lines while typing.
@@ -172,11 +172,15 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 - Only a powered ship (Flying/Harvesting) can harvest, so a stranded ship's SPACE stays with the radio.
 - `{name}` placeholders come from `conv.with_vars({...})`.
 
-## Planetary Scanner & Landing (DESIGN.md 4.10)
+## Ore seams & Landing (DESIGN.md 4.10)
+
+The planetary scan is removed (docs/OPENING.md §9): nothing surveys a Body, so seams stay
+dormant until `ECHO` is designed. The survey plumbing is kept for it; playtests about seams
+wake them with `pt.survey("Rook")`.
 
 ```
-PlanetScanner (on Ship) -> PlanetScan (meter) + ScanSweep (on Planet) -> GameState.scanned_planets -> EventBus.planet_scanned
-OreDeposit (child of Planet, grown by Planet._spawn_ore) -> surfaced on scan; minimap + OreTrackingTarget
+(nothing yet) -> GameState.scanned_planets (not saved) -> EventBus.planet_scanned
+OreDeposit (child of Planet, grown by Planet._spawn_ore) -> surfaced on survey; minimap + OreTrackingTarget
 FlyingState._ground_contact -> Touchdown rules -> PlanetLandedState (owns zoom and prompt; rings are the ship's sonar)
 OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend() -> GameState.spent_ore (refill timers)
 ```
@@ -186,12 +190,12 @@ OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend(
 - Ore seams are hexagons just under the surface, seeded from the planet's save key, so they are
   the same every session and need no authoring in `HomeSystem.tscn`. There is no landing pad:
   land on plain ground within `OreDeposit.REACH` of a seam.
-- Unlocks: upgrade path `planet_scanner`, flag `GameState.has_planet_scanner` (separate from Scanner PULSE).
-- Save: `[scan] planets` and `[ore] regrow` (ore_id -> seconds left, never shown to the player).
-  `Save.save_scanned_planets` / `Save.save_ore_regrowth` write only their section mid-flight; keep file IO
+- Save: `[ore] regrow` (ore_id -> seconds left, never shown to the player). Surveys are not saved,
+  and an old save's `[scan]` / `[upgrades]` sections are ignored.
+  `Save.save_ore_regrowth` writes only its section mid-flight; keep file IO
   out of code unit tests reach (the default save path in tests is the player's real save).
-- Scanning only reaches **inner orbit** (`Planet.scan_radius()`, the first gravity ring clear of
-  the surface), not the whole gravity field: you fly in close and hold there against the pull.
+- Visiting only reaches **inner orbit** (`Planet.scan_radius()`, the first gravity ring clear of
+  the surface), not the whole gravity field: you fly in close against the pull.
 - A seam is harvested with the *same* loop as a scrap node (`HarvestTiming` hold-and-release,
   `OreDeposit.HITS` / `RICH_HITS` hits, the last one the break). The seam owns the timing and its
   hits; `PlanetLandedState` feeds it the key and throws the gems. There is no separate drill.

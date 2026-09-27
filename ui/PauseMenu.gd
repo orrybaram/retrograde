@@ -92,9 +92,6 @@ func _show_pause_menu() -> void:
 	var spaceport = get_tree().get_first_node_in_group("spaceport_dialogue") as SpacePortDialogue
 	if spaceport and spaceport.visible:
 		return
-	var store = get_tree().get_first_node_in_group("store_ui") as StoreUI
-	if store and store.visible:
-		return
 	var gate_terminal = get_tree().get_first_node_in_group("gate_terminal") as GateTerminal
 	if gate_terminal and gate_terminal.visible:
 		return

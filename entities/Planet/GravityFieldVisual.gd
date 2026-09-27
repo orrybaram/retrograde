@@ -4,8 +4,8 @@ class_name GravityFieldVisual
 ## Draws concentric gravity-field rings around a planet using inverse-square falloff.
 ## Ring count, outline color, and width are exported. Radius and base strength are
 ## read from the parent Planet at draw time.
-## The ring geometry is shared (see ring_radius): the scanner only reaches inner orbit,
-## the first ring clear of the surface.
+## The ring geometry is shared (see ring_radius): inner orbit, the first ring clear of the
+## surface, is the reach that marks a Body Visited.
 
 ## The innermost ring sits this far inside the surface.
 const RING_INSET := 100.0
@@ -68,8 +68,8 @@ static func ring_radius(index: int, count: int, planet_radius: float, max_radius
 	var t := float(index) / float(count - 1) if count > 1 else 1.0
 	return lerpf(planet_radius - RING_INSET, max_radius, t)
 
-## Inner orbit: the first ring that clears the surface. The planet scanner only reaches
-## this far, so scanning means flying in close and holding there against the pull.
+## Inner orbit: the first ring that clears the surface. Entering it marks a Body Visited,
+## so a Record means flying in close against the pull.
 static func inner_orbit_radius(planet_radius: float, max_radius: float, count: int) -> float:
 	for i in count:
 		var r := ring_radius(i, count, planet_radius, max_radius)

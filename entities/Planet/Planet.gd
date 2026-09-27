@@ -141,8 +141,8 @@ func surface_gravity() -> float:
 func field_radius() -> float:
 	return radius * gravity_radius_multiplier
 
-## How close the ship has to be for the Planetary Scanner to work: inner orbit, the
-## first gravity ring clear of the surface.
+## How close the ship has to be to reach this Body (and mark it Visited): inner orbit,
+## the first gravity ring clear of the surface.
 func scan_radius() -> float:
 	var rings: int = gravity_field_visual.ring_count if gravity_field_visual else 6
 	return GravityFieldVisual.inner_orbit_radius(radius, field_radius(), rings)
@@ -154,7 +154,8 @@ func save_key() -> String:
 func is_moon() -> bool:
 	return parent_planet != null and parent_planet.planet_type != PlanetType.SUN
 
-## True once the Planetary Scanner has mapped this Body.
+## True once this Body has been surveyed. Nothing surveys in play now: the planetary
+## scan is gone until `ECHO` is designed (docs/OPENING.md §9).
 func is_scanned() -> bool:
 	var gs := _game_state()
 	return gs != null and gs.is_planet_scanned(save_key())
@@ -182,7 +183,7 @@ static func find_by_key(tree: SceneTree, key: String) -> Planet:
 			return planet
 	return null
 
-## Ore seams under this planet's surface (revealed once it's scanned).
+## Ore seams under this planet's surface (dormant: revealed only once it's surveyed).
 func get_ore_deposits() -> Array[OreDeposit]:
 	var ores: Array[OreDeposit] = []
 	for child in get_children():
