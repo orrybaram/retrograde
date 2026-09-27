@@ -138,7 +138,7 @@ func open() -> void:
 	]
 	_selected_index = 0
 	_refresh_rows()
-	_frame.set_hint("UP/DN SELECT   ENTER CONFIRM   ESC LEAVE")
+	_frame.set_hint(Controls.menu_hint("CONFIRM", "LEAVE"))
 	visible = true
 	_frame.animate_in()
 
@@ -168,26 +168,27 @@ func _refresh_rows() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if not (event is InputEventKey and event.pressed):
+	if not event.is_pressed():
 		return
+	var action := Controls.menu_action(event)
 
 	if _running:
-		if (event as InputEventKey).keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE]:
+		if action in [&"menu_accept", &"menu_back"] or event.is_action_pressed(&"action"):
 			_skip = true
 			get_viewport().set_input_as_handled()
 		return
 
-	match (event as InputEventKey).keycode:
-		KEY_UP:
+	match action:
+		&"menu_up":
 			_move_selection(-1)
 			get_viewport().set_input_as_handled()
-		KEY_DOWN:
+		&"menu_down":
 			_move_selection(1)
 			get_viewport().set_input_as_handled()
-		KEY_ENTER, KEY_KP_ENTER:
+		&"menu_accept":
 			_activate_selection()
 			get_viewport().set_input_as_handled()
-		KEY_ESCAPE:
+		&"menu_back":
 			close()
 			get_viewport().set_input_as_handled()
 

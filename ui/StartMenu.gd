@@ -9,11 +9,14 @@ signal load_game
 @onready var start_button: RichTextLabel = $CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer/StartRow/StartButton
 @onready var load_button: RichTextLabel = $CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer/LoadRow/LoadButton
 @onready var load_row: HBoxContainer = $CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer/LoadRow
+@onready var controls_button: RichTextLabel = $CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer/ControlsRow/ControlsButton
 @onready var quit_button: RichTextLabel = $CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer/QuitRow/QuitButton
+@onready var footer_label: Label = $CenterContainer/VBoxContainer/FooterLabel
 
 var _save_exists: bool = false
 var _selected_index: int = 0
 var _menu_items: Array[Dictionary] = []  # [{button: RichTextLabel, action: Callable, enabled: bool, label: String}]
+var _controls: ControlsUI
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Always process so button works when paused
@@ -24,8 +27,16 @@ func _ready() -> void:
 		load_button.gui_input.connect(_on_item_gui_input.bind(0))
 	if start_button:
 		start_button.gui_input.connect(_on_item_gui_input.bind(1))
+	if controls_button:
+		controls_button.gui_input.connect(_on_item_gui_input.bind(2))
 	if quit_button:
-		quit_button.gui_input.connect(_on_item_gui_input.bind(2))
+		quit_button.gui_input.connect(_on_item_gui_input.bind(3))
+
+	# Opened over the menu; while it is up it takes every input first (it is a child).
+	_controls = ControlsUI.new()
+	add_child(_controls)
+	Controls.device_changed.connect(func(_pad: bool) -> void: _update_footer())
+	_update_footer()
 
 	_update_display()
 
@@ -33,19 +44,22 @@ func _input(event: InputEvent) -> void:
 	if not visible:
 		return
 
-	if event is InputEventKey and event.pressed:
-		match event.keycode:
-			KEY_UP:
-				_move_selection(-1)
-				get_viewport().set_input_as_handled()
-			KEY_DOWN:
-				_move_selection(1)
-				get_viewport().set_input_as_handled()
-			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+	match Controls.menu_action(event):
+		&"menu_up":
+			_move_selection(-1)
+			get_viewport().set_input_as_handled()
+		&"menu_down":
+			_move_selection(1)
+			get_viewport().set_input_as_handled()
+		&"menu_accept":
+			_activate_selection()
+			get_viewport().set_input_as_handled()
+		&"menu_back":
+			_on_quit_pressed()
+			get_viewport().set_input_as_handled()
+		_:
+			if event.is_action_pressed(&"action"):
 				_activate_selection()
-				get_viewport().set_input_as_handled()
-			KEY_ESCAPE:
-				_on_quit_pressed()
 				get_viewport().set_input_as_handled()
 
 func _move_selection(direction: int) -> void:
@@ -85,6 +99,7 @@ func _update_display() -> void:
 	_menu_items.clear()
 	_menu_items.append({"button": load_button, "action": _on_load_pressed, "enabled": _save_exists, "label": "CONTINUE"})
 	_menu_items.append({"button": start_button, "action": _on_start_pressed, "enabled": true, "label": "NEW GAME"})
+	_menu_items.append({"button": controls_button, "action": _controls.open, "enabled": true, "label": "CONTROLS"})
 	_menu_items.append({"button": quit_button, "action": _on_quit_pressed, "enabled": true, "label": "QUIT"})
 
 	# Ensure selected index is on an enabled item
@@ -108,6 +123,10 @@ func _update_display() -> void:
 			button.text = "  %s" % label
 		else:
 			button.text = ("  [color=#" + Colors.hex(Colors.PRIMARY_DIM) + "]%s[/color]") % label
+
+func _update_footer() -> void:
+	if footer_label:
+		footer_label.text = "// %s TO SELECT, %s TO CONFIRM //" % [Controls.nav_label(), Controls.label(&"menu_accept")]
 
 func _on_start_pressed() -> void:
 	start_game.emit()

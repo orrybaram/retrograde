@@ -21,7 +21,7 @@ class_name Gate
 ## docks with the same rules as a port: the cradle is the dock surface, the ship comes
 ## in slow and lined up, and GateDockedState clamps it there.
 ##
-## Unidentified until flown to (CONTEXT.md): it is an unnamed ring on the minimap until
+## Unidentified until flown to (docs/GLOSSARY.md): it is an unnamed ring on the minimap until
 ## the ship gets inside Identifiable.RANGE of it, at which point the Guide says what it
 ## is and the chart names it. The Guide never points at one beforehand (docs/adr/0002).
 ##

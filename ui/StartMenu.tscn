@@ -69,7 +69,7 @@ text = " ███████████   ██████████ █�
 ░░░░░   ░░░░░ ░░░░░░░░░░    ░░░░░    ░░░░░   ░░░░░    ░░░░░░░      ░░░░░░░░░  ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░░░░░░   ░░░░░░░░░░ "
 
 [node name="MenuPanel" type="Control" parent="CenterContainer/VBoxContainer" unique_id=2054982694]
-custom_minimum_size = Vector2(350, 180)
+custom_minimum_size = Vector2(350, 215)
 layout_mode = 2
 
 [node name="BackgroundRect" type="ColorRect" parent="CenterContainer/VBoxContainer/MenuPanel" unique_id=2007168708]
@@ -156,6 +156,19 @@ theme_override_colors/default_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
 bbcode_enabled = true
 text = "  NEW GAME"
+fit_content = true
+
+[node name="ControlsRow" type="HBoxContainer" parent="CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ControlsButton" type="RichTextLabel" parent="CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer/ControlsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+theme_override_colors/default_color = Color(0.91, 0.757, 0.439, 1)
+theme_override_styles/normal = SubResource("StyleBoxEmpty_indent")
+bbcode_enabled = true
+text = "  CONTROLS"
 fit_content = true
 
 [node name="Spacer" type="Control" parent="CenterContainer/VBoxContainer/MenuPanel/MarginContainer/VBoxContainer" unique_id=1728870657]

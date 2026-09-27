@@ -25,12 +25,12 @@ func tab_title() -> String:
 
 
 func hint() -> String:
-	return map.hint_text() + "   " + SHELL_KEYS
+	return map.hint_text() + "   " + shell_keys()
 
 
-## Every chart key goes to the chart, the arrows included: they drive the mark.
-func handle_key(keycode: int) -> bool:
-	return map.handle_key(keycode)
+## Every chart action goes to the chart, the directions included: they drive the mark.
+func handle_action(action: StringName) -> bool:
+	return map.handle_action(action)
 
 
 func on_shown() -> void:

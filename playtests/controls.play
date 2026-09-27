@@ -1,0 +1,56 @@
+# The CONTROLS screen: reached from the start menu and the pause menu, it lists every
+# action with its keys and pad inputs, rebinds one through capture, swaps a clash, and
+# the new binding flies the ship. Runs on its own controls file (never the player's).
+# Run: tools/play.sh playtests/controls.play
+
+assert main.current_game_state == 0 "boots to menu"
+# NEW GAME is selected on a fresh run (CONTINUE is off with no save): one down is CONTROLS.
+press down
+press enter
+wait_until pt.controls_ui() != null 2
+assert str(pt.screen_text()).contains("THRUST") "lists the flight actions"
+assert str(pt.screen_text()).contains("LS UP") "shows the pad column"
+screenshot controls_01_start
+
+# Rebind BOOST's main key (seventh row) to Q: STRAFE LEFT had Q, so it takes SHIFT.
+press down 6
+press enter
+assert pt.controls_ui().is_capturing() "listening for the new key"
+screenshot controls_02_capture
+press q
+wait 0.1
+assert not pt.controls_ui().is_capturing() "capture ended"
+assert str(pt.screen_text()).contains("STRAFE LEFT TOOK ITS OLD INPUT") "the clash swapped"
+screenshot controls_03_swapped
+press escape
+wait_until pt.controls_ui() == null 2
+assert pt.visible_ui().has("StartMenu") "back on the start menu"
+
+# In the game: the pause menu has CONTROLS too.
+press up
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval pt.skip_opening()
+wait_until pt.state_name() == "LandedState" 5
+press escape
+wait_until get_tree().paused 2
+screenshot controls_04_pause
+press down
+press enter
+wait_until pt.controls_ui() != null 2
+assert str(pt.screen_text()).contains("BOOST") "controls open over the pause menu"
+press escape
+wait_until pt.controls_ui() == null 2
+assert get_tree().paused "still paused behind it"
+press escape
+wait_until not get_tree().paused 2
+
+# The swap holds in flight: Q boosts now.
+hold thrust 0.5
+wait_until pt.state_name() == "FlyingState" 3
+down q
+wait 0.3
+assert ship.want_boost "Q is BOOST now"
+up q

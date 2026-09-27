@@ -93,7 +93,7 @@ func test_pick_prefers_the_deeper_field_and_skips_scanned() -> void:
 
 
 ## The sun is a Body like any other: it is surveyed by the same rule, and its survey
-## honestly reports no ore (CONTEXT.md, Body; docs/adr/0003).
+## honestly reports no ore (docs/GLOSSARY.md, Body; docs/adr/0003).
 func test_the_sun_is_surveyed_like_any_other_body() -> void:
 	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN)
 	sun.planet_name = "Sun"

@@ -22,5 +22,5 @@ The Merchant is the Titan (ADR 0008) wearing a different face. It does not salva
 - **Finding the Merchant is the problem.** Regions are ~250,000 units apart and the minimap reaches 10,000, so a Merchant cannot be found by sweeping space at random. It **broadcasts** — a repeating signal the ship homes on by ear rather than by map — and each Merchant sells a pointer to the next. Local homing, regional chain.
 - The Merchant trades for **artifacts**, not currency (ADR 0007). Buying a chart means giving away Titan hardware instead of bolting it on. This is the only trade in the game and it is the only morally loaded one.
 - "Why does it charge?" becomes the question that eventually gives the Merchant away. A process that wants parts is a process that wants to be rebuilt. It is not collecting payment; it is collecting itself.
-- `CONTEXT.md`'s **Charted** entry and the Relationships bullet making the Chart a Gate's main reward are both wrong and must be replaced.
+- `docs/GLOSSARY.md`'s **Charted** entry and the Relationships bullet making the Chart a Gate's main reward are both wrong and must be replaced.
 - The Chart is still the Titan's own map, still arriving piece by piece — now through an intermediary taking a cut. The fiction ADR 0002 protected survives; only the counter changed.

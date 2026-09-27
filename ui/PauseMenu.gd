@@ -7,11 +7,13 @@ signal resumed
 signal quit_to_menu
 
 @onready var resume_button: RichTextLabel = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/ResumeRow/ResumeButton
+@onready var controls_button: RichTextLabel = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/ControlsRow/ControlsButton
 @onready var quit_button: RichTextLabel = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/QuitRow/QuitButton
 
 var _selected_index: int = 0
 var _menu_items: Array[Dictionary] = []
 var _pause_start_time: float = 0.0
+var _controls: ControlsUI
 
 func _ready() -> void:
 	visible = false
@@ -20,19 +22,25 @@ func _ready() -> void:
 
 	if resume_button:
 		resume_button.gui_input.connect(_on_item_gui_input.bind(0))
+	if controls_button:
+		controls_button.gui_input.connect(_on_item_gui_input.bind(1))
 	if quit_button:
-		quit_button.gui_input.connect(_on_item_gui_input.bind(1))
+		quit_button.gui_input.connect(_on_item_gui_input.bind(2))
+
+	# Opened over the menu; while it is up it takes every input first (it is a child).
+	_controls = ControlsUI.new()
+	add_child(_controls)
 
 	_build_menu_items()
 
 func _input(event: InputEvent) -> void:
-	# Handle escape to toggle pause
-	if event.is_action_pressed("ui_cancel"):
+	# PAUSE toggles; BACK also resumes once paused.
+	if event.is_action_pressed(&"pause") or (visible and event.is_action_pressed(&"menu_back")):
 		# The dev panel closes on its own ESC; don't pause behind it.
 		var dev_panel = get_tree().get_first_node_in_group("dev_panel") as DevPanel
 		if dev_panel and dev_panel.visible:
 			return
-		# If the Log or the map is visible, let them handle ESC instead
+		# If the Log or the map is visible, let them handle it instead
 		var log_screen = get_tree().get_first_node_in_group("log_ui") as LogUI
 		if log_screen and log_screen.visible:
 			return
@@ -54,15 +62,18 @@ func _input(event: InputEvent) -> void:
 	if not visible:
 		return
 
-	if event is InputEventKey and event.pressed:
-		match event.keycode:
-			KEY_UP:
-				_move_selection(-1)
-				get_viewport().set_input_as_handled()
-			KEY_DOWN:
-				_move_selection(1)
-				get_viewport().set_input_as_handled()
-			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+	match Controls.menu_action(event):
+		&"menu_up":
+			_move_selection(-1)
+			get_viewport().set_input_as_handled()
+		&"menu_down":
+			_move_selection(1)
+			get_viewport().set_input_as_handled()
+		&"menu_accept":
+			_activate_selection()
+			get_viewport().set_input_as_handled()
+		_:
+			if event.is_action_pressed(&"action"):
 				_activate_selection()
 				get_viewport().set_input_as_handled()
 
@@ -138,6 +149,7 @@ func _on_item_gui_input(event: InputEvent, index: int) -> void:
 func _build_menu_items() -> void:
 	_menu_items.clear()
 	_menu_items.append({"button": resume_button, "action": _on_resume_pressed, "enabled": true, "label": "RESUME"})
+	_menu_items.append({"button": controls_button, "action": _controls.open, "enabled": true, "label": "CONTROLS"})
 	_menu_items.append({"button": quit_button, "action": _on_quit_pressed, "enabled": true, "label": "QUIT TO MENU"})
 
 func _update_menu_display() -> void:

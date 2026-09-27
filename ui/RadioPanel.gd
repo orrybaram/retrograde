@@ -292,7 +292,7 @@ func _update_hint() -> void:
 			word = "CONFIRM"
 		elif last:
 			word = "CLOSE"
-		parts.append("%s %s" % [InputUtils.get_action_key_name("action").to_upper(), word])
+		parts.append("%s %s" % [Controls.label(&"action"), word])
 	_hint.text = "   ".join(parts)
 
 func _process(delta: float) -> void:
@@ -342,8 +342,7 @@ func _beep_new_chars() -> void:
 func _input(event: InputEvent) -> void:
 	if _line == null or not visible:
 		return
-	var enter: bool = event is InputEventKey and event.pressed and not event.echo \
-			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER)
+	var enter: bool = event.is_action_pressed(&"menu_accept")
 	var space: bool = event.is_action_pressed("action") and _space_continues() and _action_armed()
 	if not (space or enter or event.is_action_pressed("radio_next")):
 		return

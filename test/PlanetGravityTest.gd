@@ -82,7 +82,7 @@ func test_the_home_system_holds_every_body_this_suite_expects() -> void:
 
 
 ## The Core sits in the sun and it is meant to be the last and hardest place to reach
-## (CONTEXT.md, Sun Station). Before ADR 0004 the sun read 1.6 G and Rook, a moon, read
+## (docs/GLOSSARY.md, Sun Station). Before ADR 0004 the sun read 1.6 G and Rook, a moon, read
 ## 1.7 G.
 func test_the_sun_outweighs_every_other_body_several_times_over() -> void:
 	var bodies := _home_bodies()

@@ -96,23 +96,20 @@ func _process(_delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if current_game_state != MainGameState.PLAYING:
 		return
-	# The dev panel owns every key while it is up, including I / M / ESC.
+	# The dev panel owns every key while it is up, the Log and chart shortcuts included.
 	var dev_panel := get_tree().get_first_node_in_group("dev_panel") as DevPanel
 	if dev_panel and dev_panel.visible:
 		return
 
-	if event is InputEventKey and event.pressed and not event.echo:
-		# Handle Log toggle with "i" key
-		if event.keycode == KEY_I:
-			_toggle_log()
-		# "m" goes straight to the Log's star chart tab
-		elif event.keycode == KEY_M:
-			_toggle_system_map()
-		# Handle ESC to close the Log (the chart included)
-		elif event.keycode == KEY_ESCAPE:
-			if log_ui and log_ui.visible:
-				log_ui.close_log()
-				get_viewport().set_input_as_handled()
+	if event.is_action_pressed(&"open_log"):
+		_toggle_log()
+	# Straight to the Log's star chart tab
+	elif event.is_action_pressed(&"open_map"):
+		_toggle_system_map()
+	# BACK closes the Log (the chart included)
+	elif event.is_action_pressed(&"menu_back") and log_ui and log_ui.visible:
+		log_ui.close_log()
+		get_viewport().set_input_as_handled()
 
 ## A transmission that pauses the game has to be answered, and the radio panel
 ## steps aside for any open menu. So the menus go instead: otherwise the pause

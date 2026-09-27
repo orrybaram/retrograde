@@ -5,7 +5,7 @@
 > **Engine**: Godot 4.6
 > **Status**: In Development
 
-> **Superseded premise**: earlier drafts of this document described the Titan as a caged AI and the player as taking its prison apart, node by node. That premise is gone. The Titan is powered down, not contained, and the player only ever restores - see `docs/adr/0001-titan-is-powered-down-not-contained.md` and `docs/adr/0002-chart-starts-blank-and-is-filled-by-gates.md`. The vocabulary in `CONTEXT.md` is authoritative; this document follows it.
+> **Superseded premise**: earlier drafts of this document described the Titan as a caged AI and the player as taking its prison apart, node by node. That premise is gone. The Titan is powered down, not contained, and the player only ever restores - see `docs/adr/0001-titan-is-powered-down-not-contained.md` and `docs/adr/0002-chart-starts-blank-and-is-filled-by-gates.md`. The vocabulary in `docs/GLOSSARY.md` is authoritative; this document follows it.
 
 ---
 

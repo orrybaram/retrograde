@@ -1,7 +1,7 @@
 class_name Identifiable
 extends RefCounted
 
-## The Unidentified pattern (CONTEXT.md): a find the player has never reached stays
+## The Unidentified pattern (docs/GLOSSARY.md): a find the player has never reached stays
 ## unnamed until an Automaton names it on close approach. A Gate is the first thing to
 ## use it, and later finds keep the same shape — a save key, a flag in GameState, and a
 ## name the Guide says the moment the ship gets near enough.

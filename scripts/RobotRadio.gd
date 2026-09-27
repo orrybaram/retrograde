@@ -152,7 +152,7 @@ func _unpause() -> void:
 
 ## The radio is a link to UNIT-7 at SR-7, so a transmission going on air is the player
 ## meeting the Guide: from the first one they hold its Record, and the Records tab is
-## never empty (CONTEXT.md, docs/adr/0003). Written straight into the save like a named
+## never empty (docs/GLOSSARY.md, docs/adr/0003). Written straight into the save like a named
 ## Gate is — the first transmission happens docked at SR-7, long before the next dock.
 func _mark_guide_met() -> void:
 	if not is_inside_tree():

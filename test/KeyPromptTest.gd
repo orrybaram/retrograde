@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## On-screen prompts read the word, then its key on the line below.
 
 func _key(action: String) -> String:
-	return InputUtils.get_action_key_name(action).to_upper()
+	return Controls.label(action)
 
 func test_prompt_is_the_word_over_its_key() -> void:
 	assert_str(EventBus.action_prompt("DOCK")).is_equal("DOCK\n[%s]" % _key("action"))

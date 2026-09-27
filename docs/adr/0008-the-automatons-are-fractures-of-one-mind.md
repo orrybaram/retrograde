@@ -12,7 +12,7 @@ The Titan was switched off Module by Module. What stayed powered are pieces runn
 ## Considered options
 
 - **Three genuinely separate Automatons** (the previous design). Rejected: it leaves the game's central relationship — the player and the things that steer them — as three unrelated acquaintances, and wastes the fact that `docs/DESIGN.md` §5.3 already calls them "pieces of it."
-- **Masks: one actor consciously playing several parts.** Rejected, and this is the important rejection. It converts the premise from **complicity** to **deception**, and `CONTEXT.md`'s spine is the opposite: *"Nobody lies to the player. Every transaction is exactly what it says it is."* It also destroys the Broken One, whose entire weight comes from being a victim with its own interiority — under masks it is the Titan doing a bit.
+- **Masks: one actor consciously playing several parts.** Rejected, and this is the important rejection. It converts the premise from **complicity** to **deception**, and `docs/GLOSSARY.md`'s spine is the opposite: *"Nobody lies to the player. Every transaction is exactly what it says it is."* It also destroys the Broken One, whose entire weight comes from being a victim with its own interiority — under masks it is the Titan doing a bit.
 - **Fractures: one mind, cut apart, unaware of itself** (chosen).
 
 ## Consequences
@@ -23,4 +23,4 @@ The Titan was switched off Module by Module. What stayed powered are pieces runn
 - **The reveal is seeded mechanically, not textually.** Shared tells across fragments, none of them load-bearing on its own: a beep signature that is the same pattern at a different pitch (`RobotBeeper`), face geometry built from the same parts with one element swapped (`RobotFaces`), an identical typing cadence (`Typewriter`) where everything else in the world differs, and a shared structural tic in how sentences end.
 - **The Merchant's cover reads as wear before it reads as concealment.** A scratched, pitted cover over the screen says "this one has been out here a long time" in hour three and "this one is hiding" in hour twenty. Same asset, two readings. If the mask is obviously a mask, the reveal front-loads and is wasted.
 - Three distinct Automatons are needed *more* than before, not less: the differences between them are the evidence.
-- `CONTEXT.md`'s **Automaton** entry needs replacing, and **Merchant** needs an entry of its own.
+- `docs/GLOSSARY.md`'s **Automaton** entry needs replacing, and **Merchant** needs an entry of its own.

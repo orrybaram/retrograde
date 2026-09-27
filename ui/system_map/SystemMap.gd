@@ -196,6 +196,7 @@ func _process(delta: float) -> void:
 
 	_time += delta
 	_advance_anim(delta)
+	_poll_actions()
 	_handle_panning(delta)
 	_calculate_scale()
 	_handle_cursor(delta)
@@ -215,31 +216,38 @@ func _advance_anim(delta: float) -> void:
 	_chart.modulate.a = chart_t
 	_chart.scale = Vector2.ONE * lerpf(0.965, 1.0, chart_t)
 
-## A key the Log handed over while the chart is up. Returns true when the chart takes
-## it. The arrows are claimed but polled each frame, so the mark glides while held.
-func handle_key(keycode: int) -> bool:
+## A menu action the Log handed over while the chart is up. Returns true when the chart
+## takes it. The directions, zoom, pan and center are claimed but polled each frame
+## (`_poll_actions`), so the mark and the view glide while held and a pad's triggers and
+## sticks work the same as keys.
+func handle_action(action: StringName) -> bool:
 	if not visible:
 		return false
-	match keycode:
-		KEY_PLUS, KEY_EQUAL:
-			_zoom_in()
-		KEY_MINUS, KEY_UNDERSCORE:
-			_zoom_out()
-		# Recenter on the ship, bringing the mark back with the view
-		KEY_C:
-			_center_on_player()
-			_reset_cursor()
+	match action:
 		# Hand whatever the mark is sitting on to the nav system
-		KEY_ENTER, KEY_KP_ENTER:
+		&"menu_accept":
 			_set_tracking_point()
 		# Drop the tracking point. Nothing is tracked until the player picks again.
-		KEY_DELETE, KEY_BACKSPACE:
+		&"menu_clear":
 			NavSystem.clear()
-		KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT:
+		&"menu_up", &"menu_down", &"menu_left", &"menu_right", &"chart_zoom_in", &"chart_zoom_out", \
+				&"chart_pan_up", &"chart_pan_down", &"chart_pan_left", &"chart_pan_right", &"chart_center":
 			pass
 		_:
 			return false
 	return true
+
+## Zoom and center step once per press, read off the action state so a trigger pull
+## counts once however many motion events it sends.
+func _poll_actions() -> void:
+	if Input.is_action_just_pressed(&"chart_zoom_in"):
+		_zoom_in()
+	if Input.is_action_just_pressed(&"chart_zoom_out"):
+		_zoom_out()
+	# Recenter on the ship, bringing the mark back with the view
+	if Input.is_action_just_pressed(&"chart_center"):
+		_center_on_player()
+		_reset_cursor()
 
 func open_map() -> void:
 	# Refresh references
@@ -274,21 +282,12 @@ func is_open() -> bool:
 	return visible
 
 func _handle_panning(delta: float) -> void:
-	var pan_direction = Vector2.ZERO
-
-	# WASD pans the view; the arrow keys belong to the mark
-	if Input.is_key_pressed(KEY_D):
-		pan_direction.x -= 1.0
-	if Input.is_key_pressed(KEY_A):
-		pan_direction.x += 1.0
-	if Input.is_key_pressed(KEY_S):
-		pan_direction.y -= 1.0
-	if Input.is_key_pressed(KEY_W):
-		pan_direction.y += 1.0
+	# The pan actions move the view; the menu directions belong to the mark.
+	var pan_direction := -Input.get_vector(&"chart_pan_left", &"chart_pan_right", &"chart_pan_up", &"chart_pan_down")
 
 	# Normalize diagonal movement
 	if pan_direction.length() > 0:
-		pan_direction = pan_direction.normalized()
+		pan_direction = pan_direction.limit_length(1.0)
 		var new_pan_offset = pan_offset + pan_direction * pan_speed * delta
 		pan_offset = _clamp_pan_offset(new_pan_offset)
 		_clamp_cursor_to_view()
@@ -365,23 +364,15 @@ func _calculate_scale() -> void:
 
 # --- The mark ----------------------------------------------------------------
 
-## Arrow keys drive the mark. It crosses the chart at a steady speed whatever the
+## The menu directions (arrows, D-pad, left stick) drive the mark. It crosses the chart at a steady speed whatever the
 ## zoom, and shoves the view along once it reaches the edge, so the whole system
 ## is reachable without touching the pan keys.
 func _handle_cursor(delta: float) -> void:
-	var direction := Vector2.ZERO
-	if Input.is_key_pressed(KEY_RIGHT):
-		direction.x += 1.0
-	if Input.is_key_pressed(KEY_LEFT):
-		direction.x -= 1.0
-	if Input.is_key_pressed(KEY_DOWN):
-		direction.y += 1.0
-	if Input.is_key_pressed(KEY_UP):
-		direction.y -= 1.0
+	var direction := Controls.nav_vector()
 	if direction == Vector2.ZERO:
 		return
 
-	cursor_world += direction.normalized() * cursor_speed * delta / maxf(scale_factor, 0.0001)
+	cursor_world += direction.limit_length(1.0) * cursor_speed * delta / maxf(scale_factor, 0.0001)
 	cursor_world = _clamp_cursor_world(cursor_world)
 	_scroll_to_cursor()
 	_clamp_cursor_to_view()
@@ -1144,10 +1135,15 @@ func draw_chrome(c: Control) -> void:
 ## The chart's own keys, for the Log's bottom border. Dropping the point is only
 ## offered once there is one to drop.
 func hint_text() -> String:
-	var hint := "[ +/- ] ZOOM   [ WASD ] PAN   [ ARROWS ] MARK   [ ENTER ] TRACK"
+	var L := Controls.label
+	var zoom := "%s/%s" % [L.call(&"chart_zoom_in"), L.call(&"chart_zoom_out")]
+	var pan := "RS" if Controls.using_pad else "%s%s%s%s" % [L.call(&"chart_pan_up"), L.call(&"chart_pan_left"),
+			L.call(&"chart_pan_down"), L.call(&"chart_pan_right")]
+	var mark := "LS" if Controls.using_pad else "ARROWS"
+	var hint := "[ %s ] ZOOM   [ %s ] PAN   [ %s ] MARK   [ %s ] TRACK" % [zoom, pan, mark, L.call(&"menu_accept")]
 	if NavSystem.get_target() != null:
-		hint += "   [ DEL ] CLEAR"
-	return hint + "   [ C ] CENTER"
+		hint += "   [ %s ] CLEAR" % L.call(&"menu_clear")
+	return hint + "   [ %s ] CENTER" % L.call(&"chart_center")
 
 func _draw_corner_brackets(c: Control, alpha: float) -> void:
 	var arm := 16.0

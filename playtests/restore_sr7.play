@@ -40,17 +40,9 @@ assert pt.section("fuel_tank").lodged_in == pt.recall("station") "the tank keeps
 assert pt.section("fuel_tank").global_position.distance_to(pt.recall("station").to_global(Vector2(382, 100))) > 1100.0 and pt.section("fuel_tank").global_position.distance_to(pt.recall("station").to_global(Vector2(382, 100))) < 1600.0 "just off screen from where the ship wakes"
 assert pt.section("fuel_tank").global_position.x > pt.recall("station").to_global(Vector2(382, 100)).x "off to the right"
 assert pt.section("dorsal_arm").lodged_in == pt.planet("Rook") and pt.section("dorsal_arm").lodged_spin > 0.0 "the arm goes round Rook with the debris"
-wait_until pt.section("dorsal_arm").lodged_beside != null 3
-assert pt.section("dorsal_arm").lodged_beside != null "a piece of scrap goes round beside it"
-assert pt.section("dorsal_arm").global_position.distance_to(pt.section("dorsal_arm").lodged_beside.global_position) < 300.0 "close beside it"
 eval pt.remember("arm_at", pt.section("dorsal_arm").lodged_offset)
 wait 1.0
 assert pt.section("dorsal_arm").lodged_offset.angle_to(pt.recall("arm_at")) < 0.0 "and it has moved on round, the ring's way"
-assert pt.section("dorsal_arm").global_position.distance_to(pt.section("dorsal_arm").lodged_beside.global_position) < 300.0 "still beside its scrap"
-# Harvested, the companion is gone for good: no new one turns up beside the arm
-eval pt.section("dorsal_arm").lodged_beside._deplete_resource()
-wait 2.5
-assert pt.section("dorsal_arm").beside_spent and pt.section("dorsal_arm").lodged_beside == null "harvested scrap is not given back"
 assert pt.section("solar_array").lodged_in == pt.planet("Rook") and pt.section("solar_array").lodged_spin == 0.0 "the array lies still on Rook"
 assert absf(pt.section("solar_array").global_position.distance_to(pt.planet("Rook").global_position) - 1600.0) < 40.0 "in the ground"
 assert (pt.section("solar_array").global_position - pt.planet("Rook").global_position).dot(get_node("/root/VoidZone").sun_position() - pt.planet("Rook").global_position) > 0.0 "on the sunlit face"

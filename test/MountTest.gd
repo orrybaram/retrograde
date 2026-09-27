@@ -214,7 +214,7 @@ func test_each_section_starts_somewhere_of_its_own() -> void:
 	assert_float(tank.section_start_offset.x).is_greater(1000.0)
 	# The arm is adrift in Rook's ring (~2400-3600 out), going round with it
 	var arm := _mount(Sections.DORSAL_ARM)
-	assert_bool(arm.start_on_planet and arm.start_in_orbit and arm.start_beside_scrap).is_true()
+	assert_bool(arm.start_on_planet and arm.start_in_orbit).is_true()
 	assert_float(arm.section_start_offset.length()).is_between(2400.0, 3600.0)
 	# The array is buried in Rook's sunlit ground
 	var array := _mount(Sections.SOLAR_ARRAY)

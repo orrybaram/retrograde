@@ -2,7 +2,7 @@ extends Resource
 class_name NPCData
 
 ## One Automaton: how it looks and talks at the station it is stationed at, and the
-## Record the player keeps about it in the Log (CONTEXT.md: Automaton, Record, Note).
+## Record the player keeps about it in the Log (docs/GLOSSARY.md: Automaton, Record, Note).
 
 @export var npc_name: String = ""
 ## The designation on its own, e.g. "UNIT-7". This is what its Record is filed under

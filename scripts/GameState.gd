@@ -34,7 +34,7 @@ var powered_gates: Dictionary = {}
 
 ## Gates the Guide has named, keyed by the planet's Planet.save_key(). A Gate reads as
 ## `? ? ?` on the minimap until the player flies close enough to be told what it is
-## (CONTEXT.md, Unidentified). Permanent.
+## (docs/GLOSSARY.md, Unidentified). Permanent.
 var identified_gates: Dictionary = {}
 
 ## Automatons the player has met, keyed by NPCData.record_key() (e.g. "UNIT-7"). Meeting

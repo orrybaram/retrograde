@@ -1593,7 +1593,6 @@ section_start_offset = Vector2(-3000, -120)
 section_start_rotation = 1.1
 start_on_planet = true
 start_in_orbit = true
-start_beside_scrap = true
 
 [node name="DockArm" type="Polygon2D" parent="."]
 z_index = 1

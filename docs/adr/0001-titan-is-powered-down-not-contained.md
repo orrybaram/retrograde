@@ -14,5 +14,5 @@ date: 2026-09-18
 
 ## Consequences
 
-- DESIGN.md's containment sections, dismantling quests and grid visuals are superseded and need a rewrite pass (flagged in `CONTEXT.md`).
+- DESIGN.md's containment sections, dismantling quests and grid visuals are superseded and need a rewrite pass (flagged in `docs/GLOSSARY.md`).
 - Titan Influence is a count of Modules online (0–5); the Core in the sun is a separate final state that requires all five.

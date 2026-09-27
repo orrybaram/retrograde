@@ -12,7 +12,7 @@ extends LogTab
 ## many there are to find, which is the spoiler docs/adr/0002 protects.
 ##
 ## A Record about an Automaton is the player's own note on it, not the Automaton being
-## present: nothing speaks from inside the Log (CONTEXT.md).
+## present: nothing speaks from inside the Log (docs/GLOSSARY.md).
 
 ## Shown while the player holds no Records. It says what earns one; it never hints at
 ## how many there are to find.
@@ -29,7 +29,8 @@ const EMPTY_STATE := [
 ## one line (PlanetScan.summary_line) instead.
 const NO_SURVEY := "UNSURVEYED"
 ## The keys this tab owns, laid before the shell's in the bottom border.
-const CURSOR_KEYS := "[UP/DOWN] SELECT"
+static func cursor_keys() -> String:
+	return "[%s] SELECT" % Controls.nav_label()
 const TEXT_SIZE := TerminalWindow.TEXT_SIZE
 ## Section headings inside the list column. Smaller than TerminalWindow.header(): these
 ## label a list within a column rather than a panel of the screen.
@@ -78,8 +79,8 @@ func tab_title() -> String:
 ## stayed home is offered the shell's keys alone.
 func hint() -> String:
 	if _row_count() == 0:
-		return SHELL_KEYS
-	return "%s   %s" % [CURSOR_KEYS, SHELL_KEYS]
+		return shell_keys()
+	return "%s   %s" % [cursor_keys(), shell_keys()]
 
 
 func _build() -> void:
@@ -201,7 +202,7 @@ func _draw_rows() -> void:
 
 ## The one detail column, opened out on whichever Record the cursor is on. A Body's
 ## Record is instrument output and an Automaton's is Notes, so the two do not share a
-## voice (CONTEXT.md) — but they do share this column, which is what keeps the rule
+## voice (docs/GLOSSARY.md) — but they do share this column, which is what keeps the rule
 ## beside it running full height instead of stopping at an empty pane.
 func _draw_detail() -> void:
 	_clear(_detail)
@@ -248,14 +249,14 @@ static func orbits(body: Planet) -> String:
 
 # --- Input -------------------------------------------------------------------
 
-func handle_key(keycode: int) -> bool:
+func handle_action(action: StringName) -> bool:
 	if _row_count() == 0:
 		return false
-	match keycode:
-		KEY_UP:
+	match action:
+		&"menu_up":
 			_move_cursor(-1)
 			return true
-		KEY_DOWN:
+		&"menu_down":
 			_move_cursor(1)
 			return true
 	return false
