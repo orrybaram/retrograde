@@ -102,6 +102,27 @@ func seat(f: Freight) -> void:
 		Mount.clunk(self)
 		f.punch(0.1))
 
+## Whether docking at `port` puts the ship alongside this Cradle: `port` is on SR-7.
+func serves(port: Node) -> bool:
+	return port != null and get_parent() != null and get_parent().is_ancestor_of(port)
+
+## Fit what is in the Cradle to the ship (docs/OPENING.md §9): the Component is the ship's
+## now, not the Cradle's, and the Cradle is empty again. The Cargo Bay makes the hold.
+## Returns the Component fitted, or "" with nothing to fit.
+func fit() -> String:
+	var gs := _game_state()
+	if gs == null or gs.cradled == "":
+		return ""
+	var id := gs.cradled
+	gs.mark_fitted(id)
+	gs.cradled = ""
+	Save.save_fitted(PackedStringArray(gs.fitted.keys()))
+	refresh()
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if ship:
+		ship.refit(gs)
+	return id
+
 func is_seating() -> bool:
 	return _seating != null and _seating.is_running()
 

@@ -65,13 +65,13 @@ func up() -> Vector2:
 ## The Cargo Bay is never lost: while no piece of it is anywhere in the world (a new game,
 ## or a save from before it), it is put back buried in the wreck. A piece put back from a
 ## save still buried is buried again, as hard as ever. Once it is in SR-7's Cradle it is
-## home, and no copy is left out here. Runs on every new game and load.
+## home, and no copy is left out here - nor once it is fitted. Runs on every new game and load.
 func ensure_cargo_bay() -> void:
 	if planet == null:
 		return
 	var piece := find_piece()
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	if gs and gs.cradled == component:
+	if gs and (gs.cradled == component or gs.is_fitted(component)):
 		if piece:  # already home: a stale copy must not linger
 			piece.remove_from_group("freight")
 			piece.queue_free()

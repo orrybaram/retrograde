@@ -32,6 +32,8 @@ const DATA := {
 		"pull_time": 4.25,
 		"answer_range": 5000.0,
 		"needs_power": true,
+		# Fitted, it is the ship's hold: 50 units of gems (Ship.refit).
+		"hold": 50.0,
 	},
 }
 
@@ -53,6 +55,17 @@ static func apply(f: Freight, id: String) -> void:
 	f.pull_time = d.get("pull_time", Freight.PULL_TIME)
 	f.answer_range = d.get("answer_range", 0.0)
 	f.answers_needs_power = d.get("needs_power", false)
+
+## The hold the Components `ids` give the ship once they are fitted.
+static func hold(ids: Array) -> float:
+	var total := 0.0
+	for id in ids:
+		total += float(DATA.get(id, {}).get("hold", 0.0))
+	return total
+
+## `id`'s name as the station's menus show it ("CARGO BAY").
+static func label(id: String) -> String:
+	return str(DATA.get(id, {}).get("label", id.to_upper()))
 
 ## How hard Component `id` holds when it is buried (Freight.pull_threshold).
 static func pull_threshold(id: String) -> float:
