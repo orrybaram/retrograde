@@ -1,18 +1,18 @@
 extends Node
 class_name GameState
 
-## Global singleton holding persistent player progression: credits, death count,
+## Global singleton holding persistent player progression: Stores, death count,
 ## Visited Bodies, dug-out ore seams and the Automatons the player has met. Populated by
 ## Save.load() at game start; serialized by Save.save() on dock/game-over. Emits
-## credits_changed. There are no upgrades to track: the ship's limits are fixed until a
+## stores_changed. There are no upgrades to track: the ship's limits are fixed until a
 ## found Component is fitted (docs/adr/0007).
 
-signal credits_changed
+signal stores_changed
 
-var credits: int = 0 :
+var stores: int = 0 :
 	set(value):
-		credits = value
-		credits_changed.emit()
+		stores = value
+		stores_changed.emit()
 
 ## Bodies that have been surveyed, keyed by Planet.save_key(). Nothing surveys a Body
 ## now: the planetary scan is gone and `ECHO` is not designed yet (docs/OPENING.md §9), so
@@ -153,9 +153,9 @@ func clear_cargo() -> void:
 	InventoryManager.clear_inventory()
 
 ## Reset all game state to initial values for a new game.
-## This clears credits, inventory, and all other persistent state.
+## This clears Stores, inventory, and all other persistent state.
 func reset_all_state() -> void:
-	credits = 0
+	stores = 0
 	scanned_planets.clear()
 	visited_planets.clear()
 	spent_ore.clear()
@@ -168,4 +168,4 @@ func reset_all_state() -> void:
 	InventoryManager.clear_inventory()
 
 	# Emit signals for any listeners
-	credits_changed.emit()
+	stores_changed.emit()

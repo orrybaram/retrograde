@@ -161,14 +161,14 @@ func test_transit_lands_the_ship_docked_at_the_destination() -> void:
 
 
 ## The whole point: the Titan moves the ship, so the ship spends nothing doing it.
-func test_transit_costs_no_fuel_hull_hold_or_credits() -> void:
+func test_transit_costs_no_fuel_hull_hold_or_stores() -> void:
 	var here := _power(_gate("Veld", 253125.0))
 	var there := _power(_gate("Crom", 168750.0))
 	var ship := _ship()
 	_dock_at(ship, here)
 	ship.fuel = 42.0
 	ship.hull_strength = 55.0
-	_gs.credits = 1234
+	_gs.stores = 1234
 	InventoryManager.add_item("gem", 3)
 	var hold := InventoryManager.get_total_value()
 
@@ -176,12 +176,12 @@ func test_transit_costs_no_fuel_hull_hold_or_credits() -> void:
 
 	assert_float(ship.fuel).is_equal(42.0)
 	assert_float(ship.hull_strength).is_equal(55.0)
-	assert_int(_gs.credits).is_equal(1234)
+	assert_int(_gs.stores).is_equal(1234)
 	assert_int(InventoryManager.get_total_value()).is_equal(hold)
 	assert_int(InventoryManager.get_quantity("gem")).is_equal(3)
 
 
-## Powering a Gate is what costs credits; nothing about the link charges again.
+## Powering a Gate is what costs Stores; nothing about the link charges again.
 func test_arriving_never_powers_anything_down_or_up() -> void:
 	var here := _power(_gate("Veld", 253125.0))
 	var there := _power(_gate("Crom", 168750.0))

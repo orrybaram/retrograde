@@ -1,6 +1,6 @@
-# Docking at a port: gems fly out of the hold into the port while the HUD credit count
+# Docking at a port: gems fly out of the hold into the port while the HUD Stores count
 # rolls up, and SR-7 tops the tank up to its free quarter (~1.25s from empty) and stops
-# there (docs/OPENING.md §9). Dialogue opens after the cash-in.
+# there (docs/OPENING.md §9). Dialogue opens after the Deposit.
 # Run: tools/play.sh playtests/dock.play   (frames land in .playtest/dock_*.png)
 
 press enter
@@ -28,25 +28,25 @@ eval inv.add_item("gem", 12)
 eval inv.add_item("crystal", 4)
 eval inv.add_item("artifact", 2)
 eval ship.set("fuel", 0.0)
-assert gs.credits == 0 "no credits yet"
-# The hold emptying and the credits rolling up both change how many digits the cargo row
+assert gs.stores == 0 "no Stores yet"
+# The hold emptying and the Stores rolling up both change how many digits the cargo row
 # carries; the meters must not stretch with it
 eval pt.remember("fuel_bar_w", pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar").size.x)
 eval ship.set_meta("pending_dockable", pt.node("space_ports"))
 eval ship.state_machine.change_state("LandedState")
 wait 0.9
-burst dock_1_cash_in 6 0.05
-wait_until gs.credits > 0 2
-assert inv.get_total_value() > 0 "hold still draining while credits count up"
+burst dock_1_deposit 6 0.05
+wait_until gs.stores > 0 2
+assert inv.get_total_value() > 0 "hold still draining while Stores count up"
 assert ship.fuel > 0.0 "tank refilling"
-assert not pt.visible_ui().has("SpacePortDialogue") "dialogue waits for the cash-in"
+assert not pt.visible_ui().has("SpacePortDialogue") "dialogue waits for the Deposit"
 wait 0.8
-screenshot dock_2_cash_in
-wait_until inv.get_total_value() == 0 and gs.credits == 60 + 96 + 100 + 200 3
+screenshot dock_2_deposit
+wait_until inv.get_total_value() == 0 and gs.stores == 60 + 96 + 100 + 200 3
 wait_until pt.visible_ui().has("SpacePortDialogue") 2
 wait 0.5
 screenshot dock_3_banked
-assert pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar").size.x == pt.recall("fuel_bar_w") "fuel meter keeps its width through the cash-in"
+assert pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/FuelRow/FuelProgressBar").size.x == pt.recall("fuel_bar_w") "fuel meter keeps its width through the Deposit"
 assert is_equal_approx(ship.fuel, ship.max_fuel * 0.25) "a quarter tank, and no more"
 wait 1.0
 assert is_equal_approx(ship.fuel, ship.max_fuel * 0.25) "the fill stopped at the quarter"

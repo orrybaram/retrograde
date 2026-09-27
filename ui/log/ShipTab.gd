@@ -148,13 +148,13 @@ func _update_cargo() -> void:
 		row.add_child(name_label)
 		row.add_child(TerminalWindow.label("x%d" % qty, TEXT_SIZE, Colors.TEXT if qty > 0 else Colors.PRIMARY_DIM))
 		row.add_child(TerminalWindow.spacer())
-		row.add_child(TerminalWindow.label("%d CR ea" % GemData.value_of(item_id), SMALL_SIZE, Colors.PRIMARY_DIM))
-		var worth := TerminalWindow.label("%d CR" % (qty * GemData.value_of(item_id)), TEXT_SIZE, Colors.PRIMARY if qty > 0 else Colors.PRIMARY_DIM)
+		row.add_child(TerminalWindow.label("%d ST ea" % GemData.value_of(item_id), SMALL_SIZE, Colors.PRIMARY_DIM))
+		var worth := TerminalWindow.label("%d ST" % (qty * GemData.value_of(item_id)), TEXT_SIZE, Colors.PRIMARY if qty > 0 else Colors.PRIMARY_DIM)
 		worth.custom_minimum_size.x = STAT_VALUE_WIDTH
 		worth.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(worth)
 		_cargo_rows.add_child(row)
-	_hold_total.text = "%d CR" % GemData.hold_value(items)
+	_hold_total.text = "%d ST" % GemData.hold_value(items)
 
 
 func _clear(box: Container) -> void:

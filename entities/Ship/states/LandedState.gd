@@ -12,7 +12,7 @@ var _initial_ship_position: Vector2 = Vector2.ZERO
 var _initial_ship_rotation: float = 0.0
 var _dialogue = null  # SpacePortDialogue
 var _terminal: CoreTerminal = null
-var _cash_in: HoldCashIn = null
+var _deposit: HoldDeposit = null
 var _refueling := false
 ## Where this dock's fill stops: SR-7's free quarter (Ship.free_fuel_floor).
 var _refuel_target := 0.0
@@ -73,7 +73,7 @@ func enter() -> void:
 	var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
 
 	# Space ports: top the tank up to SR-7's free quarter, fly the hold into the port as
-	# credits, refresh resources
+	# Stores, refresh resources
 	var at_port := locked_dockable.is_in_group("space_ports")
 	# A port nobody runs takes no delivery: the hold keeps what it carries until someone
 	# is awake to receive it (docs/OPENING.md §3, SpacePort.is_open).
@@ -81,9 +81,9 @@ func enter() -> void:
 	if at_port:
 		_start_refuel(gs)
 		if port_open:
-			_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
-			if _cash_in:
-				_cash_in.finished.connect(_on_cash_in_finished)
+			_deposit = HoldDeposit.begin(locked_dockable, ship, gs)
+			if _deposit:
+				_deposit.finished.connect(_on_deposit_finished)
 		EventBus.resources_refresh_requested.emit()
 
 	# Auto-save on landing (wait a frame to ensure position is set)
@@ -91,11 +91,11 @@ func enter() -> void:
 	_autosave()
 
 	# Automatically open SpacePort dialogue if docked to a SpacePort (but not on spawn),
-	# once the cash-in has played out. A closed port opens nothing and prompts nothing:
+	# once the Deposit has played out. A closed port opens nothing and prompts nothing:
 	# the dock is a perch, and thrust is the way off it.
 	if not instant_dock and port_open:
-		if is_instance_valid(_cash_in):
-			await _cash_in.finished
+		if is_instance_valid(_deposit):
+			await _deposit.finished
 		if locked_dockable and is_instance_valid(locked_dockable):
 			_open_spaceport_dialogue()
 	elif instant_dock and port_open:
@@ -110,8 +110,8 @@ func enter() -> void:
 
 func exit() -> void:
 	super.exit()
-	var cash_in := _cash_in
-	_cash_in = null
+	var deposit := _deposit
+	_deposit = null
 	_refueling = false
 	_refuel_target = 0.0
 	_close_core_terminal()
@@ -134,10 +134,10 @@ func exit() -> void:
 	if ship and ship.camera:
 		ship.camera.zoom_camera_out()
 
-	# Taking off mid cash-in banks the rest immediately (after locked_dockable is
+	# Taking off mid Deposit deposits the rest immediately (after locked_dockable is
 	# cleared, so the enter() coroutine waiting on it doesn't reopen the dialogue)
-	if is_instance_valid(cash_in):
-		cash_in.finish()
+	if is_instance_valid(deposit):
+		deposit.finish()
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
@@ -328,7 +328,7 @@ func _refuel(delta: float) -> void:
 		_refueling = false
 		_autosave()
 
-func _on_cash_in_finished(_total: int) -> void:
+func _on_deposit_finished(_total: int) -> void:
 	_autosave()
 
 func _autosave() -> void:
@@ -437,9 +437,9 @@ func _on_reboot_requested() -> void:
 	# The first thing a running SR-7 does for the ship on its dock is the free quarter
 	_start_refuel(gs)
 	if _port_is_open():
-		_cash_in = HoldCashIn.begin(locked_dockable, ship, gs)
-		if _cash_in:
-			_cash_in.finished.connect(_on_cash_in_finished)
+		_deposit = HoldDeposit.begin(locked_dockable, ship, gs)
+		if _deposit:
+			_deposit.finished.connect(_on_deposit_finished)
 		_show_enter_spaceport_message()
 
 func _show_enter_spaceport_message() -> void:

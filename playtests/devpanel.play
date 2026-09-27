@@ -32,7 +32,7 @@ assert get_tree().paused "the dev panel pauses the game"
 assert pt.visible_ui().has("DevPanel") "the panel is on screen"
 screenshot 01_ship
 
-# --- SHIP: hull, hold, credits, the no-damage flag ---------------------------
+# --- SHIP: hull, hold, Stores, the no-damage flag ---------------------------
 press down
 press left
 assert ship.hull_strength < ship.max_hull "LEFT on HULL takes plating off"
@@ -47,7 +47,7 @@ assert inv.get_total_weight() == 0 "LEFT on HOLD dumps it"
 
 press down
 press enter
-assert gs.credits >= 25000 "ENTER on CREDITS banks the jump"
+assert gs.stores >= 25000 "ENTER on STORES adds the jump"
 
 press down
 press right

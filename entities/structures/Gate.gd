@@ -26,7 +26,7 @@ class_name Gate
 ## is and the chart names it. The Guide never points at one beforehand (docs/adr/0002).
 ##
 ## One Gate in the system is not a planet's: the Core's Gate at the Sun Station, which
-## waits on all five Modules rather than on credits (`is_core`).
+## waits on all five Modules rather than on Stores (`is_core`).
 
 const OrbitalMotionClass = preload("res://scripts/OrbitalMotion.gd")
 const MSG_IDENTIFIED = preload("res://entities/Robot/radio/messages/gate_identified.tres")
@@ -62,7 +62,7 @@ const BLINK_DUTY := 0.18
 ## state, not a sixth Module.
 const MODULE_COUNT := 5
 
-## What the Titan asks for this Module, in credits.
+## What the Titan asks for this Module, in Stores.
 @export var power_cost: int = 600
 
 ## The Core's Gate, beside the Sun Station: the Titan's sixth part rather than a
@@ -213,10 +213,10 @@ func identify_if_near(ship_position: Vector2) -> bool:
 
 ## Whether the player can pay for it right now.
 func can_afford(gs: GameState) -> bool:
-	return gs != null and gs.credits >= power_cost
+	return gs != null and gs.stores >= power_cost
 
 ## True once every Module is online, which is all the Core's Gate is waiting for. A
-## planet's Gate only ever waits on credits.
+## planet's Gate only ever waits on Stores.
 func modules_ready(gs: GameState) -> bool:
 	return gs != null and gs.titan_influence() >= MODULE_COUNT
 
@@ -226,7 +226,7 @@ func offers_transit() -> bool:
 	return not is_core
 
 ## Pay the cost and bring this planet's Module online. Returns false if it is already
-## online or the credits aren't there; nothing is charged in that case.
+## online or the Stores aren't there; nothing is charged in that case.
 func power(gs: GameState) -> bool:
 	# The Core is not a Module, and what happens when it comes online is a later
 	# endgame issue: its Gate charges nothing and brings nothing online yet.
@@ -235,7 +235,7 @@ func power(gs: GameState) -> bool:
 	var key := save_key()
 	if gs == null or key == "" or gs.is_gate_powered(key) or not can_afford(gs):
 		return false
-	gs.credits -= power_cost
+	gs.stores -= power_cost
 	gs.mark_gate_powered(key)
 	_glow = 0.0
 	return true

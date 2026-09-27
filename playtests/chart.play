@@ -12,7 +12,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-eval gs.set("credits", 5000)
+eval gs.set("stores", 5000)
 
 # A new chart holds home and nothing else
 press m

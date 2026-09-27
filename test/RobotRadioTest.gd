@@ -204,12 +204,12 @@ func test_seen_flags_round_trip_through_save() -> void:
 
 func test_saving_flags_keeps_other_save_data() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "credits", 42)
+	cfg.set_value("stats", "stores", 42)
 	cfg.save(SAVE_FILE)
 	Save.save_radio_seen(PackedStringArray(["a"]), SAVE_FILE)
 	cfg = ConfigFile.new()
 	cfg.load(SAVE_FILE)
-	assert_int(cfg.get_value("stats", "credits", 0)).is_equal(42)
+	assert_int(cfg.get_value("stats", "stores", 0)).is_equal(42)
 	assert_array(Array(Save.load_radio_seen(SAVE_FILE))).is_equal(["a"])
 
 
@@ -461,7 +461,7 @@ func test_bundled_messages_are_valid() -> void:
 	for conv: RadioConversation in TIPS + CONFIRM_CALLS + ALARMS:
 		assert_str(String(conv.id)).is_not_empty()
 		assert_bool(conv.lines.is_empty()).is_false()
-		var vars := {"penalty": 20, "salvage": "Salvage it."}
+		var vars := {"salvage": "Salvage it."}
 		for line in conv.lines:
 			var shown := line.display_text(vars) + line.confirm_text(vars)
 			assert_bool(RobotFaces.has_face(line.expression)).override_failure_message("%s: %s" % [conv.id, line.expression]).is_true()
@@ -518,13 +518,13 @@ func test_a_critical_hull_outranks_every_other_warning() -> void:
 
 
 func test_vars_fill_text_and_confirm_label() -> void:
-	var line := RadioLine.make("Fee is {penalty} CR.", &"neutral", false, "PAY {penalty}")
+	var line := RadioLine.make("Fee is {penalty} ST.", &"neutral", false, "PAY {penalty}")
 	var conv := RadioConversation.make(&"fee", [line] as Array[RadioLine]).with_vars({"penalty": 20})
-	assert_str(conv.lines[0].display_text(conv.vars)).is_equal("Fee is 20 CR.")
+	assert_str(conv.lines[0].display_text(conv.vars)).is_equal("Fee is 20 ST.")
 	assert_str(conv.lines[0].confirm_text(conv.vars)).is_equal("PAY 20")
 	assert_str(String(conv.id)).is_equal("fee")
 	# The shared template is untouched
-	assert_str(line.display_text()).is_equal("Fee is {penalty} CR.")
+	assert_str(line.display_text()).is_equal("Fee is {penalty} ST.")
 
 
 func test_key_tokens_use_the_input_map() -> void:

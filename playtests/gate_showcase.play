@@ -11,7 +11,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 20
-eval gs.set("credits", 1000)
+eval gs.set("stores", 1000)
 
 eval pt.caption("A GATE ORBITS EVERY PLANET  //  dormant, waiting to be switched on")
 wait 1.6
@@ -41,7 +41,7 @@ press action
 wait_until pt.state_name() == "GateDockedState" 3
 wait 1.4
 
-eval pt.caption("The Gate's own terminal  //  600 CR to bring Veld's Module online")
+eval pt.caption("The Gate's own terminal  //  600 ST to bring Veld's Module online")
 wait 3.0
 press enter
 wait_until gs.titan_influence() == 1 3
@@ -66,7 +66,7 @@ wait 2.0
 reload
 wait_until main.current_game_state == 1 10
 wait 1.0
-eval pt.caption("Back in the cradle, Module still online, credits still spent")
+eval pt.caption("Back in the cradle, Module still online, Stores still spent")
 wait 3.0
 eval pt.caption("")
 wait 0.6

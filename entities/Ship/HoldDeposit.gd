@@ -1,11 +1,11 @@
 extends Node2D
-class_name HoldCashIn
+class_name HoldDeposit
 
-## Docking cash-in: gems leave the ship one at a time and arc into the port. Each gem
-## comes out of the hold as it launches and is banked as credits when it lands, so the
-## cargo readout drains while the credit readout counts up. Cheapest gems go first so
+## Docking Deposit: gems leave the ship one at a time and arc into the port. Each gem
+## comes out of the hold as it launches and is added to the Stores when it lands, so the
+## cargo readout drains while the Stores readout counts up. Cheapest gems go first so
 ## the big ones close it out. Parented to the SpacePort so the flight rides the station.
-## Taking off early banks whatever is left instantly (finish()).
+## Taking off early deposits whatever is left instantly (finish()).
 
 signal finished(total: int)
 
@@ -18,7 +18,7 @@ const ARC_WIDTH := 44.0       # sideways swing along the pad
 const ARC_HEIGHT := 12.0      # lift off the ship before diving into the port
 const TARGET := Vector2(0, 36)  # inside the station, below the pad (ship sits at y=-20)
 
-static var running := 0  # sequences in progress (the HUD rolls its credit count meanwhile)
+static var running := 0  # sequences in progress (the HUD rolls its Stores count meanwhile)
 
 var _ship: Node2D = null
 var _gs: GameState = null
@@ -69,20 +69,20 @@ static func launch_order(items: Dictionary) -> Array[String]:
 static func interval_for(count: int) -> float:
 	return clampf(TOTAL_TIME / maxi(count, 1), MIN_INTERVAL, MAX_INTERVAL)
 
-## Start cashing in the current hold at `port`. Returns null when there is nothing to cash.
-static func begin(port: Node2D, ship: Node2D, gs: GameState) -> HoldCashIn:
+## Start depositing the current hold at `port`. Returns null when there is nothing to deposit.
+static func begin(port: Node2D, ship: Node2D, gs: GameState) -> HoldDeposit:
 	var ids := launch_order(InventoryManager.get_all_items())
 	if ids.is_empty():
 		return null
-	var cash_in := HoldCashIn.new()
-	cash_in._ship = ship
-	cash_in._gs = gs
-	cash_in._queue = ids
-	cash_in._interval = interval_for(ids.size())
-	cash_in.z_index = 5
+	var deposit := HoldDeposit.new()
+	deposit._ship = ship
+	deposit._gs = gs
+	deposit._queue = ids
+	deposit._interval = interval_for(ids.size())
+	deposit.z_index = 5
 	running += 1
-	port.add_child(cash_in)
-	return cash_in
+	port.add_child(deposit)
+	return deposit
 
 func _process(delta: float) -> void:
 	if _done:
@@ -120,7 +120,7 @@ func _bank(id: String) -> void:
 	var value := GemData.value_of(id)
 	_total += value
 	if _gs:
-		_gs.credits += value
+		_gs.stores += value
 
 ## Bank everything still queued or in flight right now.
 func finish() -> void:
@@ -140,7 +140,7 @@ func _complete() -> void:
 	_done = true
 	running -= 1
 	if _total > 0:
-		EventBus.hold_cashed_in.emit(_total)
+		EventBus.hold_deposited.emit(_total)
 	finished.emit(_total)
 	queue_free()
 
