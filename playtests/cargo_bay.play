@@ -67,7 +67,22 @@ assert ship.damage_shake_current_intensity > 0.5 "but the ship strains at it"
 assert ship.state_machine.current_state._coupled != null "still coupled"
 screenshot cargo_bay_2_strain
 
+# --- A quarter spent on the way is not enough: the Burn runs dry and it holds ---
+# A tenth of the tank burned getting here leaves 15%, under the tear-out's fifth
+eval ship.set("fuel", ship.max_fuel * 0.15)
+down boost
+down reverse_thrust
+wait_until ship.fuel == 0.0 6
+wait 1.5
+up boost
+up reverse_thrust
+assert pt.recall("bay").is_buried() "a wasted quarter runs dry before it tears free"
+assert ship.state_machine.current_state._coupled != null "still coupled, on the Aux"
+wait_until pt.recall("bay").pull_progress == 0.0 20
+screenshot cargo_bay_2b_dry
+
 # --- The Burn tears it free, on the quarter tank SR-7 gives ---
+eval ship.set("fuel", ship.max_fuel * 0.25)
 eval pt.remember("fuel", ship.fuel)
 down boost
 down reverse_thrust
@@ -76,7 +91,8 @@ up boost
 up reverse_thrust
 assert not pt.recall("bay").is_buried() "the Burn tears it free"
 assert ship.fuel > 0.0 "the quarter tank covered it"
-assert pt.recall("fuel") - ship.fuel > ship.max_fuel * 0.15 and pt.recall("fuel") - ship.fuel < ship.max_fuel * 0.23 "at about a fifth of a full tank"
+eval (pt.recall("fuel") - ship.fuel) / ship.max_fuel
+assert pt.recall("fuel") - ship.fuel > ship.max_fuel * 0.17 and pt.recall("fuel") - ship.fuel < ship.max_fuel * 0.23 "at about a fifth of a full tank, a thin margin under the quarter"
 wait_until pt.state_name() == "CarryingState" 3
 assert pt.state_name() == "CarryingState" "the magnet takes it onto the nose"
 screenshot cargo_bay_3_free
