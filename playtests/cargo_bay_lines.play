@@ -1,0 +1,88 @@
+# UNIT-7's Cargo Bay lines (docs/OPENING.md §9). Awake, with no hold: the first Sweep that
+# finds scrap names the need - nothing to put it in - and never the place. Flying up to the
+# hauler on Veld names it, HAULER, DOWN. FIT CARGO BAY gets a word, and only then does the
+# cutting tutorial (first_scrap) wait for the first scrap the ship can cut.
+# Run: PLAYTEST_PORT=7795 tools/play.sh --headless playtests/cargo_bay_lines.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+eval pt.skip_opening(false)
+wait_until pt.state_name() == "LandedState" 5
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
+wait 0.5
+hold thrust 1.5
+assert pt.state_name() == "FlyingState" "undocked"
+assert not ship.has_hold() "no hold"
+
+# --- The need: a Sweep finds scrap, and there is nothing to put it in ---
+eval pt.warp_to(pt.nearest_kind("Scrap").global_position + Vector2(150, 0))
+frames 30
+assert not get_tree().root.get_node("RobotRadio").is_active() "quiet before the Sweep"
+press action
+wait_until pt.node("radio_panel").visible 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_no_hold" "the need is named"
+assert get_tree().paused "a tutorial: the game holds"
+wait_until not pt.node("radio_panel").is_typing() 10
+screenshot cargo_bay_lines_1_need
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+assert pt.node("radio_panel").message_text().contains("haven't got a hold") "nothing to put it in"
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+press space
+wait_until not pt.node("radio_panel").is_typing() 10
+assert pt.node("radio_panel").message_text().contains("if I knew") "and never the place"
+press space
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 3
+wait 0.2
+assert not get_tree().paused "flying again"
+assert get_tree().root.get_node("RobotRadio").has_seen("first_no_hold") "said once"
+assert not get_tree().root.get_node("RobotRadio").has_seen("first_scrap") "no cutting tutorial with nothing to cut into"
+
+# A second Sweep says nothing more
+press action
+wait 1.5
+assert not get_tree().root.get_node("RobotRadio").is_active() "the need is named once"
+
+# --- Close approach: the hauler, named flatly ---
+assert not pt.hauler().is_identified() "Unidentified from out here"
+eval pt.warp_to(pt.hauler().global_position + pt.hauler().up().rotated(pt.hauler().get_parent().global_rotation) * 700.0)
+wait_until pt.hauler().is_identified() 3
+wait_until pt.node("radio_panel").visible 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "hauler_identified" "UNIT-7 names it"
+assert not get_tree().paused "named in flight"
+wait_until not pt.node("radio_panel").is_typing() 10
+assert pt.node("radio_panel").message_text().contains("HAULER, DOWN") "HAULER, DOWN"
+screenshot cargo_bay_lines_2_named
+eval get_tree().root.get_node("RobotRadio").silence()
+
+# --- Fitting: a word from UNIT-7 as the menu closes ---
+eval gs.set("cradled", "cargo_bay")
+eval pt.cradle().refresh()
+eval pt.redock()
+wait_until pt.state_name() == "LandedState" 10
+wait_until pt.visible_ui().has("SpacePortDialogue") 10
+assert str(pt.screen_text()).contains("> FIT CARGO BAY") "FIT CARGO BAY offered"
+press enter
+wait 0.1
+assert ship.max_cargo_weight == 50.0 "the hold is 50"
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "cargo_bay_fitted" "UNIT-7 says so"
+press enter
+wait_until not pt.visible_ui().has("SpacePortDialogue") 2
+wait_until pt.node("radio_panel").visible 3
+wait_until not pt.node("radio_panel").is_typing() 10
+assert pt.node("radio_panel").message_text().contains("That is a hold") "a line at fitting"
+screenshot cargo_bay_lines_3_fitted
+eval get_tree().root.get_node("RobotRadio").silence()
+
+# --- Now the cutting tutorial waits for the first scrap it can cut ---
+hold thrust 1.5
+stage_harvest 40
+frames 3
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_scrap" "the cutting tutorial, now there is a hold"
+screenshot cargo_bay_lines_4_first_scrap
+quit

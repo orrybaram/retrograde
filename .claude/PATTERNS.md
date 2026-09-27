@@ -157,7 +157,12 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 - `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
 - UNIT-7 is off until SR-7's core cold start reboots it at the end of Act 1 (`wake_guide()`,
   `MSG_WAKE`): until then `RobotRadio.request()` drops every call, tips, the Void and Gates included.
-- Built-in triggers in `scripts/RobotRadio.gd`: low fuel (not while docked), low hull, hold full, scrap in range, boost hint.
+- Built-in triggers in `scripts/RobotRadio.gd`: low fuel (not while docked), low hull, hold full, scrap in range (only once the Cargo Bay is fitted), boost hint.
+  The Cargo Bay lines (docs/OPENING.md §9): a Sweep reaching live scrap (`ScrapNode.on_swept` ->
+  `EventBus.scrap_swept`; SR-7's dish rings have `SonarPulse.sweep` off and don't count) with no
+  Cargo Bay fitted plays `first_no_hold` (the need, never the place); `Cradle.fit()` ->
+  `EventBus.component_fitted` plays `cargo_bay_fitted`. A scenario flying awake with no hold runs
+  `mark_seen("first_no_hold")` if it doesn't want the paused tip.
 - Continue: SPACE (TAB/ENTER aliases) finishes the speech, then moves on (next / confirm / close).
   SPACE is also the flight action key, so it only drives conversations that pause the game or
   contain a confirm; other tips take TAB/ENTER and auto-dismiss after `RadioLine.read_time()`.
@@ -232,7 +237,9 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   The guide's line (`gate_identified.tres`) is `once`, so only the first Gate the player ever
   reaches is spoken for; the rest flip silently. Flying to it is the only trigger — nothing
   points at a Gate beforehand. `scripts/Identifiable.gd` holds the range and the label drawing
-  so later finds read the same way.
+  so later finds read the same way. The hauler on Veld (`HaulerWreck`) is the second: once SR-7's
+  core has started, flying within range names it `HAULER, DOWN` (`hauler_identified.tres`,
+  `GameState.identified_wrecks`, saved as `[finds] identified_wrecks`).
 
 ## Titan Influence (what it leaks into)
 

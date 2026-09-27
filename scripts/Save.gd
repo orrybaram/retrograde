@@ -22,6 +22,8 @@ const ORE_REGROW_KEY := "regrow"
 const GATE_SECTION := "gates"
 const GATE_POWERED_KEY := "powered"
 const GATE_IDENTIFIED_KEY := "identified"
+const FIND_SECTION := "finds"
+const FIND_WRECKS_KEY := "identified_wrecks"
 const AUTOMATON_SECTION := "automatons"
 const AUTOMATON_MET_KEY := "met"
 const SECTION_SECTION := "sections"
@@ -82,6 +84,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
 	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray(gs.identified_gates.keys()))
+	cfg.set_value(FIND_SECTION, FIND_WRECKS_KEY, PackedStringArray(gs.identified_wrecks.keys()))
 	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray(gs.met_automatons.keys()))
 	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray(gs.seated_sections.keys()))
 	cfg.set_value(SECTION_SECTION, SECTION_CORE_KEY, gs.core_started)
@@ -204,6 +207,23 @@ static func load_identified_gates(path: String = "") -> PackedStringArray:
 	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray()))
+
+## Writes only the named wrecks into an existing save, like save_identified_gates: UNIT-7
+## names one in open flight. With no save yet the next full save() writes them.
+static func save_identified_wrecks(keys: PackedStringArray, path: String = "") -> void:
+	var file := path if path != "" else Playtest.save_path()
+	var cfg := ConfigFile.new()
+	if cfg.load(file) != OK:
+		return
+	cfg.set_value(FIND_SECTION, FIND_WRECKS_KEY, keys)
+	cfg.save(file)
+
+## The wrecks UNIT-7 has already named. A save from before this has named none.
+static func load_identified_wrecks(path: String = "") -> PackedStringArray:
+	var cfg := ConfigFile.new()
+	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
+		return PackedStringArray()
+	return PackedStringArray(cfg.get_value(FIND_SECTION, FIND_WRECKS_KEY, PackedStringArray()))
 
 ## Writes only the met Automatons into an existing save, like save_identified_gates: the
 ## player meets the Guide on the first transmission, with no dock to hang a full save off.
@@ -343,6 +363,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.identified_gates.clear()
 	for gate_key in load_identified_gates():
 		gs.mark_gate_identified(gate_key)
+	gs.identified_wrecks.clear()
+	for wreck_key in load_identified_wrecks():
+		gs.mark_wreck_identified(wreck_key)
 	gs.met_automatons.clear()
 	for designation in load_met_automatons():
 		gs.mark_automaton_met(designation)

@@ -37,6 +37,10 @@ var powered_gates: Dictionary = {}
 ## (docs/GLOSSARY.md, Unidentified). Permanent.
 var identified_gates: Dictionary = {}
 
+## Wrecks UNIT-7 has named (HaulerWreck.save_key()). Like a Gate, a wreck is Unidentified
+## until the ship flies close enough to be told what it is. Permanent.
+var identified_wrecks: Dictionary = {}
+
 ## Automatons the player has met, keyed by NPCData.record_key() (e.g. "UNIT-7"). Meeting
 ## one earns its Record in the Log, and the Log only ever gains Records. Permanent.
 var met_automatons: Dictionary = {}
@@ -141,6 +145,12 @@ func is_gate_identified(key: String) -> bool:
 func mark_gate_identified(key: String) -> void:
 	identified_gates[key] = true
 
+func is_wreck_identified(key: String) -> bool:
+	return identified_wrecks.has(key)
+
+func mark_wreck_identified(key: String) -> void:
+	identified_wrecks[key] = true
+
 ## How awake the Titan is, 0 to 5: one step per Module online. Every "wrongness"
 ## effect reads from this. (The Core in the sun is a separate final state, not step 6.)
 func titan_influence() -> int:
@@ -175,6 +185,7 @@ func reset_all_state() -> void:
 	spent_ore.clear()
 	powered_gates.clear()
 	identified_gates.clear()
+	identified_wrecks.clear()
 	met_automatons.clear()
 	seated_sections.clear()
 	cradled = ""

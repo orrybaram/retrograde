@@ -42,6 +42,10 @@ signal sonar_pulsed(origin: Vector2)
 ## A sonar resonance ring left the ship at `origin` (global): one each time `action` is let
 ## go wherever the ship is free to act (held longer, it reaches further); puzzles listen here.
 
+signal scrap_swept()
+## A Sweep's ring reached a live chunk of scrap, found just now or long since: whether the
+## ship can cut it is another matter (RobotRadio's no-hold call).
+
 signal gem_collected(item_id: String, world_position: Vector2)
 ## Emitted when the ship picks up a loose gem (after it is added to the hold).
 
@@ -55,6 +59,9 @@ signal radio_message_requested(conversation: RadioConversation)
 ## Ask the guide robot to radio the player. RobotRadio queues it by priority.
 
 signal section_seated(id: String)
+
+signal component_fitted(id: String)
+## A Component in SR-7's Cradle was fitted to the ship (Cradle.fit), with its Components id.
 
 ## SR-7's core has caught (CoreHousing): the power comes up from it (StationPower).
 signal core_started()

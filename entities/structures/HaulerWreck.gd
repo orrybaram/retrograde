@@ -17,6 +17,11 @@ const BAY_EXPOSED := 70.0
 ## How far off straight up it leans (radians).
 const BAY_LEAN := 0.12
 
+## Unidentified until flown to (docs/GLOSSARY.md, Identifiable): once SR-7's cold start has
+## UNIT-7 awake to look, the ship coming within Identifiable.RANGE gets it named, flatly.
+const NAME := "HAULER, DOWN"
+const MSG_IDENTIFIED := preload("res://entities/Robot/radio/messages/hauler_identified.tres")
+
 ## Where on the planet it lies: degrees round from the planet's +X.
 @export var ground_angle_degrees := 205.0
 @export var component := Components.CARGO_BAY
@@ -42,6 +47,9 @@ const PLATES := [
 ]
 
 var planet: Planet
+## Off in tests so naming the wreck never touches a save file (Gate does the same).
+var persist := true
+var _ship: Node2D = null
 
 func _ready() -> void:
 	add_to_group("hauler_wrecks")
@@ -58,6 +66,46 @@ func _ready() -> void:
 static func find(tree: SceneTree) -> HaulerWreck:
 	return tree.get_first_node_in_group("hauler_wrecks") as HaulerWreck
 
+## Named in the save under its planet: one hauler per Body.
+func save_key() -> String:
+	return "hauler_" + planet.save_key() if planet else ""
+
+## True once UNIT-7 has named it.
+func is_identified() -> bool:
+	var gs := _game_state()
+	return gs != null and gs.is_wreck_identified(save_key())
+
+## Names the wreck (MSG_IDENTIFIED). Nobody can make it out before the cold start: UNIT-7
+## is dark until then. Returns true when this call is what identified it.
+func identify() -> bool:
+	var gs := _game_state()
+	var key := save_key()
+	if gs == null or key == "" or not gs.core_started or gs.is_wreck_identified(key):
+		return false
+	gs.mark_wreck_identified(key)
+	EventBus.radio_message_requested.emit(MSG_IDENTIFIED)
+	if persist:
+		Save.save_identified_wrecks(PackedStringArray(gs.identified_wrecks.keys()))
+	return true
+
+## Identifies the wreck once the ship is close enough to make it out, and not before.
+func identify_if_near(ship_position: Vector2) -> bool:
+	if is_identified() or not Identifiable.in_range(ship_position, global_position):
+		return false
+	return identify()
+
+## The only trigger for identification: the player flying within reach of it.
+func _process(_delta: float) -> void:
+	if is_identified():
+		return
+	if not is_instance_valid(_ship):
+		_ship = get_tree().get_first_node_in_group("ship") as Node2D
+	if is_instance_valid(_ship):
+		identify_if_near(_ship.global_position)
+
+func _game_state() -> GameState:
+	return get_tree().get_first_node_in_group("game_state") as GameState if is_inside_tree() else null
+
 ## Straight up out of the ground here, in the planet's frame.
 func up() -> Vector2:
 	return Vector2.UP.rotated(rotation)
@@ -70,7 +118,7 @@ func ensure_cargo_bay() -> void:
 	if planet == null:
 		return
 	var piece := find_piece()
-	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	var gs := _game_state()
 	if gs and (gs.cradled == component or gs.is_fitted(component)):
 		if piece:  # already home: a stale copy must not linger
 			piece.remove_from_group("freight")

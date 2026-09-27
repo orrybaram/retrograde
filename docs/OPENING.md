@@ -477,14 +477,18 @@ harvest range, the array's warmer-colder lesson reused.
    the ship docks or relaunches, never higher. A dead SR-7 gives nothing.
 2. **The need.** The first time a Sweep finds scrap that will not harvest, UNIT-7 names the
    problem, never the place: there is nothing to put it in. It is sincere; it does not know
-   where a hold is. On close approach it names the wreck flatly (`HAULER, DOWN` or similar).
+   where a hold is (`first_no_hold.tres`). On close approach it names the wreck flatly,
+   `HAULER, DOWN` (`hauler_identified.tres`). SR-7's own dish ring at the cold start is not
+   a Sweep and never calls it.
 3. **The pull.** The player lands, clamps the Lug and flies away from the ground. On the Aux
    the ship strains at the end of the clamp and the ground shudders and holds. Only the Burn
    tears it free. Tuning: the tear-out costs about 20% of `max_fuel`, so the free quarter is
    just enough with a little over. Once free it lifts off Veld on the Aux.
 4. **Home.** Flown back as Freight, heavy (ADR 0012), and released into SR-7's **Cradle**.
 5. **Fitting.** Docked, SR-7's menu offers `FIT CARGO BAY`. UNIT-7 fits it: the hold becomes
-   50, the cargo readout appears, and everything harvests.
+   50, the cargo readout appears, and everything harvests. UNIT-7 says so as the menu closes
+   (`cargo_bay_fitted.tres`), and the cutting tutorial (`first_scrap`) waits for the first
+   scrap after this.
 
 **The same pull on Rook.** The solar array's key-press tugs (§4) become the same verb: clamp
 and fly away. The array is light and Rook is small, so the Aux does it. The lesson learned in

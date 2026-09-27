@@ -35,7 +35,9 @@ func test_a_sleeping_guide_gives_no_tips() -> void:
 	radio.check_fuel(1.0, 100.0)
 	radio.check_hull(10.0, 100.0)
 	radio.check_cargo(50.0, 50.0)
-	radio._on_harvest_available_changed(true)
+	radio.check_scrap(true, true)
+	radio.check_swept_scrap(false)
+	radio.check_fitted(Components.CARGO_BAY)
 	radio.watch_for_boost()
 	radio.tick_boost_watch(radio.BOOST_HINT_AFTER + 1.0, false, true)
 	assert_bool(radio.is_active()).is_false()
@@ -452,16 +454,16 @@ func test_a_destroyed_hull_is_not_a_low_hull_warning() -> void:
 
 func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
 	var radio := _radio()
-	radio._on_harvest_available_changed(false)
+	radio.check_scrap(false, true)
 	assert_bool(radio.is_active()).is_false()
-	radio._on_harvest_available_changed(true)
+	radio.check_scrap(true, true)
 	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_SCRAP)
 
 
 # --- Data ------------------------------------------------------------------------
 
 const TIPS := [RADIO_SCRIPT.MSG_WAKE, RADIO_SCRIPT.MSG_BOOST_HINT, RADIO_SCRIPT.MSG_LOW_FUEL,
-	RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP,
+	RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP, RADIO_SCRIPT.MSG_NO_HOLD,
 	RADIO_SCRIPT.MSG_LOW_HULL]
 ## Not tutorials: one-line alarms that fire mid-flight and deliberately do not pause.
 const ALARMS := [RADIO_SCRIPT.MSG_HULL_CRITICAL]

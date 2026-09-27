@@ -879,6 +879,8 @@ func skip_opening(fit_cargo_bay := true) -> void:
 	# A new game starts with a dry tank and no hold; scenarios past the opening start with
 	# a full tank and the Cargo Bay fitted, and no copy of it left on Veld
 	if fit_cargo_bay:
+		# Skipped past, so already said: a scenario that woke UNIT-7 first doesn't hear it
+		RobotRadio.mark_seen(RobotRadio.MSG_CARGO_BAY_FITTED.id)
 		gs.cradled = Components.CARGO_BAY
 		cradle().fit()
 		var wreck := hauler()
