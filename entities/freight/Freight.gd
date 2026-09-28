@@ -4,9 +4,9 @@ class_name Freight
 ## Something too big for the hold (docs/adr/0012): clamped rigidly to the ship's nose at
 ## its one Lug and pushed home ahead of it. Let go, it coasts on as the ship was moving -
 ## same velocity, same heading, plus a slow drift off the nose, losing only a trace of speed
-## to DRAG - and gravity never bends its path. While
-## clamped it is not a body of its own: Ship.clamp_freight folds its mass, inertia and
-## outline into the ship's, and Ship.release_freight hands them back.
+## to DRAG - and gravity never bends its path. While clamped it is not a body of its own:
+## Ship.carry folds its mass, inertia and outline into the ship's, and letting go
+## (Ship.let_go, or any way out of CarryingState) hands them back.
 ## Holding `action` with the nose this close to the Lug (px) starts the magnet. Angle and
 ## speed don't matter: the magnet turns the piece into its pose on the way in.
 const MAGNET_RANGE := 25.0

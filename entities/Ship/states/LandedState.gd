@@ -1,9 +1,9 @@
-extends ShipState
+extends DockingState
 class_name LandedState
 
 ## Handles docking behavior when the ship is docked to a dockable entity.
 
-# Dockable is an interface - we use Node2D and check for methods
+## The port docked at (a Dockable).
 var locked_dockable: Node2D = null
 var locked_offset_from_target: Vector2 = Vector2.ZERO
 var _docking_start_time: float = 0.0
@@ -41,29 +41,21 @@ func enter() -> void:
 	if not is_ship_valid():
 		return
 
-	# Get dockable from ship's metadata (set by FlyingState or ShipSpawner)
-	var pending_dockable = ship.get_meta("pending_dockable", null) as Node2D
-	ship.remove_meta("pending_dockable")
+	# What Ship.dock_at staged: the port, and whether to skip the approach (spawning)
+	var staged := _take_staged()
+	var port := staged[0] as Node2D
+	var instant: bool = staged[1]
 
-	# Check for instant dock flag (set by ShipSpawner for spawning)
-	var instant_dock = ship.get_meta("instant_dock", false)
-	ship.remove_meta("instant_dock")
-
-	if not pending_dockable or not is_instance_valid(pending_dockable):
-		# No dockable provided, go back to flying
+	if port == null:
+		# Nothing to dock at, go back to flying
 		_exit_to_flying()
 		return
 
-	# Verify it has dockable methods
-	if not pending_dockable.has_method("get_dock_position") or not pending_dockable.has_method("get_dock_distance"):
-		_exit_to_flying()
-		return
-
-	locked_dockable = pending_dockable
+	locked_dockable = port
 	locked_offset_from_target = Vector2.ZERO  # Will be calculated on first frame
 	ship.drift_spin = 0.0  # docked is under control, whatever it was doing before
 
-	if instant_dock:
+	if instant:
 		# Instant dock: skip animation by setting start time far in the past
 		_docking_start_time = 0.0
 		_initial_ship_position = ship.global_position
@@ -102,17 +94,17 @@ func enter() -> void:
 	# Automatically open SpacePort dialogue if docked to a SpacePort (but not on spawn),
 	# once the Deposit has played out. A closed port opens nothing and prompts nothing:
 	# the dock is a perch, and thrust is the way off it.
-	if not instant_dock and port_open:
+	if not instant and port_open:
 		if is_instance_valid(_deposit):
 			await _deposit.finished
 		if locked_dockable and is_instance_valid(locked_dockable):
 			_open_spaceport_dialogue()
-	elif instant_dock and port_open:
+	elif instant and port_open:
 		_show_enter_spaceport_message()
 	elif _awaiting_reboot():
 		# SR-7 whole and its core cold: the dock's console is the only thing awake
 		# (docs/OPENING.md §5), and it is what docking was for.
-		if instant_dock:
+		if instant:
 			_show_terminal_message()
 		else:
 			_open_core_terminal()
@@ -207,17 +199,8 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	
 	# Get dock position and velocity from dockable
 	var target_pos = locked_dockable.get_dock_position()
-	var target_vel = Vector2.ZERO
-	if locked_dockable.has_method("get_dock_velocity"):
-		target_vel = locked_dockable.get_dock_velocity()
-	var dock_rotation = 0.0
-	if locked_dockable.has_method("get_dock_rotation"):
-		dock_rotation = locked_dockable.get_dock_rotation()
-	else:
-		dock_rotation = locked_dockable.global_rotation
-	
-	# Calculate target rotation (perpendicular to dock surface)
-	var target_rotation = dock_rotation + PI / -2.0  # Perpendicular (90 degrees offset)
+	var target_vel = locked_dockable.get_dock_velocity()
+	var target_rotation = Dockable.ship_rotation(locked_dockable)  # across the dock surface
 	
 	# If we just locked, calculate offset to preserve X position and set Y flush on dock
 	if locked_offset_from_target == Vector2.ZERO:
@@ -444,11 +427,6 @@ func _autosave() -> void:
 		await ship.get_tree().create_timer(0.5).timeout
 		if is_instance_valid(hud):
 			hud.hide_saving_indicator()
-
-func _exit_to_flying() -> void:
-	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
-	if state_machine and state_machine.has_state("FlyingState"):
-		state_machine.change_state("FlyingState")
 
 # --- SR-7's core terminal -------------------------------------------------------
 

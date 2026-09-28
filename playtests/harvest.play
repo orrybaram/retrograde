@@ -102,8 +102,7 @@ assert pt.popup_counts() == inv.get_all_items() "popup numbers match collected g
 # --- F: docking at a port deposits the hold ---
 eval inv.add_item("gem", 1)
 assert gs.stores == 0 and inv.get_total_value() > 0 "fresh game: no Stores, gems in hold"
-eval ship.set_meta("pending_dockable", pt.node("space_ports"))
-eval ship.state_machine.change_state("LandedState")
+eval ship.dock_at(pt.node("space_ports"))
 frames 2
 wait_until inv.get_total_value() == 0 and gs.stores > 0 5
 assert gs.stores > 0 "dock flies the hold into the port as Stores"

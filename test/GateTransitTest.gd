@@ -52,8 +52,7 @@ func _ship() -> Ship:
 
 func _dock_at(ship: Ship, gate: Gate) -> void:
 	ship.global_position = gate.get_dock_position()
-	ship.set_meta("pending_dockable", gate)
-	ship.state_machine.change_state("GateDockedState")
+	ship.dock_at(gate)
 
 
 func _labels(items: Array[Dictionary]) -> Array[String]:

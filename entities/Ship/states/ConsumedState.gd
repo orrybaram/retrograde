@@ -5,16 +5,13 @@ class_name ConsumedState
 ## debris and no wreck to come back for — the hull simply stops being anywhere,
 ## and the camera holds on the dark where it was. By the time this state is
 ## entered the shroud is already total, so there is nothing to see it happen.
+## Entered through Ship.surrender_to_void, which has already put any load back inside
+## the edge.
 
 var _last_seen := Vector2.ZERO
 
 func allows_sonar() -> bool:
 	return false
-
-## A load on the nose is not let go at the edge of the dark: it goes where the Void
-## sends it (Ship.surrender_freight_to_void), not where the ship was.
-func holds_freight() -> bool:
-	return true
 
 func enter() -> void:
 	super.enter()
@@ -27,7 +24,6 @@ func enter() -> void:
 			particles.emitting = false
 
 	_last_seen = ship.global_position
-	ship.surrender_freight_to_void()
 	ship.linear_velocity = Vector2.ZERO
 	ship.angular_velocity = 0.0
 

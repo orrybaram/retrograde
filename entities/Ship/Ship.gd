@@ -37,7 +37,9 @@ const NOSE := Vector2(10, 0)
 ## softened by this power: 1.0 is physical, 0.5 its square root.
 const FREIGHT_TURN_EXPONENT := 0.5
 
-## Freight clamped to the nose (docs/adr/0012), or null. See clamp_freight.
+## Freight clamped to the nose (docs/adr/0012), or null. Set only through the verbs below
+## (carry, let_go, surrender_to_void, hand_over, discard_freight): non-null exactly while
+## the ship is in CarryingState.
 var freight: Freight = null
 var _freight_collider: CollisionPolygon2D = null
 var _turn_ratio := 1.0
@@ -402,12 +404,79 @@ func turn_ratio() -> float:
 func is_carrying() -> bool:
 	return freight != null and is_instance_valid(freight)
 
+# --- Verbs: Freight and docking ----------------------------------------------------------
+# What other modules ask of the ship. Each verb owns its state change and hands the next
+# state what it needs, so the ship is in CarryingState exactly while it holds Freight.
+
+## Carry `f`: the magnet has it, so clamp it to the nose and fly laden (CarryingState).
+## The only way into CarryingState. `quiet` skips the clunk (a load put back on the nose
+## from a save or a scenario). False, doing nothing, if a load is already on or `f` is gone.
+func carry(f: Freight, quiet := false) -> bool:
+	if is_carrying() or f == null or not is_instance_valid(f) or state_machine == null:
+		return false
+	var carrying := state_machine.states.get("CarryingState") as CarryingState
+	if carrying == null:
+		return false
+	carrying.stage(f, quiet)
+	state_machine.change_state("CarryingState")
+	return is_carrying()
+
+## Let go of the load where it is (see _release_freight) and fly on unladen. Returns the
+## piece, or null if nothing was clamped.
+func let_go() -> Freight:
+	if not is_carrying():
+		return null
+	var f := freight
+	state_machine.change_state("FlyingState")  # leaving CarryingState lets go
+	return f
+
+## The Void takes the ship (ConsumedState) but never its load: that is put back inside
+## the edge first (see _surrender_freight_to_void). Returns the piece, or null.
+func surrender_to_void() -> Freight:
+	var f := _surrender_freight_to_void()
+	if state_machine and state_machine.has_state("ConsumedState"):
+		state_machine.change_state("ConsumedState")
+	return f
+
+## Hand the load, still clamped and out of physics, to `holder` (an abandoned hull), and
+## fly on unladen. Returns the piece, or null if nothing was clamped.
+func hand_over(holder: Node2D) -> Freight:
+	if not is_carrying() or holder == null:
+		return null
+	var f := _hand_freight_to(holder)
+	state_machine.change_state("FlyingState")
+	return f
+
+## Forget the clamped load without letting it go anywhere (it is about to be freed: a load
+## or a new game replaces every piece, Freight.clear_all), and fly on unladen.
+func discard_freight() -> void:
+	_detach_freight()
+	update_mass_from_cargo()
+	if state_machine and state_machine.current_state is CarryingState:
+		state_machine.change_state("FlyingState")
+
+## Dock at `dockable` (see Dockable): the state it belongs in - LandedState at a port,
+## GateDockedState at a Gate - is handed the berth and takes it from there. `instant`
+## skips the approach (spawning, a Gate transit). False, doing nothing, if `dockable` is
+## not something the ship can dock at.
+func dock_at(dockable: Node2D, instant := false) -> bool:
+	if not Dockable.is_dockable(dockable) or state_machine == null:
+		return false
+	var docked := state_machine.states.get(Dockable.docked_state_for(dockable)) as DockingState
+	if docked == null:
+		return false
+	docked.stage(dockable, instant)
+	state_machine.change_state(docked.name)
+	return true
+
+# --- What the verbs do to the hull (CarryingState and the verbs only) --------------------
+
 ## Take hold of `f` at its Lug. It stops being a body of its own: it rides on the nose in
 ## the pose its Lug fixes, its outline becomes part of the hull, and its mass joins the
 ## ship's. Momentum is shared, so clamping a piece at rest drags the ship a little.
 ## Its mark comes off the Chart and the ship tracks where it is headed instead. `quiet`
 ## skips the clunk (a load being put back on the nose from a save).
-func clamp_freight(f: Freight, quiet := false) -> void:
+func _clamp_freight(f: Freight, quiet := false) -> void:
 	drift_spin = 0.0  # a load on the nose is a ship under control
 	if is_carrying() or f == null or not is_instance_valid(f):
 		return
@@ -434,9 +503,13 @@ func clamp_freight(f: Freight, quiet := false) -> void:
 ## ship's velocity, the ship's heading, no spin - plus a nudge of RELEASE_DRIFT straight off
 ## the nose, so the two very slowly part. It is marked on the Chart and becomes the
 ## tracked target at once. Returns the piece (null if nothing was clamped).
-func release_freight() -> Freight:
+func _release_freight() -> Freight:
 	if not is_carrying():
-		freight = null
+		# Freed out from under the clamp (a scenario or a lab clearing it): nothing to let
+		# go of, but the hull still wears its outline and mass
+		if freight != null or _freight_collider != null:
+			_detach_freight()
+			update_mass_from_cargo()
 		return null
 	var f := freight
 	var carried := global_transform * f.transform
@@ -459,7 +532,7 @@ func release_freight() -> Freight:
 ## The Void takes the ship but never its load: the piece turns up on the same bearing
 ## from the sun, Freight.VOID_RETURN_DISTANCE inside the edge, at rest, marked and
 ## tracked. Returns it, or null if nothing was clamped.
-func surrender_freight_to_void() -> Freight:
+func _surrender_freight_to_void() -> Freight:
 	if not is_carrying():
 		return null
 	var f := freight
@@ -475,9 +548,9 @@ func surrender_freight_to_void() -> Freight:
 	NavSystem.track(f.tracking_target())
 	return f
 
-## Hand the clamped load, still clamped and out of physics, to `holder` (an abandoned
-## hull), where it is. Returns it, or null if nothing was clamped.
-func hand_freight_to(holder: Node2D) -> Freight:
+## Hand the clamped load, still clamped and out of physics, to `holder`, where it is.
+## Returns it, or null if nothing was clamped.
+func _hand_freight_to(holder: Node2D) -> Freight:
 	if not is_carrying():
 		return null
 	var f := freight
@@ -485,11 +558,6 @@ func hand_freight_to(holder: Node2D) -> Freight:
 	f.reparent(holder, true)
 	update_mass_from_cargo()
 	return f
-
-## Forget the clamped load without letting it go anywhere (it is about to be freed).
-func discard_freight() -> void:
-	_detach_freight()
-	update_mass_from_cargo()
 
 func _detach_freight() -> void:
 	freight = null

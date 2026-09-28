@@ -136,7 +136,7 @@ func _new_load(clamped: bool) -> void:
 	for f in get_tree().get_nodes_in_group("freight"):
 		if f is Freight and f.component != "":
 			if ship.is_carrying() and ship.freight == f:
-				ship.state_machine.change_state("FlyingState")
+				ship.let_go()
 			f.queue_free()
 	_place_ship(station.global_transform * Transform2D(PI, START))
 	var f := Freight.new()
@@ -145,8 +145,7 @@ func _new_load(clamped: bool) -> void:
 	var nose := Transform2D(ship.global_rotation, ship.global_position) * Freight.clamped_pose(f.lug_position, f.lug_facing, Ship.NOSE)
 	f.global_transform = nose
 	if clamped:
-		ship.clamp_freight(f, true)
-		ship.state_machine.change_state("CarryingState")
+		ship.carry(f, true)
 	else:
 		f.global_position += Vector2.from_angle(ship.global_rotation) * 8.0
 	_last = ""
@@ -175,8 +174,7 @@ func _shoot() -> void:
 	await _snap("00_at_drop", 0.2)
 	await _snap("01_reaching", 0.6)
 	await _snap("02_latched", 0.7)
-	var f := ship.freight
-	ship.state_machine.change_state("FlyingState")
+	var f := ship.let_go()
 	claw.seat(f)
 	_place_ship(ship.global_transform.translated(Vector2(120, 0)))
 	await _snap("03_swing", 0.8)

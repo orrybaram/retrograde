@@ -34,8 +34,7 @@ assert gs.stores == 0 "no Stores yet"
 # The hold emptying and the Stores rolling up both change how many digits the cargo row
 # carries; the meters must not stretch with it
 eval pt.remember("hull_bar_w", pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar").size.x)
-eval ship.set_meta("pending_dockable", pt.node("space_ports"))
-eval ship.state_machine.change_state("LandedState")
+eval ship.dock_at(pt.node("space_ports"))
 wait 0.9
 burst dock_1_deposit 6 0.05
 wait_until gs.stores > 0 2
@@ -71,8 +70,7 @@ wait_until pt.state_name() == "FlyingState" 3
 eval gs.set("stores", 30)
 eval ship.drive.set("fuel", 0.0)
 eval ship.set("hull_strength", 50.0)
-eval ship.set_meta("pending_dockable", pt.node("space_ports"))
-eval ship.state_machine.change_state("LandedState")
+eval ship.dock_at(pt.node("space_ports"))
 wait_until gs.stores == 0 3
 wait 1.5
 assert is_equal_approx(ship.hull_strength, 60.0) "30 ST patched ten points"
@@ -84,8 +82,7 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.4
 wait_until pt.state_name() == "FlyingState" 3
 eval ship.drive.set("fuel", ship.drive.max_fuel * 0.6)
-eval ship.set_meta("pending_dockable", pt.node("space_ports"))
-eval ship.state_machine.change_state("LandedState")
+eval ship.dock_at(pt.node("space_ports"))
 wait 1.5
 assert is_equal_approx(ship.drive.fuel, ship.drive.max_fuel * 0.6) "above the quarter SR-7 adds nothing for free"
 state

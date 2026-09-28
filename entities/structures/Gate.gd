@@ -250,6 +250,10 @@ func get_dock_distance() -> float:
 func get_dock_velocity() -> Vector2:
 	return linear_velocity
 
+## A Gate's berth always takes a ship.
+func accepts_docking() -> bool:
+	return true
+
 ## The berth's own frame: the docked ship is held just above its origin.
 func get_dock_transform() -> Transform2D:
 	return Transform2D(global_rotation, get_dock_position())

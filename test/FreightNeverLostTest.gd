@@ -65,7 +65,7 @@ func test_the_void_returns_a_load_a_kilometre_inside_on_the_same_bearing() -> vo
 
 func test_a_ship_crossing_the_edge_keeps_its_load() -> void:
 	var f := _piece()
-	_ship.clamp_freight(f, true)
+	_ship.carry(f, true)
 	_ship.global_position = Vector2(EDGE + 500.0, 0)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
@@ -73,10 +73,10 @@ func test_a_ship_crossing_the_edge_keeps_its_load() -> void:
 
 func test_the_void_takes_the_ship_but_hands_the_load_back() -> void:
 	var f := _piece()
-	_ship.state_machine.change_state("CarryingState")
-	_ship.clamp_freight(f, true)
+	_ship.carry(f, true)
 	_ship.global_position = Vector2(0, EDGE + 5000.0)
-	_ship.state_machine.change_state("ConsumedState")
+	assert_object(_ship.surrender_to_void()).is_same(f)
+	assert_str(_ship.state_machine.get_current_state_name()).is_equal("ConsumedState")
 	assert_bool(_ship.is_carrying()).is_false()
 	assert_bool(f.is_loose()).is_true()
 	assert_float(f.global_position.length()).is_equal_approx(EDGE - 1000.0, 0.1)
@@ -96,27 +96,27 @@ func test_untouched_freight_has_no_mark() -> void:
 func test_clamping_tracks_home_and_letting_go_marks_and_tracks_the_piece() -> void:
 	var f := _piece()
 	NavSystem.track_point(Vector2(9000, 9000), "WAYPOINT")
-	_ship.clamp_freight(f, true)
+	_ship.carry(f, true)
 	assert_bool(f.handled).is_true()
 	assert_bool(f.is_marked()).is_false()
 	assert_bool(NavSystem.is_tracking_home()).is_true()
 
 	NavSystem.track_point(Vector2(9000, 9000), "WAYPOINT")
-	_ship.release_freight()
+	_ship.let_go()
 	assert_bool(f.is_marked()).is_true()
 	assert_object(NavSystem.get_target()).is_same(f.tracking_target())
 	var marks := SystemMap.freight_marks(get_tree())
 	assert_array(marks).has_size(1)
 	assert_str(marks[0]["label"]).is_equal(f.label)
 
-	_ship.clamp_freight(f, true)
+	_ship.carry(f, true)
 	assert_bool(f.is_marked()).is_false()
 	assert_array(SystemMap.freight_marks(get_tree())).is_empty()
 	assert_bool(NavSystem.is_tracking_home()).is_true()
 
 func test_the_magnet_only_takes_loose_freight() -> void:
 	var f := _piece()
-	_ship.clamp_freight(f, true)
+	_ship.carry(f, true)
 	var flying := _ship.state_machine.states["FlyingState"] as FlyingState
 	assert_object(flying.freight_in_reach()).is_null()
 
@@ -148,14 +148,15 @@ func test_repeated_reloads_never_duplicate_or_lose_freight() -> void:
 
 func test_a_clamped_load_is_saved_clamped_and_handed_back() -> void:
 	var f := _piece()
-	_ship.clamp_freight(f, true)
+	_ship.carry(f, true)
 	var rows := Freight.snapshot_all(get_tree())
 	assert_bool(rows[0]["clamped"]).is_true()
 	Freight.clear_all(get_tree())
 	assert_bool(_ship.is_carrying()).is_false()
+	assert_str(_ship.state_machine.get_current_state_name()).is_equal("FlyingState")
 	var clamped := Freight.restore_all(_world, rows)
 	assert_object(clamped).is_not_null()
-	_ship.clamp_freight(clamped, true)
+	_ship.carry(clamped, true)
 	assert_bool(_ship.is_carrying()).is_true()
 	assert_array(_pieces()).has_size(1)
 

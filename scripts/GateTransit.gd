@@ -54,10 +54,7 @@ static func arrive(ship: Ship, destination: Gate) -> void:
 	ship.rotation = dock.get_rotation() + PI / -2.0
 	ship.linear_velocity = destination.get_dock_velocity()
 	ship.angular_velocity = 0.0
-	ship.set_meta("pending_dockable", destination)
-	ship.set_meta("instant_dock", true)
-	if ship.state_machine and ship.state_machine.has_state("GateDockedState"):
-		ship.state_machine.change_state("GateDockedState")
+	ship.dock_at(destination, true)
 
 ## The whole transit as the player sees it: dark, the move, then waking up in the
 ## other berth. The tree is never paused, so the system keeps turning underneath.

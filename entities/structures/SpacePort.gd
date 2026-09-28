@@ -3,9 +3,7 @@ class_name SpacePort
 
 ## SpacePort entity with landing pad, blinking lights, tower, and hangers.
 ## Detects when ships land on the pad.
-## Implements Dockable interface for manual docking.
-
-const Dockable = preload("res://entities/structures/Dockable.gd")
+## A Dockable (entities/structures/Dockable.gd) for manual docking.
 
 signal ship_landed(ship: Ship)
 signal ship_took_off(ship: Ship)

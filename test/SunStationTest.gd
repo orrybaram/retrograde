@@ -136,7 +136,7 @@ func test_the_cores_gate_is_dockable_the_same_way_a_modules_gate_is() -> void:
 	var gate := _core_gate()
 	assert_bool(gate.is_in_group("dockable")).is_true()
 	assert_bool(gate.is_in_group("gates")).is_true()
-	assert_str(FlyingState.docked_state_for(gate)).is_equal("GateDockedState")
+	assert_str(Dockable.docked_state_for(gate)).is_equal("GateDockedState")
 
 
 func test_the_cores_gate_waits_on_every_module_not_on_stores() -> void:

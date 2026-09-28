@@ -1,4 +1,4 @@
-extends ShipState
+extends DockingState
 class_name GateDockedState
 
 ## The ship clamped into a Gate's docking berth. (LandedState is a port; this is a Gate.)
@@ -31,8 +31,10 @@ func enter() -> void:
 	if not is_ship_valid():
 		return
 
-	var pending := _take_meta("pending_dockable", null) as Node2D
-	var instant := bool(_take_meta("instant_dock", false))
+	# What Ship.dock_at staged: the Gate, and whether to skip the approach
+	var staged := _take_staged()
+	var pending := staged[0] as Node2D
+	var instant: bool = staged[1]
 
 	if not is_instance_valid(pending) or not pending.is_in_group("gates"):
 		_exit_to_flying()
@@ -59,15 +61,6 @@ func enter() -> void:
 		_show_prompt()
 	else:
 		_open_terminal()
-
-## Read one of the hand-over values FlyingState or ShipSpawner left on the ship, and
-## clear it so the next dock starts clean.
-func _take_meta(key: String, fallback: Variant) -> Variant:
-	if not ship.has_meta(key):
-		return fallback
-	var value: Variant = ship.get_meta(key)
-	ship.remove_meta(key)
-	return value
 
 func exit() -> void:
 	super.exit()
@@ -221,8 +214,3 @@ func _autosave() -> void:
 		await ship.get_tree().create_timer(0.5).timeout
 		if is_instance_valid(hud):
 			hud.hide_saving_indicator()
-
-func _exit_to_flying() -> void:
-	var machine := ship.get_node_or_null("StateMachine") as StateMachine
-	if machine and machine.has_state("FlyingState"):
-		machine.change_state("FlyingState")
