@@ -184,19 +184,6 @@ func _on_void_consumed() -> void:
 	await get_tree().create_timer(CONSUMED_SILENCE).timeout
 	show_game_over("Consumed")
 
-## Put the ship at `dock` - unless it is a dock whose arm is still in (SR-7 before every
-## piece is home, DockArm), which no ship can sit on: then adrift outside the station, the
-## way a new game opens.
-func _spawn_home(dock: Node2D) -> void:
-	var port := dock as SpacePort
-	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	if port and port.needs_core and not DockArm.should_be_out(gs):
-		var station := await ship_spawner.find_home_station()
-		if station:
-			await ship_spawner.spawn_adrift(station, false)
-			return
-	await ship_spawner.spawn_at_dock(dock)
-
 ## Checked when a game starts, not at init: Playtest.active is still false while the
 ## main scene is being built, so reading it any earlier is a race.
 func _wake_enabled() -> bool:
@@ -417,13 +404,7 @@ func load_game() -> void:
 		if is_instance_valid(clamped):
 			ship.carry(clamped, true)
 	elif ship_spawner:
-		var dock = await ship_spawner.find_saved_dock()
-		if not dock:
-			dock = await ship_spawner.find_default_dock()
-		if dock:
-			await _spawn_home(dock)
-		else:
-			push_warning("No dock found for load game")
+		await ship_spawner.spawn_home(gs)
 
 	var wake := _wake_enabled()
 	await _uncover_spawn(booting, wake)
@@ -464,82 +445,39 @@ func show_game_over(reason: String) -> void:
 	await reset_game()
 	RobotRadio.request(GAME_OVER_MESSAGES.get(reason, RobotRadio.MSG_SHIP_DESTROYED))
 
+## The next clone comes up at home, through the Session pipeline (Session.relaunch).
 func reset_game() -> void:
 	game_over_pending = false
+	last_game_over_reason = ""  # a relaunch costs no Stores, whatever the reason
 	clear_screen_effects()
 	# A clone lost mid-diagnostic comes up locked where it left off (BootLog)
 	get_tree().call_group("boot_log", "arm")
-	# Lost with a load still on the nose: it stays out here, where the ship was
-	if ship and ship.is_carrying():
-		ship.let_go()
-	Gem.clear_all(true)  # wreck gems stay where the ship blew up
-
-	# A relaunch is another clone coming up, so it boots the same way a new game does
-	var wake := _wake_enabled()
-	var booting := _cover_spawn(_station_powered())
-	if ship and ship.ship_polygon:
-		ship.ship_polygon.visible = false
-
-	# A relaunch costs no Stores, whatever the reason
-	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	last_game_over_reason = ""
-
-	# Reset ship state
-	if ship:
-		ship.hull_strength = ship.max_hull
-		ship.drive.top_up_to_free_floor(gs)
-		ship.linear_velocity = Vector2.ZERO
-		ship.angular_velocity = 0.0
-		ship.rotation = 0.0  # Reset rotation
-		
-		# Reset camera shake values (prevents shake from persisting after explosion)
-		ship.camera_shake_time = 0.0
-		ship.damage_shake_time = 0.0
-		ship.damage_shake_current_intensity = 0.0
-		
-		# Reset ship state machine to FlyingState
-		if ship.state_machine and ship.state_machine.has_state("FlyingState"):
-			ship.state_machine.change_state("FlyingState")
-		
-		# Re-enable ship controls
-		ship.set_process(true)
-		ship.set_physics_process(true)
-		
-		# The ship stays hidden until it has been placed back on its dock, below
-
-		# Reset boost particles material to original state
-		ship.reset_boost_particles()
-	
-	# Reset GameState (cargo only, preserve Stores)
-	if gs:
-		gs.clear_cargo()
-	
-	# The next clone comes back at the saved dock, or the default if that one is gone.
-	if ship_spawner:
-		var dock: Node2D = await ship_spawner.find_saved_dock()
-		if not dock:
-			dock = await ship_spawner.find_default_dock()
-		if dock:
-			await _spawn_home(dock)
-		else:
-			push_warning("No dock found for respawn")
-
-	await _uncover_spawn(booting, wake)
-	if ship and ship.ship_polygon:
-		ship.ship_polygon.visible = true
-
-	get_tree().paused = false
-	current_game_state = MainGameState.PLAYING
-
-	# Save game after respawn (ship reset at dock)
-	var save_gs = get_tree().get_first_node_in_group("game_state") as GameState
-	if save_gs and ship:
-		Save.save(save_gs, ship)
-
-	EventBus.ship_respawned.emit()
-	EventBus.resources_refresh_requested.emit()
-
-	# Come up out of the dark the same way a new game does
-	if wake:
-		await _wake_from_black()
+	var session := _session()
+	await session.run(session.relaunch())
 	get_tree().call_group("boot_log", "begin")
+
+## The pipeline that brings a clone up, around this scene's ship, spawner and screen.
+func _session() -> Session:
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	var session := Session.new(get_tree(), ship, ship_spawner, gs, MainScreen.new(self))
+	session.live.connect(func() -> void: current_game_state = MainGameState.PLAYING)
+	return session
+
+## The spawn's cover as the player sees it: the boot terminal or the dark, then waking up.
+class MainScreen extends Session.Screen:
+	var _main: Node
+
+	func _init(main: Node) -> void:
+		_main = main
+
+	func cover(boots: bool) -> bool:
+		return _main._cover_spawn(boots)
+
+	func uncover(booting: bool, wake: bool) -> void:
+		await _main._uncover_spawn(booting, wake)
+
+	func wakes() -> bool:
+		return _main._wake_enabled()
+
+	func wake_up() -> void:
+		await _main._wake_from_black()
