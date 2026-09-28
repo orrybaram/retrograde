@@ -152,7 +152,7 @@ func test_the_lamps_say_which_side_of_level_the_load_is() -> void:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	_world.add_child(ship)
 	var bay := _bay(Transform2D.IDENTITY)
-	ship.clamp_freight(bay, true)
+	ship.carry(bay, true)
 	var red := Colors.RUST_RED
 	var green := Colors.SAGE
 	for case: Array in [[-80.0, [red, green]], [0.0, [green, green]], [80.0, [green, red]]]:

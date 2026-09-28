@@ -99,11 +99,10 @@ func _ship() -> Ship:
 	return ship
 
 
-## Dock the ship the way flying in does: hand over the dockable, change state.
+## Dock the ship the way flying in does.
 func _dock_at(ship: Ship, dockable: Node2D) -> void:
 	ship.global_position = dockable.get_dock_position()
-	ship.set_meta("pending_dockable", dockable)
-	ship.state_machine.change_state(FlyingState.docked_state_for(dockable))
+	assert_bool(ship.dock_at(dockable)).is_true()
 
 
 # --- Powering ----------------------------------------------------------------
@@ -277,10 +276,10 @@ func test_new_game_makes_every_gate_unknown_again() -> void:
 
 func test_a_gate_docks_into_its_own_state_and_a_port_does_not() -> void:
 	var gate := _gate(_planet("Veld"))
-	assert_str(FlyingState.docked_state_for(gate)).is_equal("GateDockedState")
+	assert_str(Dockable.docked_state_for(gate)).is_equal("GateDockedState")
 	var port := auto_free(load("res://entities/structures/SpacePort.tscn").instantiate()) as SpacePort
 	add_child(port)
-	assert_str(FlyingState.docked_state_for(port)).is_equal("LandedState")
+	assert_str(Dockable.docked_state_for(port)).is_equal("LandedState")
 
 
 func test_docking_at_a_gate_clamps_the_ship_to_it() -> void:

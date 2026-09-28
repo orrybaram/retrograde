@@ -4,8 +4,6 @@ class_name FlyingState
 ## Handles normal ship movement and controls.
 ## This is the default state when the ship is flying freely.
 
-# Dockable is an interface - we check for methods rather than casting
-
 var ALIGNMENT_ANGLE_THRESHOLD_DEGREES: float = 30.0
 var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after entering state
 ## A ship breaking ground is released still touching the surface, so the ground rules are
@@ -420,8 +418,7 @@ func _update_magnet() -> void:
 		var f := _magnet_target
 		_magnet_target = null
 		_magnet_locked = false
-		ship.set_meta("pending_freight", f)
-		ship.state_machine.change_state("CarryingState")
+		ship.carry(f)
 
 ## How far the magnet has drawn a piece in, 0 to 1: the Lug's gap to the nose against the
 ## magnet's reach. 0 with nothing in its pull (the manual check's CLAMP row, BootLog).
@@ -560,80 +557,24 @@ func _check_dockable_proximity() -> void:
 	var current_time = Time.get_ticks_msec() / 1000.0
 	var in_cooldown = (current_time - _state_enter_time) < DOCK_MESSAGE_COOLDOWN
 	
-	var ship_pos = ship.global_position
+	_nearby_dockable = Dockable.nearest(ship.get_tree(), ship.global_position)
 	
-	# Find all dockable entities
-	var dockables = ship.get_tree().get_nodes_in_group("dockable")
-	if dockables.is_empty():
-		_nearby_dockable = null
-		# Only clear docking message if harvest isn't available (harvest has priority)
+	# Slow enough relative to the berth, and lined up with it (within the threshold)
+	if _nearby_dockable and _lined_up_with(_nearby_dockable) and not in_cooldown:
+		# Show docking prompt (only if harvest isn't available)
 		if not EventBus.is_harvest_available():
-			EventBus.action_message_changed.emit("")
-		return
-	
-	var closest_dockable: Node2D = null
-	var closest_distance: float = INF
-	
-	for node in dockables:
-		if not is_instance_valid(node):
-			continue
-		if not (node is Node2D):
-			continue
-		
-		# Check if node has dockable methods
-		var dockable_node = node as Node2D
-		if not dockable_node.has_method("get_dock_position") or not dockable_node.has_method("get_dock_distance"):
-			continue
-		if dockable_node.has_method("accepts_docking") and not dockable_node.accepts_docking():
-			continue
-		
-		var dock_pos = dockable_node.get_dock_position()
-		var dist = ship_pos.distance_to(dock_pos)
-		var max_dist = dockable_node.get_dock_distance()
-		
-		if dist < max_dist and dist < closest_distance:
-			closest_distance = dist
-			closest_dockable = dockable_node
-	
-	# Update nearby dockable and show/hide message
-	_nearby_dockable = closest_dockable
-	
-	if closest_dockable:
-		# Check if ship is moving slowly enough relative to dockable
-		var dockable_velocity = Vector2.ZERO
-		if closest_dockable.has_method("get_dock_velocity"):
-			dockable_velocity = closest_dockable.get_dock_velocity()
-		var relative_velocity = ship.linear_velocity - dockable_velocity
-		var is_slow_enough = relative_velocity.length() < 50.0  # Threshold for docking speed
-		
-		# Check if ship rotation is aligned with dock (within ±10 degrees)
-		var dock_rotation = 0.0
-		if closest_dockable.has_method("get_dock_rotation"):
-			dock_rotation = closest_dockable.get_dock_rotation()
-		else:
-			dock_rotation = closest_dockable.global_rotation
-		
-		var target_rotation = dock_rotation + PI / -2.0  # Perpendicular (90 degrees offset)
-		var ship_rotation = ship.rotation
-		var angle_diff = abs(wrapf(ship_rotation - target_rotation, -PI, PI))
-		var angle_threshold = deg_to_rad(ALIGNMENT_ANGLE_THRESHOLD_DEGREES)
-		var is_aligned = angle_diff <= angle_threshold
-		
-		if is_slow_enough and is_aligned and not in_cooldown:
-			# Show docking prompt (only if harvest isn't available)
-			if not EventBus.is_harvest_available():
-				EventBus.action_message_changed.emit(EventBus.action_prompt("DOCK"))
-		else:
-			# Moving too fast, not aligned, or in cooldown - clear message
-			if not EventBus.is_harvest_available():
-				EventBus.action_message_changed.emit("")
+			EventBus.action_message_changed.emit(EventBus.action_prompt("DOCK"))
 	else:
-		# No dockable nearby, clear message (unless harvest is available)
+		# Nothing in reach, moving too fast, not aligned, or in cooldown - clear message
+		# (unless harvest is available)
 		if not EventBus.is_harvest_available():
 			EventBus.action_message_changed.emit("")
 
+func _lined_up_with(dockable: Node2D) -> bool:
+	return Dockable.approach_ok(dockable, ship.rotation, ship.linear_velocity, deg_to_rad(ALIGNMENT_ANGLE_THRESHOLD_DEGREES))
+
 func _attempt_dock() -> void:
-	if not is_ship_valid() or not _nearby_dockable or not is_instance_valid(_nearby_dockable):
+	if not is_ship_valid() or not Dockable.is_dockable(_nearby_dockable):
 		return
 	
 	# Don't allow docking during cooldown (after taking off)
@@ -645,53 +586,13 @@ func _attempt_dock() -> void:
 	if not Input.is_action_just_pressed("action"):
 		return
 	
-	# Validate ship is close enough
-	var ship_pos = ship.global_position
-	var dock_pos = _nearby_dockable.get_dock_position()
-	var dist = ship_pos.distance_to(dock_pos)
-	
-	if dist > _nearby_dockable.get_dock_distance():
+	# Close enough, slow enough and lined up
+	if ship.global_position.distance_to(_nearby_dockable.get_dock_position()) > _nearby_dockable.get_dock_distance():
+		return
+	if not _lined_up_with(_nearby_dockable):
 		return
 	
-	# Validate ship is moving slowly enough relative to dockable
-	var dockable_velocity = Vector2.ZERO
-	if _nearby_dockable.has_method("get_dock_velocity"):
-		dockable_velocity = _nearby_dockable.get_dock_velocity()
-	var relative_velocity = ship.linear_velocity - dockable_velocity
-	if relative_velocity.length() >= 50.0:
-		return
-	
-	# Validate ship rotation is aligned with dock (within ±10 degrees)
-	var dock_rotation = 0.0
-	if _nearby_dockable.has_method("get_dock_rotation"):
-		dock_rotation = _nearby_dockable.get_dock_rotation()
-	else:
-		dock_rotation = _nearby_dockable.global_rotation
-	
-	# Calculate target rotation (perpendicular to dock surface)
-	var target_rotation = dock_rotation + PI / -2.0  # Perpendicular (90 degrees offset)
-	
-	# Get current ship rotation and calculate angle difference
-	var ship_rotation = ship.rotation
-	var angle_diff = abs(wrapf(ship_rotation - target_rotation, -PI, PI))
-	
-	var angle_threshold = deg_to_rad(ALIGNMENT_ANGLE_THRESHOLD_DEGREES)
-	
-	if angle_diff > angle_threshold:
-		return  # Ship is not aligned correctly
-	
-	# Hand the dockable to the docked state, which picks it back up in enter()
-	ship.set_meta("pending_dockable", _nearby_dockable)
-	
-	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
-	var docked_state = docked_state_for(_nearby_dockable)
-	if state_machine and state_machine.has_state(docked_state):
-		state_machine.change_state(docked_state)
-
-## Which docked state a dockable belongs in: a Gate has its own, everything else
-## docks like a port.
-static func docked_state_for(dockable: Node2D) -> String:
-	return "GateDockedState" if dockable.is_in_group("gates") else "LandedState"
+	ship.dock_at(_nearby_dockable)
 
 func _is_ui_blocking_input() -> bool:
 	if not ship or not is_instance_valid(ship):

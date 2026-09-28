@@ -20,7 +20,7 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 		push_error("ShipSpawner: No valid ship reference")
 		return
 	
-	if not dockable or not is_instance_valid(dockable):
+	if not Dockable.is_dockable(dockable):
 		push_error("ShipSpawner: No valid dockable provided")
 		return
 	
@@ -28,12 +28,12 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 	await get_tree().process_frame
 	
 	# Get dock properties
-	var dock_pos = _get_dock_position(dockable)
-	var dock_rotation = _get_dock_rotation(dockable)
-	var dock_velocity = _get_dock_velocity(dockable)
+	var dock_pos: Vector2 = dockable.get_dock_position()
+	var dock_rotation: float = dockable.get_dock_rotation()
+	var dock_velocity: Vector2 = dockable.get_dock_velocity()
 	
 	# Calculate ship rotation (perpendicular to dock surface)
-	var ship_rotation = dock_rotation + PI / -2.0
+	var ship_rotation := Dockable.ship_rotation(dockable)
 	
 	# Get spawn offset if dockable has a ShipSpawn child
 	var spawn_offset = Vector2.ZERO
@@ -61,16 +61,8 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 	ship.linear_velocity = dock_velocity
 	ship.angular_velocity = 0.0
 	
-	# Set metadata for the docked state
-	ship.set_meta("pending_dockable", dockable)
-	if instant:
-		ship.set_meta("instant_dock", true)
-	
 	# Dock the way flying in would have: a Gate has its own state
-	var state_machine = ship.get_node_or_null("StateMachine") as StateMachine
-	var docked_state = FlyingState.docked_state_for(dockable)
-	if state_machine and state_machine.has_state(docked_state):
-		state_machine.change_state(docked_state)
+	ship.dock_at(dockable, instant)
 	
 	print("Ship spawned at dock: ", dockable.name, " position: ", spawn_pos)
 	spawn_complete.emit()
@@ -143,7 +135,7 @@ func find_default_dock() -> Node2D:
 	# Wait for scene to be ready
 	await get_tree().process_frame
 	
-	var dockables = get_tree().get_nodes_in_group("dockable")
+	var dockables := Dockable.all(get_tree())
 	if dockables.is_empty():
 		push_warning("ShipSpawner: No dockable entities found in scene")
 		return null
@@ -159,7 +151,7 @@ func find_default_dock() -> Node2D:
 			return dockable
 	
 	# Fallback: first dockable
-	return dockables[0] as Node2D
+	return dockables[0]
 
 ## Find the saved dock from the save file.
 ## Returns null if no save exists or dock not found.
@@ -178,21 +170,3 @@ func find_saved_dock() -> Node2D:
 		return dockable
 	
 	return null
-
-## Helper: Get dock position from dockable
-func _get_dock_position(dockable: Node2D) -> Vector2:
-	if dockable.has_method("get_dock_position"):
-		return dockable.get_dock_position()
-	return dockable.global_position
-
-## Helper: Get dock rotation from dockable
-func _get_dock_rotation(dockable: Node2D) -> float:
-	if dockable.has_method("get_dock_rotation"):
-		return dockable.get_dock_rotation()
-	return dockable.global_rotation
-
-## Helper: Get dock velocity from dockable
-func _get_dock_velocity(dockable: Node2D) -> Vector2:
-	if dockable.has_method("get_dock_velocity"):
-		return dockable.get_dock_velocity()
-	return Vector2.ZERO

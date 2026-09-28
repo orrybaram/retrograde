@@ -890,16 +890,13 @@ func skip_opening(fit_cargo_bay := true) -> void:
 	ship.drive.fuel = ship.drive.max_fuel
 	var port := node("space_ports") as Node2D
 	warp_to(port.get_dock_position())
-	ship.set_meta("pending_dockable", port)
-	ship.set_meta("instant_dock", true)
-	ship.state_machine.change_state("LandedState")
+	ship.dock_at(port, true)
 
 func redock() -> void:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	var port := node("space_ports") as Node2D
 	warp_to(port.get_dock_position())
-	ship.set_meta("pending_dockable", port)
-	ship.state_machine.change_state("LandedState")
+	ship.dock_at(port)
 
 ## Show `text` as a caption at the top of the screen (for recorded videos); "" hides it.
 func caption(text: String) -> void:
@@ -1043,8 +1040,7 @@ func stage_at_cradle(id: String, offset := Vector2.ZERO, turn_deg := 0.0) -> voi
 func _stage_load(f: Freight, at: Transform2D, station: RigidBody2D) -> void:
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if not ship.is_carrying():
-		ship.clamp_freight(f, true)
-		ship.state_machine.change_state("CarryingState")
+		ship.carry(f, true)
 	# The ship's transform that puts its load exactly there
 	var ship_xf := at * f.transform.affine_inverse()
 	var rid := ship.get_rid()

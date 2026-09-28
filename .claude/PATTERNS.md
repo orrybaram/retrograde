@@ -67,12 +67,18 @@ Ship._drive_sonar release -> Resonance.available_for(ship)? -> Resonance.release
 ```
 FlyingState._update_magnet: Lug within Freight.MAGNET_RANGE (no prompt text)
   -> hold action -> Freight.magnet_step each tick (pulled + turned into its pose) -> seated
-  -> CarryingState.enter -> Ship.clamp_freight
-CarryingState: hold action RELEASE_HOLD (0.8s; the action message is only a filling bar) -> FlyingState; exit() always calls Ship.release_freight
+  -> Ship.carry(f) -> CarryingState.enter clamps it (Ship._clamp_freight)
+CarryingState: hold action RELEASE_HOLD (0.8s; the action message is only a filling bar) -> Ship.let_go -> FlyingState; exit() always calls Ship._release_freight
 ```
 
+- Freight is handled only through Ship's verbs, each of which owns its state change:
+  `carry(f, quiet)` (the only way into CarryingState), `let_go()`, `surrender_to_void()`
+  (ConsumedState, load put back inside the edge), `hand_over(holder)`, `discard_freight()`
+  (Freight.clear_all). The ship is in CarryingState exactly while `is_carrying()`; no
+  metadata, and nothing outside the ship changes its state by name to carry.
+
 - `Freight` (`entities/freight/Freight.gd`) is a RigidBody2D in group `freight` with no gravity and no
-  damping: released, it coasts with the ship's velocity and heading plus `Ship.RELEASE_DRIFT` off the nose (`Ship.release_freight`). Planet
+  damping: released, it coasts with the ship's velocity and heading plus `Ship.RELEASE_DRIFT` off the nose (`Ship._release_freight`). Planet
   gravity only pulls `Ship` bodies anyway (`PlanetGravityField`). One Lug: `lug_position` + `lug_facing`.
 - Clamped, the piece is reparented under the ship with `PROCESS_MODE_DISABLED` (out of the physics
   space), its outline is added to the ship as `FreightCollision`, and `Ship._apply_mass` sets mass,
@@ -195,6 +201,12 @@ OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend(
 
 - `LandedState` is docking at a port; landing on a planet is `PlanetLandedState`;
   docking at a Gate is `GateDockedState`.
+- Docking goes through `Ship.dock_at(dockable, instant)` (flight, spawning, Gate transit,
+  playtests): it stages the berth on the `DockingState` (`LandedState` / `GateDockedState`)
+  that `Dockable.docked_state_for` picks, then changes state. Anything dockable is a Node2D in
+  group `dockable` with the methods `Dockable.METHODS` lists (position, rotation, distance,
+  velocity, accepts_docking); ask `Dockable` (`is_dockable`, `nearest`, `approach_ok`), never
+  `has_method`.
 - Ore seams are hexagons just under the surface, seeded from the planet's save key, so they are
   the same every session and need no authoring in `HomeSystem.tscn`. There is no landing pad:
   land on plain ground within `OreDeposit.REACH` of a seam.
@@ -217,7 +229,7 @@ OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend(
 
 ```
 Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
-  -> FlyingState._attempt_dock -> GateDockedState (clamps to the berth, owns zoom)
+  -> FlyingState._attempt_dock -> Ship.dock_at -> GateDockedState (clamps to the berth, owns zoom)
     -> GateTerminal (CanvasLayer) -> Gate.power(gs) -> GameState.powered_gates -> Save `[gates] powered`
 ```
 

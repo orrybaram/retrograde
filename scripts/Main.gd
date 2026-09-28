@@ -179,8 +179,8 @@ func _on_void_consumed() -> void:
 	if current_game_state != MainGameState.PLAYING or game_over_pending:
 		return
 	game_over_pending = true
-	if ship and ship.state_machine and ship.state_machine.has_state("ConsumedState"):
-		ship.state_machine.change_state("ConsumedState")
+	if ship:
+		ship.surrender_to_void()
 	await get_tree().create_timer(CONSUMED_SILENCE).timeout
 	show_game_over("Consumed")
 
@@ -415,8 +415,7 @@ func load_game() -> void:
 	if ship_spawner and clamped:
 		await ship_spawner.spawn_in_flight(Save.load_spawn_position(), Save.load_spawn_rotation(), Save.load_spawn_velocity())
 		if is_instance_valid(clamped):
-			ship.clamp_freight(clamped, true)
-			ship.state_machine.change_state("CarryingState")
+			ship.carry(clamped, true)
 	elif ship_spawner:
 		var dock = await ship_spawner.find_saved_dock()
 		if not dock:
@@ -472,7 +471,7 @@ func reset_game() -> void:
 	get_tree().call_group("boot_log", "arm")
 	# Lost with a load still on the nose: it stays out here, where the ship was
 	if ship and ship.is_carrying():
-		ship.release_freight()
+		ship.let_go()
 	Gem.clear_all(true)  # wreck gems stay where the ship blew up
 
 	# A relaunch is another clone coming up, so it boots the same way a new game does
