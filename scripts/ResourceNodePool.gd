@@ -2,6 +2,8 @@ extends Node
 
 ## Object pool manager for OrbitalNode variants (ScrapNode and DebrisNode).
 ## Maintains separate pools for each scene variant.
+## The pool owns every instance it hands out: callers return them, never free them.
+## A freed instance is dropped (and reported) rather than handed out again.
 ## Add to Project Settings > Autoload as "ResourceNodePool"
 
 # Scene paths for all resource variants
@@ -69,17 +71,15 @@ func get_instance(variant_name: String, parent: Node) -> OrbitalNode:
 		return null
 
 	var pool_data = _pools[variant_name]
-	var instance: OrbitalNode
+	var instance := _take_available(variant_name)
 
-	if pool_data["available"].is_empty():
+	if not instance:
 		if can_grow:
 			instance = _create_instance(variant_name)
 			pool_data["available"].erase(instance)
 		else:
 			push_warning("ResourceNodePool: Pool exhausted for variant: %s" % variant_name)
 			return null
-	else:
-		instance = pool_data["available"].pop_back()
 
 	# Reparent to the specified parent
 	instance.reparent(parent)
@@ -94,6 +94,16 @@ func get_instance(variant_name: String, parent: Node) -> OrbitalNode:
 	instance.on_spawn()
 
 	return instance
+
+## Pops the next live instance, dropping any that were freed while parked in the pool.
+func _take_available(variant_name: String) -> OrbitalNode:
+	var available: Array = _pools[variant_name]["available"]
+	while not available.is_empty():
+		var candidate: Variant = available.pop_back()
+		if is_instance_valid(candidate):
+			return candidate
+		push_error("ResourceNodePool: dropped a freed %s instance; something freed a pooled node instead of returning it" % variant_name)
+	return null
 
 ## Get a random instance from scrap variants (Scrap1-5)
 func get_random_scrap_instance(parent: Node) -> OrbitalNode:
@@ -131,8 +141,12 @@ func _return_to_pool(instance: OrbitalNode, variant_name: String) -> void:
 	pool_data["available"].append(instance)
 
 ## Return a specific instance to the pool
-func return_instance(instance: OrbitalNode) -> void:
-	if not instance:
+func return_instance(instance: Variant) -> void:
+	if typeof(instance) == TYPE_NIL:
+		return
+	if not is_instance_valid(instance):
+		push_error("ResourceNodePool: a freed node was returned to the pool; pooled nodes must be returned, never freed")
+		_prune_freed()
 		return
 	var variant_name = instance.get_meta("pool_variant", "") as String
 	if variant_name != "" and _pools.has(variant_name):
@@ -143,7 +157,16 @@ func return_all() -> void:
 	for variant_name in _pools.keys():
 		var pool_data = _pools[variant_name]
 		for instance in pool_data["in_use"].duplicate():
-			instance.returned_to_pool.emit()
+			if is_instance_valid(instance):
+				instance.returned_to_pool.emit()
+	_prune_freed()
+
+## Drop freed instances from every list so they are never handed out or counted.
+func _prune_freed() -> void:
+	for variant_name in _pools.keys():
+		var pool_data = _pools[variant_name]
+		for key in ["available", "in_use"]:
+			pool_data[key] = pool_data[key].filter(func(i): return is_instance_valid(i))
 
 ## Get pool statistics for debugging
 func get_stats() -> Dictionary:
