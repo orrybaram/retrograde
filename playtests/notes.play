@@ -10,7 +10,7 @@
 # this scenario hands the player its Record directly rather than meeting it on the radio.
 press enter
 wait_until main.current_game_state == 1 15
-eval gs.mark_automaton_met("UNIT-7")
+eval gs.progress.mark("met_automatons", "UNIT-7")
 
 # The rest of the tutorial transmissions pause the game; this scenario isn't about them
 eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
@@ -134,7 +134,7 @@ wait_until not pt.visible_ui().has("LogUI") 2
 
 # --- The Notes derive from the powered Gates, so they come back with the save --
 eval pt.save_now()
-eval gs.powered_gates.clear()
+eval gs.set("progress", gs.progress.fresh())
 reload
 assert gs.titan_influence() == 5 "the powered Gates came back"
 press i

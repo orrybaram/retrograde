@@ -53,7 +53,7 @@ func _ready() -> void:
 
 ## Whether SR-7's arm belongs out in the game `gs` describes.
 static func should_be_out(gs: GameState) -> bool:
-	return gs != null and (gs.station_whole() or gs.core_started)
+	return gs != null and (gs.station_whole() or gs.progress.flagged(Progress.CORE_STARTED))
 
 func get_port() -> SpacePort:
 	return get_node_or_null(port) as SpacePort

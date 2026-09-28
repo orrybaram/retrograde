@@ -10,22 +10,16 @@ const RADIO_SCRIPT := preload("res://scripts/RobotRadio.gd")
 const MSG_IDENTIFIED := "res://entities/Robot/radio/messages/gate_identified.tres"
 
 var _gs: GameState
-var _radio_persisted := true
 
 
 func before_test() -> void:
 	_gs = auto_free(GameState.new()) as GameState
 	_gs.set_process(false)
 	add_child(_gs)
-	# Naming a Gate radios the player, and the real radio would write its show-once
-	# flags to the player's own save. Hold it off for the length of the test.
-	_radio_persisted = RobotRadio.persist
-	RobotRadio.persist = false
 
 
 func after_test() -> void:
 	RobotRadio.silence()
-	RobotRadio.persist = _radio_persisted
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_FILE))
 
 
@@ -88,7 +82,6 @@ func _bearing_from(planet: Planet, body: Node2D) -> Vector2:
 ## A radio of its own, so a test can watch what the guide would do with a request.
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
-	radio.persist = false
 	radio.guide_awake = true
 	return radio
 
@@ -184,7 +177,7 @@ func test_new_game_powers_every_module_back_down() -> void:
 	_gs.stores = 600
 	gate.power(_gs)
 	_gs.reset_all_state()
-	assert_dict(_gs.powered_gates).is_empty()
+	assert_array(Array(_gs.progress.list(Progress.POWERED_GATES))).is_empty()
 	assert_int(_gs.titan_influence()).is_equal(0)
 	assert_bool(gate.is_powered()).is_false()
 
@@ -346,29 +339,37 @@ func test_a_ship_docked_at_a_gate_is_saved_against_that_gate() -> void:
 
 # --- Saving ------------------------------------------------------------------
 
-func test_powered_gates_round_trip_through_the_save() -> void:
+## Powering a Gate marks it in the Progress ledger, once, and that is the Titan Influence.
+func test_powering_a_gate_marks_it_once_in_the_ledger() -> void:
+	var gate := _gate(_planet("Veld"), 600)
+	_gs.stores = 1200
+	assert_bool(gate.power(_gs)).is_true()
+	assert_bool(gate.power(_gs)).is_false()
+	assert_array(Array(_gs.progress.list(Progress.POWERED_GATES))).contains_exactly([gate.save_key()])
+	assert_int(_gs.stores).is_equal(600)
+
+
+## The save file keeps powered Gates where saves before the ledger did, and a Gate powered
+## far from any dock is written into it at once, keeping everything else.
+func test_powered_gates_round_trip_through_the_save_file() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 42)
+	cfg.set_value("gates", "powered", PackedStringArray(["Sun/Veld"]))
 	cfg.save(SAVE_FILE)
-	Save.save_powered_gates(PackedStringArray(["Sun/Veld", "Sun/Crom"]), SAVE_FILE)
-	assert_array(Array(Save.load_powered_gates(SAVE_FILE))).contains_exactly(["Sun/Veld", "Sun/Crom"])
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_int(ledger.count(Progress.POWERED_GATES)).is_equal(1)
+	ledger.mark(Progress.POWERED_GATES, "Sun/Crom")
 	cfg.load(SAVE_FILE)
 	assert_int(cfg.get_value("stats", "stores")).is_equal(42)
-	assert_array(Array(cfg.get_value(Save.GATE_SECTION, Save.GATE_POWERED_KEY))).contains_exactly(
-		["Sun/Veld", "Sun/Crom"])
-
-
-func test_gate_save_needs_an_existing_save() -> void:
-	Save.save_powered_gates(PackedStringArray(["Sun/Veld"]), SAVE_FILE)
-	assert_bool(FileAccess.file_exists(SAVE_FILE)).is_false()
-	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
+	assert_array(Array(cfg.get_value("gates", "powered"))).contains_exactly(["Sun/Veld", "Sun/Crom"])
 
 
 func test_a_save_from_before_gates_reads_as_nothing_powered() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 7)
 	cfg.save(SAVE_FILE)
-	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_int(ledger.count(Progress.POWERED_GATES)).is_equal(0)
 
 
 ## Naming a Gate goes through the Progress ledger and nothing else: the GameState's own
@@ -402,7 +403,8 @@ func test_named_gates_round_trip_through_the_save_file() -> void:
 	assert_int(cfg.get_value("stats", "stores")).is_equal(42)
 	assert_array(Array(cfg.get_value("gates", "identified"))).contains_exactly(["Sun/Veld", "Sun/Crom"])
 	# Naming a Gate is not powering it: the two lists are kept apart
-	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
+	assert_int(ledger.count(Progress.POWERED_GATES)).is_equal(0)
+	assert_bool(cfg.has_section_key("gates", "powered")).is_false()
 
 
 ## As before the ledger: with no save yet, naming a Gate writes no file (a names-only file

@@ -89,7 +89,7 @@ func test_home_is_drawn_but_its_orbit_is_not() -> void:
 	var rook := _planet("Rook", veld)
 
 	assert_bool(SystemMap.is_region_charted(rook, sun, _gs)).is_false()
-	_gs.mark_gate_powered(veld.save_key())
+	_gs.progress.mark(Progress.POWERED_GATES, veld.save_key())
 	assert_bool(SystemMap.is_region_charted(rook, sun, _gs)).is_true()
 
 
@@ -100,7 +100,7 @@ func test_powering_a_gate_charts_the_planet_and_its_moons() -> void:
 	var dross := _planet("Dross", crom)
 	var veld := _planet("Veld", sun)
 
-	_gs.mark_gate_powered(crom.save_key())
+	_gs.progress.mark(Progress.POWERED_GATES, crom.save_key())
 
 	assert_bool(SystemMap.is_charted(crom, sun, null, _gs)).is_true()
 	assert_bool(SystemMap.is_charted(dross, sun, null, _gs)).is_true()
@@ -124,11 +124,11 @@ func test_a_moon_belongs_to_its_planets_region() -> void:
 func test_the_sun_waits_for_its_own_gate() -> void:
 	var sun := _planet("Sun")
 	var veld := _planet("Veld", sun)
-	_gs.mark_gate_powered(veld.save_key())
+	_gs.progress.mark(Progress.POWERED_GATES, veld.save_key())
 
 	assert_bool(SystemMap.is_charted(veld, sun, null, _gs)).is_true()
 	assert_bool(SystemMap.is_charted(sun, sun, null, _gs)).is_false()
-	_gs.mark_gate_powered(sun.save_key())
+	_gs.progress.mark(Progress.POWERED_GATES, sun.save_key())
 	assert_bool(SystemMap.is_charted(sun, sun, null, _gs)).is_true()
 
 

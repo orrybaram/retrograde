@@ -73,7 +73,7 @@ func test_locking_swings_it_true_and_it_stays_seated() -> void:
 	add_child(gs)
 	_wing.lock()
 	assert_bool(_wing.seated).is_true()
-	assert_bool(gs.is_section_seated(Sections.SOLAR_ARRAY_2)).is_true()
+	assert_bool(gs.progress.holds(Progress.SEATED_SECTIONS, Sections.SOLAR_ARRAY_2)).is_true()
 	await await_millis(int(ArrayNudge.LOCK_TIME * 1000.0) + 150)
 	assert_float(absf(_wing.off_true())).is_less(0.001)
 	# Seated walls it off from further pushes
@@ -84,11 +84,11 @@ func test_a_seated_save_puts_it_back_true() -> void:
 	var gs := auto_free(GameState.new()) as GameState
 	gs.add_to_group("game_state")
 	add_child(gs)
-	gs.mark_section_seated(Sections.SOLAR_ARRAY_2)
+	gs.progress.mark(Progress.SEATED_SECTIONS, Sections.SOLAR_ARRAY_2)
 	_wing.refresh()
 	assert_bool(_wing.seated).is_true()
 	assert_float(absf(_wing.off_true())).is_less(0.001)
-	gs.seated_sections.clear()
+	gs.progress = gs.progress.fresh()  # a new game: nothing seated
 	_wing.refresh()
 	assert_float(_wing.off_true()).is_equal_approx(ArrayNudge.HANG_ANGLE, 0.001)
 

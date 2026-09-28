@@ -40,7 +40,7 @@ func _ready() -> void:
 	var gs := GameState.new()
 	gs.name = "GameState"
 	gs.mark_station_whole()
-	gs.core_started = true
+	gs.progress.flag(Progress.CORE_STARTED)
 	add_child(gs)
 	_build_station()
 	ship = SHIP_SCENE.instantiate() as Ship
@@ -86,9 +86,14 @@ func _build_station() -> void:
 func _set_arm_home(home: bool) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	if home:
-		gs.mark_section_seated(Sections.DORSAL_ARM)
+		gs.progress.mark(Progress.SEATED_SECTIONS, Sections.DORSAL_ARM)
 	else:
-		gs.seated_sections.erase(Sections.DORSAL_ARM)
+		# The ledger never takes a Record back, so the lab starts one over without the arm
+		gs.progress = gs.progress.fresh()
+		for id in GameState.station_pieces():
+			if id != Sections.DORSAL_ARM:
+				gs.progress.mark(Progress.SEATED_SECTIONS, id)
+		gs.progress.flag(Progress.CORE_STARTED)
 	var m := Mount.for_section(get_tree(), Sections.DORSAL_ARM)
 	m.refresh()
 	claw.refresh()

@@ -48,7 +48,7 @@ assert not pt.node("radio_panel").visible "no transmission on waking"
 assert not get_tree().root.get_node("RobotRadio").is_active() "the radio is quiet"
 assert not get_tree().paused "nothing holds the game"
 assert not get_tree().root.get_node("RobotRadio").has_seen("first_wake") "the wake-up call is parked"
-assert not gs.has_met_automaton("UNIT-7") "the Guide is not met on a new game"
+assert not gs.progress.holds("met_automatons", "UNIT-7") "the Guide is not met on a new game"
 assert pt.state_name() == "FlyingState" "still adrift"
 assert abs(ship.angular_velocity) > 0.1 "still turning over: nothing has taken the stick"
 screenshot 04_quiet

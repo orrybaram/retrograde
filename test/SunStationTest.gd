@@ -129,7 +129,7 @@ func _core_gate() -> Gate:
 ## Bring every Module online without going anywhere near the Core.
 func _all_modules_online() -> void:
 	for planet in ["Veld", "Crom", "Sonder", "Roke", "TERRA-0"]:
-		_gs.mark_gate_powered(planet)
+		_gs.progress.mark(Progress.POWERED_GATES, planet)
 
 
 func test_the_cores_gate_is_dockable_the_same_way_a_modules_gate_is() -> void:
@@ -185,8 +185,8 @@ func test_the_terminal_refuses_the_core_without_counting_the_modules() -> void:
 	assert_str(row["right"]).is_equal("MODULES OFFLINE")
 
 	# Two of the five online reads exactly the same: the terminal never tallies them.
-	_gs.mark_gate_powered("Veld")
-	_gs.mark_gate_powered("Crom")
+	_gs.progress.mark(Progress.POWERED_GATES, "Veld")
+	_gs.progress.mark(Progress.POWERED_GATES, "Crom")
 	terminal._refresh_hub()
 	assert_bool(terminal._menu_items[0]["enabled"]).is_false()
 	assert_str(terminal._menu_items[0]["right"]).is_equal("MODULES OFFLINE")

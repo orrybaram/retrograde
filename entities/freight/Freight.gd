@@ -493,8 +493,10 @@ static func snapshot_all(tree: SceneTree) -> Array:
 	return rows
 
 ## Put saved pieces back into `world`. Returns the one that was clamped (not yet on any
-## ship: the caller clamps it once the ship is in place), or null.
-static func restore_all(world: Node, rows: Array) -> Freight:
+## ship: the caller clamps it once the ship is in place), or null. A Section `progress`
+## holds as seated is part of the station, not Freight: it seats in flight, marking the
+## ledger and nothing else, so its row can still be in the save until the next full one.
+static func restore_all(world: Node, rows: Array, progress: Progress = null) -> Freight:
 	var clamped: Freight = null
 	for row in rows:
 		if not row is Dictionary:
@@ -503,6 +505,8 @@ static func restore_all(world: Node, rows: Array) -> Freight:
 		# not put back: its Mount is gone, and so is it
 		var id := str(row.get("section", ""))
 		if id != "" and not Sections.exists(id):
+			continue
+		if id != "" and progress and progress.holds(Progress.SEATED_SECTIONS, id):
 			continue
 		var f := from_row(world, row)
 		if bool(row.get("clamped", false)) and clamped == null:

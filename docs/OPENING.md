@@ -158,7 +158,7 @@ manifest):
   the station's console, not its hub: the hold is not taken in, because there is nobody
   there to receive it. The station's hub appears for the first time at the wake, so the
   wake is what hands the player the port. `SpacePort.needs_core` gates it on
-  `GameState.core_started`, which §5's cold start sets and the save keeps - a station does
+  the Progress ledger's `CORE_STARTED`, which §5's cold start flags and the save keeps - a station does
   not go back to being dead. The gate is the world's state, not the radio's:
   `RobotRadio.guide_awake` still governs only whether UNIT-7's tips play.
 

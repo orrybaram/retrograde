@@ -12,7 +12,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5
-assert gs.visited_planets.is_empty() "a new game has reached nowhere"
+assert gs.progress.list("visited_bodies").is_empty() "a new game has reached nowhere"
 
 # --- Nothing reached yet: the Records tab is empty, and honest about it ---
 press i
@@ -36,16 +36,16 @@ hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
 eval pt.park_near_planet("Rook", 4000)
 frames 3
-assert not gs.is_planet_visited("Veld/Rook") "the gravity field is not close enough"
+assert not gs.progress.holds("visited_bodies", "Veld/Rook") "the gravity field is not close enough"
 eval pt.park_near_planet("Rook", 2000, 200, true)
 frames 3
-assert gs.is_planet_visited("Veld/Rook") "inner orbit earns Rook its Record"
+assert gs.progress.holds("visited_bodies", "Veld/Rook") "inner orbit earns Rook its Record"
 assert not gs.is_planet_scanned("Veld/Rook") "the Record carries no survey yet"
 
 # --- Veld too, so the cursor has somewhere to go ---
 eval pt.park_near_planet("Veld", 3000, 0, true)
 frames 3
-assert gs.is_planet_visited("Sun/Veld") "Veld earns its own Record"
+assert gs.progress.holds("visited_bodies", "Sun/Veld") "Veld earns its own Record"
 
 press i
 wait_until pt.visible_ui().has("LogUI") 2
@@ -96,7 +96,7 @@ wait_until not pt.visible_ui().has("LogUI") 2
 # --- The sun reads honestly through the same instrument: no ore, no habitability ---
 eval pt.park_near_planet("Sun", 12000, 0, true)
 frames 3
-assert gs.is_planet_visited("Sun") "the sun is a Body like any other"
+assert gs.progress.holds("visited_bodies", "Sun") "the sun is a Body like any other"
 eval gs.mark_planet_scanned("Sun")
 press i
 wait_until pt.visible_ui().has("LogUI") 2
@@ -118,8 +118,8 @@ eval pt.redock()
 wait_until pt.visible_ui().has("SpacePortDialogue") 5
 press escape
 wait_until ship.drive.fuel == ship.drive.max_fuel 15
-eval gs.visited_planets.clear()
+eval gs.set("progress", gs.progress.fresh())
 reload
-assert gs.is_planet_visited("Veld/Rook") "Rook's Record restored from the save"
-assert gs.is_planet_visited("Sun/Veld") "Veld's Record restored from the save"
+assert gs.progress.holds("visited_bodies", "Veld/Rook") "Rook's Record restored from the save"
+assert gs.progress.holds("visited_bodies", "Sun/Veld") "Veld's Record restored from the save"
 state

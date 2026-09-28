@@ -500,7 +500,7 @@ static func region_planet(body: Planet, sun_body: Planet) -> Planet:
 ## True once a region's Gate is powered, which is what puts its orbits on the chart.
 static func is_region_charted(body: Planet, sun_body: Planet, gs: GameState) -> bool:
 	var root := region_planet(body, sun_body)
-	return root != null and gs != null and gs.is_gate_powered(root.save_key())
+	return root != null and gs != null and gs.progress.holds(Progress.POWERED_GATES, root.save_key())
 
 ## True when the chart draws the body itself: its region is Charted, or it is home.
 static func is_charted(body: Planet, sun_body: Planet, home: Planet, gs: GameState) -> bool:

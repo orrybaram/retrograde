@@ -50,8 +50,6 @@ const PLATES := [
 ]
 
 var planet: Planet
-## Off in tests so naming the wreck never touches a save file (Gate does the same).
-var persist := true
 ## The dish's ping has reached it: it pings on the minimap until it is identified.
 var heard := false
 var _ship: Node2D = null
@@ -92,7 +90,7 @@ func on_dish_ping() -> void:
 ## the wake, so no ping will come to set it).
 func _restore_heard() -> void:
 	var gs := _game_state()
-	heard = gs != null and gs.core_started
+	heard = gs != null and gs.progress.flagged(Progress.CORE_STARTED)
 
 ## The hauler wreck in `tree`, or null.
 static func find(tree: SceneTree) -> HaulerWreck:
@@ -105,19 +103,16 @@ func save_key() -> String:
 ## True once UNIT-7 has named it.
 func is_identified() -> bool:
 	var gs := _game_state()
-	return gs != null and gs.is_wreck_identified(save_key())
+	return gs != null and gs.progress.holds(Progress.IDENTIFIED_WRECKS, save_key())
 
 ## Names the wreck (MSG_IDENTIFIED). Nobody can make it out before the cold start: UNIT-7
 ## is dark until then. Returns true when this call is what identified it.
 func identify() -> bool:
 	var gs := _game_state()
-	var key := save_key()
-	if gs == null or key == "" or not gs.core_started or gs.is_wreck_identified(key):
+	if gs == null or not gs.progress.flagged(Progress.CORE_STARTED) \
+			or not gs.progress.mark(Progress.IDENTIFIED_WRECKS, save_key()):
 		return false
-	gs.mark_wreck_identified(key)
 	EventBus.radio_message_requested.emit(MSG_IDENTIFIED)
-	if persist:
-		Save.save_identified_wrecks(PackedStringArray(gs.identified_wrecks.keys()))
 	return true
 
 ## Identifies the wreck once the ship is close enough to make it out, and not before.
@@ -151,7 +146,7 @@ func ensure_cargo_bay() -> void:
 		return
 	var piece := find_piece()
 	var gs := _game_state()
-	if gs and (component in gs.cradled or gs.is_fitted(component)):
+	if gs and (component in gs.cradled or gs.progress.holds(Progress.FITTED_COMPONENTS, component)):
 		if piece:  # already home: a stale copy must not linger
 			piece.remove_from_group("freight")
 			piece.queue_free()

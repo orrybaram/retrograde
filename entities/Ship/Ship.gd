@@ -633,7 +633,7 @@ func has_hold() -> bool:
 ## Size the ship to what `gs` has fitted: the hold is the Cargo Bay's, or none at all
 ## (docs/OPENING.md §9). Runs on fitting and on every load.
 func refit(state: GameState) -> void:
-	max_cargo_weight = base_max_cargo_weight + (Components.hold(state.fitted.keys()) if state else 0.0)
+	max_cargo_weight = base_max_cargo_weight + (Components.hold(Array(state.progress.list(Progress.FITTED_COMPONENTS))) if state else 0.0)
 	update_mass_from_cargo()
 
 ## Reset ship to initial state for a new game.

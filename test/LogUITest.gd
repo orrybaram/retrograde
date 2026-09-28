@@ -190,7 +190,7 @@ func test_a_scan_fills_the_record_while_the_log_is_open() -> void:
 	planet.name = "Sonder"
 	planet.planet_name = "Sonder"
 	add_child(planet)
-	_gs.mark_planet_visited(planet.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()

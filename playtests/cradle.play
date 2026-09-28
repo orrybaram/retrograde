@@ -81,7 +81,7 @@ screenshot cradle_4_fit_offered
 press enter
 wait 0.1
 assert ship.max_cargo_weight == 50.0 "the hold is 50"
-assert gs.is_fitted("cargo_bay") and gs.cradled.is_empty() "fitted, out of the Cradle"
+assert gs.progress.holds("fitted_components", "cargo_bay") and gs.cradled.is_empty() "fitted, out of the Cradle"
 assert not str(pt.screen_text()).contains("FIT CARGO BAY") "nothing more to fit"
 press enter
 wait 0.2
@@ -93,7 +93,7 @@ screenshot cradle_5_fitted
 eval pt.save_now()
 reload
 wait 0.5
-assert gs.is_fitted("cargo_bay") "still fitted after a reload"
+assert gs.progress.holds("fitted_components", "cargo_bay") "still fitted after a reload"
 assert ship.max_cargo_weight == 50.0 "and the hold is 50"
 assert gs.cradled.is_empty() "the Cradle stays empty"
 assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"

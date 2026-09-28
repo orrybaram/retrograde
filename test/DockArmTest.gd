@@ -25,21 +25,21 @@ func _arm() -> DockArm:
 
 func _whole() -> void:
 	for id in GameState.station_pieces():
-		_gs.mark_section_seated(id)
+		_gs.progress.mark(Progress.SEATED_SECTIONS, id)
 
 
 func test_out_only_when_whole_or_running() -> void:
 	assert_bool(DockArm.should_be_out(null)).is_false()
 	assert_bool(DockArm.should_be_out(_gs)).is_false()
 	for id in Sections.DATA.keys():
-		_gs.mark_section_seated(id)
+		_gs.progress.mark(Progress.SEATED_SECTIONS, id)
 	assert_bool(DockArm.should_be_out(_gs)).override_failure_message("the hanging wing counts too").is_false()
-	_gs.mark_section_seated(Sections.SOLAR_ARRAY_2)
+	_gs.progress.mark(Progress.SEATED_SECTIONS, Sections.SOLAR_ARRAY_2)
 	assert_bool(DockArm.should_be_out(_gs)).is_true()
 
 
 func test_a_running_core_means_the_arm_is_out() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	assert_bool(DockArm.should_be_out(_gs)).is_true()
 
 

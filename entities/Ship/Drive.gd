@@ -149,7 +149,7 @@ func refuel(points: float, up_to := INF) -> float:
 
 ## The level SR-7 tops the tank up to, or 0 while its core is cold.
 func free_floor(gs: GameState) -> float:
-	if gs == null or not gs.core_started:
+	if gs == null or not gs.progress.flagged(Progress.CORE_STARTED):
 		return 0.0
 	return max_fuel * FREE_FRACTION
 

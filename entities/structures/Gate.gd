@@ -182,7 +182,7 @@ func _game_state() -> GameState:
 ## True once this Gate's Module is online.
 func is_powered() -> bool:
 	var gs := _game_state()
-	return gs != null and gs.is_gate_powered(save_key())
+	return gs != null and gs.progress.holds(Progress.POWERED_GATES, save_key())
 
 ## True once the Guide has named this Gate. Until then the minimap reads `? ? ?`.
 func is_identified() -> bool:
@@ -227,10 +227,10 @@ func power(gs: GameState) -> bool:
 	if is_core:
 		return false
 	var key := save_key()
-	if gs == null or key == "" or gs.is_gate_powered(key) or not can_afford(gs):
+	if gs == null or key == "" or gs.progress.holds(Progress.POWERED_GATES, key) or not can_afford(gs):
 		return false
 	gs.stores -= power_cost
-	gs.mark_gate_powered(key)
+	gs.progress.mark(Progress.POWERED_GATES, key)
 	_glow = 0.0
 	return true
 

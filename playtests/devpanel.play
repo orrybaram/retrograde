@@ -69,7 +69,7 @@ screenshot 03_progress
 press enter
 assert gs.titan_influence() == 5 "ENTER brings every Module online"
 press left
-assert gs.titan_influence() < 5 "LEFT takes one back off"
+assert gs.titan_influence() == 5 "LEFT takes no Module offline: nothing goes backwards"
 
 press down
 press down

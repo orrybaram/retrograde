@@ -74,8 +74,7 @@ func fit(id := "") -> String:
 	var left := gs.cradled
 	left.remove_at(at)
 	gs.cradled = left
-	gs.mark_fitted(id)
-	Save.save_fitted(PackedStringArray(gs.fitted.keys()))
+	gs.progress.mark(Progress.FITTED_COMPONENTS, id)
 	Save.save_cradled(gs.cradled)
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if ship:

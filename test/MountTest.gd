@@ -296,28 +296,34 @@ func test_a_saved_mast_from_before_the_rebuild_does_not_come_back() -> void:
 	var ids := get_tree().get_nodes_in_group("freight").map(func(f): return f.section)
 	assert_array(ids).contains_exactly_in_any_order(["", Sections.FUEL_TANK])
 
-func test_seating_writes_the_seated_state_and_drops_the_piece_from_the_save() -> void:
+## A Section seated in flight is only marked in the ledger; its Freight row can still be
+## in the save until the next full one, and Freight does not put it back.
+func test_a_seated_section_does_not_come_back_as_freight() -> void:
+	var ledger := Progress.new()
+	ledger.mark(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)
+	var rows := [{"section": Sections.FUEL_TANK, "x": 1.0}, {"section": "", "x": 2.0}]
+	Freight.restore_all(_world, rows, ledger)
+	var ids := get_tree().get_nodes_in_group("freight").map(func(f): return f.section)
+	assert_array(ids).contains_exactly([""])
+
+## Seated in flight, the Section is written into the save where saves before the ledger
+## kept it, and the rest of the save is left alone.
+func test_seating_writes_the_seated_state_into_the_save_file() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("wreck", "freight", [{"section": Sections.FUEL_TANK, "x": 1.0}, {"section": "", "x": 2.0}])
+	cfg.set_value("wreck", "freight", [{"section": Sections.FUEL_TANK, "x": 1.0}])
 	cfg.save(SAVE_FILE)
-	Save.save_seated_section(Sections.FUEL_TANK, PackedStringArray([Sections.FUEL_TANK]), SAVE_FILE)
-	assert_array(Array(Save.load_seated_sections(SAVE_FILE))).contains_exactly([Sections.FUEL_TANK])
+	Progress.new(Progress.FileStore.new(SAVE_FILE)).mark(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)
 	var back := ConfigFile.new()
 	back.load(SAVE_FILE)
-	var rows: Array = back.get_value("wreck", "freight", [])
-	assert_int(rows.size()).is_equal(1)
-	assert_float(rows[0]["x"]).is_equal(2.0)
-
-func test_seating_with_no_save_writes_nothing() -> void:
-	Save.save_seated_section(Sections.FUEL_TANK, PackedStringArray([Sections.FUEL_TANK]), SAVE_FILE)
-	assert_bool(FileAccess.file_exists(SAVE_FILE)).is_false()
+	assert_array(Array(back.get_value("sections", "seated"))).contains_exactly([Sections.FUEL_TANK])
+	assert_int((back.get_value("wreck", "freight", []) as Array).size()).is_equal(1)
 
 func test_a_new_game_has_nothing_seated() -> void:
 	var gs := auto_free(GameState.new()) as GameState
-	gs.mark_section_seated(Sections.FUEL_TANK)
-	assert_bool(gs.is_section_seated(Sections.FUEL_TANK)).is_true()
+	gs.progress.mark(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)
+	assert_bool(gs.progress.holds(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)).is_true()
 	gs.reset_all_state()
-	assert_bool(gs.is_section_seated(Sections.FUEL_TANK)).is_false()
+	assert_bool(gs.progress.holds(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)).is_false()
 
 # --- the prompt ---
 

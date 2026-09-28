@@ -7,7 +7,7 @@ class_name ArrayNudge
 ## the wing turns; within SNAP_ANGLE of true it swings the rest of the way and locks with the same
 ## clunk as a seated Section. It only ever turns toward true - a push the wrong way just
 ## meets a wing that will not give. The node's own transform is the wing seated; its
-## rotation is how far off true it hangs. Seated state: GameState.seated_sections.
+## rotation is how far off true it hangs. Seated state: the ledger's Progress.SEATED_SECTIONS.
 
 ## How far off true a new game leaves it: well down, so it plainly hangs.
 const HANG_ANGLE := deg_to_rad(50.0)
@@ -56,7 +56,7 @@ func _ready() -> void:
 ## Match the saved or new game: locked true, or hanging off it.
 func refresh() -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	_show_seated(gs != null and gs.is_section_seated(section))
+	_show_seated(gs != null and gs.progress.holds(Progress.SEATED_SECTIONS, section))
 
 func _show_seated(on: bool) -> void:
 	if _locking:
@@ -133,8 +133,7 @@ func lock() -> void:
 	seated = true
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
-		gs.mark_section_seated(section)
-		Save.save_seated_section(section, PackedStringArray(gs.seated_sections.keys()))
+		gs.progress.mark(Progress.SEATED_SECTIONS, section)
 	_locking = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_locking.tween_property(self, "transform", _home, LOCK_TIME)
 	_locking.tween_callback(func() -> void:

@@ -12,9 +12,9 @@ func test_unpowered_until_the_core_starts() -> void:
 	var gs := _gs()
 	assert_bool(StationPower.is_powered(gs)).is_false()
 	for id in Sections.DATA.keys() + [Sections.SOLAR_ARRAY_2]:
-		gs.mark_section_seated(id)
+		gs.progress.mark(Progress.SEATED_SECTIONS, id)
 	assert_bool(StationPower.is_powered(gs)).override_failure_message("the wings are pieces, not a switch").is_false()
-	gs.core_started = true
+	gs.progress.flag(Progress.CORE_STARTED)
 	assert_bool(StationPower.is_powered(gs)).is_true()
 
 

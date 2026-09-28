@@ -33,16 +33,15 @@ const MSG_SHIP_DESTROYED := preload("res://entities/Robot/radio/messages/ship_de
 const MSG_VOID_CONSUMED := preload("res://entities/Robot/radio/messages/void_consumed.tres")
 
 var queue := RadioQueue.new()
-## Save file for show-once flags; empty uses the game save (Playtest.save_path()).
+## Save file the show-once flags are written into. Empty keeps them in memory only, so a
+## radio in a test never touches a save file; Main points the game's at the save.
 var save_path := ""
-## Off in tests so flags never touch a save file.
-var persist := true
 
 ## UNIT-7 is off when the game opens (docs/OPENING.md §5): the station is dead and nobody
 ## is on the comms. Until the core's cold start at the end of Act 1 reboots it, every
 ## call - tips, alarms, the Void, a lost ship - is dropped (request() refuses them), and
 ## MSG_WAKE is the first thing it says. The radio is the comms system to reuse.
-## The core's cold start sets it (wake_guide); a load sets it from GameState.core_started.
+## The core's cold start sets it (wake_guide); a load sets it from the ledger (CORE_STARTED).
 var guide_awake := false
 
 ## Nothing teaches boosting any more — the wake-up call is story, not controls. If the
@@ -152,18 +151,14 @@ func _unpause() -> void:
 
 ## The radio is a link to UNIT-7 at SR-7, so a transmission going on air is the player
 ## meeting the Guide: from the first one they hold its Record, and the Records tab is
-## never empty (docs/GLOSSARY.md, docs/adr/0003). Written straight into the save like a named
-## Gate is — the first transmission happens docked at SR-7, long before the next dock.
+## never empty (docs/GLOSSARY.md, docs/adr/0003). Marked in the Progress ledger like a named
+## Gate is, which writes it through - the first transmission comes long before any dock.
 func _mark_guide_met() -> void:
 	if not is_inside_tree():
 		return
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	var designation := Automatons.GUIDE.record_key()
-	if gs == null or gs.has_met_automaton(designation):
-		return
-	gs.mark_automaton_met(designation)
-	if persist:
-		Save.save_met_automatons(PackedStringArray(gs.met_automatons.keys()), save_path)
+	if gs:
+		gs.progress.mark(Progress.MET_AUTOMATONS, Automatons.GUIDE.record_key())
 
 ## SR-7's core has caught and the power is up (CoreHousing): UNIT-7 comes on the comms
 ## for the first time, and from here its tips and alarms are live.
@@ -180,8 +175,7 @@ func mark_seen(id: StringName) -> void:
 	if id == &"" or _seen.has(id):
 		return
 	_seen[id] = true
-	if persist:
-		Save.save_radio_seen(seen_ids(), save_path)
+	_write_seen()
 
 func seen_ids() -> PackedStringArray:
 	var ids := PackedStringArray()
@@ -200,10 +194,14 @@ func load_seen(ids: PackedStringArray) -> void:
 ## New game: every tip plays again.
 func reset() -> void:
 	_seen.clear()
-	if persist:
-		Save.save_radio_seen(seen_ids(), save_path)
+	_write_seen()
 	silence()
 	watch_for_boost()
+
+## Into the save at `save_path`, when there is one to write to.
+func _write_seen() -> void:
+	if save_path != "":
+		Save.save_radio_seen(seen_ids(), save_path)
 
 func silence() -> void:
 	var was_active := queue.is_active()
@@ -306,4 +304,4 @@ func cargo_bay_fitted() -> bool:
 	if not is_inside_tree():
 		return false
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	return gs != null and gs.is_fitted(Components.CARGO_BAY)
+	return gs != null and gs.progress.holds(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)

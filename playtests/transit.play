@@ -30,7 +30,7 @@ wait_until pt.state_name() == "FlyingState" 3
 # first, so a transit destination is always already identified. Shortcutting the flight here
 # would leave Crom unidentified and fire the guide's identify call on arrival instead.
 eval gs.set("stores", 1000)
-eval gs.mark_gate_powered(pt.gate("Crom").save_key())
+eval gs.progress.mark("powered_gates", pt.gate("Crom").save_key())
 eval gs.progress.mark("identified_gates", pt.gate("Crom").save_key())
 eval gs.progress.mark("identified_gates", pt.gate("Veld").save_key())
 assert gs.titan_influence() == 1 "Crom's Module is online"

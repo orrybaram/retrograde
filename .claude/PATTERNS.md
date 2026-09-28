@@ -57,8 +57,8 @@ Ship._drive_sonar release -> Resonance.available_for(ship)? -> Resonance.release
 - `ProcedureDef` (`entities/procedure/`) holds the steps; the placard draws from the same
   data. `check()` gives `ok`, a `right` count (never which) and `incomplete`.
 - SR-7's core is the first (`CoreHousing`): it listens once `CoreHousing.is_whole` (all
-  Sections plus the nudged wing), and its cold start sets `GameState.core_started`
-  (saved as `[sections] core_started`), which is SR-7's power (`StationPower`) and UNIT-7
+  Sections plus the nudged wing), and its cold start flags `Progress.CORE_STARTED` in the
+  ledger (saved as `[sections] core_started`), which is SR-7's power (`StationPower`) and UNIT-7
   awake (`RobotRadio.guide_awake`, `wake_guide()`). Dev panel: PROGRESS > SR-7 WHOLE /
   SR-7 CORE. Playtest: `pt.seat_sr7()`, `pt.park_by_core()`, `playtests/core_cold_start.play`.
 
@@ -160,7 +160,8 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
 - `garbled` renders the line as line noise of the same shape (and keeps re-scrambling after it types), while `text` still holds what was meant. `expression` picks the face color in `RobotView._face_color()`: `titan` purple, `dead`/`lost` red, everything else mustard.
   Bundled messages live in `entities/Robot/radio/messages/*.tres`. `{key:<action>}` in text becomes the bound key.
 - Higher priority interrupts (the interrupted one replays after); otherwise queued by priority, FIFO.
-- `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`); new game resets them.
+- `once` flags persist in the save's `[radio]` section (`Save.save_radio_seen`) once Main points
+  `RobotRadio.save_path` at the save; any other radio (tests) keeps them in memory. New game resets them.
 - UNIT-7 is off until SR-7's core cold start reboots it at the end of Act 1 (`wake_guide()`,
   `MSG_WAKE`): until then `RobotRadio.request()` drops every call, tips, the Void and Gates included.
 - Built-in triggers in `scripts/RobotRadio.gd`: low fuel (not while docked), low hull, hold full, scrap in range (only once the Cargo Bay is fitted), boost hint.
@@ -230,7 +231,7 @@ OreDeposit.tick_harvest (HarvestTiming per hit, GemData.ore_drops) -> ore.spend(
 ```
 Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   -> FlyingState._attempt_dock -> Ship.dock_at -> GateDockedState (clamps to the berth, owns zoom)
-    -> GateTerminal (CanvasLayer) -> Gate.power(gs) -> GameState.powered_gates -> Save `[gates] powered`
+    -> GateTerminal (CanvasLayer) -> Gate.power(gs) -> Progress.POWERED_GATES -> Save `[gates] powered`
 ```
 
 - One dormant Gate per planet, placed in `HomeSystem.tscn` at `field_radius() x 1.5`. Its
@@ -241,8 +242,8 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   `Gate.get_dock_transform()`. Approach rules are the port's (distance 60, same alignment).
 - The Gate is deliberately not pinned to the minimap rim - the minimap shows scanner range and
   nothing more, so a Gate has to be flown to (docs/adr/0002).
-- Save: `[gates] powered`, written on power-up (a full autosave, which also saves the Stores
-  it cost) and on the normal save path. `Save.save_powered_gates` writes only that section.
+- Save: `[gates] powered`, written through by the ledger on power-up, and by the full autosave
+  that follows (which also saves the Stores it cost).
 - Unidentified (docs/GLOSSARY.md): a Gate reads `? ? ?` on the minimap until the ship comes within
   `Identifiable.RANGE` of it, at which point `Gate.identify()` marks it in the Progress ledger
   (`Progress.IDENTIFIED_GATES`, saved as `[gates] identified`) and the label flips to `GATE`.
@@ -251,13 +252,15 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
   points at a Gate beforehand. `scripts/Identifiable.gd` holds the range and the label drawing
   so later finds read the same way. The hauler on Veld (`HaulerWreck`) is the second: once SR-7's
   core has started, flying within range names it `HAULER, DOWN` (`hauler_identified.tres`,
-  `GameState.identified_wrecks`, saved as `[finds] identified_wrecks`).
+  `Progress.IDENTIFIED_WRECKS`, saved as `[finds] identified_wrecks`).
 
 ## Progress ledger (Records, `scripts/Progress.gd`)
 
 ```
 gs.progress.mark(kind, key) -> Store.write(kind, keys)   # write-through, no Save call at the call site
 gs.progress.holds(kind, key) / gs.progress.list(kind)    # list is oldest first, and a copy
+gs.progress.count(kind)                                   # no copy: titan_influence() reads it
+gs.progress.flag(kind) / gs.progress.flagged(kind)        # single-key kinds (CORE_STARTED)
 ```
 
 - Every earned fact, by kind; nothing is ever unmarked (a new game is `progress.fresh()`, a
@@ -267,8 +270,20 @@ gs.progress.holds(kind, key) / gs.progress.list(kind)    # list is oldest first,
   and `Progress.FileStore(path)` (Main points the game's at `Playtest.save_path()`). The file
   store keeps each kind where saves before the ledger kept it (`FileStore.WHERE`), writes
   nothing when there is no save yet, and `Save.save()` carries the ledger over with `put`.
-- Adding a kind: a constant in `Progress`, listed in `Progress.KINDS`. So far only named Gates
-  are on it; the other Records move over in #161.
+- Kinds: Visited Bodies, named Gates, named wrecks, met Automatons, powered Gates, seated
+  Sections, fitted Components, and SR-7's cold start (a bool in older saves: `FileStore.BOOLS`).
+  Adding one: a constant in `Progress`, listed in `Progress.KINDS` (and a `FileStore.WHERE`
+  entry only if older saves already kept it somewhere).
+- Not on it, because they go backwards: ore regrowth (`[ore] regrow`, timers) and the Cradle
+  (`[sections] cradled`, Components leave it when fitted). Those keep their own Save pairs.
+- A continue repairs an old save after `resumed()`: a started core with pieces missing comes
+  back fully seated (`GameState.repair_station`).
+- Seating a Section only marks the ledger. The Section's Freight row can outlive it in the save
+  until the next full save, so `Freight.restore_all` skips rows for Sections the ledger holds.
+- Tests: a bare `GameState.new()` keeps its ledger in memory, so it needs no save-path override
+  or `persist` flag. Use `Progress.new(Progress.FileStore.new(path))` to test the file itself.
+- The dev panel can only add Records (MODULES ONLINE, SR-7 CORE, GATES NAMED have no LEFT);
+  RESET ALL STATE starts over with `progress.fresh()`.
 
 ## Titan Influence (what it leaks into)
 

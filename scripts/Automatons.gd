@@ -16,13 +16,13 @@ const GUIDE := preload("res://entities/Robot/CheerfulGuideNPC.tres")
 const ALL := [GUIDE]
 
 
-## The Automatons the player has met, in ALL order. A key in `met_automatons` with no
+## The Automatons the player has met, in ALL order. A met key (Progress.MET_AUTOMATONS) with no
 ## Automaton behind it is ignored rather than drawn as a row (docs/adr/0003).
 static func met(gs: GameState) -> Array[NPCData]:
 	var known: Array[NPCData] = []
 	if gs == null:
 		return known
 	for npc in ALL:
-		if gs.has_met_automaton(npc.record_key()):
+		if gs.progress.holds(Progress.MET_AUTOMATONS, npc.record_key()):
 			known.append(npc)
 	return known
