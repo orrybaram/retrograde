@@ -59,6 +59,7 @@ func physics_process(delta: float) -> void:
 	var flying := _flying()
 
 	FlyingState.read_stick(ship)
+	ship.tick_drive(delta)
 	if FlyingState.has_stick_input(ship):
 		_locked = false
 		ship.sleeping = false

@@ -30,9 +30,8 @@ wait 1
 assert not pt.node("radio_panel").visible "departure is quiet now"
 
 # Low fuel: a tutorial, so it pauses and SPACE drives it
-# Thrust no longer touches the gauge, so the tank is nudged directly to trip the warning
-eval ship.set("fuel", 30.0)
-eval ship.consume_fuel(0.1)
+# Thrust no longer touches the gauge, so the tank is set directly (the Drive signals it) to trip the warning
+eval ship.drive.set("fuel", 30.0)
 wait_until pt.node("radio_panel").visible 3
 assert get_tree().root.get_node("RobotRadio").queue.current.id == "first_low_fuel" "low-fuel tutorial on air"
 assert get_tree().paused "low-fuel tutorial pauses the game"
@@ -50,7 +49,7 @@ assert not get_tree().paused "closing the low-fuel tutorial unpauses"
 
 # Scrap tutorial pauses the game and waits for the player. It lands the moment the
 # scrap is in range, with thrust still held -- not seconds later once the player coasts.
-eval ship.set("fuel", 150.0)
+eval ship.drive.set("fuel", 150.0)
 down thrust
 stage_harvest 40
 frames 3
@@ -86,7 +85,7 @@ assert not get_tree().paused "closing the tutorial unpauses"
 
 # Explosion: the next clone comes up on its own, then the guide calls
 eval gs.set("stores", 500)
-eval ship.set("fuel", 0.5)
+eval ship.drive.set("fuel", 0.5)
 eval ship.take_damage(100000.0)
 wait_until main.current_game_state == 2 10
 assert not get_tree().root.get_node("RobotRadio").is_active() "nothing on the radio while the ship is lost"
@@ -111,7 +110,7 @@ assert pt.visible_ui().is_empty() "the closing SPACE doesn't open the dock menu"
 assert gs.death_count == 1 "the loss counts as a death"
 # Dying takes nothing. The relaunch docks at SR-7, which buys the tank past its free
 # quarter out of Stores (issue #137): 112.5 fuel at 2 ST, 225 ST at most
-wait_until ship.fuel == ship.max_fuel 5
+wait_until ship.drive.fuel == ship.drive.max_fuel 5
 assert gs.stores >= 500 - 225 and gs.stores < 500 "dying costs no Stores; only the tank past its quarter does"
 
 # Hold fills mid-harvest while SPACE is being mashed: the hold-full tutorial waits

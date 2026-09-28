@@ -166,7 +166,7 @@ func test_transit_costs_no_fuel_hull_hold_or_stores() -> void:
 	var there := _power(_gate("Crom", 168750.0))
 	var ship := _ship()
 	_dock_at(ship, here)
-	ship.fuel = 42.0
+	ship.drive.fuel = 42.0
 	ship.hull_strength = 55.0
 	_gs.stores = 1234
 	InventoryManager.add_item("gem", 3)
@@ -174,7 +174,7 @@ func test_transit_costs_no_fuel_hull_hold_or_stores() -> void:
 
 	GateTransit.arrive(ship, there)
 
-	assert_float(ship.fuel).is_equal(42.0)
+	assert_float(ship.drive.fuel).is_equal(42.0)
 	assert_float(ship.hull_strength).is_equal(55.0)
 	assert_int(_gs.stores).is_equal(1234)
 	assert_int(InventoryManager.get_total_value()).is_equal(hold)
@@ -201,11 +201,11 @@ func test_a_gate_dock_does_not_refuel() -> void:
 	_gs.core_started = true
 	var gate := _power(_gate("Veld", 253125.0))
 	var ship := _ship()
-	ship.fuel = 0.0
+	ship.drive.fuel = 0.0
 	_dock_at(ship, gate)
 	var state := ship.state_machine.current_state as GateDockedState
 	for i in 120:
 		ship.global_position = gate.get_dock_position()
 		state.physics_process(1.0 / 60.0)
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("GateDockedState")
-	assert_float(ship.fuel).is_equal(0.0)
+	assert_float(ship.drive.fuel).is_equal(0.0)

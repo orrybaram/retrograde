@@ -1,15 +1,15 @@
 extends RigidBody2D
 class_name Ship
 
-## Player ship entity. Owns fuel, hull (via HealthComponent), cargo weight, and
-## input intent flags. Behavior is delegated to states via StateMachine:
+## Player ship entity. Owns the Drive (fuel and the boost), hull (via HealthComponent),
+## cargo weight, and input intent flags. Behavior is delegated to states via StateMachine:
 ## FlyingState → LandedState (docked) / PlanetLandedState (on a landing site) /
 ## HarvestingState / DestroyedState.
-## Signals: fuel_changed, fuel_depleted, cargo_changed.
+## Signals: cargo_changed (fuel's are on `drive`).
 
 @export var thrust_power: float = 262.5
 @export var turn_speed: float = 5
-@export var fuel_consumption_rate: float = 5.0  # Fuel consumed per second when thrusting
+@export var fuel_consumption_rate: float = 5.0  # Fuel per second, before the boost's multiplier
 @export var boost_power_multiplier: float = 2.667  # Multiplier for boost thrust power (keeps the boost at ~700)
 @export var boost_fuel_multiplier: float = 3.0  # Multiplier for boost fuel consumption
 ## Ordinary thrust stops adding speed past this (px/s). It still steers and brakes up
@@ -21,14 +21,11 @@ class_name Ship
 @export var crash_damage_multiplier: float = 0.5  # Damage per unit of collision velocity
 @export var damage_threshold: float = 50.0  # Minimum impact speed to take damage
 
-@export var max_fuel: float = 150.0  # Maximum fuel capacity
-
 @export var max_cargo_weight: float = 0.0  # Hold space (gems take 1-3 units each); the ship starts with none
 
 # Base stats (stored at initialization). The ship's limits are fixed: nothing is bought
 # (docs/adr/0007).
 var base_max_hull: float = 100.0
-var base_max_fuel: float = 150.0
 var base_max_cargo_weight: float = 0.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
 @export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
@@ -45,8 +42,6 @@ var freight: Freight = null
 var _freight_collider: CollisionPolygon2D = null
 var _turn_ratio := 1.0
 
-signal fuel_changed
-signal fuel_depleted
 signal cargo_changed(current_weight: float, max_weight: float)
 
 var want_turn_left := false
@@ -71,12 +66,13 @@ var hull_strength: float:
 			# A repair or a save being restored all land here rather than
 			# in take_damage, so this is where the readouts have to be told.
 			health_component.hp_changed.emit(health_component.current_hp, health_component.max_hp)
-var fuel: float = 200.0
+## The Aux and the Burn (docs/adr/0010): the tank, the free quarter, the cough, and
+## whether the boost is lit. Every fuel read and write goes through it.
+var drive := Drive.new()
 ## Dev-panel overrides (ui/DevPanel.gd), off in normal play. Nothing but that panel
 ## writes them, and it only exists in a debug build.
 var dev_invulnerable := false
-var dev_infinite_fuel := false
-var low_fuel_effect: LowFuelEffect = null  # vapor + engine sputter when the tank runs low
+var low_fuel_effect: LowFuelEffect = null  # vapor + the backfire when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
 var sonar: SonarPulse = null
 ## The Marks a Sweep lays down near hardware that listens (docs/SWEEP.md).
@@ -153,7 +149,6 @@ func _ready() -> void:
 	
 	# Store base stats from @export values (these are the unmodified base values)
 	base_max_hull = max_hull
-	base_max_fuel = max_fuel
 	base_max_cargo_weight = max_cargo_weight
 
 	# Create HealthComponent
@@ -170,7 +165,8 @@ func _ready() -> void:
 		EventBus.ship_hull_changed.emit(current, max_hp))
 
 	# Initialize fuel
-	fuel = max_fuel
+	drive.burn_rate = fuel_consumption_rate * boost_fuel_multiplier
+	drive.fuel = drive.max_fuel
 	low_fuel_effect = LowFuelEffect.new()
 	low_fuel_effect.name = "LowFuelEffect"
 	add_child(low_fuel_effect)
@@ -243,6 +239,9 @@ func _physics_process(dt: float) -> void:
 	# Delegate to current state
 	if state_machine and state_machine.current_state:
 		state_machine.current_state.physics_process(dt)
+	# The flight states tick the Drive themselves, straight after sampling the stick
+	if not _in_flight():
+		drive.rest()
 	if sonar:
 		_drive_sonar()
 		resonance.tick(dt, sonar.charging, Resonance.available_for(self))
@@ -281,6 +280,16 @@ func wants_sonar() -> bool:
 		return false
 	var flying := state_machine.states.get("FlyingState") as FlyingState
 	return flying == null or not flying._is_ui_blocking_input()
+
+## One flight step of the Drive, from the wants just sampled: a Burn is tried when the
+## boost is held with thrust on. The flight states call it before anything reads is_lit.
+func tick_drive(dt: float) -> void:
+	drive.tick(dt, want_boost and (want_thrust or want_reverse_thrust))
+
+## Free flight or harvesting: the only states the engines run in.
+func _in_flight() -> bool:
+	var current := state_machine.current_state if state_machine else null
+	return current is FlyingState or current is HarvestingState
 
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	# Delegate to current state
@@ -351,41 +360,6 @@ func reset_boost_particles() -> void:
 	boost_particles.one_shot = false
 	boost_particles.emitting = false
 	boost_particles.position = Vector2(-10, 0)  # Reset position
-
-## What SR-7 puts in the tank for nothing (docs/OPENING.md §9): once its core is running,
-## every dock and every relaunch tops the tank up to a quarter, never higher. A dead SR-7
-## gives nothing. Anything past the quarter is paid for out of Stores.
-const FREE_FUEL_FRACTION := 0.25
-
-## The level SR-7 tops the tank up to, or 0 while its core is cold.
-func free_fuel_floor(gs: GameState) -> float:
-	if gs == null or not gs.core_started:
-		return 0.0
-	return max_fuel * FREE_FUEL_FRACTION
-
-## Relaunch: SR-7 tops the tank up to its free quarter at once. Never drains it.
-func top_up_to_free_floor(gs: GameState) -> void:
-	fuel = maxf(fuel, free_fuel_floor(gs))
-	fuel_changed.emit()
-
-## Consume fuel and return true if fuel was consumed
-func consume_fuel(amount: float) -> bool:
-	# The dev panel's infinite tank: the engine still fires, the gauge never moves.
-	if dev_infinite_fuel:
-		return true
-	# Only consume fuel if we have fuel available
-	if fuel <= 0.0:
-		return false
-	
-	var old_fuel = fuel
-	fuel = max(0.0, fuel - amount)
-	fuel_changed.emit()
-	
-	# Emit fuel_depleted signal when fuel reaches 0
-	if fuel <= 0.0 and old_fuel > 0.0:
-		fuel_depleted.emit()
-	
-	return fuel < old_fuel  # Return true if fuel was actually consumed
 
 ## Update the ship's physics mass based on current cargo weight, plus any Freight on the nose
 func update_mass_from_cargo() -> void:
@@ -599,15 +573,13 @@ func refit(state: GameState) -> void:
 func reset_to_initial_state() -> void:
 	# Reset stats to base values
 	max_hull = base_max_hull
-	max_fuel = base_max_fuel
 	max_cargo_weight = base_max_cargo_weight
 
 	# Hull comes back full; the tank starts dry - a new game wakes with no FUEL TANK
 	# seated (docs/OPENING.md), so fuel is something the player has to go and get.
 	health_component.max_hp = max_hull
 	health_component.reset()
-	fuel = 0.0
-	fuel_changed.emit()
+	drive.fuel = 0.0
 
 	# Reset physics
 	linear_velocity = Vector2.ZERO
@@ -637,5 +609,5 @@ func reset_to_initial_state() -> void:
 	update_mass_from_cargo()
 
 	# Emit signals
-	fuel_changed.emit()
+	drive.changed.emit()
 	cargo_changed.emit(0.0, max_cargo_weight)

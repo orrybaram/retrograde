@@ -27,7 +27,7 @@ func _ship() -> Ship:
 func test_a_new_ship_has_no_hold_and_an_empty_tank() -> void:
 	var ship := _ship()
 	ship.reset_to_initial_state()
-	assert_float(ship.fuel).is_equal(0.0)
+	assert_float(ship.drive.fuel).is_equal(0.0)
 	assert_float(ship.max_cargo_weight).is_equal(0.0)
 	assert_bool(ship.has_hold()).is_false()
 	# Nothing to fill is not full

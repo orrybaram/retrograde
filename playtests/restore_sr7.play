@@ -101,7 +101,7 @@ assert pt.section("solar_array").is_buried() "short of its threshold the Aux nev
 assert pt.section("solar_array").pull_progress == 0.0 "and never builds the pull"
 assert ship.state_machine.current_state._coupled != null "and the ship stays coupled, straining"
 # The Burn pulls past it
-eval ship.set("fuel", 100.0)
+eval ship.drive.set("fuel", 100.0)
 down boost
 hold reverse_thrust 0.5
 up boost

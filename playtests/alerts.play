@@ -19,40 +19,40 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait_until pt.state_name() == "FlyingState" 3
-assert ship.max_fuel == 150.0 "base tank is 150"
-eval ship.set("fuel", 45.0)
+assert ship.drive.max_fuel == 150.0 "base tank is 150"
+eval ship.drive.set("fuel", 45.0)
 wait 0.8
 screenshot alert_vapor_low
-eval ship.set("fuel", 15.0)
+eval ship.drive.set("fuel", 15.0)
 wait 0.3
 # Ordinary thrust runs on aux power: a critical tank never coughs it
 down thrust
 wait 1.5
-assert not ship.low_fuel_effect.is_coughing() "plain thrust never coughs on a low tank"
-assert ship.fuel == 15.0 "plain thrust spends no fuel"
+assert not ship.drive.is_coughing() "plain thrust never coughs on a low tank"
+assert ship.drive.fuel == 15.0 "plain thrust spends no fuel"
 # Only the boost draws on the tank, so only the boost coughs. Hold the tank at critical
 # for the burn, or it runs dry before the first cough.
-eval ship.set("dev_infinite_fuel", true)
+eval ship.drive.set("infinite", true)
 down boost
-wait_until ship.low_fuel_effect.is_coughing() 3
+wait_until ship.drive.is_coughing() 3
 frames 2
 assert ship.thruster_particles.emitting "the cough takes the boost, not the thrust"
 assert not ship.boost_particles.emitting "the boost plume is what a cough cuts"
 burst alert_sputter 6 0.06
 up boost
-eval ship.set("dev_infinite_fuel", false)
+eval ship.drive.set("infinite", false)
 # Trying to boost on a dry tank coughs too, and plain thrust still flies
-eval ship.set("fuel", 0.0)
+eval ship.drive.set("fuel", 0.0)
 wait 0.5
-assert not ship.low_fuel_effect.is_coughing() "a dry tank on plain thrust never coughs"
+assert not ship.drive.is_coughing() "a dry tank on plain thrust never coughs"
 down boost
-wait_until ship.low_fuel_effect.is_coughing() 3
+wait_until ship.drive.is_coughing() 3
 assert ship.thruster_particles.emitting "a dry cough leaves the thrust alone"
 up boost
 up thrust
-eval ship.set("fuel", 150.0)
+eval ship.drive.set("fuel", 150.0)
 wait 0.2
-assert not ship.low_fuel_effect.is_coughing() "cough clears above threshold"
+assert not ship.drive.is_coughing() "cough clears above threshold"
 wait 2.2
 assert ship.low_fuel_effect._puffs.is_empty() "vapor dissipates"
 eval inv.add_item("shard", int(ship.max_cargo_weight))

@@ -52,8 +52,8 @@ func _ready() -> void:
 	_update_labels()
 	_last_cargo_weight = InventoryManager.get_total_weight()
 	InventoryManager.inventory_changed.connect(_on_inventory_changed)
-	if ship and ship.has_signal("fuel_changed"):
-		ship.fuel_changed.connect(_update_labels)
+	if ship:
+		ship.drive.changed.connect(_update_labels)
 	if ship and ship.has_signal("cargo_changed"):
 		ship.cargo_changed.connect(_on_cargo_changed)
 
@@ -151,10 +151,8 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 			var speed = ship.linear_velocity.length()
 			velocity_label.text = "%.1f m/s" % [speed]
 
-		var fuel = ship.fuel if "fuel" in ship else 0.0
-		var max_fuel = ship.max_fuel if "max_fuel" in ship else 100.0
 		if boost_gauge:
-			boost_gauge.set_fuel(fuel, max_fuel)
+			boost_gauge.set_fuel(ship.drive.fuel, ship.drive.max_fuel)
 
 		# Update hull segment bar
 		var hull = ship.hull_strength if "hull_strength" in ship else 0.0

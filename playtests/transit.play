@@ -38,7 +38,7 @@ assert gs.titan_influence() == 1 "Crom's Module is online"
 # Dock in Veld's berth and pay for its Gate
 wait 2.2
 eval pt.park_at_gate("Veld", 30.0)
-eval ship.set("fuel", 10.0)
+eval ship.drive.set("fuel", 10.0)
 frames 2
 press action
 wait_until pt.state_name() == "GateDockedState" 3
@@ -51,7 +51,7 @@ assert gs.stores == 400 "Veld's Gate took its 600 ST"
 # A Gate gives no fuel: that is SR-7's (docs/OPENING.md §9)
 assert pt.node("gate_terminal")._menu_items.size() == 2 "a powered Gate offers transit and the door, no fuel"
 wait 1.0
-assert ship.fuel == 10.0 "the berth leaves the tank as it was"
+assert ship.drive.fuel == 10.0 "the berth leaves the tank as it was"
 assert ship.hull_strength == ship.max_hull "a Gate has no hull shop"
 screenshot transit_1_hub
 
@@ -63,7 +63,7 @@ assert pt.screen_text()["GateTerminal"].has("CROM") "Crom's Gate is the destinat
 screenshot transit_2_destinations
 
 # Take it: black-out, then the ship is in Crom's berth having spent nothing
-eval pt.remember("fuel", ship.fuel)
+eval pt.remember("fuel", ship.drive.fuel)
 eval pt.remember("hull", ship.hull_strength)
 eval pt.remember("hold", inv.get_total_value())
 press enter
@@ -72,7 +72,7 @@ screenshot transit_3_black
 wait_until ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 60 12
 assert pt.state_name() == "GateDockedState" "the ship comes out of the dark already docked"
 assert ship.global_position.distance_to(pt.gate("Crom").get_dock_position()) < 60 "in Crom's berth"
-assert ship.fuel == pt.recall("fuel") "transit burns no fuel"
+assert ship.drive.fuel == pt.recall("fuel") "transit burns no fuel"
 assert ship.hull_strength == pt.recall("hull") "transit costs no hull"
 assert inv.get_total_value() == pt.recall("hold") "transit takes nothing out of the hold"
 assert gs.stores == 400 "transit costs no Stores"

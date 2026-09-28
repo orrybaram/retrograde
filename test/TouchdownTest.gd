@@ -118,13 +118,13 @@ func test_landed_ship_locks_to_the_planet_and_burns_no_fuel() -> void:
 	var ore := _ore(planet, 0.0)
 	var ship := _landed_ship(planet, ore)
 	assert_bool(ship.is_landed_on_planet()).is_true()
-	var fuel := ship.fuel
+	var fuel := ship.drive.fuel
 	planet.global_position = Vector2(500, -200)
 	await await_millis(PlanetLandedState.SETTLE_TIME * 1000.0 + 150.0)
 	var expected := planet.global_position + Vector2(400.0 + PlanetLandedState.LANDED_HEIGHT, 0)
 	assert_vector(ship.global_position).is_equal_approx(expected, Vector2.ONE * 1.0)
 	assert_float(ship.rotation).is_equal_approx(0.0, 0.01)
-	assert_float(ship.fuel).is_equal(fuel)
+	assert_float(ship.drive.fuel).is_equal(fuel)
 
 
 func test_liftoff_costs_nothing_and_releases_the_ship_under_its_own_power() -> void:
@@ -133,10 +133,10 @@ func test_liftoff_costs_nothing_and_releases_the_ship_under_its_own_power() -> v
 	var ship := _landed_ship(planet, ore)
 	InventoryManager.add_item("crystal", 20)
 	var state := ship.state_machine.current_state as PlanetLandedState
-	var fuel := ship.fuel
+	var fuel := ship.drive.fuel
 	state.lift_off()
 	# Breaking ground is free - only the climb costs fuel, and that is ordinary thrust
-	assert_float(ship.fuel).is_equal(fuel)
+	assert_float(ship.drive.fuel).is_equal(fuel)
 	await await_millis(100)
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
 	# Nothing is thrown: the ship is handed over at rest relative to the planet and has to
@@ -152,13 +152,13 @@ func test_an_empty_tank_still_releases_the_ship_it_just_cannot_climb() -> void:
 	var ore := _ore(planet, 0.0)
 	var ship := _landed_ship(planet, ore)
 	var state := ship.state_machine.current_state as PlanetLandedState
-	ship.fuel = 0.0
+	ship.drive.fuel = 0.0
 	var depleted := [false]
-	ship.fuel_depleted.connect(func(): depleted[0] = true)
+	ship.drive.depleted.connect(func(): depleted[0] = true)
 	state.lift_off()
 	# Nothing is taken and nothing is faked: with no fuel the engines simply never fire,
 	# so the ship comes straight back down (see landing.play for the stranding it leads to)
-	assert_float(ship.fuel).is_equal(0.0)
+	assert_float(ship.drive.fuel).is_equal(0.0)
 	assert_bool(depleted[0]).is_false()
 	await await_millis(100)
 	assert_str(ship.state_machine.get_current_state_name()).is_equal("FlyingState")
