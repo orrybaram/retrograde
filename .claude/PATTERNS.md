@@ -102,17 +102,26 @@ Main -> Session.run(launch)   launch: Session.Launch { boots, reset, restore_wor
     -> live (Main: PLAYING) -> EventBus.ship_respawned -> save -> wake from black
 ```
 
-- One pipeline, one order. A way in (relaunch today; new game and resume in #164) is a
-  `Launch` describing only how it differs (`Session.relaunch()`), never a copy of the sequence.
+- One pipeline, one order. Every way in is a `Launch` describing only how it differs, never a
+  copy of the sequence: `Session.new_game()`, `Session.resume(path)`, `Session.relaunch()`.
+  Main keeps only the menus, input and the wrapping (the intro, BootLog prepare/begin/forget).
+- New game: reset clears the world (`_clear_world`: Gem/DerelictShip/Freight), the state, the
+  radio, the encounter field, the orbits and the ship; world is `planets_restored`; the ship
+  wakes adrift (`spawn_adrift`). Resume: world is the save, then wrecks and Freight swapped in
+  one step, encounters, orbit angles, `planets_restored`, a physics frame; the ship comes back
+  in flight with its load through `ship.carry(f, true)`, or home (`spawn_home`).
 - World before ship (a resume must restore orbits before any dock is found); save after the
   respawn is announced, so the save holds what every listener already reacted to.
+- `planets_restored` fires before the ship is placed, so nothing listening to it may read where
+  the ship is. EncounterField waits for `ship_respawned` to load the cells around it.
 - A relaunch keeps the world: its world step is `resources_refresh_requested` (rings topped
   up), never `planets_restored`, which rebuilds every ring and encounter.
 - The Ship resets itself: `Ship.relaunch(gs)` after a loss, `reset_to_initial_state()` for a
   new game, both through `_reset_flight()` (hull, motion, drift spin, shake, boost plume,
   FlyingState, processing). Nothing outside the Ship writes those fields to reset it.
 - `Session.Screen` is the cover seam (Main's boot terminal / fade; a quiet one in tests), and
-  the save is injectable, so `test/SessionTest.gd` runs a relaunch on a bare ship.
+  the save is injectable, so `test/SessionTest.gd` runs every launch on a bare ship; `resume`
+  and the Save loaders it calls take a save path, so a test never touches the player's save.
 
 ## Controls (keyboard, gamepad, rebinding)
 
