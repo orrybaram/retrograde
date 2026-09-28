@@ -1,65 +1,39 @@
 extends Node2D
 class_name LowFuelEffect
 
-## Makes the ship itself signal a low tank. Added by Ship at runtime.
-## - Vapor: faint puffs leak from the hull and hang in space behind the ship.
-## - Sputter: while boosting, the engine coughs — the boost and its plume cut out, a backfire
-##   spits sparks and smoke, and the hull jolts. Ordinary thrust runs on aux power and never
-##   coughs: a low or empty tank costs the boost and nothing else. FlyingState drops the boost
-##   during a cough (particles already out finish naturally). Rare when LOW, frequent when CRITICAL.
-##   A dry tank coughs too when you try to boost: nothing to burn, and the engine says so.
-## Only runs in flight; docking refuels and clears it. Puffs are drawn in world space.
-
-enum Level { OK, LOW, CRITICAL }
-
-const LOW_RATIO := 0.25
-const CRITICAL_RATIO := 0.10
+## Makes the ship itself signal a low tank. Added by Ship at runtime; draws what its
+## Drive decides and decides nothing itself.
+## - Vapor: faint puffs leak from the hull and hang in space behind the ship, at the rate
+##   of the Drive's warning level (only in flight; docking refuels and clears it).
+## - Backfire: when the Drive coughs (a Burn tried on a low or empty tank), the exhaust
+##   spits sparks and smoke and the hull jolts. The Drive holds the boost off for the
+##   cough; ordinary Aux thrust never coughs.
+## Puffs are drawn in world space.
 
 const EXHAUST := Vector2(-13, 0)  # ship-local
-const VAPOR_RATE := {Level.LOW: 7.0, Level.CRITICAL: 16.0}  # puffs per second
-const COUGH_GAP := {Level.LOW: Vector2(1.2, 2.8), Level.CRITICAL: Vector2(0.25, 0.8)}  # seconds between coughs
-const COUGH_LENGTH := Vector2(0.2, 0.4)
+const VAPOR_RATE := {Drive.Level.LOW: 7.0, Drive.Level.CRITICAL: 16.0}  # puffs per second
 const JOLT := 2.5  # px hull kick on a cough
 
 var _ship: Ship
-var _level := Level.OK
+var _level := Drive.Level.OK
 var _puffs: Array[Dictionary] = []  # {pos, vel, age, life, r0, r1, color, a0}
 var _vapor_accum := 0.0
-var _cough_left := 0.0  # > 0 while the engine is cut
-var _next_cough := 0.0
 var _jolt := Vector2.ZERO
-
-static func level_for(fuel: float, max_fuel: float) -> Level:
-	if max_fuel <= 0.0 or fuel <= 0.0:
-		return Level.CRITICAL
-	var ratio := fuel / max_fuel
-	if ratio <= CRITICAL_RATIO:
-		return Level.CRITICAL
-	if ratio <= LOW_RATIO:
-		return Level.LOW
-	return Level.OK
-
-## True while a cough has the engine cut; FlyingState withholds thrust.
-func is_coughing() -> bool:
-	return _cough_left > 0.0
 
 func _ready() -> void:
 	_ship = get_parent() as Ship
 	top_level = true  # draw puffs in world space so they trail behind
 	z_index = -1
+	if _ship:
+		_ship.drive.coughed.connect(_backfire)
 
 func _process(delta: float) -> void:
 	global_transform = Transform2D.IDENTITY
 	if not _ship:
 		return
-	_level = level_for(_ship.fuel, _ship.max_fuel) if _in_flight() else Level.OK
-
-	if _level == Level.OK:
-		_end_cough()
-		_next_cough = 0.0
-	else:
+	_level = _ship.drive.warning()
+	if _level != Drive.Level.OK:
 		_emit_vapor(delta)
-		_update_sputter(delta)
 
 	_update_jolt(delta)
 	_age_puffs(delta)
@@ -78,27 +52,7 @@ func _emit_vapor(delta: float) -> void:
 			"color": Colors.CREAM_SOFT, "a0": randf_range(0.10, 0.18),
 		})
 
-func _update_sputter(delta: float) -> void:
-	# Only a burn draws on the tank, so only a burn can cough - including one tried on
-	# an empty tank
-	var burning := (_ship.want_thrust or _ship.want_reverse_thrust) and _ship.want_boost
-	if _cough_left > 0.0:
-		_cough_left -= delta
-		if _cough_left <= 0.0:
-			_end_cough()
-		return
-	if not burning:
-		return
-	if _next_cough <= 0.0:
-		_next_cough = randf_range(COUGH_GAP[_level].x, COUGH_GAP[_level].y) * 0.5
-	_next_cough -= delta
-	if _next_cough <= 0.0:
-		_start_cough()
-
-func _start_cough() -> void:
-	var gap: Vector2 = COUGH_GAP[_level]
-	_cough_left = randf_range(COUGH_LENGTH.x, COUGH_LENGTH.y)
-	_next_cough = randf_range(gap.x, gap.y)
+func _backfire() -> void:
 	_jolt = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)).normalized() * JOLT
 	if _ship.damage_shake_time <= 0.0:
 		_ship.damage_shake_time = 0.18
@@ -125,9 +79,6 @@ func _start_cough() -> void:
 			"color": Colors.HULL_LIGHT, "a0": randf_range(0.35, 0.55),
 		})
 
-func _end_cough() -> void:
-	_cough_left = 0.0
-
 func _update_jolt(delta: float) -> void:
 	if not _ship.ship_polygon:
 		return
@@ -150,7 +101,3 @@ func _draw() -> void:
 		var c: Color = p.color
 		c.a = p.a0 * (1.0 - t) * (1.0 - t)
 		draw_circle(p.pos, lerpf(p.r0, p.r1, 1.0 - pow(1.0 - t, 2.0)), c)
-
-func _in_flight() -> bool:
-	var sm := _ship.state_machine
-	return sm != null and (sm.current_state is FlyingState or sm.current_state is HarvestingState)

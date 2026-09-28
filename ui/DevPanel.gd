@@ -345,11 +345,10 @@ func _ship_rows() -> Array[Dictionary]:
 	rows.append(_value_row(
 		"FUEL",
 		"Arrows move the tank a tenth at a time, ENTER fills it.",
-		func() -> String: return "%d / %d" % [roundi(ship.fuel), roundi(ship.max_fuel)],
+		func() -> String: return "%d / %d" % [roundi(ship.drive.fuel), roundi(ship.drive.max_fuel)],
 		func(direction: int) -> void:
-			ship.fuel = ship.max_fuel if direction == 0 \
-				else clampf(ship.fuel + direction * ship.max_fuel * GAUGE_STEP, 0.0, ship.max_fuel)
-			ship.fuel_changed.emit()
+			ship.drive.fuel = ship.drive.max_fuel if direction == 0 \
+				else ship.drive.fuel + direction * ship.drive.max_fuel * GAUGE_STEP
 	))
 
 	rows.append(_value_row(
@@ -391,9 +390,9 @@ func _ship_rows() -> Array[Dictionary]:
 
 	rows.append(_toggle_row(
 		"INFINITE FUEL",
-		"Thrust stops drawing on the tank. The readout stays where it is.",
-		func() -> bool: return ship.dev_infinite_fuel,
-		func(on: bool) -> void: ship.dev_infinite_fuel = on
+		"The boost stops drawing on the tank. The readout stays where it is.",
+		func() -> bool: return ship.drive.infinite,
+		func(on: bool) -> void: ship.drive.infinite = on
 	))
 
 	rows.append(_action_row(
@@ -408,9 +407,8 @@ func _ship_rows() -> Array[Dictionary]:
 		"STRAND SHIP",
 		"Empties the tank, which is what puts the abandon-ship call on the radio.",
 		func() -> void:
-			ship.fuel = 0.0
-			ship.fuel_changed.emit()
-			ship.fuel_depleted.emit()
+			ship.drive.fuel = 0.0
+			ship.drive.depleted.emit()
 			close()
 	))
 

@@ -63,11 +63,11 @@ assert get_node("/root/NavSystem").get_target() == null "arriving drops the seam
 assert str(pt.snapshot().action_message).contains("HARVEST") "landed prompt offers the harvest"
 wait 0.6
 screenshot landing_2_landed
-eval pt.set_meta("landed_fuel", ship.fuel)
+eval pt.set_meta("landed_fuel", ship.drive.fuel)
 eval pt.set_meta("landed_pos", ship.global_position)
 eval pt.set_meta("landed_offset", ship.global_position - pt.planet("Rook").global_position)
 wait 3
-assert ship.fuel == pt.get_meta("landed_fuel") "no fuel burns while landed"
+assert ship.drive.fuel == pt.get_meta("landed_fuel") "no fuel burns while landed"
 assert ship.global_position.distance_to(pt.get_meta("landed_pos")) > 20 "rides the orbit"
 assert (ship.global_position - pt.planet("Rook").global_position).distance_to(pt.get_meta("landed_offset")) < 1 "locked to the planet"
 assert pt.altitude("Rook") < 16 "sits on the surface"
@@ -83,18 +83,18 @@ burst landing_4_liftoff 4 0.15
 wait_until pt.altitude("Rook") > 60 4
 up thrust
 assert pt.state_name() == "FlyingState" "climbing away under thrust without landing again"
-assert pt.get_meta("landed_fuel") - ship.fuel < 30 "only the climb costs fuel, no launch fee"
+assert pt.get_meta("landed_fuel") - ship.drive.fuel < 30 "only the climb costs fuel, no launch fee"
 
 # --- A nearly dry tank climbs out just the same. Thrust costs nothing now, so the only
 # thing an empty tank takes away is the boost: 2 fuel gets off Rook and still has 2 left.
 eval pt.hover_over_ore("Rook", 60)
 land Rook 15 15
 wait 0.5
-eval ship.set("fuel", 2.0)
+eval ship.drive.set("fuel", 2.0)
 down thrust
 wait_until pt.state_name() == "FlyingState" 5
 wait 1.0
 up thrust
-assert ship.fuel == 2.0 "climbing out spent no fuel"
+assert ship.drive.fuel == 2.0 "climbing out spent no fuel"
 assert pt.state_name() == "FlyingState" "a near-empty tank still breaks ground"
 state

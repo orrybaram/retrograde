@@ -42,7 +42,7 @@ func test_an_old_saves_upgrades_do_not_raise_the_ships_limits() -> void:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	add_child(ship)
 	var hull := ship.max_hull
-	var tank := ship.max_fuel
+	var tank := ship.drive.max_fuel
 	var hold := ship.max_cargo_weight
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "fuel", tank * 3.0)
@@ -54,9 +54,9 @@ func test_an_old_saves_upgrades_do_not_raise_the_ships_limits() -> void:
 	cfg.save(SAVE_FILE)
 	Save.load_into(_gs, ship)
 	assert_float(ship.max_hull).is_equal(hull)
-	assert_float(ship.max_fuel).is_equal(tank)
+	assert_float(ship.drive.max_fuel).is_equal(tank)
 	assert_float(ship.max_cargo_weight).is_equal(hold)
-	assert_float(ship.fuel).is_equal(tank)
+	assert_float(ship.drive.fuel).is_equal(tank)
 	assert_float(ship.hull_strength).is_equal(hull)
 	assert_bool("upgrade_levels" in _gs).is_false()
 	assert_bool("has_planet_scanner" in _gs).is_false()

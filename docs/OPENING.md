@@ -575,7 +575,7 @@ should be renamed before SR-7's Cradle is built.
 | | Value | Where |
 |---|---|---|
 | Tank | 150 fuel (`max_fuel`); the Aux costs nothing, the Burn 6/s | `Ship`, `Main.tscn` |
-| Free quarter | 37.5 fuel on every dock or relaunch, never higher | `Ship.FREE_FUEL_FRACTION` |
+| Free quarter | 37.5 fuel on every dock or relaunch, never higher | `Drive.FREE_FRACTION` |
 | Cargo Bay hold | pull threshold 1.6 (the Aux tops out at 1.0), `pull_time` 4.25 s | `Components` |
 | Tear-out | about 29-30 fuel of Burn, 19-20% of the tank; 7-9 fuel left over | measured |
 | Wasted quarter | a tenth of the tank burned on the way (15% left) runs dry mid-pull, and the ground holds; the Aux flies home for another quarter | measured |
@@ -601,7 +601,7 @@ badly holed hull goes mostly to the patch. A Gate's Module (600 ST) is two full 
 > **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
 > dock without ever reading as a tutorial popup.
 > **TODO**: The dry dock is not built. A dead SR-7 now gives nothing on a dock or a
-> relaunch, and a running one tops the tank up to a quarter (`Ship.free_fuel_floor`), but
+> relaunch, and a running one tops the tank up to a quarter (`Drive.free_floor`), but
 > an empty tank before the cold start is a soft-lock until ADR 0010's Aux exists.
 > **TODO**: What the dock offers *after* the wake is ADR 0007's, not this document's:
 > there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the

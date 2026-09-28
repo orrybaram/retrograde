@@ -55,10 +55,12 @@ func physics_process(delta: float) -> void:
 		ship.want_thrust = false
 		ship.want_reverse_thrust = false
 		ship.want_boost = false
+		ship.tick_drive(delta)
 		return
 	
 	# Sample input here (physics rate, thread-safe for our purposes)
 	read_stick(ship)
+	ship.tick_drive(delta)
 	
 	# If any input, ensure the body is awake
 	if has_stick_input(ship) or ship.want_boost:
@@ -185,10 +187,9 @@ static func turned_spin(spin: float, turn: float, turn_speed: float, ratio: floa
 ## Ordinary thrust is held to `ship.cruise_speed` (see cruise_velocity); the boost is not.
 func _apply_thrust(state: PhysicsDirectBodyState2D, local_direction: Vector2) -> void:
 	var force := local_direction.rotated(ship.rotation) * ship.thrust_power
-	if _boosting() and not ControlLock.is_capped():
-		if ship.consume_fuel(ship.fuel_consumption_rate * ship.boost_fuel_multiplier * state.step):
-			state.apply_central_force(force * ship.boost_power_multiplier)
-			return
+	if not ControlLock.is_capped() and ship.drive.try_burn(state.step):
+		state.apply_central_force(force * ship.boost_power_multiplier)
+		return
 	var dv := force * state.inverse_mass * state.step
 	state.linear_velocity = _held(state.linear_velocity, dv)
 
@@ -210,11 +211,10 @@ static func cruise_velocity(velocity: Vector2, dv: Vector2, cap: float) -> Vecto
 		return next
 	return next.normalized() * limit
 
-## Is the boost actually lit? It needs the key, fuel in the tank, and an engine that is not
-## coughing. Failing any of those drops the throttle back to ordinary thrust - it never
-## takes the thrust away.
+## Is the boost actually lit? The Drive decides (key, thrust, fuel, no cough); failing
+## any of those drops the throttle back to ordinary thrust - it never takes the thrust away.
 func _boosting() -> bool:
-	return ship.want_boost and ship.fuel > 0.0 and not _engine_coughing()
+	return ship.drive.is_lit()
 
 ## Contact with a planet within reach of one of its revealed ore seams: touch down
 ## gently, or take damage and bounce. Returns true when the ship is over a seam (the
@@ -241,9 +241,6 @@ func _ground_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_ve
 			state.linear_velocity = Touchdown.bounce_velocity(rel, up, planet.linear_velocity)
 			EventBus.action_message_changed.emit("TOO FAST TO LAND")
 	return true
-
-func _engine_coughing() -> bool:
-	return ship.low_fuel_effect != null and ship.low_fuel_effect.is_coughing()
 
 func _update_particles() -> void:
 	if not is_ship_valid() or not ship.thruster_particles or not ship.boost_particles:

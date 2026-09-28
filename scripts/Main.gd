@@ -2,7 +2,7 @@ extends Node2D
 
 ## Root scene controller. Owns the MainGameState enum (MENU / PLAYING / GAME_OVER)
 ## and orchestrates transitions between StartMenu, active gameplay, PauseMenu,
-## and the relaunch after a game over. Connects ship signals (fuel_depleted)
+## and the relaunch after a game over. Connects ship signals (drive.depleted)
 ## and EventBus events.
 
 enum MainGameState {
@@ -67,7 +67,7 @@ func _ready() -> void:
 	
 	# Connect ship signals
 	if ship:
-		ship.fuel_depleted.connect(_on_fuel_depleted)
+		ship.drive.depleted.connect(_on_fuel_depleted)
 
 	# The Void ran its clock out
 	VoidZone.consumed.connect(_on_void_consumed)
@@ -488,7 +488,7 @@ func reset_game() -> void:
 	# Reset ship state
 	if ship:
 		ship.hull_strength = ship.max_hull
-		ship.top_up_to_free_floor(gs)
+		ship.drive.top_up_to_free_floor(gs)
 		ship.linear_velocity = Vector2.ZERO
 		ship.angular_velocity = 0.0
 		ship.rotation = 0.0  # Reset rotation

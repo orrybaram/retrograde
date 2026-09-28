@@ -117,7 +117,7 @@ wait_until not pt.visible_ui().has("LogUI") 2
 eval pt.redock()
 wait_until pt.visible_ui().has("SpacePortDialogue") 5
 press escape
-wait_until ship.fuel == ship.max_fuel 15
+wait_until ship.drive.fuel == ship.drive.max_fuel 15
 eval gs.visited_planets.clear()
 reload
 assert gs.is_planet_visited("Veld/Rook") "Rook's Record restored from the save"

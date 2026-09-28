@@ -55,7 +55,7 @@ extends Node
 ##       pt.stage_at_mount(id, [offset], [turn_deg]) (the ship carrying the Section, placed at its Mount),
 ##       pt.caption(text) (on-screen caption for recorded videos))
 ## and this node as `self`, so get_tree() etc. also work.
-## e.g. `assert ship.fuel < ship.max_fuel "thrusting burns fuel"`
+## e.g. `assert ship.drive.fuel < ship.drive.max_fuel "boosting burns fuel"`
 
 const DEFAULT_PORT := 7777
 ## Per-run save file. Godot's user dir is keyed by project name, so parallel runs
@@ -635,8 +635,8 @@ func snapshot() -> Dictionary:
 			"velocity": _jsonable(ship.linear_velocity),
 			"speed": snappedf(ship.linear_velocity.length(), 0.1),
 			"rotation_deg": snappedf(rad_to_deg(ship.global_rotation), 0.1),
-			"fuel": snappedf(ship.fuel, 0.1),
-			"max_fuel": ship.max_fuel,
+			"fuel": snappedf(ship.drive.fuel, 0.1),
+			"max_fuel": ship.drive.max_fuel,
 			"hull": snappedf(ship.hull_strength, 0.1),
 			"max_hull": ship.max_hull,
 			"cargo_weight": ship.get_cargo_weight(),
@@ -887,8 +887,7 @@ func skip_opening(fit_cargo_bay := true) -> void:
 		var wreck := hauler()
 		if wreck:
 			wreck.ensure_cargo_bay()
-	ship.fuel = ship.max_fuel
-	ship.fuel_changed.emit()
+	ship.drive.fuel = ship.drive.max_fuel
 	var port := node("space_ports") as Node2D
 	warp_to(port.get_dock_position())
 	ship.set_meta("pending_dockable", port)

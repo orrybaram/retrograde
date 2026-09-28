@@ -18,7 +18,7 @@ func _gs(stores: int) -> GameState:
 func _ship(fuel: float, hull: float) -> Ship:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	add_child(ship)
-	ship.fuel = fuel
+	ship.drive.fuel = fuel
 	ship.hull_strength = hull
 	return ship
 
@@ -42,7 +42,7 @@ func _dock(state: LandedState, gs: GameState, seconds: float) -> void:
 
 
 func _full_fuel_cost(ship: Ship) -> int:
-	return ceili(ship.max_fuel * (1.0 - Ship.FREE_FUEL_FRACTION) * Economy.REFUEL_COST_PER_POINT)
+	return ceili(ship.drive.max_fuel * (1.0 - Drive.FREE_FRACTION) * Economy.REFUEL_COST_PER_POINT)
 
 
 func test_stores_go_to_the_hull_first() -> void:
@@ -54,7 +54,7 @@ func test_stores_go_to_the_hull_first() -> void:
 	# Mid-repair: the tank has had its free quarter and not a drop more
 	assert_bool(state._repairing).is_true()
 	assert_float(ship.hull_strength).is_greater(40.0)
-	assert_float(ship.fuel).is_equal_approx(ship.max_fuel * Ship.FREE_FUEL_FRACTION, 0.001)
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * Drive.FREE_FRACTION, 0.001)
 	assert_int(gs.stores).is_less(10000)
 
 
@@ -65,7 +65,7 @@ func test_with_stores_left_the_tank_fills_past_the_quarter() -> void:
 	state.locked_dockable = ship
 	_dock(state, gs, LandedState.REPAIR_TIME + LandedState.REFUEL_TIME * 2.0)
 	assert_float(ship.hull_strength).is_equal(ship.max_hull)
-	assert_float(ship.fuel).is_equal(ship.max_fuel)
+	assert_float(ship.drive.fuel).is_equal(ship.drive.max_fuel)
 	var spent := 60 * Economy.REPAIR_COST_PER_POINT + _full_fuel_cost(ship)
 	assert_int(gs.stores).is_equal(10000 - spent)
 	assert_bool(state._repairing or state._topping_up).is_false()
@@ -73,12 +73,12 @@ func test_with_stores_left_the_tank_fills_past_the_quarter() -> void:
 
 func test_a_whole_hull_goes_straight_to_the_tank() -> void:
 	var ship := _ship(0.0, 100.0)
-	ship.fuel = ship.max_fuel * Ship.FREE_FUEL_FRACTION
+	ship.drive.fuel = ship.drive.max_fuel * Drive.FREE_FRACTION
 	var gs := _gs(1000)
 	var state := _landed(ship)
 	state.locked_dockable = ship
 	_dock(state, gs, LandedState.REFUEL_TIME * 2.0)
-	assert_float(ship.fuel).is_equal(ship.max_fuel)
+	assert_float(ship.drive.fuel).is_equal(ship.drive.max_fuel)
 	assert_int(gs.stores).is_equal(1000 - _full_fuel_cost(ship))
 
 
@@ -91,7 +91,7 @@ func test_too_few_stores_patch_part_of_the_hull_and_reach_zero() -> void:
 	assert_int(gs.stores).is_equal(0)
 	assert_float(ship.hull_strength).is_equal_approx(50.0, 0.01)
 	# Nothing left for the tank past its free quarter
-	assert_float(ship.fuel).is_equal_approx(ship.max_fuel * Ship.FREE_FUEL_FRACTION, 0.001)
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * Drive.FREE_FRACTION, 0.001)
 
 
 func test_stores_left_after_the_hull_partly_fill_the_tank_and_reach_zero() -> void:
@@ -102,8 +102,8 @@ func test_stores_left_after_the_hull_partly_fill_the_tank_and_reach_zero() -> vo
 	_dock(state, gs, LandedState.REPAIR_TIME + LandedState.REFUEL_TIME * 2.0)
 	assert_int(gs.stores).is_equal(0)
 	assert_float(ship.hull_strength).is_equal(ship.max_hull)
-	var expected := ship.max_fuel * Ship.FREE_FUEL_FRACTION + 10.0 / Economy.REFUEL_COST_PER_POINT
-	assert_float(ship.fuel).is_equal_approx(expected, 0.01)
+	var expected := ship.drive.max_fuel * Drive.FREE_FRACTION + 10.0 / Economy.REFUEL_COST_PER_POINT
+	assert_float(ship.drive.fuel).is_equal_approx(expected, 0.01)
 
 
 func test_no_stores_buys_nothing() -> void:
@@ -113,7 +113,7 @@ func test_no_stores_buys_nothing() -> void:
 	state.locked_dockable = ship
 	_dock(state, gs, LandedState.REPAIR_TIME + LandedState.REFUEL_TIME * 2.0)
 	assert_float(ship.hull_strength).is_equal(40.0)
-	assert_float(ship.fuel).is_equal_approx(ship.max_fuel * Ship.FREE_FUEL_FRACTION, 0.001)
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * Drive.FREE_FRACTION, 0.001)
 
 
 func test_a_whole_ship_spends_nothing() -> void:

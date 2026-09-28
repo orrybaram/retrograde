@@ -219,7 +219,7 @@ func _bind_ship() -> void:
 	if ship == _ship or ship == null:
 		return
 	_ship = ship
-	ship.fuel_changed.connect(func() -> void: check_fuel(ship.fuel, ship.max_fuel))
+	ship.drive.changed.connect(func() -> void: check_fuel(ship.drive.fuel, ship.drive.max_fuel))
 	ship.cargo_changed.connect(check_cargo)
 
 ## Starts the boost clock for a session. Nothing happens if the hint is already spent.
@@ -231,7 +231,9 @@ func watch_for_boost() -> void:
 func _process(delta: float) -> void:
 	if not _watching_boost or _ship == null:
 		return
-	tick_boost_watch(delta, _ship.want_boost and _ship.want_thrust,
+	# Lit, not just held: a boost tried on a dry tank or cut by a cough hasn't shown the
+	# player what the Burn does, so the hint still has something to teach
+	tick_boost_watch(delta, _ship.drive.is_lit(),
 			_ship.state_machine.current_state is FlyingState)
 
 ## One step of the boost clock, taken apart from the ship so it can be driven directly.
@@ -253,7 +255,7 @@ func check_fuel(fuel: float, max_fuel: float) -> void:
 	# tank at the dock, and that is no moment for the low-fuel briefing.
 	if is_instance_valid(_ship) and _ship.state_machine and _ship.state_machine.current_state is LandedState:
 		return
-	if guide_awake and max_fuel > 0.0 and LowFuelEffect.level_for(fuel, max_fuel) != LowFuelEffect.Level.OK:
+	if guide_awake and max_fuel > 0.0 and Drive.level_for(fuel, max_fuel) != Drive.Level.OK:
 		request(MSG_LOW_FUEL)
 
 ## Two steps, both show-once: the first venting gets the full briefing with the game

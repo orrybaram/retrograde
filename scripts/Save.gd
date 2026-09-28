@@ -36,8 +36,8 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value("stats", "stores", gs.stores)
 	cfg.set_value("stats", "death_count", gs.death_count)
 	if ship:
-		cfg.set_value("stats", "fuel", ship.fuel)
-		cfg.set_value("stats", "max_fuel", ship.max_fuel)
+		cfg.set_value("stats", "fuel", ship.drive.fuel)
+		cfg.set_value("stats", "max_fuel", ship.drive.max_fuel)
 		cfg.set_value("stats", "hull_strength", ship.hull_strength)
 		cfg.set_value("stats", "max_hull", ship.max_hull)
 		cfg.set_value("stats", "max_cargo_weight", ship.max_cargo_weight)
@@ -372,10 +372,11 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	# Load current fuel and hull values. An old save's bought upgrades are ignored: the
 	# ship's limits are fixed, so a fuller tank or hull is clamped back down to them.
 	if ship:
-		ship.fuel = float(cfg.get_value("stats", "fuel", ship.max_fuel))
+		# Restored quietly (clamped to the tank): a load is not the tank changing, and the
+		# radio would take a low tank for a fresh warning. The HUD reads it every frame.
+		ship.drive.restore(float(cfg.get_value("stats", "fuel", ship.drive.max_fuel)))
 		ship.hull_strength = float(cfg.get_value("stats", "hull_strength", ship.max_hull))
 		# Clamp to max values (in case save has invalid values)
-		ship.fuel = min(ship.fuel, ship.max_fuel)
 		ship.hull_strength = min(ship.hull_strength, ship.max_hull)
 		ship.refit(gs)
 		ship.update_mass_from_cargo()  # Update mass based on loaded cargo

@@ -297,7 +297,7 @@ F1 / ` -> DevPanel (ui/DevPanel.gd, CanvasLayer, group `dev_panel`)
 - Warps close the panel before they move the ship: the physics server has to be running
   to take the new transform. They reuse `Playtest`'s helpers (`park_at_gate`,
   `park_near_planet`, `redock`, `warp_to`), so a warp lands where a scenario's would.
-- `Ship.dev_invulnerable` / `Ship.dev_infinite_fuel` are the only gameplay hooks the panel
+- `Ship.dev_invulnerable` / `Drive.infinite` (`ship.drive`) are the only gameplay hooks the panel
   adds; nothing but the panel writes them.
 - Don't let the panel name a class that names it back (it reaches the pause menu through
   `CanvasItem`, not `PauseMenu`): a `class_name` cycle breaks the script class cache and

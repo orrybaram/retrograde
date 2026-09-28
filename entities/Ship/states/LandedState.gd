@@ -14,7 +14,7 @@ var _dialogue = null  # SpacePortDialogue
 var _terminal: CoreTerminal = null
 var _deposit: HoldDeposit = null
 var _refueling := false
-## Where this dock's fill stops: SR-7's free quarter (Ship.free_fuel_floor).
+## Where this dock's fill stops: SR-7's free quarter (Drive.free_floor).
 var _refuel_target := 0.0
 ## After the Deposit, SR-7 spends Stores on the ship with no menu (issue #137): the hull
 ## is patched first, then the tank is topped up past the free quarter, as far as the
@@ -330,13 +330,12 @@ func _toggle_dialogue() -> void:
 ## Tops the tank up to SR-7's free quarter, if it is below it. A cold SR-7 gives nothing,
 ## and a tank already past the quarter is left alone (docs/OPENING.md §9).
 func _start_refuel(gs: GameState) -> void:
-	_refuel_target = ship.free_fuel_floor(gs)
-	_refueling = ship.fuel < _refuel_target
+	_refuel_target = ship.drive.free_floor(gs)
+	_refueling = ship.drive.fuel < _refuel_target
 
 func _refuel(delta: float) -> void:
-	ship.fuel = minf(ship.fuel + ship.max_fuel / REFUEL_TIME * delta, _refuel_target)
-	ship.fuel_changed.emit()
-	if ship.fuel >= _refuel_target:
+	ship.drive.refuel(ship.drive.max_fuel / REFUEL_TIME * delta, _refuel_target)
+	if ship.drive.fuel >= _refuel_target:
 		_refueling = false
 		_autosave()
 
@@ -374,7 +373,7 @@ func _start_service(gs: GameState) -> void:
 	_gs = gs
 	_owed = 0.0
 	_repairing = ship.hull_strength < ship.max_hull
-	_topping_up = ship.fuel < ship.max_fuel
+	_topping_up = ship.drive.fuel < ship.drive.max_fuel
 
 func _repair(delta: float) -> void:
 	var cost := float(Economy.REPAIR_COST_PER_POINT)
@@ -394,13 +393,11 @@ func _repair(delta: float) -> void:
 
 func _top_up(delta: float) -> void:
 	var cost := Economy.REFUEL_COST_PER_POINT
-	var points := minf(ship.max_fuel / REFUEL_TIME * delta, ship.max_fuel - ship.fuel)
-	points = minf(points, _affordable(cost))
+	var drive := ship.drive
+	var points := drive.refuel(minf(drive.max_fuel / REFUEL_TIME * delta, _affordable(cost)))
 	if points > 0.0:
-		ship.fuel += points
-		ship.fuel_changed.emit()
 		_charge(points * cost)
-	if ship.fuel >= ship.max_fuel or _affordable(cost) <= AFFORD_EPSILON:
+	if drive.fuel >= drive.max_fuel or _affordable(cost) <= AFFORD_EPSILON:
 		_topping_up = false
 		_finish_service()
 

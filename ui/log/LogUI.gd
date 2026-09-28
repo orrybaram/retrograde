@@ -142,8 +142,8 @@ func _connect_ship() -> void:
 	if current == _ship:
 		return
 	_ship = current
-	if _ship and _ship.has_signal("fuel_changed") and not _ship.fuel_changed.is_connected(_refresh):
-		_ship.fuel_changed.connect(_refresh)
+	if _ship and not _ship.drive.changed.is_connected(_refresh):
+		_ship.drive.changed.connect(_refresh)
 
 
 # --- Input -------------------------------------------------------------------

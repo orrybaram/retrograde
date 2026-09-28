@@ -52,7 +52,7 @@ assert pt.answers(pt.recall("bay")) == 1 and pt.broken_answers(pt.recall("bay"))
 screenshot cargo_bay_1_wreck
 
 # --- The pull on the Aux: the ship strains and the ground holds ---
-eval ship.set("fuel", ship.max_fuel * 0.25)
+eval ship.drive.set("fuel", ship.drive.max_fuel * 0.25)
 eval ship.set("rotation", (-pt.recall("bay").lug_facing_global()).angle())
 eval pt.warp_to(pt.recall("bay").lug_global() + pt.recall("bay").lug_facing_global() * 26.0)
 eval ship.set("linear_velocity", pt.recall("bay").linear_velocity)
@@ -69,10 +69,10 @@ screenshot cargo_bay_2_strain
 
 # --- A quarter spent on the way is not enough: the Burn runs dry and it holds ---
 # A tenth of the tank burned getting here leaves 15%, under the tear-out's fifth
-eval ship.set("fuel", ship.max_fuel * 0.15)
+eval ship.drive.set("fuel", ship.drive.max_fuel * 0.15)
 down boost
 down reverse_thrust
-wait_until ship.fuel == 0.0 6
+wait_until ship.drive.fuel == 0.0 6
 wait 1.5
 up boost
 up reverse_thrust
@@ -82,17 +82,17 @@ wait_until pt.recall("bay").pull_progress == 0.0 20
 screenshot cargo_bay_2b_dry
 
 # --- The Burn tears it free, on the quarter tank SR-7 gives ---
-eval ship.set("fuel", ship.max_fuel * 0.25)
-eval pt.remember("fuel", ship.fuel)
+eval ship.drive.set("fuel", ship.drive.max_fuel * 0.25)
+eval pt.remember("fuel", ship.drive.fuel)
 down boost
 down reverse_thrust
 wait_until not pt.recall("bay").is_buried() 8
 up boost
 up reverse_thrust
 assert not pt.recall("bay").is_buried() "the Burn tears it free"
-assert ship.fuel > 0.0 "the quarter tank covered it"
-eval (pt.recall("fuel") - ship.fuel) / ship.max_fuel
-assert pt.recall("fuel") - ship.fuel > ship.max_fuel * 0.17 and pt.recall("fuel") - ship.fuel < ship.max_fuel * 0.23 "at about a fifth of a full tank, a thin margin under the quarter"
+assert ship.drive.fuel > 0.0 "the quarter tank covered it"
+eval (pt.recall("fuel") - ship.drive.fuel) / ship.drive.max_fuel
+assert pt.recall("fuel") - ship.drive.fuel > ship.drive.max_fuel * 0.17 and pt.recall("fuel") - ship.drive.fuel < ship.drive.max_fuel * 0.23 "at about a fifth of a full tank, a thin margin under the quarter"
 wait_until pt.state_name() == "CarryingState" 3
 assert pt.state_name() == "CarryingState" "the magnet takes it onto the nose"
 screenshot cargo_bay_3_free
@@ -101,9 +101,9 @@ screenshot cargo_bay_3_free
 eval pt.remember("alt", ship.global_position.distance_to(pt.planet("Veld").global_position))
 hold reverse_thrust 6.0
 assert ship.global_position.distance_to(pt.planet("Veld").global_position) > pt.recall("alt") + 150.0 "climbing away from Veld on the Aux"
-assert ship.fuel > 0.0 "without the Burn"
+assert ship.drive.fuel > 0.0 "without the Burn"
 assert pt.state_name() == "CarryingState" "still carrying it"
-eval pt.remember("fuel_left", ship.fuel)
+eval pt.remember("fuel_left", ship.drive.fuel)
 screenshot cargo_bay_4_lift
 
 # --- A reload keeps a buried one buried, and one there only once ---

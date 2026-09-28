@@ -64,7 +64,7 @@ eval pt.redock()
 wait_until pt.visible_ui().has("SpacePortDialogue") 5
 press esc
 # The port autosaves when the tank is full, so let that land before clearing state
-wait_until ship.fuel == ship.max_fuel 15
+wait_until ship.drive.fuel == ship.drive.max_fuel 15
 eval pt.set_meta("left_at_save", pt.ore("Rook").regrow_left())
 eval gs.spent_ore.clear()
 assert not pt.ore("Rook").is_spent() "cleared before reload"

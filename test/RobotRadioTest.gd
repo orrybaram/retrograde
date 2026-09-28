@@ -402,7 +402,7 @@ func test_low_fuel_fires_below_threshold_and_interrupts_tips() -> void:
 	radio.check_fuel(100.0, 100.0)
 	assert_bool(radio.is_active()).is_false()
 	radio.request(RADIO_SCRIPT.MSG_SCRAP)
-	radio.check_fuel(100.0 * LowFuelEffect.LOW_RATIO, 100.0)
+	radio.check_fuel(100.0 * Drive.LOW_RATIO, 100.0)
 	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_LOW_FUEL)
 	assert_int(radio.queue.pending_count()).is_equal(1)
 

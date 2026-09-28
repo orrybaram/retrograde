@@ -119,11 +119,11 @@ func _update_systems() -> void:
 			hull_level != LowHullEffect.Level.OK)
 	_hull_value.text = "%d / %d" % [ceili(ship.hull_strength), int(ship.max_hull)]
 
-	var fuel_ratio := ship.fuel / ship.max_fuel if ship.max_fuel > 0 else 0.0
-	var fuel_level := LowFuelEffect.level_for(ship.fuel, ship.max_fuel)
+	var drive := ship.drive
+	var fuel_ratio := drive.fuel / drive.max_fuel if drive.max_fuel > 0 else 0.0
 	_fuel_gauge.set_fill(fuel_ratio, _fuel_color(fuel_ratio), 20,
-			ship.fuel > 0.0 and fuel_level != LowFuelEffect.Level.OK)
-	_fuel_value.text = "%d / %d" % [int(ship.fuel), int(ship.max_fuel)]
+			drive.fuel > 0.0 and drive.level() != Drive.Level.OK)
+	_fuel_value.text = "%d / %d" % [int(drive.fuel), int(drive.max_fuel)]
 
 	# No hold at all reads as no row, not 0 / 0
 	_hold_row.visible = ship.has_hold()

@@ -96,19 +96,18 @@ static func engine_output(thrusting: bool, boosting: bool, boost_multiplier: flo
 ## faster. A dry tank holds still: a new game starts on one, and a gauge flashing from
 ## the first frame is noise.
 static func blink_dim(current: float, max_val: float, t: float) -> bool:
-	var level := LowFuelEffect.level_for(current, max_val)
-	if current <= 0.0 or level == LowFuelEffect.Level.OK:
+	var level := Drive.level_for(current, max_val)
+	if current <= 0.0 or level == Drive.Level.OK:
 		return false
-	var period := 0.5 if level == LowFuelEffect.Level.CRITICAL else 1.0
+	var period := 0.5 if level == Drive.Level.CRITICAL else 1.0
 	return fmod(t, period) > period * 0.6
 
 func _process(delta: float) -> void:
 	var target := 0.0
 	_burning = false
 	if ship and is_instance_valid(ship) and not ship.is_locked_to_planet() and not ship.is_landed_on_planet():
-		var coughing := ship.low_fuel_effect != null and ship.low_fuel_effect.is_coughing()
 		var thrusting := ship.want_thrust or ship.want_reverse_thrust
-		_burning = thrusting and ship.want_boost and ship.fuel > 0.0 and not coughing
+		_burning = ship.drive.is_lit()
 		target = engine_output(thrusting, _burning, ship.boost_power_multiplier)
 	var rate := ENGINE_RISE if target > engine else ENGINE_FALL
 	engine += (target - engine) * minf(1.0, delta * rate)

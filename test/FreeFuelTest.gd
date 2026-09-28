@@ -17,7 +17,7 @@ func _gs(core_started: bool) -> GameState:
 func _ship(fuel: float) -> Ship:
 	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
 	add_child(ship)
-	ship.fuel = fuel
+	ship.drive.fuel = fuel
 	return ship
 
 
@@ -43,17 +43,17 @@ func test_a_running_sr7_fills_an_empty_tank_to_a_quarter_and_stops() -> void:
 	var ship := _ship(0.0)
 	var state := _landed(ship)
 	_dock(state, _gs(true), LandedState.REFUEL_TIME * 2.0)
-	assert_float(ship.fuel).is_equal_approx(ship.max_fuel * 0.25, 0.001)
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * 0.25, 0.001)
 	assert_bool(state._refueling).is_false()
 
 
 func test_a_tank_above_the_quarter_is_left_alone() -> void:
 	var ship := _ship(0.0)
-	ship.fuel = ship.max_fuel * 0.6
+	ship.drive.fuel = ship.drive.max_fuel * 0.6
 	var state := _landed(ship)
 	state._start_refuel(_gs(true))
 	assert_bool(state._refueling).is_false()
-	assert_float(ship.fuel).is_equal(ship.max_fuel * 0.6)
+	assert_float(ship.drive.fuel).is_equal(ship.drive.max_fuel * 0.6)
 
 
 func test_a_cold_sr7_gives_nothing_on_the_dock() -> void:
@@ -61,7 +61,7 @@ func test_a_cold_sr7_gives_nothing_on_the_dock() -> void:
 	var state := _landed(ship)
 	_dock(state, _gs(false), LandedState.REFUEL_TIME * 2.0)
 	assert_bool(state._refueling).is_false()
-	assert_float(ship.fuel).is_equal(0.0)
+	assert_float(ship.drive.fuel).is_equal(0.0)
 
 
 ## The port's pace is unchanged: a quarter of the tank takes a quarter of the full-tank time.
@@ -70,7 +70,7 @@ func test_the_quarter_fills_at_the_ports_pace() -> void:
 	var state := _landed(ship)
 	state._start_refuel(_gs(true))
 	state._refuel(LandedState.REFUEL_TIME / 8.0)
-	assert_float(ship.fuel).is_equal_approx(ship.max_fuel / 8.0, 0.001)
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel / 8.0, 0.001)
 	assert_bool(state._refueling).is_true()
 
 
@@ -78,26 +78,26 @@ func test_the_quarter_fills_at_the_ports_pace() -> void:
 
 func test_relaunch_tops_an_empty_tank_up_to_a_quarter() -> void:
 	var ship := _ship(0.0)
-	ship.top_up_to_free_floor(_gs(true))
-	assert_float(ship.fuel).is_equal_approx(ship.max_fuel * 0.25, 0.001)
+	ship.drive.top_up_to_free_floor(_gs(true))
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * 0.25, 0.001)
 
 
 func test_relaunch_never_drains_a_tank_above_the_quarter() -> void:
 	var ship := _ship(0.0)
-	ship.fuel = ship.max_fuel * 0.8
-	ship.top_up_to_free_floor(_gs(true))
-	assert_float(ship.fuel).is_equal(ship.max_fuel * 0.8)
+	ship.drive.fuel = ship.drive.max_fuel * 0.8
+	ship.drive.top_up_to_free_floor(_gs(true))
+	assert_float(ship.drive.fuel).is_equal(ship.drive.max_fuel * 0.8)
 
 
 func test_relaunch_before_the_cold_start_gives_nothing() -> void:
 	var ship := _ship(0.0)
-	ship.top_up_to_free_floor(_gs(false))
-	assert_float(ship.fuel).is_equal(0.0)
-	ship.top_up_to_free_floor(null)
-	assert_float(ship.fuel).is_equal(0.0)
+	ship.drive.top_up_to_free_floor(_gs(false))
+	assert_float(ship.drive.fuel).is_equal(0.0)
+	ship.drive.top_up_to_free_floor(null)
+	assert_float(ship.drive.fuel).is_equal(0.0)
 
 
 func test_the_floor_is_zero_until_the_core_runs() -> void:
 	var ship := _ship(0.0)
-	assert_float(ship.free_fuel_floor(_gs(false))).is_equal(0.0)
-	assert_float(ship.free_fuel_floor(_gs(true))).is_equal(ship.max_fuel * Ship.FREE_FUEL_FRACTION)
+	assert_float(ship.drive.free_floor(_gs(false))).is_equal(0.0)
+	assert_float(ship.drive.free_floor(_gs(true))).is_equal(ship.drive.max_fuel * Drive.FREE_FRACTION)

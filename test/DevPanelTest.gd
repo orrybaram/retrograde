@@ -195,13 +195,14 @@ func test_infinite_fuel_flag_leaves_the_tank_alone() -> void:
 	_panel_in_tree()
 
 	_run("SHIP", "INFINITE FUEL", 1)
-	var before := ship.fuel
-	assert_bool(ship.consume_fuel(50.0)).is_true()  # the engine still fires
-	assert_float(ship.fuel).is_equal(before)
+	var before := ship.drive.fuel
+	ship.drive.tick(0.0, true)  # boost held with thrust on
+	assert_bool(ship.drive.try_burn(1.0)).is_true()  # the engine still fires
+	assert_float(ship.drive.fuel).is_equal(before)
 
 	_run("SHIP", "INFINITE FUEL", -1)
-	ship.consume_fuel(50.0)
-	assert_float(ship.fuel).is_equal(before - 50.0)
+	ship.drive.try_burn(1.0)
+	assert_float(ship.drive.fuel).is_equal(before - ship.drive.burn_rate)
 
 
 func test_stores_row_steps_and_floors_at_zero() -> void:
