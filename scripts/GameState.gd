@@ -31,7 +31,7 @@ var progress := Progress.new()
 
 ## The Components let go of into SR-7's Cradle and waiting there to be fitted (Components
 ## ids, oldest first). The Cradle is always open, so any number can wait. Each is permanent
-## until it is fitted.
+## until it is fitted, and one taken off the ship comes back here (docs/adr/0014).
 var cradled := PackedStringArray()
 
 ## Death counter - tracks total number of deaths (not displayed to player)
@@ -80,6 +80,17 @@ func repair_station() -> void:
 ## effect reads from this. (The Core in the sun is a separate final state, not step 6.)
 func titan_influence() -> int:
 	return progress.count(Progress.POWERED_GATES)
+
+## The Components on the ship now: every one ever fitted, less any taken off again. The
+## ledger only gains (FITTED_COMPONENTS is "has been fitted"), so taking one off puts it
+## back in `cradled` instead of unmarking it; each Component is one of a kind, so one
+## waiting in the Cradle is not on the ship. The save format is unchanged.
+func fitted() -> PackedStringArray:
+	var on := PackedStringArray()
+	for id in progress.list(Progress.FITTED_COMPONENTS):
+		if not id in cradled:
+			on.append(id)
+	return on
 
 func spend_ore(ore_id: String, regrow_seconds: float) -> void:
 	spent_ore[ore_id] = regrow_seconds

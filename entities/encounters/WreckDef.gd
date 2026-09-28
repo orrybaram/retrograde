@@ -43,8 +43,9 @@ func build(field: Node2D, entry: Dictionary) -> Node:
 	var loot: Array[String] = []
 	for id in entry.get("loot", []):
 		loot.append(str(id))
+	# A clone wreck built from the player's hull is the ship as first printed: bare
 	var wreck := DerelictShip.spawn(field, silhouette, loot, entry["pos"], Vector2.ZERO,
-		entry["rotation"], entry["spin"], DerelictShip.HITS)
+		entry["rotation"], entry["spin"], DerelictShip.HITS, true, hull == null)
 	wreck.transient = true  # the field rebuilds it from the seed; the save must not
 	if harvest_radius > 0.0:
 		var circle := wreck.get_node_or_null("CollisionShape2D") as CollisionShape2D

@@ -372,6 +372,26 @@ func _ship_rows() -> Array[Dictionary]:
 			ship.update_mass_from_cargo()
 	))
 
+	rows.append(_toggle_row(
+		"CARGO BAY",
+		"Fits the Cargo Bay to the hull, or stows it back in SR-7's Cradle.",
+		func() -> bool: return gs != null and Components.CARGO_BAY in gs.fitted(),
+		func(on: bool) -> void:
+			var cradle := Cradle.find(get_tree())
+			if gs == null or cradle == null:
+				return
+			if on:
+				if not Components.CARGO_BAY in gs.cradled and not Components.CARGO_BAY in gs.fitted():
+					var waiting := gs.cradled
+					waiting.append(Components.CARGO_BAY)
+					gs.cradled = waiting
+				cradle.fit(Components.CARGO_BAY)
+				# One of a kind: the copy still loose in the world goes
+				get_tree().call_group("hauler_wrecks", "ensure_cargo_bay")
+			else:
+				cradle.stow(Components.CARGO_BAY)
+	))
+
 	rows.append(_value_row(
 		"STORES",
 		"Arrows move the balance by %d; ENTER adds %d." % [STORES_STEP, STORES_JUMP],

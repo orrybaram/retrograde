@@ -84,8 +84,9 @@ _Avoid_: code, combo, puzzle, spell
 ## Freight and SR-7
 
 **Component**:
-A physical object recovered from the world and fitted to the ship at a station through the station's menus — the only way the ship is ever upgraded. There is no currency and nothing is bought (docs/adr/0007). A Component is a destination, not a size: it may be found as **Freight** and flown home clamped to the hull.
-_Avoid_: credits, loot, crafting material, resource
+A physical object recovered from the world and fitted to the ship at a station from **SHIP** — the only way the ship is ever upgraded. There is no currency and nothing is bought (docs/adr/0007). A Component is a destination, not a size: it may be found as **Freight** and flown home clamped to the hull.
+Fitted, it is part of the ship: bolted on in its one place on the hull, drawn there, solid and heavy. Each Component has exactly one place; the player chooses whether to fit it, never where, and fitting one where another sits sends the old one to the Cradle. A fitted Component is cut down from its Freight form to what the ship needs, so it is smaller on the hull than it was on the clamp. It can be taken off again, at a station with a **Cradle**, and waits in the Cradle. The places are never shown empty: the player learns a place exists only by finding what goes there (ADR 0014).
+_Avoid_: credits, loot, crafting material, resource, module (a Module is the Titan's), upgrade (as a noun for the object)
 
 **Freight**:
 An object too big for the hold, **clamped** rigidly to the outside of the hull and flown home by hand; while clamped, its mass and shape become the ship's — slower to speed up, slower to turn, slower to stop. Freight is a physical category, not a purpose — a **Section** and a **Component** can both arrive as Freight.
@@ -108,8 +109,12 @@ The cut place on SR-7 where a **Section** belongs — a straight torch line, emp
 _Avoid_: socket, slot, dock, marker
 
 **Cradle**:
-The place at a station that takes any **Component** delivered as **Freight**; what is in the Cradle is fitted to the ship from the station's menus once the player docks. SR-7's is a drop bay in its container strip, worked by the **DORSAL ARM**'s claw, and always open: any number of **Components** can wait in it (ADR 0013). (A Gate's docking surface is its berth, not a cradle.)
+The place at a station that takes any **Component** delivered as **Freight**, where it waits to be fitted. SR-7's is a drop bay in its container strip, worked by the **DORSAL ARM**'s claw, and always open: any number of **Components** can wait in it (ADR 0013). What waits there is fitted from **SHIP**, and a Component taken off the ship goes back into it. (A Gate's docking surface is its berth, not a cradle.)
 _Avoid_: bay, dock, drop-off, loading zone
+
+**SHIP**:
+The station screen, docked at a station with a **Cradle**, that shows the ship as a line drawing and is where **Components** are fitted and taken off. Its dock row carries a count of Components waiting in the Cradle, and nothing when none are. Fitting happens on the screen, and the ship in the world changes at the same moment.
+_Avoid_: install, upgrade menu, loadout, hangar, garage, inventory
 
 ## The Log
 
@@ -133,7 +138,8 @@ _Avoid_: lore, bio, log entry, description
 - **Titan Influence** equals the number of **Modules** online; the **Core** coming online is a separate, final state, not step 6.
 - Powering a **Gate** brings its **Module** online; there is no way to power a **Module** down again.
 - **Freight** is flown, never stowed: it never enters the hold and never counts against cargo capacity. While clamped, the ship is the ship plus the Freight — heavier and slower to turn, but never lopsided: the nose goes where the player points it.
-- A found **Component** too big for the hold is **Freight** until it is released at a station; it becomes part of the ship only when fitted there through the menus.
+- A found **Component** too big for the hold is **Freight** until it is released at a station; it becomes part of the ship only when fitted there from **SHIP**.
+- A fitted **Component** outlives the ship: the next clone's ship is printed with it (ADR 0011). A hull the player abandons still wears its own copy, which is dead metal: it does not answer a **Sweep** and cannot be taken (ADR 0014).
 - **Freight** is never lost. Released, it coasts on as the ship was moving — same velocity, same heading, plus a slow drift off the nose — and gravity never bends its path. A clamp will not hold past the edge of the **Void**, so all Freight is always inside the system.
 - A ship abandoned or destroyed with **Freight** clamped leaves it there; a **Void**-consumed ship never has any, because the clamp let go at the edge.
 - **Freight** the ship has clamped and then let go of — released, or left on an abandoned or destroyed hull — is marked on the **Chart** and tracked at once. These are the ship's own marks, drawn over the Titan's map whether or not the region is **Charted**; **Freight** never touched is never marked. Clamping it again clears the mark and tracks its destination instead: a **Section**'s **Mount**, or the **Cradle** for a **Component**.

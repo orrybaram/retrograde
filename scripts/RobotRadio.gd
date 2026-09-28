@@ -299,9 +299,10 @@ func check_fitted(id: String) -> void:
 	if guide_awake and id == Components.CARGO_BAY:
 		request(MSG_CARGO_BAY_FITTED)
 
-## The Cargo Bay is the ship's: there is a hold, and scrap can be cut.
+## The Cargo Bay is on the ship: there is a hold, and scrap can be cut. Not once fitted
+## but now - it can be stowed again (docs/adr/0014).
 func cargo_bay_fitted() -> bool:
 	if not is_inside_tree():
 		return false
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	return gs != null and gs.progress.holds(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)
+	return gs != null and Components.CARGO_BAY in gs.fitted()

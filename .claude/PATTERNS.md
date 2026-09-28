@@ -42,6 +42,21 @@ Ship._drive_sonar -> Ship.wants_sonar() -> SonarPulse.charging (held) -> fire() 
   cut) until a ring reaches it, then `ScrapNode.reveal()` lights it up for the rest of its spawn and sends one cream `SonarEcho` ring back.
   Containers and derelicts opt out via `_hides_until_pinged()`. Playtest `stage_harvest` reveals.
 
+## Fitted Components (docs/adr/0014)
+
+```
+Cradle.fit(id) / Cradle.stow(id) -> GameState.cradled + Progress.FITTED_COMPONENTS
+  -> GameState.fitted() -> Ship.refit -> FittedParts.build (art under Body, Fitted_<id> colliders)
+  -> Ship._apply_mass (mass, centre, inertia, turn ratio)
+```
+
+- A Component's `place`, `fitted.outline` (ship space, never aft of x -13), `fitted.mass` and
+  `fitted.bands` live in `Components.DATA`. One Component per place; fitting into a taken place
+  sends the old one to the Cradle (`Cradle.displaces`).
+- SHIP is a page of `SpacePortDialogue` (`ShipPage` + `ShipSchematic`): the row under the cursor
+  previews itself. Handling is `Ship.handling(ids)` in eighths.
+- The art is Polygon2Ds so `DerelictShip` copies it: an abandoned hull wears its parts.
+
 ## Procedures (docs/SWEEP.md, docs/OPENING.md §5)
 
 ```
@@ -304,7 +319,9 @@ gs.progress.flag(kind) / gs.progress.flagged(kind)        # single-key kinds (CO
   Adding one: a constant in `Progress`, listed in `Progress.KINDS` (and a `FileStore.WHERE`
   entry only if older saves already kept it somewhere).
 - Not on it, because they go backwards: ore regrowth (`[ore] regrow`, timers) and the Cradle
-  (`[sections] cradled`, Components leave it when fitted). Those keep their own Save pairs.
+  (`[sections] cradled`, Components leave it when fitted and come back when stowed). Those
+  keep their own Save pairs. `FITTED_COMPONENTS` means "has been fitted"; what is on the hull
+  now is `GameState.fitted()` (that, less anything back in the Cradle).
 - A continue repairs an old save after `resumed()`: a started core with pieces missing comes
   back fully seated (`GameState.repair_station`).
 - Seating a Section only marks the ledger. The Section's Freight row can outlive it in the save

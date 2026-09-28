@@ -31,6 +31,9 @@ var loot: Array[String] = []    # gems still aboard
 var drift := Vector2.ZERO
 var spin := 0.0
 var hull_source: Node2D = null  # polygons to copy for the visual (the player's hull)
+## Copy the Components fitted to `hull_source` too (docs/adr/0014). A hull the player left
+## wears its parts; a clone wreck is the ship as the cloning bay first printed it, bare.
+var wears_fitted := true
 var hull_only := false          # abandoned empty: salvages like plain scrap
 var _armed := false             # harvestable once the player has respawned
 ## Belongs to the encounter field, which rebuilds it from the seed. Saving it too would
@@ -43,9 +46,11 @@ var _tracking: NodeTrackingTarget
 ## Leave `ship` adrift with its hold aboard (a bare hull if the hold is empty).
 ## A load on the nose stays on it, and the hull becomes the tracked target.
 ## `armed` false keeps it out of harvest range detection until the player respawns.
+## `bare` leaves off the parts fitted to `hull`: a clone wreck, not the player's own.
 static func spawn(world: Node, hull: Node2D, gems: Array[String], pos: Vector2, velocity: Vector2,
-		rot: float, spin_speed: float, hits: int, armed := true) -> DerelictShip:
+		rot: float, spin_speed: float, hits: int, armed := true, bare := false) -> DerelictShip:
 	var derelict := DerelictShip.new()
+	derelict.wears_fitted = not bare
 	derelict.hull_only = gems.is_empty()
 	derelict._armed = armed
 	derelict.monitorable = armed
@@ -240,7 +245,10 @@ func _load_shape() -> void:
 	add_child(area)
 	if hull_source:
 		var to_local := hull_source.global_transform.affine_inverse()
+		var fitted_art := hull_source.get_node_or_null(FittedParts.ART)
 		for poly in hull_source.find_children("*", "Polygon2D", true, false):
+			if fitted_art and not wears_fitted and fitted_art.is_ancestor_of(poly):
+				continue
 			var copy := Polygon2D.new()
 			copy.polygon = poly.polygon
 			copy.color = poly.color

@@ -42,7 +42,7 @@ wait 1
 log mark BOOST
 eval get_tree().get_frame()
 down thrust
-hold boost 3.5
+hold boost 4.0
 up thrust
 eval ship.linear_velocity.length()
 assert main.get_node("SpaceDust")._stretch > 0.8 "streaks when really fast"
@@ -64,7 +64,7 @@ screenshot dust_4_brake
 log mark TURN
 eval get_tree().get_frame()
 down thrust
-hold boost 3.5
+hold boost 4.0
 up thrust
 hold turn_left 0.5
 wait 1

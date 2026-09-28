@@ -38,7 +38,7 @@ And it is a bar the player fills by hand. Each Section is Freight: clamped rigid
 hull, flown home with its mass and shape dragging the ship's handling, and **released into
 its own gap in the silhouette**. Not docked, not fitted from a menu - flown into the hole.
 Components (ship upgrades) are delivered the same way, into the station's Cradle, and fitted
-from the station's menus once docked. One delivery gesture for all Freight. SR-7's Cradle
+from the dock's SHIP page once docked (ADR 0014), where they go on the hull for good. One delivery gesture for all Freight. SR-7's Cradle
 (decided 2026-09-27, ADR 0013) is a drop bay in the container strip, worked by the DORSAL
 ARM: brought near the drop point off the right mast, at any angle, the load is met by the
 arm's claw, let go of, and carried round into the bay, which takes it below. It only works
@@ -543,8 +543,10 @@ harvest range, the array's warmer-colder lesson reused.
    tears it free. Tuning: the tear-out costs about 20% of `max_fuel`, so the free half covers
    it with room to spare. Once free it lifts off Veld on the Aux.
 4. **Home.** Flown back as Freight, heavy (ADR 0012), and released into SR-7's **Cradle**.
-5. **Fitting.** Docked, SR-7's menu offers `FIT CARGO BAY`. UNIT-7 fits it: the hold becomes
-   50, the cargo readout appears, and everything harvests. UNIT-7 says so as the menu closes
+5. **Fitting.** Docked, SR-7's menu offers `SHIP`, counting one Component waiting; SHIP
+   offers `FIT CARGO BAY`, blinking the bay in its place over the hull. UNIT-7 fits it: the
+   bay is strapped across the ship's back (heavier, and solid - ADR 0014), the hold becomes
+   50, the cargo readout appears, and everything harvests. UNIT-7 says so on FIT
    (`cargo_bay_fitted.tres`), and the cutting tutorial (`first_scrap`) waits for the first
    scrap after this.
 
