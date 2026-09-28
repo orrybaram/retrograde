@@ -21,7 +21,7 @@ wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.4
 wait_until pt.state_name() == "FlyingState" 3
 
-assert gs.identified_gates.is_empty() "a new game knows none of the Gates"
+assert gs.progress.list("identified_gates").is_empty() "a new game knows none of the Gates"
 
 # In scanner range but nowhere near it: a ring on the minimap and nothing else
 eval pt.park_at_gate("Veld", 3000.0)
@@ -52,6 +52,6 @@ reload
 wait_until main.current_game_state == 1 10
 assert pt.gate("Veld").is_identified() "Veld's Gate is still named after a reload"
 assert pt.gate("Crom").is_identified() "so is Crom's"
-assert gs.identified_gates.size() == 2 "and nothing else got named"
+assert gs.progress.list("identified_gates").size() == 2 "and nothing else got named"
 assert gs.titan_influence() == 0 "naming a Gate leaves its Module offline"
 state

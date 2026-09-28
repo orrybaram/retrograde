@@ -51,6 +51,11 @@ var booted_last_spawn := false
 
 func _ready() -> void:
 	add_to_group("main")
+	# The game's Progress ledger writes through to the save file; every other GameState
+	# (tests, labs) keeps its facts in memory.
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	if gs:
+		gs.progress = Progress.new(Progress.FileStore.new(Playtest.save_path()))
 	_build_fade_overlay()
 	# Connect menu signals
 	if start_menu:

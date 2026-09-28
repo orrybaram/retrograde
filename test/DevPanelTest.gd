@@ -48,7 +48,6 @@ func _gate(planet: Planet, core := false) -> Gate:
 	var gate := auto_free(load("res://entities/structures/Gate.tscn").instantiate()) as Gate
 	gate.is_core = core
 	gate.enable_orbiting = false
-	gate.persist = false  # keep identification out of the player's save
 	planet.add_child(gate)
 	return gate
 
@@ -120,18 +119,19 @@ func test_modules_row_never_goes_below_zero() -> void:
 
 # --- Gates and planets -------------------------------------------------------
 
-## Naming is all-or-nothing, and the Core's Gate is named along with the rest.
+## Naming is all-or-nothing, the Core's Gate is named along with the rest, and it is for good.
 func test_naming_gates_covers_the_core_too() -> void:
 	_gate(_planet("Veld"))
 	_gate(_planet("Sun", Planet.PlanetType.SUN), true)
 	_panel_in_tree()
 
 	_run("PROGRESS", "GATES NAMED", 0)
-	assert_int(_gs.identified_gates.size()).is_equal(2)
+	assert_int(_gs.progress.list(Progress.IDENTIFIED_GATES).size()).is_equal(2)
 	assert_str(_read("PROGRESS", "GATES NAMED")).is_equal("2 / 2")
 
+	# Nothing goes backwards: a named Gate stays named
 	_run("PROGRESS", "GATES NAMED", -1)
-	assert_int(_gs.identified_gates.size()).is_equal(0)
+	assert_str(_read("PROGRESS", "GATES NAMED")).is_equal("2 / 2")
 
 
 func test_refill_ore_seams_clears_every_regrow_timer() -> void:
