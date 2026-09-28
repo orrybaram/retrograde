@@ -22,13 +22,6 @@ func _ready() -> void:
 	EventBus.gem_collected.connect(_on_gem_collected)
 	EventBus.hold_deposited.connect(_on_hold_deposited)
 
-func spawn_all_resources() -> void:
-	# Manually trigger spawning on all ResourceSpawners (useful if auto_spawn is disabled)
-	var spawners = get_tree().get_nodes_in_group("resource_spawners")
-	for spawner in spawners:
-		if spawner.has_method("spawn_cluster"):
-			spawner.spawn_cluster()
-
 func _on_gem_collected(item_id: String, _world_position: Vector2) -> void:
 	if _pending.is_empty():
 		get_tree().create_timer(BATCH_WINDOW).timeout.connect(_flush_pending)

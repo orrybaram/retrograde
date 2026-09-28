@@ -11,7 +11,7 @@ This document is the *system*; those two are the *content*.
 
 The system is roughly 500,000 world units across — Veld orbits at 253,125, and the Sun's
 own radius is 9,000. Every resource node in the game today spawns in a ring bound to a
-planet or a station (`OrbitalRingSpawner`, `ResourceSpawner`), all at game start, and
+planet or a station (`OrbitalRingSpawner`), all at game start, and
 lives until harvested.
 
 That works for rings because a ring is bounded and near the player. It does not work for

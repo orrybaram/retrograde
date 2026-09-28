@@ -37,8 +37,6 @@ var scene_root: Node2D = null
 
 
 func _ready() -> void:
-	add_to_group("resource_spawners")
-
 	# Find parent planet or space station
 	_find_parent_body()
 
