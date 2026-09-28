@@ -149,4 +149,7 @@ press space
 wait 0.3
 assert not get_tree().root.get_node("RobotRadio").is_active() "hold-full tutorial finished"
 assert not get_tree().paused "closing the hold-full tutorial unpauses"
+# Closing a pausing call unpauses outside the physics step: unpausing inside it double-adds
+# bodies to the engine's lists, which only printed (#93). Any engine ERROR fails the run.
+assert pt.engine_errors().is_empty() "no engine errors"
 quit
