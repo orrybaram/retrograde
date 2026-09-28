@@ -88,7 +88,7 @@ func test_fitting_from_the_menu_gives_the_ship_its_hold() -> void:
 	assert_float(ship.max_cargo_weight).is_equal(50.0)
 	assert_bool(ship.has_hold()).is_true()
 	assert_float(hold[0]).override_failure_message("the readout hears of it").is_equal(50.0)
-	assert_bool(_gs.is_fitted(Components.CARGO_BAY)).is_true()
+	assert_bool(_gs.progress.holds(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)).is_true()
 	assert_array(_gs.cradled).is_empty()
 	assert_bool(_cradle().is_full()).override_failure_message("the Cradle is empty again").is_false()
 	# And the row is gone
@@ -98,19 +98,22 @@ func test_fitting_from_the_menu_gives_the_ship_its_hold() -> void:
 # --- keeping it ---
 
 func test_fitting_is_written_to_the_save_at_once() -> void:
+	_gs.progress = Progress.new(Progress.FileStore.new(SAVE_FILE))
 	_gs.cradled = PackedStringArray([Components.CARGO_BAY])
 	Save.save(_gs, null)
 	_cradle().fit()
-	assert_array(Save.load_fitted(SAVE_FILE)).contains_exactly([Components.CARGO_BAY])
+	var held := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_array(Array(held.list(Progress.FITTED_COMPONENTS))).contains_exactly([Components.CARGO_BAY])
 	assert_array(Save.load_cradled(SAVE_FILE)).is_empty()
 
 func test_a_load_keeps_the_hold() -> void:
-	_gs.mark_fitted(Components.CARGO_BAY)
+	_gs.progress.mark(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)
 	Save.save(_gs, null)
 	var gs := auto_free(GameState.new()) as GameState
+	gs.progress = Progress.new(Progress.FileStore.new(SAVE_FILE))
 	var ship := _ship()
 	Save.load_into(gs, ship)
-	assert_bool(gs.is_fitted(Components.CARGO_BAY)).is_true()
+	assert_bool(gs.progress.holds(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)).is_true()
 	assert_float(ship.max_cargo_weight).is_equal(50.0)
 
 func test_a_save_from_before_fitting_has_no_hold() -> void:
@@ -119,16 +122,16 @@ func test_a_save_from_before_fitting_has_no_hold() -> void:
 	cfg.save(SAVE_FILE)
 	var ship := _ship()
 	Save.load_into(_gs, ship)
-	assert_dict(_gs.fitted).is_empty()
+	assert_int(_gs.progress.count(Progress.FITTED_COMPONENTS)).is_equal(0)
 	assert_float(ship.max_cargo_weight).is_equal(0.0)
 
 func test_a_new_game_has_nothing_fitted() -> void:
 	var ship := _ship()
-	_gs.mark_fitted(Components.CARGO_BAY)
+	_gs.progress.mark(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)
 	ship.refit(_gs)
 	_gs.reset_all_state()
 	ship.reset_to_initial_state()
-	assert_dict(_gs.fitted).is_empty()
+	assert_int(_gs.progress.count(Progress.FITTED_COMPONENTS)).is_equal(0)
 	assert_float(ship.max_cargo_weight).is_equal(0.0)
 
 func test_once_fitted_the_wreck_leaves_no_copy() -> void:
@@ -138,6 +141,6 @@ func test_once_fitted_the_wreck_leaves_no_copy() -> void:
 	add_child(veld)
 	var wreck: HaulerWreck = auto_free(HaulerWreck.new())
 	veld.add_child(wreck)
-	_gs.mark_fitted(Components.CARGO_BAY)
+	_gs.progress.mark(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)
 	wreck.ensure_cargo_bay()
 	assert_object(wreck.find_piece()).is_null()

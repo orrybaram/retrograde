@@ -18,7 +18,7 @@ func before_test() -> void:
 	add_child(_world)
 	_gs = auto_free(GameState.new()) as GameState
 	_gs.mark_station_whole()
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	add_child(_gs)
 	_station = load("res://entities/structures/SpaceStation.tscn").instantiate() as SpaceStation
 	_world.add_child(_station)
@@ -47,9 +47,14 @@ func _at_drop(offset := Vector2.ZERO, turn := 0.0) -> Transform2D:
 
 func _arm_home(on: bool) -> void:
 	if on:
-		_gs.mark_section_seated(Sections.DORSAL_ARM)
+		_gs.progress.mark(Progress.SEATED_SECTIONS, Sections.DORSAL_ARM)
 	else:
-		_gs.seated_sections.erase(Sections.DORSAL_ARM)
+		# The ledger takes nothing back, so this is a save that never had the arm home
+		_gs.progress = _gs.progress.fresh()
+		for id in GameState.station_pieces():
+			if id != Sections.DORSAL_ARM:
+				_gs.progress.mark(Progress.SEATED_SECTIONS, id)
+		_gs.progress.flag(Progress.CORE_STARTED)
 	Mount.for_section(get_tree(), Sections.DORSAL_ARM).refresh()
 
 func _state() -> String:
@@ -110,7 +115,9 @@ func test_no_arm_and_nothing_is_taken() -> void:
 	assert_object(Cradle.accepting(get_tree(), _bay(_at_drop()))).is_same(_claw)
 
 func test_a_dead_core_takes_nothing() -> void:
-	_gs.core_started = false
+	# A save with the station whole and its core never started
+	_gs.progress = _gs.progress.fresh()
+	_gs.mark_station_whole()
 	assert_object(Cradle.accepting(get_tree(), _bay(_at_drop()))).is_null()
 	assert_array(_claw.slope_lamps()).contains_exactly([Colors.MUSTARD_DARK, Colors.MUSTARD_DARK])
 

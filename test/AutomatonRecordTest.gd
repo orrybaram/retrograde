@@ -30,15 +30,15 @@ func after_test() -> void:
 ## The radio is a link to UNIT-7 at SR-7, so the first transmission is the meeting.
 func test_the_guide_is_met_on_the_first_transmission() -> void:
 	var radio := _radio()
-	assert_bool(_gs.has_met_automaton("UNIT-7")).is_false()
+	assert_bool(_gs.progress.holds(Progress.MET_AUTOMATONS, "UNIT-7")).is_false()
 	radio.request(_conv(&"hello"))
-	assert_bool(_gs.has_met_automaton("UNIT-7")).is_true()
+	assert_bool(_gs.progress.holds(Progress.MET_AUTOMATONS, "UNIT-7")).is_true()
 
 
 func test_the_guide_is_filed_under_the_designation_its_record_uses() -> void:
 	var radio := _radio()
 	radio.request(_conv(&"hello"))
-	assert_array(_gs.met_automatons.keys()).contains_exactly([GUIDE.record_key()])
+	assert_array(Array(_gs.progress.list(Progress.MET_AUTOMATONS))).contains_exactly([GUIDE.record_key()])
 	assert_str(GUIDE.record_key()).is_equal("UNIT-7")
 
 
@@ -48,41 +48,47 @@ func test_meeting_the_guide_again_adds_nothing() -> void:
 	radio.request(_conv(&"hello"))
 	radio.silence()
 	radio.request(_conv(&"again"))
-	assert_int(_gs.met_automatons.size()).is_equal(1)
+	assert_int(_gs.progress.count(Progress.MET_AUTOMATONS)).is_equal(1)
 
 
 # --- The save ----------------------------------------------------------------
 
-func test_met_automatons_round_trip_through_the_save() -> void:
+## A continue brings back the Automatons the player met, from wherever the ledger writes.
+func test_the_guide_is_still_met_on_a_continue() -> void:
+	_radio().request(_conv(&"hello"))
+	_gs.progress = _gs.progress.resumed()
+	assert_bool(_gs.progress.holds(Progress.MET_AUTOMATONS, "UNIT-7")).is_true()
+
+
+## The save file keeps met Automatons where saves before the ledger did, and a meeting is
+## written into it at once, keeping everything else.
+func test_met_automatons_round_trip_through_the_save_file() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 42)
 	cfg.save(SAVE_FILE)
-	Save.save_met_automatons(PackedStringArray(["UNIT-7"]), SAVE_FILE)
-	assert_array(Array(Save.load_met_automatons(SAVE_FILE))).contains_exactly(["UNIT-7"])
+	Progress.new(Progress.FileStore.new(SAVE_FILE)).mark(Progress.MET_AUTOMATONS, "UNIT-7")
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_array(Array(ledger.list(Progress.MET_AUTOMATONS))).contains_exactly(["UNIT-7"])
 	cfg.load(SAVE_FILE)
 	assert_int(cfg.get_value("stats", "stores")).is_equal(42)
+	assert_array(Array(cfg.get_value("automatons", "met"))).contains_exactly(["UNIT-7"])
 	# Meeting an Automaton is not powering a Gate: the lists are kept apart
-	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
-
-
-func test_met_automatons_need_an_existing_save() -> void:
-	Save.save_met_automatons(PackedStringArray(["UNIT-7"]), SAVE_FILE)
-	assert_bool(FileAccess.file_exists(SAVE_FILE)).is_false()
-	assert_int(Save.load_met_automatons(SAVE_FILE).size()).is_equal(0)
+	assert_int(ledger.count(Progress.POWERED_GATES)).is_equal(0)
 
 
 func test_a_save_from_before_records_reads_as_nobody_met() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 7)
 	cfg.save(SAVE_FILE)
-	assert_int(Save.load_met_automatons(SAVE_FILE).size()).is_equal(0)
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_int(ledger.count(Progress.MET_AUTOMATONS)).is_equal(0)
 
 
 func test_a_new_game_clears_the_met_automatons() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	_gs.reset_all_state()
-	assert_bool(_gs.met_automatons.is_empty()).is_true()
-	assert_bool(_gs.has_met_automaton("UNIT-7")).is_false()
+	assert_int(_gs.progress.count(Progress.MET_AUTOMATONS)).is_equal(0)
+	assert_bool(_gs.progress.holds(Progress.MET_AUTOMATONS, "UNIT-7")).is_false()
 
 
 # --- Notes -------------------------------------------------------------------
@@ -122,7 +128,7 @@ func test_a_note_waits_for_the_influence_step_it_is_keyed_to() -> void:
 # --- The Records tab ---------------------------------------------------------
 
 func test_a_met_automaton_gets_a_row_under_the_heading() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	assert_array(_text_of(tab._automatons)).contains(["A U T O M A T O N S", "UNIT-7", "SR-7"])
 	assert_bool(tab._automatons.visible).is_true()
@@ -144,7 +150,7 @@ func test_nothing_met_and_nowhere_visited_leaves_the_empty_state_up() -> void:
 ## A player who has met the Guide and flown nowhere still holds a Record, so the
 ## Automatons section stands on its own.
 func test_the_automatons_section_stands_without_the_bodies() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	assert_bool(tab._bodies.visible).is_false()
 	assert_bool(tab._automatons.visible).is_true()
@@ -154,7 +160,7 @@ func test_the_automatons_section_stands_without_the_bodies() -> void:
 ## designation and where it was met, then the Notes. The robot's face belongs to the
 ## store screen, where the player is actually standing in front of it.
 func test_the_record_shows_the_designation_and_station_without_a_portrait() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	assert_array(_text_of(tab._detail)).contains(["UNIT-7", "STATION   SR-7"])
 	assert_array(_text_of(tab._detail)).not_contains([GUIDE.ascii_art])
@@ -162,7 +168,7 @@ func test_the_record_shows_the_designation_and_station_without_a_portrait() -> v
 
 ## Nothing speaks from inside the Log: the Record is a note, not a greeting.
 func test_the_record_says_nothing_the_guide_would_say() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	for line in _text_of(tab._detail):
 		assert_str(line).not_contains("Welcome")
@@ -170,7 +176,7 @@ func test_the_record_says_nothing_the_guide_would_say() -> void:
 
 ## The pane lists the unlocked Notes under the designation block, in authored order.
 func test_the_pane_lists_the_notes_the_player_has_reached() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	_power_modules(3)
 	var tab := _records_tab()
 	assert_array(_text_of(tab._detail)).contains(GUIDE.notes_at(3))
@@ -179,7 +185,7 @@ func test_the_pane_lists_the_notes_the_player_has_reached() -> void:
 ## A locked Note leaves no placeholder and no count — the pane shows what the player
 ## reached and nothing standing in for the rest (docs/adr/0003).
 func test_a_locked_note_leaves_nothing_behind_in_the_pane() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	var text := _text_of(tab._detail)
 	assert_array(text).contains(GUIDE.notes_at(0))
@@ -192,7 +198,7 @@ func test_a_locked_note_leaves_nothing_behind_in_the_pane() -> void:
 ## Stepping Modules online is the dev panel's preview path: each step the Guide has a
 ## Note keyed to puts one more line in the pane, and no step takes one away.
 func test_raising_modules_online_reveals_further_notes() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	var seen := _text_of(tab._detail).size()
 	for influence in range(1, Gate.MODULE_COUNT + 1):
@@ -207,15 +213,10 @@ func test_raising_modules_online_reveals_further_notes() -> void:
 ## Notes are not saved: they derive from Titan Influence, which is the powered Gates
 ## the save already carries. Reloading those gives the same Notes back.
 func test_unlocked_notes_come_back_with_the_powered_gates() -> void:
-	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "stores", 0)
-	cfg.save(SAVE_FILE)
 	_power_modules(3)
-	Save.save_powered_gates(PackedStringArray(_gs.powered_gates.keys()), SAVE_FILE)
 
 	var loaded := auto_free(GameState.new()) as GameState
-	for key in Save.load_powered_gates(SAVE_FILE):
-		loaded.mark_gate_powered(key)
+	loaded.progress = _gs.progress.resumed()
 	assert_int(loaded.titan_influence()).is_equal(3)
 	assert_array(GUIDE.notes_at(loaded.titan_influence())).is_equal(GUIDE.notes_at(3))
 
@@ -223,8 +224,8 @@ func test_unlocked_notes_come_back_with_the_powered_gates() -> void:
 ## The one cursor carries out of the Bodies section and into the Automatons, rather
 ## than the Automatons adding a second level of navigation.
 func test_down_carries_the_cursor_from_a_body_into_the_automatons() -> void:
-	_gs.mark_planet_visited("Sun/Veld")
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.VISITED_BODIES, "Sun/Veld")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	assert_str(tab.selected_key()).is_equal("Sun/Veld")
 	assert_int(tab._automaton_index()).is_equal(-1)
@@ -252,7 +253,7 @@ func test_an_empty_list_claims_no_keys() -> void:
 
 ## LEFT / RIGHT stay unclaimed for a future tab's adjustable rows.
 func test_left_and_right_stay_unclaimed() -> void:
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()
 	assert_bool(tab.handle_action(&"menu_left")).is_false()
 	assert_bool(tab.handle_action(&"menu_right")).is_false()
@@ -262,7 +263,7 @@ func test_left_and_right_stay_unclaimed() -> void:
 func test_a_met_automaton_earns_the_cursor_keys() -> void:
 	var tab := _records_tab()
 	assert_str(tab.hint()).is_equal(LogTab.shell_keys())
-	_gs.mark_automaton_met("UNIT-7")
+	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	tab.refresh()
 	assert_str(tab.hint()).is_equal("%s   %s" % [RecordsTab.cursor_keys(), LogTab.shell_keys()])
 
@@ -272,7 +273,6 @@ func test_a_met_automaton_earns_the_cursor_keys() -> void:
 ## A radio in the tree, with its show-once flags kept out of the player's save.
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
-	radio.persist = false
 	radio.guide_awake = true  # asleep, it takes no calls at all
 	add_child(radio)
 	return radio
@@ -282,13 +282,12 @@ func _conv(id: StringName) -> RadioConversation:
 	return RadioConversation.make(id, [RadioLine.make("%s line" % id)])
 
 
-## Titan Influence stubbed at `count`: one powered Gate per Module online, which is
+## Titan Influence brought up to `count`: one powered Gate per Module online, which is
 ## exactly what GameState.titan_influence() counts and what the dev panel's MODULES
-## ONLINE row sets.
+## ONLINE row sets. A Module never goes offline, so it only ever goes up.
 func _power_modules(count: int) -> void:
-	_gs.powered_gates.clear()
 	for i in count:
-		_gs.mark_gate_powered("Sun/Module%d/Gate" % i)
+		_gs.progress.mark(Progress.POWERED_GATES, "Sun/Module%d/Gate" % i)
 
 
 func _records_tab() -> RecordsTab:

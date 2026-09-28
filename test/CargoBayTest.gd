@@ -93,12 +93,12 @@ func test_dead_to_the_sweep_until_the_cold_start() -> void:
 	var f := _bay()
 	assert_bool(f.answers_sweep()).is_false()
 	assert_float(f.answer_clarity(10.0, SonarPulse.END_RADIUS)).override_failure_message("not even inside the ring").is_equal(0.0)
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	assert_bool(f.answers_sweep()).is_true()
 	assert_float(f.answer_clarity(10.0, SonarPulse.END_RADIUS)).is_equal(1.0)
 
 func test_after_the_cold_start_it_answers_from_long_range() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var f := _bay()
 	var ring := SonarPulse.END_RADIUS
 	assert_float(f.answer_range).is_greater(ring * 10.0)
@@ -138,7 +138,7 @@ func test_a_sweep_out_of_reach_gets_an_answer_only_after_the_cold_start() -> voi
 	pulse.send(1.0)
 	await get_tree().create_timer(SonarPulse.LIFETIME + 0.2).timeout
 	assert_int(f._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(0)
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	pulse.send(1.0)
 	await get_tree().create_timer(SonarPulse.LIFETIME + 0.2).timeout
 	var echoes: Array = f._visual.get_children().filter(func(c): return c is SonarEcho)

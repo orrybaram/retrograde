@@ -53,7 +53,7 @@ screenshot terminal_2_log
 wait_until pt.core().is_starting() 8
 assert not pt.visible_ui().has("CoreTerminal") "the console steps aside for the wake"
 wait_until pt.core().started 6
-assert get_tree().get_first_node_in_group("game_state").core_started "the core is running"
+assert get_tree().get_first_node_in_group("game_state").progress.flagged("core_started") "the core is running"
 assert get_tree().get_first_node_in_group("station_power").powered "power comes up from the core"
 assert pt.core().get_parent().get_node("Lights").is_waking() "the lights catch one by one"
 assert pt.state_name() == "LandedState" "watched from the dock"

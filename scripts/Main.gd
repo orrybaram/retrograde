@@ -51,11 +51,12 @@ var booted_last_spawn := false
 
 func _ready() -> void:
 	add_to_group("main")
-	# The game's Progress ledger writes through to the save file; every other GameState
-	# (tests, labs) keeps its facts in memory.
+	# The game's Progress ledger and radio tips write through to the save file; every other
+	# GameState and radio (tests, labs) keeps them in memory.
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
 		gs.progress = Progress.new(Progress.FileStore.new(Playtest.save_path()))
+	RobotRadio.save_path = Playtest.save_path()
 	_build_fade_overlay()
 	# Connect menu signals
 	if start_menu:
@@ -364,8 +365,10 @@ func load_game() -> void:
 	if ship and ship.ship_polygon:
 		ship.ship_polygon.visible = false
 
-	# The boot terminal only runs on a powered station; before that the dark covers the spawn
-	var booting := _cover_spawn(Save.load_core_started())
+	# The boot terminal only runs on a powered station; before that the dark covers the spawn.
+	# Whether the save's is powered is the ledger's to say, before it is loaded.
+	var gs = get_tree().get_first_node_in_group("game_state") as GameState
+	var booting := _cover_spawn(gs != null and gs.progress.resumed().flagged(Progress.CORE_STARTED))
 
 	# Unpause so spawner can work
 	get_tree().paused = false
@@ -374,7 +377,6 @@ func load_game() -> void:
 	await get_tree().process_frame
 
 	# Load game state (Stores, ship stats, inventory)
-	var gs = get_tree().get_first_node_in_group("game_state") as GameState
 	var clamped: Freight = null
 	if gs and ship:
 		Save.load_into(gs, ship)
@@ -384,7 +386,7 @@ func load_game() -> void:
 		Freight.clear_all(get_tree())
 		Save.restore_wreck_gems(ship.get_parent())
 		Save.restore_derelicts(ship.get_parent(), ship.ship_polygon)
-		clamped = Save.restore_freight(ship.get_parent())
+		clamped = Save.restore_freight(ship.get_parent(), gs.progress)
 
 	if encounter_field:
 		encounter_field.restore(Save.load_encounters())

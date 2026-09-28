@@ -40,7 +40,7 @@ func _gate(planet_name: String, orbit: float) -> Gate:
 
 
 func _power(gate: Gate) -> Gate:
-	_gs.mark_gate_powered(gate.save_key())
+	_gs.progress.mark(Progress.POWERED_GATES, gate.save_key())
 	return gate
 
 
@@ -197,7 +197,7 @@ func test_arriving_never_powers_anything_down_or_up() -> void:
 ## Fuel is SR-7's to give (docs/OPENING.md §9); a Gate's berth leaves the tank as it was,
 ## even with SR-7's core running.
 func test_a_gate_dock_does_not_refuel() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var gate := _power(_gate("Veld", 253125.0))
 	var ship := _ship()
 	ship.drive.fuel = 0.0

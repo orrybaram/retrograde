@@ -22,7 +22,6 @@ func _conv(id: StringName, priority: Priority = Priority.HINT, line_count: int =
 
 func _radio() -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
-	radio.persist = false
 	# Most of these are about the tips, which only an awake guide gives
 	radio.guide_awake = true
 	return radio
@@ -204,7 +203,6 @@ func test_signals_follow_the_lines() -> void:
 func test_seen_flags_round_trip_through_save() -> void:
 	ConfigFile.new().save(SAVE_FILE)  # an existing game save
 	var radio := _radio()
-	radio.persist = true
 	radio.save_path = SAVE_FILE
 	radio.request(_conv(&"first_tip", Priority.HINT, 1, true))
 	radio.request(_conv(&"second_tip", Priority.HINT, 1, true))
@@ -225,6 +223,15 @@ func test_saving_flags_keeps_other_save_data() -> void:
 	cfg.load(SAVE_FILE)
 	assert_int(cfg.get_value("stats", "stores", 0)).is_equal(42)
 	assert_array(Array(Save.load_radio_seen(SAVE_FILE))).is_equal(["a"])
+
+
+## A radio nobody pointed at a save (every one but the game's) keeps its flags in memory.
+func test_a_radio_with_no_save_path_writes_nothing() -> void:
+	ConfigFile.new().save(SAVE_FILE)
+	var radio := _radio()
+	radio.request(_conv(&"tip", Priority.HINT, 1, true))
+	assert_bool(radio.has_seen(&"tip")).is_true()
+	assert_int(Save.load_radio_seen(SAVE_FILE).size()).is_equal(0)
 
 
 func test_flags_never_create_a_save_file() -> void:

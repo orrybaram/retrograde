@@ -868,8 +868,7 @@ func rel_speed(planet_name: String) -> float:
 func skip_opening(fit_cargo_bay := true) -> void:
 	get_tree().call_group("boot_log", "forget")
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	gs.core_started = true
-	Save.save_core_started(true)
+	gs.progress.flag(Progress.CORE_STARTED)
 	for group in ["dock_arms", "core_housing", "station_power"]:
 		get_tree().call_group(group, "refresh")
 	for station in get_tree().get_nodes_in_group("space_stations"):
@@ -1058,8 +1057,7 @@ func seat_sr7(live := false) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	var last := ""
 	for id in GameState.station_pieces():
-		gs.mark_section_seated(id)
-		Save.save_seated_section(id, PackedStringArray(gs.seated_sections.keys()))
+		gs.progress.mark(Progress.SEATED_SECTIONS, id)
 		var f := section(id)
 		if f:
 			f.queue_free()

@@ -2,10 +2,10 @@ extends Node
 class_name PlanetLog
 
 ## Marks a Body Visited. Flying into a Body's inner orbit (Planet.scan_radius()) earns
-## it its Record in the Log. The Record carries no survey (docs/adr/0003). Permanent, and
-## written to the save the moment it happens, because a Body is reached in open flight
-## with no dock to hang a full save off. Works from the first minute. Added to the Ship
-## at runtime.
+## it its Record in the Log. The Record carries no survey (docs/adr/0003). Permanent: it is
+## marked in the Progress ledger, which writes it through the moment it happens, because a
+## Body is reached in open flight with no dock to hang a full save off. Works from the
+## first minute. Added to the Ship at runtime.
 
 var _ship: Ship = null
 var _gs: GameState = null
@@ -19,20 +19,14 @@ func _physics_process(_delta: float) -> void:
 	mark_at(_ship.global_position)
 
 ## Mark whatever Body's inner orbit holds `pos`, if any. Returns the Body that earned a
-## new Record on this call, or null when nothing did. `save_file` defaults to the game
-## save; tests hand it their own.
-func mark_at(pos: Vector2, save_file: String = "") -> Planet:
+## new Record on this call, or null when nothing did.
+func mark_at(pos: Vector2) -> Planet:
 	var gs := _game_state()
 	if not gs:
 		return null
 	var body := PlanetScan.deepest(pos, get_tree().get_nodes_in_group("planets"))
-	if not body:
+	if not body or not gs.progress.mark(Progress.VISITED_BODIES, body.save_key()):
 		return null
-	var key := body.save_key()
-	if key == "" or gs.is_planet_visited(key):
-		return null
-	gs.mark_planet_visited(key)
-	Save.save_visited_planets(PackedStringArray(gs.visited_planets.keys()), save_file)
 	return body
 
 func _game_state() -> GameState:

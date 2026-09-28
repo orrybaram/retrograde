@@ -10,7 +10,7 @@ extends GdUnitTestSuite
 
 func _gs(stores: int) -> GameState:
 	var gs := auto_free(GameState.new()) as GameState
-	gs.core_started = true
+	gs.progress.flag(Progress.CORE_STARTED)
 	gs.stores = stores
 	return gs
 

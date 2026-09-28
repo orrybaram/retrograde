@@ -25,7 +25,7 @@ func _game_state() -> GameState:
 ## Brings Modules online until `influence` of them are.
 func _power_up_to(gs: GameState, influence: int) -> void:
 	for planet in PLANETS.slice(0, influence):
-		gs.mark_gate_powered(planet)
+		gs.progress.mark(Progress.POWERED_GATES, planet)
 
 
 ## A HudGlitch over a stand-in dashboard. It reads whichever GameState is in the tree,
@@ -133,10 +133,10 @@ func test_the_hud_reads_its_baseline_off_the_modules_that_are_online() -> void:
 	add_child(glitch)
 
 	assert_float(glitch.severity()).is_equal(0.0)
-	gs.mark_gate_powered("Veld")
+	gs.progress.mark(Progress.POWERED_GATES, "Veld")
 	assert_float(glitch.baseline()).is_equal_approx(TitanInfluence.baseline_glitch(1), 0.0001)
 	assert_float(glitch.severity()).is_equal_approx(TitanInfluence.baseline_glitch(1), 0.0001)
-	gs.mark_gate_powered("Crom")
+	gs.progress.mark(Progress.POWERED_GATES, "Crom")
 	assert_float(glitch.severity()).is_greater(TitanInfluence.baseline_glitch(1))
 
 

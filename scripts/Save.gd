@@ -3,11 +3,11 @@ class_name Save
 
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (Stores, death count), Ship stats (fuel, hull, cargo),
-## InventoryManager contents, planet orbital angles, Visited Bodies, dug-out ore seams
-## (seconds until they refill), powered Gates, the Progress ledger (named Gates), the Automatons the player
-## has met, which radio tips were seen, which Sections are seated in their Mounts, and every
-## piece of Freight, where it is (a load clamped to the ship puts the ship back in flight
-## with it on the nose, see load_game).
+## InventoryManager contents, planet orbital angles, dug-out ore seams (seconds until they
+## refill), the Progress ledger (every Record, see Progress.FileStore for where each kind
+## goes), which radio tips were seen, what waits in SR-7's Cradle, and every piece of
+## Freight, where it is (a load clamped to the ship puts the ship back in flight with it on
+## the nose, see load_game).
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
@@ -15,21 +15,10 @@ const ENCOUNTER_SECTION := "encounters"
 const ENCOUNTER_CONSUMED_KEY := "consumed"
 const ENCOUNTER_ELAPSED_KEY := "elapsed"
 const ENCOUNTER_CLAIMED_KEY := "claimed"
-const VISIT_SECTION := "visited"
-const VISIT_PLANETS_KEY := "planets"
 const ORE_SECTION := "ore"
 const ORE_REGROW_KEY := "regrow"
-const GATE_SECTION := "gates"
-const GATE_POWERED_KEY := "powered"
-const FIND_SECTION := "finds"
-const FIND_WRECKS_KEY := "identified_wrecks"
-const AUTOMATON_SECTION := "automatons"
-const AUTOMATON_MET_KEY := "met"
 const SECTION_SECTION := "sections"
-const SECTION_SEATED_KEY := "seated"
-const SECTION_CORE_KEY := "core_started"
 const SECTION_CRADLE_KEY := "cradled"
-const SECTION_FITTED_KEY := "fitted"
 
 ## `path` defaults to the game save.
 static func save(gs: GameState, ship: Ship, path: String = "") -> void:
@@ -80,17 +69,10 @@ static func save(gs: GameState, ship: Ship, path: String = "") -> void:
 						cfg.set_value("planets", planet_key, planet.orbital_angle)
 
 	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, RobotRadio.seen_ids())
-	cfg.set_value(VISIT_SECTION, VISIT_PLANETS_KEY, PackedStringArray(gs.visited_planets.keys()))
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
-	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
 	for kind in Progress.KINDS:
 		Progress.FileStore.put(cfg, kind, gs.progress.list(kind))
-	cfg.set_value(FIND_SECTION, FIND_WRECKS_KEY, PackedStringArray(gs.identified_wrecks.keys()))
-	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray(gs.met_automatons.keys()))
-	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray(gs.seated_sections.keys()))
-	cfg.set_value(SECTION_SECTION, SECTION_CORE_KEY, gs.core_started)
 	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, gs.cradled)
-	cfg.set_value(SECTION_SECTION, SECTION_FITTED_KEY, PackedStringArray(gs.fitted.keys()))
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -106,14 +88,13 @@ static func save(gs: GameState, ship: Ship, path: String = "") -> void:
 
 ## Writes only the radio show-once flags into an existing save, keeping the rest.
 ## With no save yet this does nothing (a flags-only file would enable CONTINUE);
-## the next full save() writes them. `path` defaults to the game save.
-static func save_radio_seen(ids: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
+## the next full save() writes them. `path` is the save file (RobotRadio.save_path).
+static func save_radio_seen(ids: PackedStringArray, path: String) -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
+	if cfg.load(path) != OK:
 		return
 	cfg.set_value(RADIO_SECTION, RADIO_SEEN_KEY, ids)
-	cfg.save(file)
+	cfg.save(path)
 
 static func load_radio_seen(path: String = "") -> PackedStringArray:
 	var cfg := ConfigFile.new()
@@ -132,26 +113,9 @@ static func load_encounters(path: String = "") -> Dictionary:
 		"claimed": PackedStringArray(cfg.get_value(ENCOUNTER_SECTION, ENCOUNTER_CLAIMED_KEY, PackedStringArray())),
 		"elapsed": float(cfg.get_value(ENCOUNTER_SECTION, ENCOUNTER_ELAPSED_KEY, 0.0)),
 	}
-## Writes only the Visited Bodies into an existing save, keeping the rest: a Body is
-## reached in open flight, with no dock to hang a full save off.
-## With no save yet this does nothing; the next full save() writes them.
-static func save_visited_planets(keys: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(VISIT_SECTION, VISIT_PLANETS_KEY, keys)
-	cfg.save(file)
 
-## The Bodies the player has flown into the inner orbit of, in visit order. Each one
-## holds a Record in the Log; anything missing was never reached and has no row.
-static func load_visited_planets(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(VISIT_SECTION, VISIT_PLANETS_KEY, PackedStringArray()))
-
-## Writes only the spent-ore regrow timers into an existing save, like save_visited_planets.
+## Writes only the spent-ore regrow timers into an existing save, keeping the rest. With no
+## save yet this does nothing; the next full save() writes them.
 static func save_ore_regrowth(spent: Dictionary, path: String = "") -> void:
 	var file := path if path != "" else Playtest.save_path()
 	var cfg := ConfigFile.new()
@@ -172,83 +136,8 @@ static func load_ore_regrowth(path: String = "") -> Dictionary:
 			out[str(ore_id)] = float(spent[ore_id])
 	return out
 
-## Writes only the powered Gates into an existing save, keeping the rest, so a Gate
-## powered at the far end of the system is kept the moment its Module comes online.
-## With no save yet this does nothing; the next full save() writes them.
-static func save_powered_gates(keys: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, keys)
-	cfg.save(file)
-
-## The planet keys whose Gates are powered — one per Module online.
-static func load_powered_gates(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray()))
-
-## Writes only the named wrecks into an existing save, like save_powered_gates: UNIT-7
-## names one in open flight. With no save yet the next full save() writes them.
-static func save_identified_wrecks(keys: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(FIND_SECTION, FIND_WRECKS_KEY, keys)
-	cfg.save(file)
-
-## The wrecks UNIT-7 has already named. A save from before this has named none.
-static func load_identified_wrecks(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(FIND_SECTION, FIND_WRECKS_KEY, PackedStringArray()))
-
-## Writes only the met Automatons into an existing save, like save_powered_gates: the
-## player meets the Guide on the first transmission, with no dock to hang a full save off.
-## With no save yet this does nothing; the next full save() writes them.
-static func save_met_automatons(designations: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, designations)
-	cfg.save(file)
-
-## The designations of the Automatons the player has met — one Record each in the Log.
-## A save from before this reads as nobody met, which is what it was.
-static func load_met_automatons(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray()))
-
-## Writes a Section seated into an existing save the moment it happens, in flight with no
-## dock to hang a full save off: the seated list, and the saved Freight without that
-## Section, so a reload never brings the piece back as well as the seated Section.
-## With no save yet this does nothing; the next full save() writes it.
-static func save_seated_section(id: String, seated: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, seated)
-	var rows: Array = cfg.get_value("wreck", "freight", [])
-	cfg.set_value("wreck", "freight", rows.filter(func(row): return not (row is Dictionary and row.get("section", "") == id)))
-	cfg.save(file)
-
-## The Sections seated back in their Mounts. A save from before this has none.
-static func load_seated_sections(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray()))
-
 ## Writes what is waiting in SR-7's Cradle into an existing save the moment it changes,
-## like a seated Section: the Components in it, and the saved Freight without any of them,
+## in flight: the Components in it, and the saved Freight without any of them,
 ## so a reload never brings one back loose as well as in the Cradle. With no save yet this
 ## does nothing; the next full save() writes it.
 static func save_cradled(ids: PackedStringArray, path: String = "") -> void:
@@ -271,41 +160,6 @@ static func load_cradled(path: String = "") -> PackedStringArray:
 	if v is String:
 		return PackedStringArray([v]) if v != "" else PackedStringArray()
 	return PackedStringArray(v)
-
-## Writes a Component fitted from the Cradle into an existing save the moment it happens:
-## what is fitted (the Cradle's list is written by save_cradled). With no save yet this does
-## nothing; the next full save() writes it.
-static func save_fitted(ids: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(SECTION_SECTION, SECTION_FITTED_KEY, ids)
-	cfg.save(file)
-
-## The Components fitted to the ship. A save from before fitting has none.
-static func load_fitted(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(SECTION_SECTION, SECTION_FITTED_KEY, PackedStringArray()))
-
-## Writes SR-7's core cold start into an existing save the moment it catches: it happens in
-## flight, with no dock to hang a full save off. With no save yet the next full save() writes it.
-static func save_core_started(started: bool, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(SECTION_SECTION, SECTION_CORE_KEY, started)
-	cfg.save(file)
-
-## Whether SR-7's core has been cold-started. A save from before this has not.
-static func load_core_started(path: String = "") -> bool:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return false
-	return bool(cfg.get_value(SECTION_SECTION, SECTION_CORE_KEY, false))
 
 ## Helper function to get a unique key for a planet
 ## Uses planet name, and for moons includes parent name
@@ -338,26 +192,13 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	# Surveys are not kept: an old save's planetary scans stay behind, so its seams stay
 	# dormant with everyone else's (docs/OPENING.md §9).
 	gs.scanned_planets.clear()
-	gs.visited_planets.clear()
-	for key in load_visited_planets():
-		gs.mark_planet_visited(key)
 	gs.spent_ore = load_ore_regrowth()
-	gs.powered_gates.clear()
-	for gate_key in load_powered_gates():
-		gs.mark_gate_powered(gate_key)
+	# Every Record comes back from the ledger's own store, then an old save's half-seated
+	# lit station is made whole (GameState.repair_station).
 	gs.progress = gs.progress.resumed()
-	gs.identified_wrecks.clear()
-	for wreck_key in load_identified_wrecks():
-		gs.mark_wreck_identified(wreck_key)
-	gs.met_automatons.clear()
-	for designation in load_met_automatons():
-		gs.mark_automaton_met(designation)
-	gs.restore_station(load_seated_sections(), load_core_started())
+	gs.repair_station()
 	gs.cradled = load_cradled()
-	gs.fitted.clear()
-	for id in load_fitted():
-		gs.mark_fitted(id)
-	RobotRadio.guide_awake = gs.core_started
+	RobotRadio.guide_awake = gs.progress.flagged(Progress.CORE_STARTED)
 	
 	# Load inventory into InventoryManager
 	var inventory_dict: Dictionary = {}
@@ -398,11 +239,12 @@ static func restore_derelicts(world: Node, hull: Node2D) -> void:
 
 ## Put saved Freight back into `world` (pieces left on derelicts come back with those).
 ## Returns the piece that was clamped to the ship, for the caller to clamp again, or null.
-static func restore_freight(world: Node) -> Freight:
+## Freight decides which rows come back: none for a Section `progress` holds as seated.
+static func restore_freight(world: Node, progress: Progress) -> Freight:
 	var cfg := ConfigFile.new()
 	if cfg.load(Playtest.save_path()) != OK:
 		return null
-	return Freight.restore_all(world, cfg.get_value("wreck", "freight", []))
+	return Freight.restore_all(world, cfg.get_value("wreck", "freight", []), progress)
 
 ## The ship's velocity when it was saved (it only matters for a ship saved in flight).
 static func load_spawn_velocity() -> Vector2:

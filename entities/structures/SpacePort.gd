@@ -130,7 +130,7 @@ func is_open() -> bool:
 	if not needs_core:
 		return true
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	return gs != null and gs.core_started
+	return gs != null and gs.progress.flagged(Progress.CORE_STARTED)
 
 ## Whether a ship can dock here at all: the port is out on its arm.
 func accepts_docking() -> bool:

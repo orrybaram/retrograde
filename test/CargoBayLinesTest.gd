@@ -27,7 +27,6 @@ func _on_requested(conv: RadioConversation) -> void:
 
 func _radio(awake := true) -> Node:
 	var radio: Node = auto_free(RADIO_SCRIPT.new())
-	radio.persist = false
 	radio.guide_awake = awake
 	return radio
 
@@ -125,7 +124,7 @@ func test_fitted_is_read_from_the_game_state() -> void:
 	var radio := _radio()
 	add_child(radio)
 	assert_bool(radio.cargo_bay_fitted()).is_false()
-	_gs.mark_fitted(Components.CARGO_BAY)
+	_gs.progress.mark(Progress.FITTED_COMPONENTS, Components.CARGO_BAY)
 	assert_bool(radio.cargo_bay_fitted()).is_true()
 
 # --- fitting ---
@@ -167,13 +166,12 @@ func _wreck() -> HaulerWreck:
 	veld.enable_orbiting = false
 	add_child(veld)
 	var wreck: HaulerWreck = auto_free(HaulerWreck.new())
-	wreck.persist = false
 	veld.add_child(wreck)
 	wreck.set_process(false)  # driven by hand
 	return wreck
 
 func test_the_wreck_is_unidentified_until_close_approach() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var wreck := _wreck()
 	assert_bool(wreck.is_identified()).is_false()
 	var far := wreck.global_position + Vector2(Identifiable.RANGE * 2.0, 0)
@@ -186,7 +184,7 @@ func test_the_wreck_is_unidentified_until_close_approach() -> void:
 	assert_array(_requested).contains_exactly([HaulerWreck.MSG_IDENTIFIED])
 
 func test_it_is_named_only_once() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var wreck := _wreck()
 	wreck.identify_if_near(wreck.global_position)
 	assert_bool(wreck.identify_if_near(wreck.global_position)).is_false()
@@ -203,17 +201,30 @@ func test_it_is_named_flatly() -> void:
 	assert_str(HaulerWreck.MSG_IDENTIFIED.lines[0].text).contains(HaulerWreck.NAME)
 	assert_bool(HaulerWreck.MSG_IDENTIFIED.pause_game).override_failure_message("named in flight").is_false()
 
-func test_named_wrecks_round_trip_through_the_save() -> void:
+## Naming the wreck marks it in the ledger once, and a continue brings the name back.
+func test_the_name_comes_back_on_a_continue() -> void:
+	_gs.progress.flag(Progress.CORE_STARTED)
+	var wreck := _wreck()
+	wreck.identify_if_near(wreck.global_position)
+	_gs.progress = _gs.progress.resumed()
+	assert_array(Array(_gs.progress.list(Progress.IDENTIFIED_WRECKS))).contains_exactly([wreck.save_key()])
+	assert_bool(wreck.is_identified()).is_true()
+
+## Named in flight, the wreck is written into the save where saves before the ledger kept it.
+func test_named_wrecks_round_trip_through_the_save_file() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 0)
 	cfg.save(SAVE_FILE)
-	Save.save_identified_wrecks(PackedStringArray(["hauler_veld"]), SAVE_FILE)
-	assert_array(Save.load_identified_wrecks(SAVE_FILE)).contains_exactly(["hauler_veld"])
+	Progress.new(Progress.FileStore.new(SAVE_FILE)).mark(Progress.IDENTIFIED_WRECKS, "hauler_veld")
+	cfg.load(SAVE_FILE)
+	assert_array(Array(cfg.get_value("finds", "identified_wrecks"))).contains_exactly(["hauler_veld"])
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_bool(ledger.holds(Progress.IDENTIFIED_WRECKS, "hauler_veld")).is_true()
 
 func test_a_new_game_forgets_the_name() -> void:
-	_gs.mark_wreck_identified("hauler_veld")
+	_gs.progress.mark(Progress.IDENTIFIED_WRECKS, "hauler_veld")
 	_gs.reset_all_state()
-	assert_bool(_gs.is_wreck_identified("hauler_veld")).is_false()
+	assert_bool(_gs.progress.holds(Progress.IDENTIFIED_WRECKS, "hauler_veld")).is_false()
 
 # --- the lines ---
 

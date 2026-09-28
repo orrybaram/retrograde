@@ -7,7 +7,7 @@ extends LogTab
 ## through both sections, top to bottom, and one rule divides the tab full height.
 ##
 ## The Log lists only what the player reached — no row for anywhere unvisited, and
-## never `? ? ?` (docs/adr/0003). The Bodies section reads GameState.visited_planets
+## never `? ? ?` (docs/adr/0003). The Bodies section reads the ledger's Progress.VISITED_BODIES
 ## and never the `planets` group: a row per Body in the scene would tell the player how
 ## many there are to find, which is the spoiler docs/adr/0002 protects.
 ##
@@ -159,7 +159,7 @@ func selected_key() -> String:
 
 func refresh() -> void:
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
-	_visited = PackedStringArray(gs.visited_planets.keys()) if gs else PackedStringArray()
+	_visited = gs.progress.list(Progress.VISITED_BODIES) if gs else PackedStringArray()
 	_met = Automatons.met(gs)
 	_cursor = clampi(_cursor, 0, maxi(_row_count() - 1, 0))
 	# An empty list is correct output for a player who has stayed home and met nobody.

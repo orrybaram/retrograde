@@ -16,7 +16,7 @@ class_name CoreHousing
 ##   The seating clunk lands (SEAT - heard, never seen; the row stays as crooked as whoever
 ##   left it), it turns over and the slots catch outward (CYCLE), and the power comes up
 ##   from here (StationPower). Once the dish is on the Sun, UNIT-7 comes on the comms
-##   (RobotRadio.wake_guide). The started state is GameState.core_started.
+##   (RobotRadio.wake_guide). The started state is the ledger's Progress.CORE_STARTED.
 
 ## Cold start pacing, s: the beat before the clunk lands, the beat after it, and the catch.
 const SEAT_TIME := 0.5
@@ -88,7 +88,7 @@ func refresh() -> void:
 	_whole = is_whole(gs)
 	if _starting:
 		return
-	started = gs != null and gs.core_started
+	started = gs != null and gs.progress.flagged(Progress.CORE_STARTED)
 	_lit = 1.0 if started else 0.0
 	_aux_time = 0.0
 	queue_redraw()
@@ -137,8 +137,7 @@ func cold_start() -> void:
 	_starting = false
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
-		gs.core_started = true
-		Save.save_core_started(true)
+		gs.progress.flag(Progress.CORE_STARTED)
 	EventBus.core_started.emit()
 	var power := get_parent().get_node_or_null("StationPower") as StationPower
 	if power:

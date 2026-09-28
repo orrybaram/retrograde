@@ -168,7 +168,7 @@ func is_working() -> bool:
 	if not arm_home():
 		return false
 	var gs := _game_state()
-	return gs == null or gs.core_started
+	return gs == null or gs.progress.flagged(Progress.CORE_STARTED)
 
 ## A load in the claw, or the pad still coming back up from taking one below.
 func is_full() -> bool:

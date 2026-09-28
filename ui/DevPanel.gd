@@ -442,12 +442,11 @@ func _progress_rows() -> Array[Dictionary]:
 
 	rows.append(_value_row(
 		"MODULES ONLINE",
-		"Powers Gates in order, free. This is the number the Titan reads.",
+		"RIGHT powers the next Gate in order, free; ENTER all of them. This is the number the Titan reads, and a Module never goes back offline (RESET ALL STATE).",
 		func() -> String: return "%d / %d" % [gs.titan_influence(), Gate.MODULE_COUNT],
 		func(direction: int) -> void:
-			var count := Gate.MODULE_COUNT if direction == 0 \
-				else clampi(gs.titan_influence() + direction, 0, Gate.MODULE_COUNT)
-			_set_modules(count)
+			if direction >= 0:
+				_power_modules(Gate.MODULE_COUNT if direction == 0 else 1)
 	))
 
 	rows.append(_action_row(
@@ -456,18 +455,19 @@ func _progress_rows() -> Array[Dictionary]:
 		func() -> void: Playtest.seat_sr7()
 	))
 
-	rows.append(_toggle_row(
+	rows.append(_value_row(
 		"SR-7 CORE",
-		"Cold-started: the station powered and UNIT-7 awake. OFF puts the core back cold.",
-		func() -> bool: return gs.core_started,
-		func(on: bool) -> void:
+		"RIGHT or ENTER cold-starts it: the station powered and UNIT-7 awake, for good (RESET ALL STATE).",
+		func() -> String: return "ON" if gs.progress.flagged(Progress.CORE_STARTED) else "OFF",
+		func(direction: int) -> void:
+			if direction < 0:
+				return
 			# A running core means every piece is home: it does not listen until the station
-			# is whole (CoreHousing.listens), so turning it on seats them too. Otherwise the
+			# is whole (CoreHousing.listens), so starting it seats them too. Otherwise the
 			# save keeps a lit station with its Sections still floating outside it.
-			if on:
-				Playtest.seat_sr7()
-			gs.core_started = on
-			RobotRadio.guide_awake = on
+			Playtest.seat_sr7()
+			gs.progress.flag(Progress.CORE_STARTED)
+			RobotRadio.guide_awake = true
 			get_tree().call_group("core_housing", "refresh")
 			get_tree().call_group("station_power", "refresh")
 			get_tree().call_group("dock_arms", "refresh")
@@ -511,8 +511,8 @@ func _progress_rows() -> Array[Dictionary]:
 	return rows
 
 
-## Every Gate that stands for a Module, in save-key order so a count maps to the
-## same set of Gates each time. The Core's Gate is not a Module.
+## Every Gate that stands for a Module, in save-key order so the panel always brings
+## the same Gates online next. The Core's Gate is not a Module.
 func _module_gates() -> Array[Gate]:
 	var gates: Array[Gate] = []
 	for node in get_tree().get_nodes_in_group("gates"):
@@ -523,11 +523,13 @@ func _module_gates() -> Array[Gate]:
 	return gates
 
 
-func _set_modules(count: int) -> void:
-	gs.powered_gates.clear()
-	var gates := _module_gates()
-	for i in mini(count, gates.size()):
-		gs.mark_gate_powered(gates[i].save_key())
+## Brings up to `count` more Modules online: the first Gates in order not yet powered.
+func _power_modules(count: int) -> void:
+	for gate in _module_gates():
+		if count <= 0:
+			return
+		if gs.progress.mark(Progress.POWERED_GATES, gate.save_key()):
+			count -= 1
 
 
 func _orbit_planets() -> Array[Planet]:

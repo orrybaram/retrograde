@@ -192,7 +192,7 @@ func test_the_free_floor_is_a_quarter_once_the_core_runs() -> void:
 	var gs := auto_free(GameState.new()) as GameState
 	assert_float(drive.free_floor(null)).is_equal(0.0)
 	assert_float(drive.free_floor(gs)).is_equal(0.0)
-	gs.core_started = true
+	gs.progress.flag(Progress.CORE_STARTED)
 	assert_float(drive.free_floor(gs)).is_equal(Drive.CAPACITY * Drive.FREE_FRACTION)
 	drive.top_up_to_free_floor(gs)
 	assert_float(drive.fuel).is_equal(Drive.CAPACITY * Drive.FREE_FRACTION)

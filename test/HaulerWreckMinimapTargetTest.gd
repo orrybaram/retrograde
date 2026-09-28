@@ -17,20 +17,19 @@ func _wreck() -> HaulerWreck:
 	veld.enable_orbiting = false
 	add_child(veld)
 	var wreck: HaulerWreck = auto_free(HaulerWreck.new())
-	wreck.persist = false
 	veld.add_child(wreck)
 	wreck.set_process(false)  # driven by hand
 	return wreck
 
 
 func test_nothing_on_the_scope_before_the_dish_pings() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var t := HaulerWreckMinimapTarget.new(_wreck())
 	assert_bool(t.is_minimap_visible()).is_false()
 
 
 func test_the_dish_ping_puts_it_on_the_scope() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var wreck := _wreck()
 	var t := HaulerWreckMinimapTarget.new(wreck)
 	wreck.on_dish_ping()
@@ -41,7 +40,7 @@ func test_the_dish_ping_puts_it_on_the_scope() -> void:
 
 
 func test_it_hears_the_dish_from_across_the_system() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var wreck := _wreck()
 	var dish: CommDish = auto_free(CommDish.new())
 	dish.add_child(Polygon2D.new())  # a part to glow
@@ -55,7 +54,7 @@ func test_it_hears_the_dish_from_across_the_system() -> void:
 
 
 func test_it_goes_quiet_once_identified() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var wreck := _wreck()
 	var t := HaulerWreckMinimapTarget.new(wreck)
 	wreck.on_dish_ping()
@@ -64,7 +63,7 @@ func test_it_goes_quiet_once_identified() -> void:
 
 
 func test_a_load_after_the_cold_start_has_it_pinging() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	var wreck := _wreck()
 	EventBus.planets_restored.emit()
 	assert_bool(HaulerWreckMinimapTarget.new(wreck).is_minimap_visible()).is_true()

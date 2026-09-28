@@ -13,7 +13,7 @@ class_name Mount
 ## of a seat, it is pulled home over SEAT_TIME with a clunk, the Freight is gone, and
 ## `part` is the station again. The Mount's own transform is its main seat (and what the
 ## tracker points at). Only the Section with
-## the Mount's id fits. The seated state lives in GameState.seated_sections.
+## the Mount's id fits. The seated state lives in the ledger (Progress.SEATED_SECTIONS).
 
 ## Close enough to seat: the docking tolerance.
 const SEAT_RANGE := 40.0
@@ -87,7 +87,7 @@ func _ready() -> void:
 		_build_alarm()
 	EventBus.planets_restored.connect(refresh)
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	_show_seated(gs != null and gs.is_section_seated(section))
+	_show_seated(gs != null and gs.progress.holds(Progress.SEATED_SECTIONS, section))
 	_register_with_minimap.call_deferred()
 
 ## A faint pulse on the minimap roughly where this Mount's piece is, until it is home
@@ -161,7 +161,7 @@ func tracking_target() -> NodeTrackingTarget:
 ## world. Runs on every new game and load (planets_restored).
 func refresh() -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
-	_show_seated(gs != null and gs.is_section_seated(section))
+	_show_seated(gs != null and gs.progress.holds(Progress.SEATED_SECTIONS, section))
 	ensure_section()
 
 ## The Section is never lost: while the Mount is empty and no piece of it is anywhere in
@@ -233,8 +233,7 @@ func seat(f: Freight) -> void:
 	seated = true
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	if gs:
-		gs.mark_section_seated(section)
-		Save.save_seated_section(section, PackedStringArray(gs.seated_sections.keys()))
+		gs.progress.mark(Progress.SEATED_SECTIONS, section)
 	# From here it is part of the station, not Freight: no saves, marks or Sweep answers
 	f.remove_from_group("freight")
 	f.remove_from_group("sonar_listeners")

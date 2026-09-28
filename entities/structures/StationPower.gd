@@ -29,7 +29,7 @@ func _ready() -> void:
 
 ## Whether `gs` has the core running.
 static func is_powered(gs: GameState) -> bool:
-	return gs != null and gs.core_started
+	return gs != null and gs.progress.flagged(Progress.CORE_STARTED)
 
 ## Match the game's state. `instant` (a load, a new game) snaps; a live repair wakes.
 func refresh(instant := true) -> void:

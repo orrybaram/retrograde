@@ -164,7 +164,7 @@ func is_scanned() -> bool:
 ## the Log whether or not it has been surveyed (docs/adr/0003).
 func is_visited() -> bool:
 	var gs := _game_state()
-	return gs != null and gs.is_planet_visited(save_key())
+	return gs != null and gs.progress.holds(Progress.VISITED_BODIES, save_key())
 
 func _game_state() -> GameState:
 	if not is_inside_tree():

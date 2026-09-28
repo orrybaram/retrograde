@@ -6,22 +6,16 @@ extends GdUnitTestSuite
 
 var _gs: GameState
 var _panel: DevPanel
-var _radio_persisted := true
 
 
 func before_test() -> void:
 	_gs = auto_free(GameState.new()) as GameState
 	_gs.set_process(false)
 	add_child(_gs)
-	# Naming a Gate radios the player, and the real radio would write its show-once
-	# flags to the player's own save. Hold it off for the length of the test.
-	_radio_persisted = RobotRadio.persist
-	RobotRadio.persist = false
 
 
 func after_test() -> void:
 	RobotRadio.silence()
-	RobotRadio.persist = _radio_persisted
 	InventoryManager.clear_inventory()
 
 
@@ -86,16 +80,29 @@ func test_modules_online_powers_gates_in_order() -> void:
 
 	_run("PROGRESS", "MODULES ONLINE", 1)
 	assert_int(_gs.titan_influence()).is_equal(1)
-	assert_bool(_gs.is_gate_powered("Crom")).is_true()  # sorts before Veld
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Crom")).is_true()  # sorts before Veld
 
 	_run("PROGRESS", "MODULES ONLINE", 1)
 	assert_int(_gs.titan_influence()).is_equal(2)
-	assert_bool(_gs.is_gate_powered("Veld")).is_true()
-	assert_bool(_gs.is_gate_powered("Sun")).is_false()
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Veld")).is_true()
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Sun")).is_false()
 
+	# Nothing goes backwards: LEFT takes no Module offline
 	_run("PROGRESS", "MODULES ONLINE", -1)
-	assert_int(_gs.titan_influence()).is_equal(1)
-	assert_bool(_gs.is_gate_powered("Veld")).is_false()
+	assert_int(_gs.titan_influence()).is_equal(2)
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Veld")).is_true()
+
+
+## A Module the player powered themselves counts, and RIGHT brings the next one after it
+## online rather than powering one that is already up.
+func test_modules_online_skips_a_gate_already_powered() -> void:
+	_gate(_planet("Veld"))
+	_gate(_planet("Crom"))
+	_gs.progress.mark(Progress.POWERED_GATES, "Crom")
+	_panel_in_tree()
+	_run("PROGRESS", "MODULES ONLINE", 1)
+	assert_int(_gs.titan_influence()).is_equal(2)
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Veld")).is_true()
 
 
 ## ENTER tops the row out, so the last Module's worth of Titan influence can be
@@ -107,7 +114,7 @@ func test_enter_brings_every_module_online() -> void:
 	_panel_in_tree()
 	_run("PROGRESS", "MODULES ONLINE", 0)
 	assert_int(_gs.titan_influence()).is_equal(Gate.MODULE_COUNT)
-	assert_bool(_gs.is_gate_powered("Sun")).is_false()
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Sun")).is_false()
 
 
 func test_modules_row_never_goes_below_zero() -> void:
@@ -132,6 +139,15 @@ func test_naming_gates_covers_the_core_too() -> void:
 	# Nothing goes backwards: a named Gate stays named
 	_run("PROGRESS", "GATES NAMED", -1)
 	assert_str(_read("PROGRESS", "GATES NAMED")).is_equal("2 / 2")
+
+
+## A running core stays running: LEFT on SR-7 CORE puts nothing back cold.
+func test_sr7_core_is_never_put_back_cold() -> void:
+	_gs.progress.flag(Progress.CORE_STARTED)
+	_panel_in_tree()
+	_run("PROGRESS", "SR-7 CORE", -1)
+	assert_bool(_gs.progress.flagged(Progress.CORE_STARTED)).is_true()
+	assert_str(_read("PROGRESS", "SR-7 CORE")).is_equal("ON")
 
 
 func test_refill_ore_seams_clears_every_regrow_timer() -> void:

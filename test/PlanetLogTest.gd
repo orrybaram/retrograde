@@ -58,11 +58,11 @@ func test_a_body_is_visited_at_inner_orbit_and_no_further_out() -> void:
 	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
 	var planet_log := _planet_log()
 	var inner := planet.scan_radius()
-	assert_object(planet_log.mark_at(Vector2(inner + 1.0, 0), SAVE_FILE)).is_null()
-	assert_object(planet_log.mark_at(Vector2(planet.field_radius() - 1.0, 0), SAVE_FILE)).is_null()
-	assert_bool(_gs.is_planet_visited("Crom")).is_false()
-	assert_object(planet_log.mark_at(Vector2(inner - 1.0, 0), SAVE_FILE)).is_same(planet)
-	assert_bool(_gs.is_planet_visited("Crom")).is_true()
+	assert_object(planet_log.mark_at(Vector2(inner + 1.0, 0))).is_null()
+	assert_object(planet_log.mark_at(Vector2(planet.field_radius() - 1.0, 0))).is_null()
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Crom")).is_false()
+	assert_object(planet_log.mark_at(Vector2(inner - 1.0, 0))).is_same(planet)
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Crom")).is_true()
 	assert_bool(planet.is_visited()).is_true()
 
 
@@ -71,17 +71,17 @@ func test_a_record_is_earned_once() -> void:
 	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
 	var planet_log := _planet_log()
 	var inside := Vector2(planet.scan_radius() - 1.0, 0)
-	assert_object(planet_log.mark_at(inside, SAVE_FILE)).is_same(planet)
-	assert_object(planet_log.mark_at(inside, SAVE_FILE)).is_null()
-	assert_int(_gs.visited_planets.size()).is_equal(1)
+	assert_object(planet_log.mark_at(inside)).is_same(planet)
+	assert_object(planet_log.mark_at(inside)).is_null()
+	assert_int(_gs.progress.count(Progress.VISITED_BODIES)).is_equal(1)
 
 
 ## Visiting works from the first minute and surveys nothing (docs/adr/0003).
 func test_visiting_does_not_survey() -> void:
 	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
 	var planet_log := _planet_log()
-	assert_object(planet_log.mark_at(Vector2(planet.scan_radius() - 1.0, 0), SAVE_FILE)).is_same(planet)
-	assert_bool(_gs.is_planet_visited("Crom")).is_true()
+	assert_object(planet_log.mark_at(Vector2(planet.scan_radius() - 1.0, 0))).is_same(planet)
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Crom")).is_true()
 	assert_bool(_gs.is_planet_scanned("Crom")).is_false()
 
 
@@ -91,12 +91,12 @@ func test_the_sun_and_a_moon_earn_records_by_the_same_rule() -> void:
 	var veld := _planet(Vector2(100000, 0), 400.0, Planet.PlanetType.ROCKY, "Veld")
 	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
 	var planet_log := _planet_log()
-	assert_object(planet_log.mark_at(Vector2(sun.scan_radius() - 1.0, 0), SAVE_FILE)).is_same(sun)
-	assert_object(planet_log.mark_at(rook.global_position, SAVE_FILE)).is_same(rook)
-	assert_bool(_gs.is_planet_visited("Sun")).is_true()
-	assert_bool(_gs.is_planet_visited("Veld/Rook")).is_true()
+	assert_object(planet_log.mark_at(Vector2(sun.scan_radius() - 1.0, 0))).is_same(sun)
+	assert_object(planet_log.mark_at(rook.global_position)).is_same(rook)
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Sun")).is_true()
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Veld/Rook")).is_true()
 	assert_str(rook.save_key()).is_equal("Veld/Rook")
-	assert_bool(_gs.is_planet_visited("Veld")).is_false()
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Veld")).is_false()
 
 
 ## A moon wins inside its parent's field: the deepest Body takes the Record.
@@ -104,42 +104,41 @@ func test_the_deepest_body_earns_the_record() -> void:
 	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
 	var rook := _moon(veld, Vector2(300, 0), 50.0, "Rook")
 	var planet_log := _planet_log()
-	assert_object(planet_log.mark_at(rook.global_position, SAVE_FILE)).is_same(rook)
+	assert_object(planet_log.mark_at(rook.global_position)).is_same(rook)
 
 
 # --- Save --------------------------------------------------------------------
 
-func test_visited_bodies_round_trip_through_the_save() -> void:
+## A continue brings every Visited Body back, in visit order.
+func test_visited_bodies_come_back_on_a_continue_in_visit_order() -> void:
+	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")
+	var crom := _planet(Vector2(100000, 0), 100.0, Planet.PlanetType.ROCKY, "Crom")
+	var planet_log := _planet_log()
+	planet_log.mark_at(crom.global_position)
+	planet_log.mark_at(Vector2(sun.scan_radius() - 1.0, 0))
+	_gs.progress = _gs.progress.resumed()
+	assert_array(Array(_gs.progress.list(Progress.VISITED_BODIES))).is_equal(["Crom", "Sun"])
+
+
+## Reaching a Body in open flight writes it into the save straight away, where saves
+## before the ledger kept it - there is no dock to hang a full save off.
+func test_a_visit_is_written_into_the_save_file_on_the_spot() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 12)
+	cfg.set_value("visited", "planets", PackedStringArray(["Veld/Rook"]))
 	cfg.save(SAVE_FILE)
-	Save.save_visited_planets(PackedStringArray(["Veld/Rook", "Sun"]), SAVE_FILE)
-	assert_array(Array(Save.load_visited_planets(SAVE_FILE))).contains_exactly(["Veld/Rook", "Sun"])
+	_gs.progress = Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
+	_planet_log().mark_at(Vector2(planet.scan_radius() - 1.0, 0))
 	cfg.load(SAVE_FILE)
+	assert_array(Array(cfg.get_value("visited", "planets"))).is_equal(["Veld/Rook", "Crom"])
 	assert_int(cfg.get_value("stats", "stores")).is_equal(12)
 
 
-## Reaching a Body in open flight writes it straight away — there is no dock to hang a
-## full save off.
-func test_marking_writes_the_save_on_the_spot() -> void:
-	var cfg := ConfigFile.new()
-	cfg.set_value("stats", "stores", 12)
-	cfg.save(SAVE_FILE)
-	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
-	_planet_log().mark_at(Vector2(planet.scan_radius() - 1.0, 0), SAVE_FILE)
-	assert_array(Array(Save.load_visited_planets(SAVE_FILE))).contains_exactly(["Crom"])
-
-
-func test_visit_save_needs_an_existing_save() -> void:
-	Save.save_visited_planets(PackedStringArray(["Crom"]), SAVE_FILE)
-	assert_bool(FileAccess.file_exists(SAVE_FILE)).is_false()
-	assert_int(Save.load_visited_planets(SAVE_FILE).size()).is_equal(0)
-
-
 func test_a_new_game_forgets_every_visit() -> void:
-	_gs.mark_planet_visited("Veld/Rook")
+	_gs.progress.mark(Progress.VISITED_BODIES, "Veld/Rook")
 	_gs.reset_all_state()
-	assert_bool(_gs.is_planet_visited("Veld/Rook")).is_false()
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Veld/Rook")).is_false()
 
 
 # --- Records tab -------------------------------------------------------------
@@ -174,7 +173,7 @@ func test_no_visits_leaves_the_bodies_list_empty() -> void:
 func test_an_unsurveyed_body_reads_no_survey() -> void:
 	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
 	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
-	_gs.mark_planet_visited(rook.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, rook.save_key())
 	var tab := _records_tab()
 	var text := "\n".join(_text(tab))
 	assert_bool(tab._bodies.visible).is_true()
@@ -194,7 +193,7 @@ func test_an_unsurveyed_body_reads_no_survey() -> void:
 func test_a_surveyed_body_carries_its_survey() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
 	planet.habitability = 0.25
-	_gs.mark_planet_visited(planet.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
 	_gs.mark_planet_scanned(planet.save_key())
 	var tab := _records_tab()
 	assert_str("\n".join(_text(tab))).not_contains(RecordsTab.NO_SURVEY)
@@ -210,7 +209,7 @@ func test_a_surveyed_body_carries_its_survey() -> void:
 func test_the_detail_pane_is_the_survey_readout() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
 	planet.habitability = 0.25
-	_gs.mark_planet_visited(planet.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
 	_gs.mark_planet_scanned(planet.save_key())
 	var tab := _records_tab()
 	assert_array(Array(_text(tab._detail))) \
@@ -220,7 +219,7 @@ func test_the_detail_pane_is_the_survey_readout() -> void:
 ## that nothing has surveyed the Body — never `? ? ?` (docs/adr/0003).
 func test_scanning_swaps_the_no_survey_line_for_the_readout() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
-	_gs.mark_planet_visited(planet.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
 	var tab := _records_tab()
 	assert_array(Array(_text(tab._detail))).contains_exactly(
 			Array(PlanetScan.identity_lines("CROM", "")) + ["", RecordsTab.NO_SURVEY])
@@ -235,7 +234,7 @@ func test_scanning_swaps_the_no_survey_line_for_the_readout() -> void:
 func test_a_surveyed_moon_still_names_what_it_orbits() -> void:
 	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
 	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
-	_gs.mark_planet_visited(rook.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, rook.save_key())
 	_gs.mark_planet_scanned(rook.save_key())
 	var tab := _records_tab()
 	var detail := "\n".join(_text(tab._detail))
@@ -248,7 +247,7 @@ func test_a_surveyed_moon_still_names_what_it_orbits() -> void:
 ## Body). It is not a moon, so it carries no ORBITS row.
 func test_the_suns_record_reads_honestly() -> void:
 	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")
-	_gs.mark_planet_visited(sun.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, sun.save_key())
 	_gs.mark_planet_scanned(sun.save_key())
 	var tab := _records_tab()
 	var rows := _text(tab._detail)
@@ -269,7 +268,7 @@ func test_the_suns_record_reads_honestly() -> void:
 func test_only_visited_bodies_get_a_row() -> void:
 	var reached := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
 	_planet(Vector2(100000, 0), 400.0, Planet.PlanetType.ROCKY, "Sonder")
-	_gs.mark_planet_visited(reached.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, reached.save_key())
 	var tab := _records_tab()
 	var text := "\n".join(_text(tab))
 	assert_str(text).contains("CROM")
@@ -282,8 +281,8 @@ func test_only_visited_bodies_get_a_row() -> void:
 func test_up_and_down_move_the_cursor_and_the_detail_follows() -> void:
 	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
 	var sonder := _planet(Vector2(100000, 0), 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
-	_gs.mark_planet_visited(crom.save_key())
-	_gs.mark_planet_visited(sonder.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, crom.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, sonder.save_key())
 	var tab := _records_tab()
 	assert_int(tab._cursor).is_equal(0)
 	assert_str("\n".join(_text(tab._detail))).contains("CROM")
@@ -301,7 +300,7 @@ func test_up_and_down_move_the_cursor_and_the_detail_follows() -> void:
 ## The bottom border only offers the cursor keys once there is a list to move through.
 func test_the_cursor_keys_appear_with_the_first_record() -> void:
 	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
-	_gs.mark_planet_visited(crom.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, crom.save_key())
 	var tab := _records_tab()
 	assert_str(tab.hint()).contains(RecordsTab.cursor_keys())
 	assert_str(tab.hint()).contains(LogTab.shell_keys())
@@ -310,7 +309,7 @@ func test_the_cursor_keys_appear_with_the_first_record() -> void:
 ## Nothing to move through, nothing to swallow: LEFT / RIGHT stay unclaimed either way.
 func test_unclaimed_keys_pass_through() -> void:
 	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
-	_gs.mark_planet_visited(crom.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, crom.save_key())
 	var tab := _records_tab()
 	assert_bool(tab.handle_action(&"menu_left")).is_false()
 	assert_bool(tab.handle_action(&"menu_right")).is_false()
