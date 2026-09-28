@@ -139,9 +139,17 @@ func _sync_pause(after_key_press: bool = true) -> void:
 
 ## Unpauses once the frame of the key press that closed the transmission has passed,
 ## so gameplay doesn't also read that SPACE as a just-pressed action (dock, harvest).
+## The last wait is for `process_frame`, so the unpause lands outside the physics step:
+## unpausing from a `physics_frame` resume (or a call deferred from one) re-registers
+## paused bodies with the servers mid-step, which Godot reports as a SelfList
+## double-add, "p_elem->_root" (#93).
 func _release_pause() -> void:
 	for i in 2:
 		await get_tree().physics_frame
+	await get_tree().process_frame
+	_unpause_unless_pausing()
+
+func _unpause_unless_pausing() -> void:
 	if not _pausing:  # unless another pausing transmission started meanwhile
 		_unpause()
 

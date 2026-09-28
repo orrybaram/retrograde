@@ -53,7 +53,9 @@ extends Node
 ##       pt.freight() (every piece), pt.test_freight() (every piece that is not a Section), pt.freight_near(pos, [radius]),
 ##       pt.chart_marks() (the ship's own marks on the Chart), pt.section(id) (a Section's Freight), pt.mount(id),
 ##       pt.stage_at_mount(id, [offset], [turn_deg]) (the ship carrying the Section, placed at its Mount),
-##       pt.caption(text) (on-screen caption for recorded videos))
+##       pt.caption(text) (on-screen caption for recorded videos),
+##       pt.engine_errors() (every engine or script ERROR since the driver started, as text: a
+##       scenario can assert it is empty, so an error fails the run instead of only printing))
 ## and this node as `self`, so get_tree() etc. also work.
 ## e.g. `assert ship.drive.fuel < ship.drive.max_fuel "boosting burns fuel"`
 
@@ -78,6 +80,29 @@ var _caption: Label = null
 var _action_message := ""
 var _server: TCPServer
 var _log_file: FileAccess
+var _errors := _ErrorLog.new()
+var _error_log_on := false
+
+## Records every ERROR the engine or a script reports (warnings aside). Loggers are called
+## from any thread, so the list is behind a mutex.
+class _ErrorLog extends Logger:
+	var _lines: Array[String] = []
+	var _lock := Mutex.new()
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
+			_editor_notify: bool, error_type: int, _script_backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type == ERROR_TYPE_WARNING:
+			return
+		var text := rationale if rationale != "" else code
+		_lock.lock()
+		_lines.append("%s (%s:%d %s)" % [text, file, line, function])
+		_lock.unlock()
+
+	func lines() -> Array[String]:
+		_lock.lock()
+		var copy := _lines.duplicate()
+		_lock.unlock()
+		return copy
 
 func _ready() -> void:
 	var target := _arg_value("--playtest")
@@ -85,6 +110,8 @@ func _ready() -> void:
 		return
 	active = true
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	OS.add_logger(_errors)
+	_error_log_on = true
 	out_dir = _arg_value("--playtest-out")
 	if out_dir == "":
 		out_dir = ProjectSettings.globalize_path("res://.playtest")
@@ -210,6 +237,7 @@ func _finish() -> void:
 	var summary := {"done": true, "ok": failures.is_empty(), "failures": failures, "out_dir": out_dir}
 	_emit(summary)
 	print("PLAYTEST %s" % ("PASSED" if failures.is_empty() else "FAILED"))
+	_stop_error_log()
 	get_tree().quit(0 if failures.is_empty() else 1)
 
 func _wait_for_main() -> void:
@@ -358,9 +386,21 @@ func _resolve_key(name: String) -> Key:
 		"up": "Up", "down": "Down", "left": "Left", "right": "Right", "shift": "Shift", "tab": "Tab"}
 	return OS.find_keycode_from_string(aliases.get(name.to_lower(), name))
 
+## Unhooks the error log before the engine shuts down: a Logger still registered while the
+## engine tears down script instances hangs the exit.
+func _stop_error_log() -> void:
+	if _error_log_on:
+		OS.remove_logger(_errors)
+		_error_log_on = false
+
+func _exit_tree() -> void:
+	_stop_error_log()
+
 ## Godot releases every pressed key when the window loses focus, which would silently
 ## end a `down`/`hold` mid-scenario. Re-press whatever we still hold, before game code runs.
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		_stop_error_log()
 	if active and what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_emit({"event": "focus_out", "held": _held.size()})
 		_repress_held.call_deferred()
@@ -1247,3 +1287,7 @@ func _arg_value(key: String, default := "") -> String:
 		if a.begins_with(key + "="):
 			return a.substr(key.length() + 1)
 	return default
+
+## Every engine or script ERROR reported since the driver started (see _ErrorLog).
+func engine_errors() -> Array[String]:
+	return _errors.lines()
