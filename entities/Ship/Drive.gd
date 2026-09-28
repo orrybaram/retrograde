@@ -12,7 +12,7 @@ class_name Drive
 ## they cannot disagree.
 ##
 ## Every change to the tank goes through `fuel` (clamped to 0..max_fuel) and emits
-## `changed`. The flight states drive it once per physics step: `tick` while flying,
+## `changed`, except `restore`, which a save loads through quietly. The flight states drive it once per physics step: `tick` while flying,
 ## `rest` otherwise, then `try_burn` from the thrust that spends it.
 
 ## The tank moved (a burn, a refuel, a save loading, the dev panel).
@@ -41,9 +41,11 @@ var max_fuel := CAPACITY:
 		max_fuel = maxf(value, 0.0)
 		fuel = fuel  # re-clamp, and say so
 ## Always 0..max_fuel. Assigning it clamps and emits `changed`.
-var fuel := 0.0:
+var fuel: float:
+	get:
+		return _fuel
 	set(value):
-		fuel = clampf(value, 0.0, max_fuel)
+		_fuel = clampf(value, 0.0, max_fuel)
 		changed.emit()
 ## Fuel a lit Burn spends per second. The Ship sets it from its tuning.
 var burn_rate := 15.0
@@ -52,6 +54,7 @@ var infinite := false
 ## The cough's own dice, so it never shifts a gameplay roll. Seed it to test.
 var rng := RandomNumberGenerator.new()
 
+var _fuel := 0.0
 var _flying := false
 var _attempting := false  # boost held with thrust on, this step
 var _cough_left := 0.0  # > 0 while a cough has the Burn cut
@@ -127,6 +130,12 @@ func try_burn(dt: float) -> bool:
 	if fuel <= 0.0:
 		depleted.emit()
 	return true
+
+## Loading a save: the tank is put back as it was, clamped, without emitting `changed`.
+## Nothing happened to the tank, so nothing should react (the radio's low-fuel briefing
+## would otherwise play mid-load); readouts pick the value up on their own refresh.
+func restore(amount: float) -> void:
+	_fuel = clampf(amount, 0.0, max_fuel)
 
 ## Add up to `points`, never past `up_to` or the tank, and never draining it. Returns the
 ## points actually added.

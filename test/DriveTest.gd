@@ -207,3 +207,18 @@ func test_the_infinite_tank_lights_but_never_moves() -> void:
 	drive.tick(STEP, true)
 	assert_bool(drive.try_burn(100.0)).is_true()
 	assert_float(drive.fuel).is_equal(Drive.CAPACITY)
+
+
+## A save loading puts the tank back quietly: nothing listening (the radio's low-fuel
+## briefing) should take a load for the tank changing.
+func test_restore_clamps_without_emitting_changed() -> void:
+	var drive := _drive(0.0)
+	var changed := [0]
+	drive.changed.connect(func() -> void: changed[0] += 1)
+	drive.restore(Drive.CAPACITY * 0.25)
+	assert_float(drive.fuel).is_equal(Drive.CAPACITY * 0.25)
+	drive.restore(Drive.CAPACITY * 3.0)
+	assert_float(drive.fuel).is_equal(Drive.CAPACITY)
+	drive.restore(-5.0)
+	assert_float(drive.fuel).is_equal(0.0)
+	assert_int(changed[0]).is_equal(0)

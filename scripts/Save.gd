@@ -372,8 +372,9 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	# Load current fuel and hull values. An old save's bought upgrades are ignored: the
 	# ship's limits are fixed, so a fuller tank or hull is clamped back down to them.
 	if ship:
-		# The Drive clamps the tank to its size and tells the readouts
-		ship.drive.fuel = float(cfg.get_value("stats", "fuel", ship.drive.max_fuel))
+		# Restored quietly (clamped to the tank): a load is not the tank changing, and the
+		# radio would take a low tank for a fresh warning. The HUD reads it every frame.
+		ship.drive.restore(float(cfg.get_value("stats", "fuel", ship.drive.max_fuel)))
 		ship.hull_strength = float(cfg.get_value("stats", "hull_strength", ship.max_hull))
 		# Clamp to max values (in case save has invalid values)
 		ship.hull_strength = min(ship.hull_strength, ship.max_hull)
