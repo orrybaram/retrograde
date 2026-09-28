@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
 
-## Tests for SR-7's free quarter (docs/OPENING.md §9): once its core is running, every dock
-## and every relaunch tops the tank up to a quarter of `max_fuel`, never higher. A cold
-## SR-7 gives nothing, and fuel past the quarter only ever comes out of Stores.
+## Tests for SR-7's free half (docs/OPENING.md §9): once its core is running, every dock
+## and every relaunch tops the tank up to half of `max_fuel`, never higher. A cold
+## SR-7 gives nothing, and fuel past half only ever comes out of Stores.
 ##
 ## The GameState is kept out of the tree on purpose, so the dock's autosave finds nothing
 ## to save and never touches the player's save file.
@@ -40,15 +40,15 @@ func _dock(state: LandedState, gs: GameState, seconds: float) -> void:
 
 # --- Docking -----------------------------------------------------------------
 
-func test_a_running_sr7_fills_an_empty_tank_to_a_quarter_and_stops() -> void:
+func test_a_running_sr7_fills_an_empty_tank_to_half_and_stops() -> void:
 	var ship := _ship(0.0)
 	var state := _landed(ship)
 	_dock(state, _gs(true), LandedState.REFUEL_TIME * 2.0)
-	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * 0.25, 0.001)
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * 0.5, 0.001)
 	assert_bool(state._refueling).is_false()
 
 
-func test_a_tank_above_the_quarter_is_left_alone() -> void:
+func test_a_tank_above_half_is_left_alone() -> void:
 	var ship := _ship(0.0)
 	ship.drive.fuel = ship.drive.max_fuel * 0.6
 	var state := _landed(ship)
@@ -65,8 +65,8 @@ func test_a_cold_sr7_gives_nothing_on_the_dock() -> void:
 	assert_float(ship.drive.fuel).is_equal(0.0)
 
 
-## The port's pace is unchanged: a quarter of the tank takes a quarter of the full-tank time.
-func test_the_quarter_fills_at_the_ports_pace() -> void:
+## The port's pace is unchanged: half the tank takes half the full-tank time.
+func test_the_half_fills_at_the_ports_pace() -> void:
 	var ship := _ship(0.0)
 	var state := _landed(ship)
 	state._start_refuel(_gs(true))
@@ -77,13 +77,13 @@ func test_the_quarter_fills_at_the_ports_pace() -> void:
 
 # --- Relaunch ----------------------------------------------------------------
 
-func test_relaunch_tops_an_empty_tank_up_to_a_quarter() -> void:
+func test_relaunch_tops_an_empty_tank_up_to_half() -> void:
 	var ship := _ship(0.0)
 	ship.drive.top_up_to_free_floor(_gs(true))
-	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * 0.25, 0.001)
+	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * 0.5, 0.001)
 
 
-func test_relaunch_never_drains_a_tank_above_the_quarter() -> void:
+func test_relaunch_never_drains_a_tank_above_half() -> void:
 	var ship := _ship(0.0)
 	ship.drive.fuel = ship.drive.max_fuel * 0.8
 	ship.drive.top_up_to_free_floor(_gs(true))

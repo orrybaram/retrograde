@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 
 ## Tests for the dock's spending (issue #137): after the Deposit, SR-7 spends Stores on
 ## the ship with no menu. The hull is patched first, then the tank is topped up past the
-## free quarter, as far as the Stores allow.
+## free half, as far as the Stores allow.
 ##
 ## The GameState is kept out of the tree on purpose, so the dock's autosave finds nothing
 ## to save and never touches the player's save file.
@@ -51,14 +51,14 @@ func test_stores_go_to_the_hull_first() -> void:
 	var state := _landed(ship)
 	state.locked_dockable = ship  # docked: anything non-null
 	_dock(state, gs, LandedState.REPAIR_TIME * 0.5)
-	# Mid-repair: the tank has had its free quarter and not a drop more
+	# Mid-repair: the tank is still on its free half, and not a drop past it is bought
 	assert_bool(state._repairing).is_true()
 	assert_float(ship.hull_strength).is_greater(40.0)
-	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * Drive.FREE_FRACTION, 0.001)
+	assert_float(ship.drive.fuel).is_less_equal(ship.drive.max_fuel * Drive.FREE_FRACTION)
 	assert_int(gs.stores).is_less(10000)
 
 
-func test_with_stores_left_the_tank_fills_past_the_quarter() -> void:
+func test_with_stores_left_the_tank_fills_past_half() -> void:
 	var ship := _ship(0.0, 40.0)
 	var gs := _gs(10000)
 	var state := _landed(ship)
@@ -90,7 +90,7 @@ func test_too_few_stores_patch_part_of_the_hull_and_reach_zero() -> void:
 	_dock(state, gs, LandedState.REPAIR_TIME + LandedState.REFUEL_TIME * 2.0)
 	assert_int(gs.stores).is_equal(0)
 	assert_float(ship.hull_strength).is_equal_approx(50.0, 0.01)
-	# Nothing left for the tank past its free quarter
+	# Nothing left for the tank past its free half
 	assert_float(ship.drive.fuel).is_equal_approx(ship.drive.max_fuel * Drive.FREE_FRACTION, 0.001)
 
 

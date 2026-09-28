@@ -68,7 +68,7 @@ var hull_strength: float:
 			# A repair or a save being restored all land here rather than
 			# in take_damage, so this is where the readouts have to be told.
 			health_component.hp_changed.emit(health_component.current_hp, health_component.max_hp)
-## The Aux and the Burn (docs/adr/0010): the tank, the free quarter, the cough, and
+## The Aux and the Burn (docs/adr/0010): the tank, the free half, the cough, and
 ## whether the boost is lit. Every fuel read and write goes through it.
 var drive := Drive.new()
 ## Dev-panel overrides (ui/DevPanel.gd), off in normal play. Nothing but that panel
@@ -654,7 +654,7 @@ func reset_to_initial_state() -> void:
 
 ## A relaunch after a loss (destroyed, or taken by the Void): the next clone comes up in
 ## this hull. Fitted upgrades persist (the cloning bay prints the ship's spec, ADR 0011),
-## the hull is whole, and SR-7 tops the tank up to its free quarter once its core runs. A
+## the hull is whole, and SR-7 tops the tank up to its free half once its core runs. A
 ## load still on the nose stays out here, where the ship was lost.
 func relaunch(state: GameState) -> void:
 	let_go()

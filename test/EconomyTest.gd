@@ -33,7 +33,7 @@ func test_a_full_hold_of_ordinary_gems_buys_about_a_full_tank() -> void:
 	var hold := _ordinary_hold(ship)
 	assert_float(hold).is_between(tank * 0.85, tank * 1.15)
 
-func test_a_full_hold_more_than_covers_the_tank_past_the_free_quarter() -> void:
+func test_a_full_hold_more_than_covers_the_tank_past_the_free_half() -> void:
 	var ship := _ship()
-	var past_quarter := ship.drive.max_fuel * (1.0 - Drive.FREE_FRACTION) * Economy.REFUEL_COST_PER_POINT
-	assert_float(_ordinary_hold(ship)).is_greater(past_quarter)
+	var past_half := ship.drive.max_fuel * (1.0 - Drive.FREE_FRACTION) * Economy.REFUEL_COST_PER_POINT
+	assert_float(_ordinary_hold(ship)).is_greater(past_half)

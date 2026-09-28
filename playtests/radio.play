@@ -109,9 +109,9 @@ assert not get_tree().paused "the call closing unpauses"
 assert pt.visible_ui().is_empty() "the closing SPACE doesn't open the dock menu"
 assert gs.death_count == 1 "the loss counts as a death"
 # Dying takes nothing. The relaunch docks at SR-7, which buys the tank past its free
-# quarter out of Stores (issue #137): 112.5 fuel at 2 ST, 225 ST at most
+# half out of Stores (issue #137): 75 fuel at 2 ST, 150 ST at most
 wait_until ship.drive.fuel == ship.drive.max_fuel 5
-assert gs.stores >= 500 - 225 and gs.stores < 500 "dying costs no Stores; only the tank past its quarter does"
+assert gs.stores >= 500 - 150 and gs.stores < 500 "dying costs no Stores; only the tank past half does"
 
 # Hold fills mid-harvest while SPACE is being mashed: the hold-full tutorial waits
 # until the player backs off, then pauses in view (gem popups don't hide the radio)

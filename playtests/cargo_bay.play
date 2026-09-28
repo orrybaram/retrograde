@@ -2,7 +2,7 @@
 # with the Cargo Bay standing Lug-up in it. It is dead to the Sweep until SR-7's cold
 # start; after, it answers from far past a ring's reach, faint and broken far off and whole
 # close in. On the Aux the ship strains at it and the ground holds; the Burn tears it free
-# on a quarter tank, and the Aux lifts it off Veld. It survives a reload where it lies.
+# on a half tank, and the Aux lifts it off Veld. It survives a reload where it lies.
 # Run: PLAYTEST_PORT=7811 tools/play.sh --headless playtests/cargo_bay.play
 
 press enter
@@ -52,7 +52,7 @@ assert pt.answers(pt.recall("bay")) == 1 and pt.broken_answers(pt.recall("bay"))
 screenshot cargo_bay_1_wreck
 
 # --- The pull on the Aux: the ship strains and the ground holds ---
-eval ship.drive.set("fuel", ship.drive.max_fuel * 0.25)
+eval ship.drive.set("fuel", ship.drive.max_fuel * 0.5)
 eval ship.set("rotation", (-pt.recall("bay").lug_facing_global()).angle())
 eval pt.warp_to(pt.recall("bay").lug_global() + pt.recall("bay").lug_facing_global() * 26.0)
 eval ship.set("linear_velocity", pt.recall("bay").linear_velocity)
@@ -67,22 +67,22 @@ assert ship.damage_shake_current_intensity > 0.5 "but the ship strains at it"
 assert ship.state_machine.current_state._coupled != null "still coupled"
 screenshot cargo_bay_2_strain
 
-# --- A quarter spent on the way is not enough: the Burn runs dry and it holds ---
-# A tenth of the tank burned getting here leaves 15%, under the tear-out's fifth
+# --- A tank run low on the way is not enough: the Burn runs dry and it holds ---
+# 15% left is under the tear-out's fifth
 eval ship.drive.set("fuel", ship.drive.max_fuel * 0.15)
 down boost
 down reverse_thrust
-wait_until ship.drive.fuel == 0.0 6
+wait_until ship.drive.fuel == 0.0 8
 wait 1.5
 up boost
 up reverse_thrust
-assert pt.recall("bay").is_buried() "a wasted quarter runs dry before it tears free"
+assert pt.recall("bay").is_buried() "a low tank runs dry before it tears free"
 assert ship.state_machine.current_state._coupled != null "still coupled, on the Aux"
 wait_until pt.recall("bay").pull_progress == 0.0 20
 screenshot cargo_bay_2b_dry
 
-# --- The Burn tears it free, on the quarter tank SR-7 gives ---
-eval ship.drive.set("fuel", ship.drive.max_fuel * 0.25)
+# --- The Burn tears it free, on the half tank SR-7 gives ---
+eval ship.drive.set("fuel", ship.drive.max_fuel * 0.5)
 eval pt.remember("fuel", ship.drive.fuel)
 down boost
 down reverse_thrust
@@ -90,9 +90,9 @@ wait_until not pt.recall("bay").is_buried() 8
 up boost
 up reverse_thrust
 assert not pt.recall("bay").is_buried() "the Burn tears it free"
-assert ship.drive.fuel > 0.0 "the quarter tank covered it"
+assert ship.drive.fuel > 0.0 "the half tank covered it"
 eval (pt.recall("fuel") - ship.drive.fuel) / ship.drive.max_fuel
-assert pt.recall("fuel") - ship.drive.fuel > ship.drive.max_fuel * 0.17 and pt.recall("fuel") - ship.drive.fuel < ship.drive.max_fuel * 0.23 "at about a fifth of a full tank, a thin margin under the quarter"
+assert pt.recall("fuel") - ship.drive.fuel > ship.drive.max_fuel * 0.17 and pt.recall("fuel") - ship.drive.fuel < ship.drive.max_fuel * 0.23 "at about a fifth of a full tank, well under the half"
 wait_until pt.state_name() == "CarryingState" 3
 assert pt.state_name() == "CarryingState" "the magnet takes it onto the nose"
 screenshot cargo_bay_3_free

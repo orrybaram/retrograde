@@ -14,7 +14,7 @@ const DATA := {
 	# A squat box, heavier than anything of SR-7's - the ship crawls with it - but the Aux
 	# still lifts it off Veld. It holds in the ground harder than the Aux can pull: only the
 	# Burn tears it free, and the tear-out (`pull_time` s of Burn, playtests/cargo_bay.play)
-	# costs about a fifth of a full tank, so the quarter SR-7 gives is just enough (§9).
+	# costs about a fifth of a full tank, so the half SR-7 gives covers it (§9).
 	# It is dead to the Sweep until SR-7's cold start, and after that it answers from far
 	# past a ring's reach, faint at the edge of `answer_range` and firming up closer
 	# (Freight.answer_clarity).

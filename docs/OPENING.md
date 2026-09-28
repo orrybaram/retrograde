@@ -531,7 +531,7 @@ buried in Veld's surface inside a crashed hauler, Lug up. It is in the world fro
 one and dead to the Sweep until SR-7's cold start; after that it answers from well beyond
 harvest range, the array's warmer-colder lesson reused.
 
-1. **Cold start.** SR-7 lights. From now on it tops the tank up to **a quarter** every time
+1. **Cold start.** SR-7 lights. From now on it tops the tank up to **half** every time
    the ship docks or relaunches, never higher. A dead SR-7 gives nothing.
 2. **The need.** The first time a Sweep finds scrap that will not harvest, UNIT-7 names the
    problem, never the place: there is nothing to put it in. It is sincere; it does not know
@@ -540,8 +540,8 @@ harvest range, the array's warmer-colder lesson reused.
    a Sweep and never calls it.
 3. **The pull.** The player lands, clamps the Lug and flies away from the ground. On the Aux
    the ship strains at the end of the clamp and the ground shudders and holds. Only the Burn
-   tears it free. Tuning: the tear-out costs about 20% of `max_fuel`, so the free quarter is
-   just enough with a little over. Once free it lifts off Veld on the Aux.
+   tears it free. Tuning: the tear-out costs about 20% of `max_fuel`, so the free half covers
+   it with room to spare. Once free it lifts off Veld on the Aux.
 4. **Home.** Flown back as Freight, heavy (ADR 0012), and released into SR-7's **Cradle**.
 5. **Fitting.** Docked, SR-7's menu offers `FIT CARGO BAY`. UNIT-7 fits it: the hold becomes
    50, the cargo readout appears, and everything harvests. UNIT-7 says so as the menu closes
@@ -555,7 +555,7 @@ minute four is the one that fails on Veld.
 **There is no store** (ADR 0007, now in full). Credits become SR-7's **Stores**. The hold
 empties into them on docking (the **Deposit**, the old cash-in count re-aimed), and docking
 spends them automatically, with no menu: the hull patched first, then the tank topped past
-the free quarter. The ring pays for the trip, and the Cargo Bay is what lets it pay at all.
+the free half. The ring pays for the trip, and the Cargo Bay is what lets it pay at all.
 Tuning target: one full hold of ordinary gems is about a full tank from empty. With the
 store go every `UpgradeItem`, so `max_hull` and `max_fuel` are fixed until Components exist,
 and the hold is 50 for good.
@@ -575,13 +575,13 @@ should be renamed before SR-7's Cradle is built.
 | | Value | Where |
 |---|---|---|
 | Tank | 150 fuel (`max_fuel`); the Aux costs nothing, the Burn 6/s | `Ship`, `Main.tscn` |
-| Free quarter | 37.5 fuel on every dock or relaunch, never higher | `Drive.FREE_FRACTION` |
+| Free half | 75 fuel on every dock or relaunch, never higher | `Drive.FREE_FRACTION` |
 | Cargo Bay hold | pull threshold 1.6 (the Aux tops out at 1.0), `pull_time` 4.25 s | `Components` |
-| Tear-out | about 29-30 fuel of Burn, 19-20% of the tank; 7-9 fuel left over | measured |
-| Wasted quarter | a tenth of the tank burned on the way (15% left) runs dry mid-pull, and the ground holds; the Aux flies home for another quarter | measured |
+| Tear-out | about 29-30 fuel of Burn, 19-20% of the tank; about 45 fuel left over | measured |
+| Low tank | 15% left runs dry mid-pull, and the ground holds; the Aux flies home for another half | measured |
 | Ordinary gem | 6.85 ST in 1.11 hold units on average (GOOD rolls on plain scrap) | `GemData` |
 | Full hold | 50 units of ordinary gems, about 309 ST | `EconomyTest` |
-| Fuel | 2 ST a point: a full tank from empty is 300 ST, the tank past the free quarter 225 ST | `Economy` |
+| Fuel | 2 ST a point: a full tank from empty is 300 ST, the tank past the free half 150 ST | `Economy` |
 | Hull | 3 ST a point: a whole hull from nothing is 300 ST, and it is paid first | `Economy` |
 
 So one full hold of ordinary gems is about a full tank from empty; a hold spent on a
@@ -601,13 +601,13 @@ badly holed hull goes mostly to the patch. A Gate's Module (600 ST) is two full 
 > **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
 > dock without ever reading as a tutorial popup.
 > **TODO**: The dry dock is not built. A dead SR-7 now gives nothing on a dock or a
-> relaunch, and a running one tops the tank up to a quarter (`Drive.free_floor`), but
+> relaunch, and a running one tops the tank up to half (`Drive.free_floor`), but
 > an empty tank before the cold start is a soft-lock until ADR 0010's Aux exists.
 > **TODO**: What the dock offers *after* the wake is ADR 0007's, not this document's:
 > there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the
 > player brings. The store is gone (#132); the hub the wake opens offers only `DEPART`
 > until fitting lands. After the Deposit, a running SR-7 spends Stores on the ship with
-> no menu (#137): the hull first, then the tank past the free quarter, as far as the
+> no menu (#137): the hull first, then the tank past the free half, as far as the
 > Stores go (`LandedState._start_service`).
 > **TODO**: UNIT-7's functional calls (relaunch, tow, the Void) still come from UNIT-7
 > before the core's cold start wakes it (`RobotRadio.wake_guide`), and need a speaker of

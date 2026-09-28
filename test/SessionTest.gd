@@ -354,7 +354,7 @@ func test_relaunch_resets_every_flight_field_including_the_spin() -> void:
 	assert_float(_ship.drift_spin).is_equal(0.0)
 	assert_str(_ship.state_machine.get_current_state_name()).is_equal("FlyingState")
 
-func test_relaunch_tops_the_tank_up_to_the_free_quarter_once_the_core_runs() -> void:
+func test_relaunch_tops_the_tank_up_to_the_free_half_once_the_core_runs() -> void:
 	_gs.progress.flag(Progress.CORE_STARTED)
 	_ship.drive.fuel = 0.0
 	_destroy()

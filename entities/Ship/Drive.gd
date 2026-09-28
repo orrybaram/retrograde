@@ -7,7 +7,7 @@ class_name Drive
 ## take it away, so nothing here models it - there is no Aux fuel, meter or cough.
 ##
 ## The **Burn** is the boost, and it is all this class is about: the tank that feeds it,
-## the free quarter SR-7 tops it up to, and the cough a low tank gives it. It answers the
+## the free half SR-7 tops it up to, and the cough a low tank gives it. It answers the
 ## one question flight, the boost gauge and the radio all ask - is the Burn lit? - so
 ## they cannot disagree.
 ##
@@ -29,8 +29,8 @@ const CRITICAL_RATIO := 0.10
 ## The ship's tank. Its limits are fixed: nothing is bought (docs/adr/0007).
 const CAPACITY := 150.0
 ## What SR-7 puts in the tank for nothing (docs/OPENING.md §9): once its core is running,
-## every dock and every relaunch tops the tank up to a quarter, never higher.
-const FREE_FRACTION := 0.25
+## every dock and every relaunch tops the tank up to half, never higher.
+const FREE_FRACTION := 0.5
 ## Seconds between coughs while a Burn is being tried on a low tank. Rare when LOW,
 ## frequent when CRITICAL (and a dry tank is CRITICAL).
 const COUGH_GAP := {Level.LOW: Vector2(1.2, 2.8), Level.CRITICAL: Vector2(0.25, 0.8)}
@@ -153,7 +153,7 @@ func free_floor(gs: GameState) -> float:
 		return 0.0
 	return max_fuel * FREE_FRACTION
 
-## Relaunch: SR-7 tops the tank up to its free quarter at once. Never drains it.
+## Relaunch: SR-7 tops the tank up to its free half at once. Never drains it.
 func top_up_to_free_floor(gs: GameState) -> void:
 	refuel(INF, free_floor(gs))
 	changed.emit()

@@ -14,10 +14,10 @@ var _dialogue = null  # SpacePortDialogue
 var _terminal: CoreTerminal = null
 var _deposit: HoldDeposit = null
 var _refueling := false
-## Where this dock's fill stops: SR-7's free quarter (Drive.free_floor).
+## Where this dock's fill stops: SR-7's free half (Drive.free_floor).
 var _refuel_target := 0.0
 ## After the Deposit, SR-7 spends Stores on the ship with no menu (issue #137): the hull
-## is patched first, then the tank is topped up past the free quarter, as far as the
+## is patched first, then the tank is topped up past the free half, as far as the
 ## Stores allow.
 var _repairing := false
 var _topping_up := false
@@ -26,7 +26,7 @@ var _gs: GameState = null
 ## of a Store per frame, and only whole Stores come off.
 var _owed := 0.0
 
-## Seconds for a port to fill an empty tank; the free quarter takes a quarter of that.
+## Seconds for a port to fill an empty tank; the free half takes half of that.
 const REFUEL_TIME := 5.0
 ## Seconds for SR-7 to patch a hull from nothing to whole.
 const REPAIR_TIME := 3.0
@@ -75,7 +75,7 @@ func enter() -> void:
 	
 	var gs = ship.get_tree().get_first_node_in_group("game_state") as GameState
 
-	# Space ports: top the tank up to SR-7's free quarter, fly the hold into the port as
+	# Space ports: top the tank up to SR-7's free half, fly the hold into the port as
 	# Stores, refresh resources
 	var at_port := locked_dockable.is_in_group("space_ports")
 	# A port nobody runs takes no delivery: the hold keeps what it carries until someone
@@ -310,8 +310,8 @@ func _toggle_dialogue() -> void:
 			if spaceport:
 				_dialogue.open_dialogue(spaceport)
 
-## Tops the tank up to SR-7's free quarter, if it is below it. A cold SR-7 gives nothing,
-## and a tank already past the quarter is left alone (docs/OPENING.md §9).
+## Tops the tank up to SR-7's free half, if it is below it. A cold SR-7 gives nothing,
+## and a tank already past half is left alone (docs/OPENING.md §9).
 func _start_refuel(gs: GameState) -> void:
 	_refuel_target = ship.drive.free_floor(gs)
 	_refueling = ship.drive.fuel < _refuel_target
@@ -337,8 +337,8 @@ func _on_deposit_finished(_total: int, gs: GameState) -> void:
 	if locked_dockable:
 		_start_service(gs)
 
-## One frame of the dock's work: the free quarter fills alongside everything; Stores go
-## to the hull first, and to the tank past the quarter once the hull is done and the
+## One frame of the dock's work: the free half fills alongside everything; Stores go
+## to the hull first, and to the tank past half once the hull is done and the
 ## free fill has stopped.
 func _service(delta: float) -> void:
 	if _refueling:
@@ -511,7 +511,7 @@ func _on_reboot_requested() -> void:
 	if ship.camera:
 		ship.camera.zoom_camera_in(Vector2(2.5, 2.5))
 	var gs := ship.get_tree().get_first_node_in_group("game_state") as GameState
-	# The first thing a running SR-7 does for the ship on its dock is the free quarter
+	# The first thing a running SR-7 does for the ship on its dock is the free half
 	_start_refuel(gs)
 	if _port_is_open():
 		_begin_deposit(gs)

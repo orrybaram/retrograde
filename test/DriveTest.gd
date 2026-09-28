@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## The Drive on its own, no scene tree (entities/Ship/Drive.gd, docs/adr/0010): whether
-## the Burn is lit, the cough a low tank gives it, the free quarter, and clamping. The
+## the Burn is lit, the cough a low tank gives it, the free half, and clamping. The
 ## Aux is never modelled here, so nothing the Drive does can take ordinary thrust away.
 
 const STEP := 1.0 / 60.0
@@ -187,7 +187,7 @@ func test_refuel_stops_at_its_target_and_never_drains() -> void:
 	assert_float(drive.fuel).is_equal(30.0)
 
 
-func test_the_free_floor_is_a_quarter_once_the_core_runs() -> void:
+func test_the_free_floor_is_half_once_the_core_runs() -> void:
 	var drive := _drive(0.0)
 	var gs := auto_free(GameState.new()) as GameState
 	assert_float(drive.free_floor(null)).is_equal(0.0)
