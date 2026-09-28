@@ -45,6 +45,8 @@ assert inv.get_total_weight() > 0 "RIGHT on HOLD packs it with gems"
 press left
 assert inv.get_total_weight() == 0 "LEFT on HOLD dumps it"
 
+# past CARGO BAY (a toggle: left alone here)
+press down
 press down
 press enter
 assert gs.stores >= 25000 "ENTER on STORES adds the jump"

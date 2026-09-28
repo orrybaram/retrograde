@@ -43,6 +43,8 @@ const FREIGHT_TURN_EXPONENT := 0.5
 var freight: Freight = null
 var _freight_collider: CollisionPolygon2D = null
 var _turn_ratio := 1.0
+## The Components on the hull (GameState.fitted, as of the last refit).
+var _fitted := PackedStringArray()
 
 signal cargo_changed(current_weight: float, max_weight: float)
 
@@ -369,27 +371,53 @@ func update_mass_from_cargo() -> void:
 	_apply_mass(base_mass + (cargo_weight * cargo_mass_multiplier))
 	cargo_changed.emit(cargo_weight, max_cargo_weight)
 
-## Set the body's mass, centre of mass and inertia from the ship's own mass and whatever
-## is clamped to it. Unladen this is exactly the ship as it always was: its own mass, its
-## centre at the origin, and inertia left to the engine.
+## Set the body's mass, centre of mass and inertia from the ship's own mass, its fitted
+## Components and whatever is clamped to it. Bare and unladen this is exactly the ship as it
+## always was: its own mass, its centre at the origin, and inertia left to the engine.
 func _apply_mass(own_mass: float) -> void:
-	if not is_carrying():
+	if not is_carrying() and _fitted.is_empty():
 		mass = own_mass
 		center_of_mass = Vector2.ZERO
 		inertia = 0.0
 		_turn_ratio = 1.0
 		return
+	var c := _combined(own_mass, _fitted, is_carrying())
+	mass = c["mass"]
+	center_of_mass = c["com"]
+	inertia = c["inertia"]
+	_turn_ratio = turn_ratio_for(c["own_inertia"], c["inertia"])
+
+## The ship's hull at `own_mass` plus fitted Components `ids` (and the clamped load, with
+## `laden`), as one body: its mass, centre of mass, inertia about that centre, and the
+## bare hull's own inertia to compare against. The hull counts as centred on the origin.
+func _combined(own_mass: float, ids: PackedStringArray, laden: bool) -> Dictionary:
 	var hull := _hull_outline()
-	var carried := freight.transform * freight.outline
-	var carried_box := Freight.bounds(carried)
-	var total := own_mass + freight.mass
-	var com := carried_box.get_center() * freight.mass / total
 	var own_i := Freight.box_inertia(hull, own_mass)
-	var combined_i := own_i + Freight.box_inertia(carried, freight.mass) - total * com.length_squared()
-	mass = total
-	center_of_mass = com
-	inertia = combined_i
-	_turn_ratio = turn_ratio_for(own_i, combined_i)
+	var total := own_mass
+	var moment := Vector2.ZERO
+	var i := own_i
+	var pieces: Array = []
+	for id in ids:
+		pieces.append([Components.fitted_outline(id), Components.fitted_mass(id)])
+	if laden:
+		pieces.append([freight.transform * freight.outline, freight.mass])
+	for piece in pieces:
+		var outline: PackedVector2Array = piece[0]
+		var m: float = piece[1]
+		if outline.is_empty() or m <= 0.0:
+			continue
+		total += m
+		moment += Freight.bounds(outline).get_center() * m
+		i += Freight.box_inertia(outline, m)
+	var com := moment / total
+	return {"mass": total, "com": com, "inertia": i - total * com.length_squared(), "own_inertia": own_i}
+
+## How well the ship handles with Components `ids` fitted, empty and unladen: 1.0 bare,
+## less as parts add mass (slower to speed up) and inertia (slower to turn). SHIP draws
+## it as a bar.
+func handling(ids: PackedStringArray = _fitted) -> float:
+	var c := _combined(base_mass, ids, false)
+	return turn_ratio_for(c["own_inertia"], c["inertia"]) * base_mass / c["mass"]
 
 ## How much of its unladen turn a ship keeps with a load: the inertia ratio, softened.
 static func turn_ratio_for(own_inertia: float, combined_inertia: float) -> float:
@@ -633,8 +661,14 @@ func has_hold() -> bool:
 ## Size the ship to what `gs` has fitted: the hold is the Cargo Bay's, or none at all
 ## (docs/OPENING.md §9). Runs on fitting and on every load.
 func refit(state: GameState) -> void:
-	max_cargo_weight = base_max_cargo_weight + (Components.hold(Array(state.progress.list(Progress.FITTED_COMPONENTS))) if state else 0.0)
+	_fitted = state.fitted() if state else PackedStringArray()
+	max_cargo_weight = base_max_cargo_weight + Components.hold(Array(_fitted))
+	FittedParts.build(self, _fitted)
 	update_mass_from_cargo()
+
+## The Components on the hull, as of the last refit.
+func fitted() -> PackedStringArray:
+	return _fitted
 
 # --- Coming back: a new clone in this hull ----------------------------------------------
 # Nothing outside the ship writes its hull, motion, shake, spin or boost particles to reset
@@ -646,6 +680,9 @@ func refit(state: GameState) -> void:
 func reset_to_initial_state() -> void:
 	max_hull = base_max_hull
 	max_cargo_weight = base_max_cargo_weight
+	_fitted = PackedStringArray()
+	FittedParts.clear(self)
+	_apply_mass(base_mass)
 	drive.fuel = 0.0
 	_reset_flight()
 	if ship_polygon:

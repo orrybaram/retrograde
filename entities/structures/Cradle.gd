@@ -61,7 +61,8 @@ func waiting() -> PackedStringArray:
 
 ## Fit `id` - or, with none given, the first Component waiting - to the ship
 ## (docs/OPENING.md §9): it is the ship's now, not the Cradle's. The Cargo Bay makes the
-## hold. Returns the Component fitted, or "" with nothing to fit.
+## hold. A Component already in `id`'s place comes off and waits here instead
+## (docs/adr/0014). Returns the Component fitted, or "" with nothing to fit.
 func fit(id := "") -> String:
 	var gs := _game_state()
 	if gs == null or gs.cradled.is_empty():
@@ -71,16 +72,46 @@ func fit(id := "") -> String:
 	var at := gs.cradled.find(id)
 	if at < 0:
 		return ""
+	var displaced := displaces(id)
 	var left := gs.cradled
 	left.remove_at(at)
+	if displaced != "":
+		left.append(displaced)
 	gs.cradled = left
 	gs.progress.mark(Progress.FITTED_COMPONENTS, id)
+	_refit(gs)
+	EventBus.component_fitted.emit(id)
+	return id
+
+## The Component fitting `id` would take off the ship (the one in its place), or "".
+func displaces(id: String) -> String:
+	var gs := _game_state()
+	if gs == null:
+		return ""
+	var place := Components.place(id)
+	for on in gs.fitted():
+		if on != id and Components.place(on) == place:
+			return on
+	return ""
+
+## Take `id` off the ship and put it back in the Cradle, to wait like any other. Taking off
+## the only hold is allowed: a ship with none is a state the game already has. Returns
+## whether it came off.
+func stow(id: String) -> bool:
+	var gs := _game_state()
+	if gs == null or not id in gs.fitted():
+		return false
+	var waiting_now := gs.cradled
+	waiting_now.append(id)
+	gs.cradled = waiting_now
+	_refit(gs)
+	return true
+
+func _refit(gs: GameState) -> void:
 	Save.save_cradled(gs.cradled)
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if ship:
 		ship.refit(gs)
-	EventBus.component_fitted.emit(id)
-	return id
 
 ## Record `id` as in the Cradle, at once and in the save: from here it is never loose
 ## Freight again.

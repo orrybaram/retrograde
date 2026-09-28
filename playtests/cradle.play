@@ -4,8 +4,9 @@
 # load is; flown in anywhere near it, at an angle, the arm reaches out and closes on it.
 # Let go of, it is the Cradle's at once, and the claw carries it round and down into the
 # bay, which takes it below and is open again for the next. It stays there through a
-# reload - and the hauler on Veld never puts another back. Docked, `FIT CARGO BAY` fits it:
-# the hold becomes 50, and it stays fitted through a reload.
+# reload - and the hauler on Veld never puts another back. Docked, SHIP shows it waiting
+# and `FIT CARGO BAY` fits it: the hold becomes 50, the bay is on the hull, and it stays
+# fitted through a reload.
 # Run: tools/play.sh --headless playtests/cradle.play
 
 press enter
@@ -71,23 +72,43 @@ assert gs.cradled == PackedStringArray(["cargo_bay"]) "still in the Cradle after
 assert not pt.cradle().is_full() "the bay is ready"
 assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"
 
-# --- Docked at SR-7, FIT CARGO BAY: the ship has its hold ---
+# --- Docked at SR-7, SHIP > FIT CARGO BAY: the ship has its hold, on the hull ---
 assert ship.max_cargo_weight == 0.0 "no hold before it is fitted"
 eval pt.redock()
 wait_until pt.state_name() == "LandedState" 10
 wait_until pt.visible_ui().has("SpacePortDialogue") 10
+assert str(pt.screen_text()).contains("> SHIP") "SHIP offered, selected"
+screenshot cradle_4_ship_offered
+press enter
+wait 0.1
 assert str(pt.screen_text()).contains("> FIT CARGO BAY") "FIT CARGO BAY offered, selected"
-screenshot cradle_4_fit_offered
+screenshot cradle_4b_fit_previewed
 press enter
 wait 0.1
 assert ship.max_cargo_weight == 50.0 "the hold is 50"
 assert gs.progress.holds("fitted_components", "cargo_bay") and gs.cradled.is_empty() "fitted, out of the Cradle"
+assert ship.get_node_or_null("Fitted_cargo_bay") != null "the bay is on the hull"
+assert str(pt.screen_text()).contains("STOW CARGO BAY") "and can come off again"
 assert not str(pt.screen_text()).contains("FIT CARGO BAY") "nothing more to fit"
-press enter
+screenshot cradle_5_fitted_ship
+press esc
+wait 0.1
+assert str(pt.screen_text()).contains("> SHIP") "back to the hub"
+press space
+wait 0.2
+assert pt.visible_ui().has("SpacePortDialogue") and str(pt.screen_text()).contains("STOW CARGO BAY") "SPACE opens SHIP, and the dock does not close it"
+press esc
+wait 0.1
+press esc
 wait 0.2
 assert not pt.visible_ui().has("SpacePortDialogue") "departed the menu"
 assert str(pt.screen_text()).contains("/50") "the cargo readout shows"
 screenshot cradle_5_fitted
+
+# --- Undocking backwards with the bay on: it clears the port pad ---
+hold reverse_thrust 0.6
+wait_until pt.state_name() != "LandedState" 3
+assert ship.health_component.current_hp == ship.health_component.max_hp "no scrape off the pad"
 
 # --- Fitted through a reload, and nothing loose on Veld ---
 eval pt.save_now()
@@ -95,6 +116,7 @@ reload
 wait 0.5
 assert gs.progress.holds("fitted_components", "cargo_bay") "still fitted after a reload"
 assert ship.max_cargo_weight == 50.0 "and the hold is 50"
+assert ship.get_node_or_null("Fitted_cargo_bay") != null "and the bay is on the hull"
 assert gs.cradled.is_empty() "the Cradle stays empty"
 assert pt.component_count("cargo_bay") == 0 "no Cargo Bay back on Veld"
 quit

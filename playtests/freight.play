@@ -95,7 +95,7 @@ up action
 frames 3
 assert ship.sonar.ring_count() == 0 "and letting go after it sends none"
 assert not ship.is_carrying() "the piece is loose"
-assert ship.mass < 3.1 "the ship is its own weight again"
+assert abs(ship.mass - 3.35) < 0.01 "the ship is its own weight again (with its Cargo Bay)"
 
 # Let go on the move, it carries on exactly as the ship was going
 # (the first piece is coasting just off the nose: move it out of the way)

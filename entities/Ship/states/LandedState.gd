@@ -144,6 +144,23 @@ func exit() -> void:
 	if is_instance_valid(deposit):
 		deposit.finish()
 
+## `action` opens the dock's menu, or the core's console. Only a press no open menu took
+## (every menu marks its keys handled), so SPACE or A on a menu row is that row's, and
+## never also closes the menu under it or reopens one it just closed.
+func _unhandled_input(event: InputEvent) -> void:
+	if not _is_current() or not is_ship_valid():
+		return
+	if event.is_action_pressed(&"action") and not event.is_echo():
+		if _awaiting_reboot():
+			_toggle_core_terminal()
+		else:
+			_toggle_dialogue()
+		get_viewport().set_input_as_handled()
+
+func _is_current() -> bool:
+	var machine := get_parent() as StateMachine
+	return machine != null and machine.current_state == self
+
 func physics_process(delta: float) -> void:
 	if not is_ship_valid():
 		return
@@ -151,13 +168,6 @@ func physics_process(delta: float) -> void:
 	# Sample input to check if player wants to take off
 	ship.want_thrust = Input.is_action_pressed("thrust")
 	ship.want_reverse_thrust = Input.is_action_pressed("reverse_thrust")
-	
-	# Handle dialogue keypress (ui_accept - Space/Enter)
-	if Input.is_action_just_pressed("action"):
-		if _awaiting_reboot():
-			_toggle_core_terminal()
-		else:
-			_toggle_dialogue()
 	
 	# Release lock if thrusting - transition back to FlyingState
 	# Don't allow takeoff if any UI is open (dialogue, terminal)
