@@ -102,6 +102,24 @@ func spawn_adrift(station: Node2D, with_drift := true) -> void:
 		drift.position = ADRIFT_OFFSET
 		station.add_child(drift)
 
+## Home: the saved dock, or the default if that one is gone - unless it is a dock whose
+## arm is still in (SR-7 before every piece is home, DockArm), which no ship can sit on:
+## then adrift outside the station, the way a new game opens, without the debris.
+func spawn_home(gs: GameState) -> void:
+	var dock: Node2D = await find_saved_dock()
+	if not dock:
+		dock = await find_default_dock()
+	if not dock:
+		push_warning("ShipSpawner: No dock to come home to")
+		return
+	var port := dock as SpacePort
+	if port and port.needs_core and not DockArm.should_be_out(gs):
+		var station := await find_home_station()
+		if station:
+			await spawn_adrift(station, false)
+			return
+	await spawn_at_dock(dock)
+
 ## The station a new game wakes beside: the player's home (group "space_stations").
 func find_home_station() -> Node2D:
 	await get_tree().process_frame

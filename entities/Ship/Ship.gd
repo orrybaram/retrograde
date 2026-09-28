@@ -636,46 +636,53 @@ func refit(state: GameState) -> void:
 	max_cargo_weight = base_max_cargo_weight + (Components.hold(state.fitted.keys()) if state else 0.0)
 	update_mass_from_cargo()
 
-## Reset ship to initial state for a new game.
-## Resets stats to base values.
+# --- Coming back: a new clone in this hull ----------------------------------------------
+# Nothing outside the ship writes its hull, motion, shake, spin or boost particles to reset
+# it; a new game and a relaunch both come through here (Session runs the rest).
+
+## A new game: the ship as the scene builds it. Stats back to base, hull full, tank dry - a
+## new game wakes with no FUEL TANK seated (docs/OPENING.md), so fuel is something the
+## player has to go and get.
 func reset_to_initial_state() -> void:
-	# Reset stats to base values
 	max_hull = base_max_hull
 	max_cargo_weight = base_max_cargo_weight
+	drive.fuel = 0.0
+	_reset_flight()
+	if ship_polygon:
+		ship_polygon.visible = true
+	cargo_changed.emit(0.0, max_cargo_weight)
 
-	# Hull comes back full; the tank starts dry - a new game wakes with no FUEL TANK
-	# seated (docs/OPENING.md), so fuel is something the player has to go and get.
+## A relaunch after a loss (destroyed, or taken by the Void): the next clone comes up in
+## this hull. Fitted upgrades persist (the cloning bay prints the ship's spec, ADR 0011),
+## the hull is whole, and SR-7 tops the tank up to its free quarter once its core runs. A
+## load still on the nose stays out here, where the ship was lost.
+func relaunch(state: GameState) -> void:
+	let_go()
+	_reset_flight()
+	drive.top_up_to_free_floor(state)
+
+## Every flight field back to a ship under control: hull full, at rest, level, no tumble,
+## no shake, the boost plume as built, flying, and processing again (DestroyedState stops
+## it). Where the ship then comes up is the spawner's business.
+func _reset_flight() -> void:
 	health_component.max_hp = max_hull
 	health_component.reset()
-	drive.fuel = 0.0
 
-	# Reset physics
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
 	rotation = 0.0
 	drift_spin = 0.0
 
-	# Reset camera shake
 	camera_shake_time = 0.0
 	damage_shake_time = 0.0
 	damage_shake_current_intensity = 0.0
 
-	# Reset boost particles
 	reset_boost_particles()
 
-	# Reset to FlyingState
 	if state_machine and state_machine.has_state("FlyingState"):
 		state_machine.change_state("FlyingState")
-
-	# Ensure ship is enabled and visible
 	set_process(true)
 	set_physics_process(true)
-	if ship_polygon:
-		ship_polygon.visible = true
 
-	# Update mass based on cargo (should be 0 after reset)
 	update_mass_from_cargo()
-
-	# Emit signals
 	drive.changed.emit()
-	cargo_changed.emit(0.0, max_cargo_weight)

@@ -94,6 +94,26 @@ CarryingState: hold action RELEASE_HOLD (0.8s; the action message is only a fill
   `Freight.punch()` and a camera bump.
 - Spawn a test piece: dev panel SPAWN FREIGHT, or `pt.stage_freight()` in a playtest (`playtests/freight.play`).
 
+## Session (bringing a clone up, `scripts/Session.gd`)
+
+```
+Main -> Session.run(launch)   launch: Session.Launch { boots, reset, restore_world, place_ship }
+  reset -> cover -> unpause, a frame -> restore_world -> place_ship -> uncover
+    -> live (Main: PLAYING) -> EventBus.ship_respawned -> save -> wake from black
+```
+
+- One pipeline, one order. A way in (relaunch today; new game and resume in #164) is a
+  `Launch` describing only how it differs (`Session.relaunch()`), never a copy of the sequence.
+- World before ship (a resume must restore orbits before any dock is found); save after the
+  respawn is announced, so the save holds what every listener already reacted to.
+- A relaunch keeps the world: its world step is `resources_refresh_requested` (rings topped
+  up), never `planets_restored`, which rebuilds every ring and encounter.
+- The Ship resets itself: `Ship.relaunch(gs)` after a loss, `reset_to_initial_state()` for a
+  new game, both through `_reset_flight()` (hull, motion, drift spin, shake, boost plume,
+  FlyingState, processing). Nothing outside the Ship writes those fields to reset it.
+- `Session.Screen` is the cover seam (Main's boot terminal / fade; a quiet one in tests), and
+  the save is injectable, so `test/SessionTest.gd` runs a relaunch on a bare ship.
+
 ## Controls (keyboard, gamepad, rebinding)
 
 ```

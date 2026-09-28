@@ -31,7 +31,8 @@ const SECTION_CORE_KEY := "core_started"
 const SECTION_CRADLE_KEY := "cradled"
 const SECTION_FITTED_KEY := "fitted"
 
-static func save(gs: GameState, ship: Ship) -> void:
+## `path` defaults to the game save.
+static func save(gs: GameState, ship: Ship, path: String = "") -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", gs.stores)
 	cfg.set_value("stats", "death_count", gs.death_count)
@@ -101,7 +102,7 @@ static func save(gs: GameState, ship: Ship) -> void:
 			cfg.set_value(ENCOUNTER_SECTION, ENCOUNTER_CLAIMED_KEY, encounters["claimed"])
 			cfg.set_value(ENCOUNTER_SECTION, ENCOUNTER_ELAPSED_KEY, encounters["elapsed"])
 
-	cfg.save(Playtest.save_path())
+	cfg.save(path if path != "" else Playtest.save_path())
 
 ## Writes only the radio show-once flags into an existing save, keeping the rest.
 ## With no save yet this does nothing (a flags-only file would enable CONTINUE);
