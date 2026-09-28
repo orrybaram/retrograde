@@ -575,7 +575,7 @@ should be renamed before SR-7's Cradle is built.
 | | Value | Where |
 |---|---|---|
 | Tank | 150 fuel (`max_fuel`); the Aux costs nothing, the Burn 6/s | `Ship`, `Main.tscn` |
-| Free quarter | 37.5 fuel on every dock or relaunch, never higher | `Ship.FREE_FUEL_FRACTION` |
+| Free quarter | 37.5 fuel on every dock or relaunch, never higher | `Drive.FREE_FRACTION` |
 | Cargo Bay hold | pull threshold 1.6 (the Aux tops out at 1.0), `pull_time` 4.25 s | `Components` |
 | Tear-out | about 29-30 fuel of Burn, 19-20% of the tank; 7-9 fuel left over | measured |
 | Wasted quarter | a tenth of the tank burned on the way (15% left) runs dry mid-pull, and the ground holds; the Aux flies home for another quarter | measured |
