@@ -156,7 +156,7 @@ func test_a_relaunch_keeps_the_world_it_came_back_to() -> void:
 
 func test_the_save_holds_the_relaunched_clone_and_the_ledger() -> void:
 	var berth := _berth()
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	_ship.drive.fuel = 0.0
 	_gs.death_count = 3
 	_gs.stores = 12
@@ -189,7 +189,7 @@ func test_a_relaunch_boots_only_on_a_powered_station() -> void:
 	var session := Session.new(get_tree(), _ship, _spawner, _gs, screen, func(_g, _s) -> void: pass)
 	await session.run(session.relaunch())
 	assert_bool(screen.boots_asked).is_false()
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	_destroy()
 	await session.run(session.relaunch())
 	assert_bool(screen.boots_asked).is_true()
@@ -205,7 +205,7 @@ func test_relaunch_resets_every_flight_field_including_the_spin() -> void:
 	assert_str(_ship.state_machine.get_current_state_name()).is_equal("FlyingState")
 
 func test_relaunch_tops_the_tank_up_to_the_free_quarter_once_the_core_runs() -> void:
-	_gs.core_started = true
+	_gs.progress.flag(Progress.CORE_STARTED)
 	_ship.drive.fuel = 0.0
 	_destroy()
 	_ship.relaunch(_gs)
