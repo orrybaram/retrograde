@@ -505,7 +505,11 @@ func _clamp_freight(f: Freight, quiet := false) -> void:
 ## tracked target at once. Returns the piece (null if nothing was clamped).
 func _release_freight() -> Freight:
 	if not is_carrying():
-		freight = null
+		# Freed out from under the clamp (a scenario or a lab clearing it): nothing to let
+		# go of, but the hull still wears its outline and mass
+		if freight != null or _freight_collider != null:
+			_detach_freight()
+			update_mass_from_cargo()
 		return null
 	var f := freight
 	var carried := global_transform * f.transform

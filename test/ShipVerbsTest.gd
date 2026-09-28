@@ -143,6 +143,17 @@ func test_clearing_the_freight_leaves_the_ship_flying_unladen() -> void:
 	assert_str(_state()).is_equal("FlyingState")
 	assert_bool(_ship.is_carrying()).is_false()
 
+func test_a_piece_freed_out_from_under_the_clamp_leaves_the_ship_flying() -> void:
+	var f := _piece()
+	_ship.carry(f, true)
+	f.free()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert_str(_state()).is_equal("FlyingState")
+	assert_bool(_ship.is_carrying()).is_false()
+	assert_object(_ship.get_node_or_null("FreightCollision")).is_null()
+	assert_float(_ship.turn_ratio()).is_equal(1.0)
+
 # --- dock ---
 
 func test_dock_at_a_port_docks_into_landed_state() -> void:

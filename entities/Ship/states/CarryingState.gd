@@ -49,6 +49,15 @@ func release_progress() -> float:
 func allows_sonar() -> bool:
 	return false
 
+## A safety net, not a way out: carry is the only way in and the verbs are the ways out,
+## but a piece freed out from under the clamp (a scenario or a lab clearing it) leaves
+## nothing to carry, so the ship flies on unladen without touching the freed node.
+func physics_process(delta: float) -> void:
+	if is_ship_valid() and not ship.is_carrying():
+		ship.state_machine.change_state("FlyingState")
+		return
+	super.physics_process(delta)
+
 func _update_action() -> void:
 	if _action_armed and Input.is_action_pressed("action") and ControlLock.allows(ControlLock.RELEASE):
 		_release_held += get_physics_process_delta_time()

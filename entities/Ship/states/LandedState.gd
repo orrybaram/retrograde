@@ -43,15 +43,15 @@ func enter() -> void:
 
 	# What Ship.dock_at staged: the port, and whether to skip the approach (spawning)
 	var staged := _take_staged()
-	var pending_dockable := staged[0] as Node2D
+	var port := staged[0] as Node2D
 	var instant: bool = staged[1]
 
-	if pending_dockable == null:
+	if port == null:
 		# Nothing to dock at, go back to flying
 		_exit_to_flying()
 		return
 
-	locked_dockable = pending_dockable
+	locked_dockable = port
 	locked_offset_from_target = Vector2.ZERO  # Will be calculated on first frame
 	ship.drift_spin = 0.0  # docked is under control, whatever it was doing before
 
