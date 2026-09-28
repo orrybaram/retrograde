@@ -1,8 +1,10 @@
 extends GdUnitTestSuite
 
-## The relaunch after a loss runs through Session's one pipeline: the world is restored,
-## the respawn announced, and only then the save, which holds the relaunched clone. The Ship
-## resets itself for it, every flight field, on the dock path and the adrift one.
+## Every way in runs through Session's one pipeline: the world is restored, the ship placed,
+## the respawn announced, and only then the save, which holds the clone that came up. A new
+## game starts the world over, a resume brings the save back (clamped Freight on the nose,
+## through the carry verb), and a relaunch keeps the world. The Ship resets itself for a
+## relaunch, every flight field, on the dock path and the adrift one.
 
 ## The smallest thing a ship can dock at: every method Dockable asks for, and nothing else.
 const BERTH_SOURCE := """extends Node2D
@@ -66,6 +68,7 @@ func after_test() -> void:
 	_connections.clear()
 	get_tree().paused = false
 	Freight.clear_all(get_tree())
+	DerelictShip.clear_all(get_tree())
 	Gem.clear_all()
 	InventoryManager.clear_inventory()
 	NavSystem.track_home()
@@ -193,6 +196,153 @@ func test_a_relaunch_boots_only_on_a_powered_station() -> void:
 	_destroy()
 	await session.run(session.relaunch())
 	assert_bool(screen.boots_asked).is_true()
+
+# --- new game ---
+
+## SR-7 as far as a new game needs it: the station the ship wakes beside.
+func _station() -> Node2D:
+	var station := Node2D.new()
+	station.add_to_group("space_stations")
+	station.global_position = Vector2(-2000, 1500)
+	_world.add_child(station)
+	return station
+
+func test_a_new_game_announces_the_planets_then_places_the_ship_then_saves() -> void:
+	_station()
+	var session := _session()
+	await session.run(session.new_game())
+	assert_array(_events).contains_exactly(
+		["cover", "planets_restored", "uncover", "live", "ship_respawned", "save"])
+
+func test_a_new_game_saves_a_fresh_game_adrift_beside_the_station() -> void:
+	var station := _station()
+	_gs.stores = 40
+	_gs.death_count = 5
+	_gs.progress.flag(Progress.CORE_STARTED)
+	_gs.progress.mark(Progress.IDENTIFIED_GATES, "Veld")
+	InventoryManager.add_item("gem", 3)
+	_ship.drive.fuel = _ship.drive.max_fuel
+	Freight.spawn(_world, Vector2(900, 900))
+	_rough_up()
+
+	var session := _session()
+	await session.run(session.new_game())
+
+	# The ship: whole, adrift where a new game wakes, with the slow tumble, and flying
+	_assert_whole()
+	assert_float(_ship.drift_spin).is_equal(ShipSpawner.ADRIFT_SPIN)
+	assert_str(_ship.state_machine.get_current_state_name()).is_equal("FlyingState")
+	assert_bool(get_tree().get_nodes_in_group("freight").is_empty()).is_true()
+	# The save: nothing earned, nothing carried, nowhere docked
+	var cfg := ConfigFile.new()
+	assert_int(cfg.load(SAVE_PATH)).is_equal(OK)
+	assert_int(cfg.get_value("stats", "stores")).is_equal(0)
+	assert_int(cfg.get_value("stats", "death_count")).is_equal(0)
+	assert_float(cfg.get_value("stats", "fuel")).is_equal(0.0)
+	assert_str(cfg.get_value("stats", "docked_at")).is_equal("")
+	var adrift := station.to_global(ShipSpawner.ADRIFT_OFFSET)
+	assert_float(cfg.get_value("stats", "spawn_position_x")).is_equal_approx(adrift.x, 5.0)
+	assert_float(cfg.get_value("stats", "spawn_position_y")).is_equal_approx(adrift.y, 5.0)
+	assert_array(cfg.get_section_keys("cargo") if cfg.has_section("cargo") else []).is_empty()
+	assert_array(cfg.get_value("wreck", "freight")).is_empty()
+	for kind in Progress.KINDS:
+		assert_array(Array(_gs.progress.list(kind))).is_empty()
+	assert_bool(cfg.get_value("sections", "core_started", false)).is_false()
+	assert_array(Array(cfg.get_value("gates", "identified", PackedStringArray()))).is_empty()
+
+# --- resume ---
+
+## The game as it was saved to SAVE_PATH, then everything the process would forget: a
+## continue starts from the file and the ledger's store, not from what is in memory.
+func _save_and_forget() -> void:
+	Save.save(_gs, _ship, SAVE_PATH)
+	_gs.stores = 0
+	_gs.death_count = 0
+	_gs.progress = _gs.progress.fresh()
+	InventoryManager.clear_inventory()
+	_ship.drive.fuel = 0.0
+	_events.clear()
+
+func test_a_resume_restores_the_world_then_places_the_ship_then_saves() -> void:
+	_berth()
+	_save_and_forget()
+	var session := _session()
+	await session.run(session.resume(SAVE_PATH))
+	assert_array(_events).contains_exactly(
+		["cover", "planets_restored", "uncover", "live", "ship_respawned", "save"])
+
+func test_a_resume_brings_the_save_back_and_saves_it_again() -> void:
+	var berth := _berth()
+	_gs.stores = 17
+	_gs.death_count = 4
+	_gs.progress.flag(Progress.CORE_STARTED)
+	_gs.progress.mark(Progress.IDENTIFIED_GATES, "Veld")
+	InventoryManager.add_item("gem", 2)
+	_ship.drive.fuel = _ship.drive.max_fuel * 0.5
+	_save_and_forget()
+
+	var session := _session()
+	await session.run(session.resume(SAVE_PATH))
+
+	assert_int(_gs.stores).is_equal(17)
+	assert_int(_gs.death_count).is_equal(4)
+	assert_bool(_gs.progress.flagged(Progress.CORE_STARTED)).is_true()
+	assert_bool(_gs.progress.holds(Progress.IDENTIFIED_GATES, "Veld")).is_true()
+	assert_int(InventoryManager.get_inventory_dict().get("gem", 0)).is_equal(2)
+	assert_float(_ship.drive.fuel).is_equal(_ship.drive.max_fuel * 0.5)
+	# Home: nothing clamped, so it comes back docked
+	assert_str(_ship.state_machine.get_current_state_name()).is_equal("LandedState")
+	assert_float(_ship.global_position.distance_to(berth.global_position)).is_less(1.0)
+	# And the save written after the respawn holds all of it
+	var cfg := ConfigFile.new()
+	assert_int(cfg.load(SAVE_PATH)).is_equal(OK)
+	assert_int(cfg.get_value("stats", "stores")).is_equal(17)
+	assert_int(cfg.get_value("stats", "death_count")).is_equal(4)
+	assert_float(cfg.get_value("stats", "fuel")).is_equal(_ship.drive.max_fuel * 0.5)
+	assert_int(cfg.get_value("cargo", "gem")).is_equal(2)
+	assert_array(Array(cfg.get_value("gates", "identified"))).contains_exactly(["Veld"])
+
+func test_a_resume_with_freight_clamped_comes_back_in_flight_carrying_it() -> void:
+	_berth()  # a dock it must not go home to
+	var where := Vector2(-4000, 2500)
+	_ship.global_position = where
+	var load_ := Freight.spawn(_world, where + Vector2(60, 0))
+	load_.label = "TEST LOAD"
+	assert_bool(_ship.carry(load_, true)).is_true()
+	_save_and_forget()
+	_ship.global_position = Vector2(8000, 8000)
+
+	var session := _session()
+	await session.run(session.resume(SAVE_PATH))
+
+	# Carried through the verb: CarryingState, holding the piece from the save
+	assert_bool(_ship.is_carrying()).is_true()
+	assert_str(_ship.state_machine.get_current_state_name()).is_equal("CarryingState")
+	assert_str(_ship.freight.label).is_equal("TEST LOAD")
+	assert_int(get_tree().get_nodes_in_group("freight").size()).is_equal(1)
+	assert_float(_ship.global_position.distance_to(where)).is_less(5.0)
+	# The save after the respawn still has it on the nose
+	var cfg := ConfigFile.new()
+	assert_int(cfg.load(SAVE_PATH)).is_equal(OK)
+	var rows: Array = cfg.get_value("wreck", "freight")
+	assert_int(rows.size()).is_equal(1)
+	assert_bool(rows[0]["clamped"]).is_true()
+	assert_str(rows[0]["label"]).is_equal("TEST LOAD")
+
+func test_a_resume_boots_only_on_a_powered_station_and_a_new_game_never_does() -> void:
+	_berth()
+	_station()
+	var screen := RecordingScreen.new(_events)
+	var session := Session.new(get_tree(), _ship, _spawner, _gs, screen, func(_g, _s) -> void: pass)
+	_save_and_forget()
+	await session.run(session.resume(SAVE_PATH))
+	assert_bool(screen.boots_asked).is_false()
+	_gs.progress.flag(Progress.CORE_STARTED)
+	_save_and_forget()
+	await session.run(session.resume(SAVE_PATH))
+	assert_bool(screen.boots_asked).is_true()
+	await session.run(session.new_game())
+	assert_bool(screen.boots_asked).is_false()
 
 # --- the Ship's reset ---
 

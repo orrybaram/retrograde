@@ -63,6 +63,9 @@ var _ship: Node2D = null
 var _sun: Planet = null
 var _current_cell := Vector2i.ZERO
 var _streaming := false
+## The world is back (planets_restored) but the ship isn't placed yet: streaming waits for
+## the respawn, so no cell is loaded, and no budget claimed, around where it used to be.
+var _awaiting_ship := false
 var _check_timer := 0.0
 
 static func get_instance(tree: SceneTree) -> EncounterField:
@@ -71,6 +74,7 @@ static func get_instance(tree: SceneTree) -> EncounterField:
 func _ready() -> void:
 	add_to_group("encounter_field")
 	EventBus.planets_restored.connect(_on_planets_restored)
+	EventBus.ship_respawned.connect(_on_ship_respawned)
 	EventBus.game_unpaused.connect(_on_game_unpaused)
 	_clock_start = _now()
 
@@ -92,6 +96,7 @@ func reset() -> void:
 	_clock_base = 0.0
 	_clock_start = _now()
 	_streaming = false
+	_awaiting_ship = false
 
 ## Everything worth saving. The cells themselves come back from the seed.
 func snapshot() -> Dictionary:
@@ -151,15 +156,27 @@ func claimed_count(def_id: StringName) -> int:
 			total += 1
 	return total
 
+## A new game or a load has put the world back. The ship is placed after this (Session), so
+## the old cells go now and the new ones wait for it (_on_ship_respawned).
 func _on_planets_restored() -> void:
 	if not enabled:
 		return
 	_release_all()
-	_streaming = true
-	_clock_start = _now()
-	_check_timer = 0.0
+	_clock_base = elapsed()  # the rings hold still until the ship is in place
+	_streaming = false
+	_awaiting_ship = true
 	_ship = null
 	_sun = null
+
+## The ship is in place: stream the cells around it. A relaunch keeps the world, and the
+## field keeps streaming through it.
+func _on_ship_respawned() -> void:
+	if not enabled or not _awaiting_ship:
+		return
+	_awaiting_ship = false
+	_streaming = true
+	_clock_start = _now()
+	_check_timer = CELL_CHECK_INTERVAL
 	_reconcile(true)
 
 func _process(delta: float) -> void:

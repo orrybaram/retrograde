@@ -19,7 +19,6 @@ enum MainGameState {
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
 @onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
 @onready var hud: Control = $"CanvasLayer/HUD"
-@onready var encounter_field: EncounterField = $EncounterField
 
 ## What UNIT-7 radios once the next clone is up, per game-over reason. Nothing to
 ## confirm: the relaunch has already happened (and RobotRadio drops it before Act 1 ends).
@@ -205,10 +204,6 @@ func _build_fade_overlay() -> void:
 	_fade_rect.visible = false
 	layer.add_child(_fade_rect)
 
-## Whether SR-7's core is running - the station is powered, Act 1 is behind the player.
-func _station_powered() -> bool:
-	return StationPower.is_powered(get_tree().get_first_node_in_group("game_state") as GameState)
-
 ## Hide the ship being placed. The boot terminal is the ship's computer coming up on a
 ## powered station (docs/DESIGN.md "Minute 0-1"), so it only runs once the core has been
 ## cold-started; until then the screen just goes dark. Returns whether it booted.
@@ -267,166 +262,30 @@ func clear_screen_effects() -> void:
 	VoidZone.clear_now()
 	get_tree().call_group("screen_effects", "clear_now")
 
-static func _depth(n: Node) -> int:
-	var d := 0
-	while n.get_parent():
-		n = n.get_parent()
-		d += 1
-	return d
-
+## A new game, through the Session pipeline (Session.new_game). Main only wraps it: the
+## menu goes, and the ship's manual diagnostic (BootLog) locks the controls from the first
+## frame, through the wake, and hands them back once the clone is up.
 func start_game() -> void:
 	clear_screen_effects()
-	# Locked from the first frame, through the wake: the diagnostic hands them back
 	var diagnostic := force_boot_log or not Playtest.active
 	if diagnostic:
 		get_tree().call_group("boot_log", "prepare")
 	if start_menu:
 		start_menu.visible = false
-	Gem.clear_all()
-	DerelictShip.clear_all(get_tree())
-	Freight.clear_all(get_tree())
-
-	# Reset all game state for new game
-	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	if gs:
-		gs.reset_all_state()
-	RobotRadio.reset()
-	RobotRadio.guide_awake = false
-	if encounter_field:
-		encounter_field.reset()
-
-	# Every orbit back to where the scene starts it, parents first so each body is placed
-	# off its parent's new position
-	var bodies := get_tree().get_nodes_in_group("orbiting_bodies")
-	bodies.sort_custom(func(a: Node, b: Node) -> bool: return _depth(a) < _depth(b))
-	for body in bodies:
-		body.reset_orbit()
-
-	# Reset ship to initial state
-	if ship:
-		ship.reset_to_initial_state()
-
-	# Hide ship while respawning to prevent showing at wrong location
-	if ship and ship.ship_polygon:
-		ship.ship_polygon.visible = false
-
-	# The boot terminal only runs on a powered station; before that the dark covers the spawn
-	var booting := _cover_spawn(_station_powered())
-
-	# Unpause so spawner can work
-	get_tree().paused = false
-
-	# Wait a frame for scene to initialize
-	await get_tree().process_frame
-
-	# A new game opens adrift outside SR-7, its dock's arm still in (docs/OPENING.md §3)
-	if ship_spawner:
-		var station := await ship_spawner.find_home_station()
-		if station:
-			await ship_spawner.spawn_adrift(station)
-		else:
-			push_warning("No home station found for new game")
-
-	# Notify that planets are in position (for new game, they're already at initial angles)
-	# This triggers spawners to start
-	EventBus.planets_restored.emit()
-
-	var wake := _wake_enabled()
-	await _uncover_spawn(booting, wake)
-
-	# Show ship after spawning is complete
-	if ship and ship.ship_polygon:
-		ship.ship_polygon.visible = true
-
-	# Now unpause and start playing
-	get_tree().paused = false
-	current_game_state = MainGameState.PLAYING
-	EventBus.ship_respawned.emit()
-	# The ship no longer starts on a dock, so nothing autosaves: save the fresh game now,
-	# so CONTINUE never resumes the last one.
-	if gs and ship:
-		Save.save(gs, ship)
-
-	# A beat of silence in the dark, then the lights come up on a dead station. Nobody is
-	# on the comms: UNIT-7 is off until the core's cold start (RobotRadio.guide_awake).
-	if wake:
-		await _wake_from_black()
+	var session := _session()
+	await session.run(session.new_game())
 	# The ship checks its own controls, once, on a new game (docs/OPENING.md §6)
 	if diagnostic:
 		get_tree().call_group("boot_log", "begin")
 
+## Continue the save, through the Session pipeline (Session.resume).
 func load_game() -> void:
 	clear_screen_effects()
 	get_tree().call_group("boot_log", "forget")  # a continue never owes the diagnostic
 	if start_menu:
 		start_menu.visible = false
-
-	# Hide ship while respawning to prevent showing at wrong location
-	if ship and ship.ship_polygon:
-		ship.ship_polygon.visible = false
-
-	# The boot terminal only runs on a powered station; before that the dark covers the spawn.
-	# Whether the save's is powered is the ledger's to say, before it is loaded.
-	var gs = get_tree().get_first_node_in_group("game_state") as GameState
-	var booting := _cover_spawn(gs != null and gs.progress.resumed().flagged(Progress.CORE_STARTED))
-
-	# Unpause so spawner can work
-	get_tree().paused = false
-
-	# Wait a frame for scene to initialize
-	await get_tree().process_frame
-
-	# Load game state (Stores, ship stats, inventory)
-	var clamped: Freight = null
-	if gs and ship:
-		Save.load_into(gs, ship)
-		# Swap in the saved wrecks in one step, so no save in between can drop them
-		Gem.clear_all()
-		DerelictShip.clear_all(get_tree())
-		Freight.clear_all(get_tree())
-		Save.restore_wreck_gems(ship.get_parent())
-		Save.restore_derelicts(ship.get_parent(), ship.ship_polygon)
-		clamped = Save.restore_freight(ship.get_parent(), gs.progress)
-
-	if encounter_field:
-		encounter_field.restore(Save.load_encounters())
-
-	# Restore planet orbital angles
-	Save.restore_planet_angles(get_tree())
-
-	# Notify that planets have been restored (allows spawners to spawn at correct positions)
-	EventBus.planets_restored.emit()
-
-	await get_tree().physics_frame
-
-	# Saved with a load clamped: back in flight where it was, with the load on the nose.
-	# Otherwise, spawn ship at saved dock, or default if not found
-	if ship_spawner and clamped:
-		await ship_spawner.spawn_in_flight(Save.load_spawn_position(), Save.load_spawn_rotation(), Save.load_spawn_velocity())
-		if is_instance_valid(clamped):
-			ship.carry(clamped, true)
-	elif ship_spawner:
-		await ship_spawner.spawn_home(gs)
-
-	var wake := _wake_enabled()
-	await _uncover_spawn(booting, wake)
-
-	# Show ship after spawning is complete
-	if ship and ship.ship_polygon:
-		ship.ship_polygon.visible = true
-
-	# Now unpause and start playing
-	get_tree().paused = false
-	current_game_state = MainGameState.PLAYING
-	EventBus.ship_respawned.emit()
-	# The ship no longer starts on a dock, so nothing autosaves: save the fresh game now,
-	# so CONTINUE never resumes the last one.
-	if gs and ship:
-		Save.save(gs, ship)
-
-	# Every waking starts the same way, continue or not
-	if wake:
-		await _wake_from_black()
+	var session := _session()
+	await session.run(session.resume())
 
 func _show_game_over_delayed(reason: String) -> void:
 	# Let the explosion play out before the next clone comes up

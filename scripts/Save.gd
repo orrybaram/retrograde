@@ -7,7 +7,7 @@ class_name Save
 ## refill), the Progress ledger (every Record, see Progress.FileStore for where each kind
 ## goes), which radio tips were seen, what waits in SR-7's Cradle, and every piece of
 ## Freight, where it is (a load clamped to the ship puts the ship back in flight with it on
-## the nose, see load_game).
+## the nose, see Session.resume).
 
 const RADIO_SECTION := "radio"
 const RADIO_SEEN_KEY := "seen"
@@ -85,6 +85,10 @@ static func save(gs: GameState, ship: Ship, path: String = "") -> void:
 			cfg.set_value(ENCOUNTER_SECTION, ENCOUNTER_ELAPSED_KEY, encounters["elapsed"])
 
 	cfg.save(path if path != "" else Playtest.save_path())
+
+## The save file at `path`, or the game save when none is given.
+static func _file(path: String) -> String:
+	return path if path != "" else Playtest.save_path()
 
 ## Writes only the radio show-once flags into an existing save, keeping the rest.
 ## With no save yet this does nothing (a flags-only file would enable CONTINUE);
@@ -181,23 +185,24 @@ static func _get_planet_key(planet: Planet) -> String:
 	
 	return planet_name
 
-static func load_into(gs: GameState, ship: Ship) -> void:
+## `path` defaults to the game save, as it does for every loader here.
+static func load_into(gs: GameState, ship: Ship, path: String = "") -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return
 	
 	gs.stores = int(cfg.get_value("stats", "stores", 0))
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
-	RobotRadio.load_seen(load_radio_seen())
+	RobotRadio.load_seen(load_radio_seen(path))
 	# Surveys are not kept: an old save's planetary scans stay behind, so its seams stay
 	# dormant with everyone else's (docs/OPENING.md §9).
 	gs.scanned_planets.clear()
-	gs.spent_ore = load_ore_regrowth()
+	gs.spent_ore = load_ore_regrowth(path)
 	# Every Record comes back from the ledger's own store, then an old save's half-seated
 	# lit station is made whole (GameState.repair_station).
 	gs.progress = gs.progress.resumed()
 	gs.repair_station()
-	gs.cradled = load_cradled()
+	gs.cradled = load_cradled(path)
 	RobotRadio.guide_awake = gs.progress.flagged(Progress.CORE_STARTED)
 	
 	# Load inventory into InventoryManager
@@ -224,32 +229,32 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 		ship.update_mass_from_cargo()  # Update mass based on loaded cargo
 
 ## Respawn saved wreck gems into `world`.
-static func restore_wreck_gems(world: Node) -> void:
+static func restore_wreck_gems(world: Node, path: String = "") -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return
 	Gem.restore_wreck(world, cfg.get_value("wreck", "gems", []))
 
 ## Respawn saved abandoned ships into `world`, drawn with `hull`'s polygons.
-static func restore_derelicts(world: Node, hull: Node2D) -> void:
+static func restore_derelicts(world: Node, hull: Node2D, path: String = "") -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return
 	DerelictShip.restore_all(world, hull, cfg.get_value("wreck", "derelicts", []))
 
 ## Put saved Freight back into `world` (pieces left on derelicts come back with those).
 ## Returns the piece that was clamped to the ship, for the caller to clamp again, or null.
 ## Freight decides which rows come back: none for a Section `progress` holds as seated.
-static func restore_freight(world: Node, progress: Progress) -> Freight:
+static func restore_freight(world: Node, progress: Progress, path: String = "") -> Freight:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return null
 	return Freight.restore_all(world, cfg.get_value("wreck", "freight", []), progress)
 
 ## The ship's velocity when it was saved (it only matters for a ship saved in flight).
-static func load_spawn_velocity() -> Vector2:
+static func load_spawn_velocity(path: String = "") -> Vector2:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return Vector2.ZERO
 	return Vector2(float(cfg.get_value("stats", "spawn_velocity_x", 0.0)),
 		float(cfg.get_value("stats", "spawn_velocity_y", 0.0)))
@@ -257,10 +262,10 @@ static func load_spawn_velocity() -> Vector2:
 ## Load planet orbital angles into a dictionary
 ## Returns a dictionary mapping planet keys to orbital angles
 ## This should be called after planets are generated
-static func load_planet_angles() -> Dictionary:
+static func load_planet_angles(path: String = "") -> Dictionary:
 	var planet_angles: Dictionary = {}
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return planet_angles
 
 	if cfg.has_section("planets"):
@@ -274,9 +279,9 @@ static func load_planet_angles() -> Dictionary:
 
 ## Load spawn position from save file
 ## Returns Vector2.ZERO if no save file or no spawn position saved
-static func load_spawn_position() -> Vector2:
+static func load_spawn_position(path: String = "") -> Vector2:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return Vector2.ZERO
 	
 	var x = float(cfg.get_value("stats", "spawn_position_x", 0.0))
@@ -285,9 +290,9 @@ static func load_spawn_position() -> Vector2:
 
 ## Load spawn rotation from save file
 ## Returns 0.0 if no save file or no rotation saved
-static func load_spawn_rotation() -> float:
+static func load_spawn_rotation(path: String = "") -> float:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return 0.0
 	
 	return float(cfg.get_value("stats", "spawn_rotation", 0.0))
@@ -344,9 +349,9 @@ static func _get_dockable_key(dockable: Node2D) -> String:
 
 ## Load dockable key from save file
 ## Returns empty string if no save file or no dockable saved
-static func load_dockable_key() -> String:
+static func load_dockable_key(path: String = "") -> String:
 	var cfg := ConfigFile.new()
-	if cfg.load(Playtest.save_path()) != OK:
+	if cfg.load(_file(path)) != OK:
 		return ""
 	
 	return str(cfg.get_value("stats", "docked_at", ""))
@@ -413,8 +418,8 @@ static func save_exists() -> bool:
 
 ## Restore planet orbital angles from saved data
 ## Should be called after planets are generated
-static func restore_planet_angles(tree: SceneTree) -> void:
-	var planet_angles = load_planet_angles()
+static func restore_planet_angles(tree: SceneTree, path: String = "") -> void:
+	var planet_angles = load_planet_angles(path)
 	if planet_angles.is_empty():
 		return
 

@@ -105,8 +105,9 @@ func spawn_adrift(station: Node2D, with_drift := true) -> void:
 ## Home: the saved dock, or the default if that one is gone - unless it is a dock whose
 ## arm is still in (SR-7 before every piece is home, DockArm), which no ship can sit on:
 ## then adrift outside the station, the way a new game opens, without the debris.
-func spawn_home(gs: GameState) -> void:
-	var dock: Node2D = await find_saved_dock()
+## `path` is the save whose dock is home (the game save when empty).
+func spawn_home(gs: GameState, path: String = "") -> void:
+	var dock: Node2D = await find_saved_dock(path)
 	if not dock:
 		dock = await find_default_dock()
 	if not dock:
@@ -173,8 +174,8 @@ func find_default_dock() -> Node2D:
 
 ## Find the saved dock from the save file.
 ## Returns null if no save exists or dock not found.
-func find_saved_dock() -> Node2D:
-	var dockable_key = Save.load_dockable_key()
+func find_saved_dock(path: String = "") -> Node2D:
+	var dockable_key = Save.load_dockable_key(path)
 	if dockable_key == "":
 		return null
 	
