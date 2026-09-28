@@ -31,8 +31,8 @@ wait_until pt.state_name() == "FlyingState" 3
 # would leave Crom unidentified and fire the guide's identify call on arrival instead.
 eval gs.set("stores", 1000)
 eval gs.mark_gate_powered(pt.gate("Crom").save_key())
-eval gs.mark_gate_identified(pt.gate("Crom").save_key())
-eval gs.mark_gate_identified(pt.gate("Veld").save_key())
+eval gs.progress.mark("identified_gates", pt.gate("Crom").save_key())
+eval gs.progress.mark("identified_gates", pt.gate("Veld").save_key())
 assert gs.titan_influence() == 1 "Crom's Module is online"
 
 # Dock in Veld's berth and pay for its Gate

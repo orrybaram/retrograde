@@ -232,14 +232,31 @@ Gate (child of Planet, drawn in _draw, group `gates` + `dockable`)
 - Save: `[gates] powered`, written on power-up (a full autosave, which also saves the Stores
   it cost) and on the normal save path. `Save.save_powered_gates` writes only that section.
 - Unidentified (docs/GLOSSARY.md): a Gate reads `? ? ?` on the minimap until the ship comes within
-  `Identifiable.RANGE` of it, at which point `Gate.identify()` records it in
-  `GameState.identified_gates` (saved as `[gates] identified`) and the label flips to `GATE`.
+  `Identifiable.RANGE` of it, at which point `Gate.identify()` marks it in the Progress ledger
+  (`Progress.IDENTIFIED_GATES`, saved as `[gates] identified`) and the label flips to `GATE`.
   The guide's line (`gate_identified.tres`) is `once`, so only the first Gate the player ever
   reaches is spoken for; the rest flip silently. Flying to it is the only trigger — nothing
   points at a Gate beforehand. `scripts/Identifiable.gd` holds the range and the label drawing
   so later finds read the same way. The hauler on Veld (`HaulerWreck`) is the second: once SR-7's
   core has started, flying within range names it `HAULER, DOWN` (`hauler_identified.tres`,
   `GameState.identified_wrecks`, saved as `[finds] identified_wrecks`).
+
+## Progress ledger (Records, `scripts/Progress.gd`)
+
+```
+gs.progress.mark(kind, key) -> Store.write(kind, keys)   # write-through, no Save call at the call site
+gs.progress.holds(kind, key) / gs.progress.list(kind)    # list is oldest first, and a copy
+```
+
+- Every earned fact, by kind; nothing is ever unmarked (a new game is `progress.fresh()`, a
+  continue `progress.resumed()`, both in GameState/Save). Owned by GameState, not an autoload,
+  so each test's `GameState.new()` gets its own ledger.
+- Store seam: `Progress.MemoryStore` (default: tests, labs, any GameState Main did not set up)
+  and `Progress.FileStore(path)` (Main points the game's at `Playtest.save_path()`). The file
+  store keeps each kind where saves before the ledger kept it (`FileStore.WHERE`), writes
+  nothing when there is no save yet, and `Save.save()` carries the ledger over with `put`.
+- Adding a kind: a constant in `Progress`, listed in `Progress.KINDS`. So far only named Gates
+  are on it; the other Records move over in #161.
 
 ## Titan Influence (what it leaks into)
 

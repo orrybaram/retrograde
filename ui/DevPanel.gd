@@ -477,13 +477,12 @@ func _progress_rows() -> Array[Dictionary]:
 
 	rows.append(_value_row(
 		"GATES NAMED",
-		"RIGHT or ENTER names every Gate; LEFT puts them all back to ? ? ?.",
-		func() -> String: return "%d / %d" % [gs.identified_gates.size(), get_tree().get_nodes_in_group("gates").size()],
+		"RIGHT or ENTER names every Gate, for good: a name is never taken back (RESET ALL STATE).",
+		func() -> String: return "%d / %d" % [gs.progress.list(Progress.IDENTIFIED_GATES).size(), get_tree().get_nodes_in_group("gates").size()],
 		func(direction: int) -> void:
-			gs.identified_gates.clear()
 			if direction >= 0:
 				for gate in get_tree().get_nodes_in_group("gates"):
-					gs.mark_gate_identified((gate as Gate).save_key())
+					gs.progress.mark(Progress.IDENTIFIED_GATES, (gate as Gate).save_key())
 	))
 
 	rows.append(_value_row(

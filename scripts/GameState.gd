@@ -32,10 +32,10 @@ var spent_ore: Dictionary = {}
 ## Gate is one Module online, and a Module never goes back offline. Permanent.
 var powered_gates: Dictionary = {}
 
-## Gates the Guide has named, keyed by the planet's Planet.save_key(). A Gate reads as
-## `? ? ?` on the minimap until the player flies close enough to be told what it is
-## (docs/GLOSSARY.md, Unidentified). Permanent.
-var identified_gates: Dictionary = {}
+## The Progress ledger: the facts the player has earned, written through to its store as
+## they are marked (so far, which Gates are named). In memory until Main points it at the
+## save file, so a GameState made anywhere else never touches the player's save.
+var progress := Progress.new()
 
 ## Wrecks UNIT-7 has named (HaulerWreck.save_key()). Like a Gate, a wreck is Unidentified
 ## until the ship flies close enough to be told what it is. Permanent.
@@ -140,12 +140,6 @@ func restore_station(seated: PackedStringArray, started: bool) -> void:
 	if core_started and not station_whole():
 		mark_station_whole()
 
-func is_gate_identified(key: String) -> bool:
-	return identified_gates.has(key)
-
-func mark_gate_identified(key: String) -> void:
-	identified_gates[key] = true
-
 func is_wreck_identified(key: String) -> bool:
 	return identified_wrecks.has(key)
 
@@ -185,7 +179,7 @@ func reset_all_state() -> void:
 	visited_planets.clear()
 	spent_ore.clear()
 	powered_gates.clear()
-	identified_gates.clear()
+	progress = progress.fresh()
 	identified_wrecks.clear()
 	met_automatons.clear()
 	seated_sections.clear()

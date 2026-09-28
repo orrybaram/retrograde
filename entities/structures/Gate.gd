@@ -89,8 +89,6 @@ var initial_angle: float:
 
 var parent_planet: Planet = null
 var minimap_target: GateMinimapTarget = null
-## Off in tests so identifying a Gate never touches a save file (RobotRadio does the same).
-var persist := true
 
 var _orbital_motion = null  # OrbitalMotion
 ## The stonework, cut once in _ready and drawn every frame after that.
@@ -189,20 +187,16 @@ func is_powered() -> bool:
 ## True once the Guide has named this Gate. Until then the minimap reads `? ? ?`.
 func is_identified() -> bool:
 	var gs := _game_state()
-	return gs != null and gs.is_gate_identified(save_key())
+	return gs != null and gs.progress.holds(Progress.IDENTIFIED_GATES, save_key())
 
 ## Names the Gate. The Guide's line is `once` per save, so only the first Gate the
 ## player ever reaches gets a word about it; every later one flips silently.
 ## Returns true when this call is what identified it.
 func identify() -> bool:
 	var gs := _game_state()
-	var key := save_key()
-	if gs == null or key == "" or gs.is_gate_identified(key):
+	if gs == null or not gs.progress.mark(Progress.IDENTIFIED_GATES, save_key()):
 		return false
-	gs.mark_gate_identified(key)
 	EventBus.radio_message_requested.emit(MSG_IDENTIFIED)
-	if persist:
-		Save.save_identified_gates(PackedStringArray(gs.identified_gates.keys()))
 	return true
 
 ## Identifies the Gate once the ship is close enough to make it out, and not before.

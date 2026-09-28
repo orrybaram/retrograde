@@ -4,7 +4,7 @@ class_name Save
 ## Static save/load helpers using ConfigFile (user://save.cfg).
 ## Serializes GameState (Stores, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, Visited Bodies, dug-out ore seams
-## (seconds until they refill), powered and identified Gates, the Automatons the player
+## (seconds until they refill), powered Gates, the Progress ledger (named Gates), the Automatons the player
 ## has met, which radio tips were seen, which Sections are seated in their Mounts, and every
 ## piece of Freight, where it is (a load clamped to the ship puts the ship back in flight
 ## with it on the nose, see load_game).
@@ -21,7 +21,6 @@ const ORE_SECTION := "ore"
 const ORE_REGROW_KEY := "regrow"
 const GATE_SECTION := "gates"
 const GATE_POWERED_KEY := "powered"
-const GATE_IDENTIFIED_KEY := "identified"
 const FIND_SECTION := "finds"
 const FIND_WRECKS_KEY := "identified_wrecks"
 const AUTOMATON_SECTION := "automatons"
@@ -83,7 +82,8 @@ static func save(gs: GameState, ship: Ship) -> void:
 	cfg.set_value(VISIT_SECTION, VISIT_PLANETS_KEY, PackedStringArray(gs.visited_planets.keys()))
 	cfg.set_value(ORE_SECTION, ORE_REGROW_KEY, gs.spent_ore.duplicate())
 	cfg.set_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray(gs.powered_gates.keys()))
-	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray(gs.identified_gates.keys()))
+	for kind in Progress.KINDS:
+		Progress.FileStore.put(cfg, kind, gs.progress.list(kind))
 	cfg.set_value(FIND_SECTION, FIND_WRECKS_KEY, PackedStringArray(gs.identified_wrecks.keys()))
 	cfg.set_value(AUTOMATON_SECTION, AUTOMATON_MET_KEY, PackedStringArray(gs.met_automatons.keys()))
 	cfg.set_value(SECTION_SECTION, SECTION_SEATED_KEY, PackedStringArray(gs.seated_sections.keys()))
@@ -189,26 +189,7 @@ static func load_powered_gates(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_POWERED_KEY, PackedStringArray()))
 
-## Writes only the identified Gates into an existing save, like save_powered_gates: the
-## Guide names a Gate in open flight, with no dock to hang a full save off.
-## With no save yet this does nothing; the next full save() writes them.
-static func save_identified_gates(keys: PackedStringArray, path: String = "") -> void:
-	var file := path if path != "" else Playtest.save_path()
-	var cfg := ConfigFile.new()
-	if cfg.load(file) != OK:
-		return
-	cfg.set_value(GATE_SECTION, GATE_IDENTIFIED_KEY, keys)
-	cfg.save(file)
-
-## The planet keys whose Gates the Guide has already named. Anything missing still
-## reads as `? ? ?`, which is what a save from before this did.
-static func load_identified_gates(path: String = "") -> PackedStringArray:
-	var cfg := ConfigFile.new()
-	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
-		return PackedStringArray()
-	return PackedStringArray(cfg.get_value(GATE_SECTION, GATE_IDENTIFIED_KEY, PackedStringArray()))
-
-## Writes only the named wrecks into an existing save, like save_identified_gates: UNIT-7
+## Writes only the named wrecks into an existing save, like save_powered_gates: UNIT-7
 ## names one in open flight. With no save yet the next full save() writes them.
 static func save_identified_wrecks(keys: PackedStringArray, path: String = "") -> void:
 	var file := path if path != "" else Playtest.save_path()
@@ -225,7 +206,7 @@ static func load_identified_wrecks(path: String = "") -> PackedStringArray:
 		return PackedStringArray()
 	return PackedStringArray(cfg.get_value(FIND_SECTION, FIND_WRECKS_KEY, PackedStringArray()))
 
-## Writes only the met Automatons into an existing save, like save_identified_gates: the
+## Writes only the met Automatons into an existing save, like save_powered_gates: the
 ## player meets the Guide on the first transmission, with no dock to hang a full save off.
 ## With no save yet this does nothing; the next full save() writes them.
 static func save_met_automatons(designations: PackedStringArray, path: String = "") -> void:
@@ -363,9 +344,7 @@ static func load_into(gs: GameState, ship: Ship) -> void:
 	gs.powered_gates.clear()
 	for gate_key in load_powered_gates():
 		gs.mark_gate_powered(gate_key)
-	gs.identified_gates.clear()
-	for gate_key in load_identified_gates():
-		gs.mark_gate_identified(gate_key)
+	gs.progress = gs.progress.resumed()
 	gs.identified_wrecks.clear()
 	for wreck_key in load_identified_wrecks():
 		gs.mark_wreck_identified(wreck_key)

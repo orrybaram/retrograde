@@ -44,7 +44,6 @@ func _gate(planet: Planet, cost := 600) -> Gate:
 	var gate := auto_free(load("res://entities/structures/Gate.tscn").instantiate()) as Gate
 	gate.power_cost = cost
 	gate.enable_orbiting = false
-	gate.persist = false  # keep identification out of the player's save
 	planet.add_child(gate)
 	return gate
 
@@ -67,7 +66,6 @@ func _moon(planet: Planet, distance := 20000.0, speed := 20.0) -> Planet:
 ## A Gate on a live orbit, holding station on a sibling if it is given one.
 func _orbiting_gate(planet: Planet, follows := NodePath(), distance := 10800.0) -> Gate:
 	var gate := auto_free(load("res://entities/structures/Gate.tscn").instantiate()) as Gate
-	gate.persist = false
 	gate.orbital_distance = distance
 	gate.orbital_speed = 3.0
 	gate.initial_angle_degrees = 40.0
@@ -178,7 +176,7 @@ func test_the_minimap_hides_a_gate_until_its_planet_is_scanned() -> void:
 func test_the_minimap_shows_a_gate_once_it_is_named() -> void:
 	var gate := _gate(_planet("Crom"))
 	var marker := GateMinimapTarget.new(gate)
-	_gs.mark_gate_identified(gate.save_key())
+	_gs.progress.mark(Progress.IDENTIFIED_GATES, gate.save_key())
 	assert_bool(marker.is_minimap_visible()).is_true()
 
 
@@ -271,7 +269,7 @@ func test_new_game_makes_every_gate_unknown_again() -> void:
 	var gate := _gate(_planet("Veld"))
 	gate.identify()
 	_gs.reset_all_state()
-	assert_dict(_gs.identified_gates).is_empty()
+	assert_array(Array(_gs.progress.list(Progress.IDENTIFIED_GATES))).is_empty()
 	assert_bool(gate.is_identified()).is_false()
 
 
@@ -374,24 +372,54 @@ func test_a_save_from_before_gates_reads_as_nothing_powered() -> void:
 	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
 
 
-func test_identified_gates_round_trip_through_the_save() -> void:
+## Naming a Gate goes through the Progress ledger and nothing else: the GameState's own
+## ledger holds it, with no save call at the Gate.
+func test_naming_a_gate_marks_it_once_in_the_ledger() -> void:
+	var gate := _gate(_planet("Veld"))
+	assert_bool(gate.identify()).is_true()
+	assert_bool(gate.identify()).is_false()
+	assert_array(Array(_gs.progress.list(Progress.IDENTIFIED_GATES))).contains_exactly([gate.save_key()])
+
+
+## A continue brings back every Gate that was named, from wherever the ledger writes.
+func test_named_gates_come_back_on_a_continue() -> void:
+	var planet := _planet("Crom")
+	_gate(planet).identify()
+	_gs.progress = _gs.progress.resumed()
+	assert_bool(_gate(planet).is_identified()).is_true()
+
+
+## The save file keeps named Gates where saves before the ledger did, so an existing save
+## loads with them, and a Gate named in flight is written into it keeping everything else.
+func test_named_gates_round_trip_through_the_save_file() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 42)
+	cfg.set_value("gates", "identified", PackedStringArray(["Sun/Veld"]))
 	cfg.save(SAVE_FILE)
-	Save.save_identified_gates(PackedStringArray(["Sun/Veld", "Sun/Crom"]), SAVE_FILE)
-	assert_array(Array(Save.load_identified_gates(SAVE_FILE))).contains_exactly(
-		["Sun/Veld", "Sun/Crom"])
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_bool(ledger.holds(Progress.IDENTIFIED_GATES, "Sun/Veld")).is_true()
+	ledger.mark(Progress.IDENTIFIED_GATES, "Sun/Crom")
 	cfg.load(SAVE_FILE)
 	assert_int(cfg.get_value("stats", "stores")).is_equal(42)
+	assert_array(Array(cfg.get_value("gates", "identified"))).contains_exactly(["Sun/Veld", "Sun/Crom"])
 	# Naming a Gate is not powering it: the two lists are kept apart
 	assert_int(Save.load_powered_gates(SAVE_FILE).size()).is_equal(0)
+
+
+## As before the ledger: with no save yet, naming a Gate writes no file (a names-only file
+## would enable CONTINUE); the next full save carries them.
+func test_naming_a_gate_needs_an_existing_save_file() -> void:
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE))
+	assert_bool(ledger.mark(Progress.IDENTIFIED_GATES, "Sun/Veld")).is_true()
+	assert_bool(FileAccess.file_exists(SAVE_FILE)).is_false()
 
 
 func test_a_save_from_before_gates_were_named_reads_as_nothing_named() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "stores", 7)
 	cfg.save(SAVE_FILE)
-	assert_int(Save.load_identified_gates(SAVE_FILE).size()).is_equal(0)
+	var ledger := Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	assert_array(Array(ledger.list(Progress.IDENTIFIED_GATES))).is_empty()
 
 
 # --- Geosync station-keeping -------------------------------------------------

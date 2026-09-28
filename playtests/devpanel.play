@@ -75,9 +75,9 @@ press down
 press down
 press down
 press enter
-assert gs.identified_gates.size() == 6 "ENTER names every Gate, Core included"
+assert gs.progress.list("identified_gates").size() == 6 "ENTER names every Gate, Core included"
 press left
-assert gs.identified_gates.size() == 0 "LEFT puts them all back to unnamed"
+assert gs.progress.list("identified_gates").size() == 6 "LEFT takes no name back: nothing goes backwards"
 
 # --- WARP: closes the panel and moves the ship -------------------------------
 press tab
