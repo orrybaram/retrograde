@@ -1,7 +1,7 @@
 extends Control
 class_name PlacardPanel
 
-## The placard on a piece of hardware that listens (docs/SWEEP.md §5, docs/OPENING.md §5),
+## The placard on a piece of hardware that listens (docs/SWEEP.md §8),
 ## read off it as the ship comes close: the Procedure in Notation, drawn from the
 ## Procedure's own steps so it can never disagree with what the hardware wants. Drawn on
 ## the HUD beside the hardware - on the far side of it from the ship, so it never covers the

@@ -7,7 +7,7 @@ class_name Automatons
 ## being present — nothing speaks from inside the Log (docs/GLOSSARY.md).
 
 ## UNIT-7, the Guide: stationed at SR-7 over Rook and the first Automaton the player
-## meets (docs/DESIGN.md 5.3, NPC #1). The player holds its Record from the first
+## meets (docs/STORY.md §3). The player holds its Record from the first
 ## transmission, so the Records tab is never empty (docs/adr/0003).
 const GUIDE := preload("res://entities/Robot/CheerfulGuideNPC.tres")
 

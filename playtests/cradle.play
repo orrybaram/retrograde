@@ -1,4 +1,4 @@
-# SR-7's Cradle takes the Cargo Bay (docs/adr/0012, docs/OPENING.md §9): a drop bay in the
+# SR-7's Cradle takes the Cargo Bay (docs/adr/0012, docs/FREIGHT.md §5): a drop bay in the
 # container strip, worked by the DORSAL ARM's claw (DorsalClaw). Clamping the Cargo Bay
 # tracks the drop point off the right mast; the glide slope lamps there say how level the
 # load is; flown in anywhere near it, at an angle, the arm reaches out and closes on it.

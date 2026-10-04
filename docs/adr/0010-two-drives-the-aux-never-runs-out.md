@@ -1,9 +1,11 @@
 ---
-status: accepted
+status: accepted, in part
 date: 2026-09-20
 ---
 
 # Two drives; the Aux never runs out
+
+> **In the game (2026-10-04):** Two drives, the Aux free and never out: holds. Differs: the Aux is capped at a 300 px/s cruise speed, the Burn is 2.67x the Aux rather than far larger, and seams are dormant, so SR-7's dock is the only fuel (`docs/FLIGHT.md` §3-4).
 
 The ship has two engines, not one throttle with a fuel gauge attached.
 

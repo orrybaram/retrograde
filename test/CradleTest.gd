@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## SR-7's Cradle (docs/adr/0012, docs/OPENING.md §9): the drop bay in the container strip,
+## SR-7's Cradle (docs/adr/0012, docs/FREIGHT.md §5): the drop bay in the container strip,
 ## worked by the DORSAL ARM's claw (DorsalClaw). A Component let go of anywhere near the
 ## drop point, at any angle, is taken - recorded at once - carried round to the bay and
 ## taken below, where it waits to be fitted. The bay is always open. No arm, or no power,

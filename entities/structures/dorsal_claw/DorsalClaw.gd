@@ -3,7 +3,7 @@ class_name DorsalClaw
 
 ## SR-7's Cradle: a drop bay in the container strip, worked by the DORSAL ARM - a knuckle
 ## boom on a turntable in the middle of the strip, with a claw on a free wrist
-## (docs/OPENING.md §9; tuned in dev/claw_lab). The ship hands it a Component as it hands
+## (docs/FREIGHT.md §5; tuned in dev/claw_lab). The ship hands it a Component as it hands
 ## any Cradle one - CarryingState.home_for -> Cradle.accepting -> fits -> seat:
 ##
 ##   1. A laden ship brings its load to the drop point off the right mast. The glide slope

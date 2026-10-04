@@ -26,7 +26,7 @@ class_name EncounterDef
 @export var budget: int = 0
 
 ## The band of distances from the sun where this can appear. The five-planet tone
-## gradient in docs/DESIGN.md falls out of these: a def banded past MV-1's orbit is a
+## gradient in docs/STORY.md §5 falls out of these: a def banded past MV-1's orbit is a
 ## military-era encounter without having to say so.
 @export var min_radius: float = 0.0
 @export var max_radius: float = 0.0  # 0 = out to the edge of the system

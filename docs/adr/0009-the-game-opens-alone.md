@@ -5,6 +5,8 @@ date: 2026-09-20
 
 # The game opens alone, and the player wakes UNIT-7
 
+> **In the game (2026-10-04):** Holds. Differences in the build: the core is rebooted from a console at the dock, not by a Procedure on a placard; a dead SR-7 has no dock at all; only the Cargo Bay answers a Sweep from long range, not the Sections (`docs/OPENING.md`).
+
 The player does not start with a Guide. They start alone at a dark, broken SR-7, and **UNIT-7 is something they switch on**, about fifteen minutes in, after reassembling enough of the station to give it power.
 
 Act 1 is the repair of SR-7 from its own debris, which is already scattered in Rook's orbit (`OrbitalRingSpawner` is parented to Rook alongside `SpaceStation`). The station is already built as a kit of named `Polygon2D` parts, so a restored component is a polygon appearing: **the silhouette of the player's house is the progress bar.**

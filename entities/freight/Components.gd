@@ -1,6 +1,6 @@
 class_name Components
 
-## The Components that turn up as Freight (docs/OPENING.md §9, docs/adr/0007): each one's
+## The Components that turn up as Freight (docs/FREIGHT.md §6, docs/adr/0007): each one's
 ## name, shape, Lug and mass, and how it lies in the world until it is found. A Component
 ## is ordinary Freight with a `component` id; it is delivered to SR-7's Cradle, not to a
 ## Mount, and fitted there from SHIP.
@@ -19,7 +19,7 @@ const DATA := {
 	# A squat box, heavier than anything of SR-7's - the ship crawls with it - but the Aux
 	# still lifts it off Veld. It holds in the ground harder than the Aux can pull: only the
 	# Burn tears it free, and the tear-out (`pull_time` s of Burn, playtests/cargo_bay.play)
-	# costs about a fifth of a full tank, so the half SR-7 gives covers it (§9).
+	# costs about a fifth of a full tank, so the half SR-7 gives covers it (docs/FREIGHT.md §6, §8).
 	# It is dead to the Sweep until SR-7's cold start, and after that it answers from far
 	# past a ring's reach, faint at the edge of `answer_range` and firming up closer
 	# (Freight.answer_clarity).

@@ -4,7 +4,7 @@ class_name PlanetScan
 ## What there is to know about a Body, as rows of text: the inner-orbit reach that marks
 ## it Visited, and the survey format its Record in the Log shows. Pure logic. Nothing
 ## surveys a Body in play now - the planetary scan is gone until `ECHO` is designed
-## (docs/OPENING.md §9) - so the survey rows only show for a Body marked scanned.
+## (docs/IDEAS.md §13) - so the survey rows only show for a Body marked scanned.
 
 ## Width of the class column in a one-line summary, so a column of them lines up.
 const CLASS_COLUMN := 11

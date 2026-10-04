@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## The Stores economy's tuning target (docs/OPENING.md §9, issue #141): one full hold of
+## The Stores economy's tuning target (docs/FREIGHT.md §8, issue #141): one full hold of
 ## ordinary gems buys about a full tank from empty. "Ordinary" is what GOOD hits on plain
 ## scrap roll (GemData.ROLL_WEIGHTS), worked out on average rather than sampled.
 

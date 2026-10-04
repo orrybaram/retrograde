@@ -8,7 +8,7 @@ class_name GateTerminal
 ## UP/DOWN select, ENTER confirms, ESC leaves. Powering runs a short boot log the
 ## launch key skips, and then the hub comes back showing the Module online. Once it is,
 ## the hub carries what a link is good for: transit to another powered Gate. A Gate
-## gives no fuel; that is SR-7's (docs/OPENING.md §9).
+## gives no fuel; that is SR-7's (docs/WORLD.md §4, docs/FREIGHT.md §8).
 ##
 ## The Core's Gate at the Sun Station reads the same terminal, but its row asks for
 ## Modules instead of Stores and does nothing yet: see `_core_row()`.

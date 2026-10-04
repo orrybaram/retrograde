@@ -1,278 +1,319 @@
-# RETROGRADE - Emergent Encounters
+# RETROGRADE - Encounters
 
-How the space between planets gets populated.
+How the space between planets gets populated, and what the player finds there.
 
-Companion to `docs/DESIGN.md` §4.1 (Transit Encounters) and `docs/IDEAS.md` (Anomalies).
-This document is the *system*; those two are the *content*.
+Owner: `entities/encounters/` (`EncounterField` in `scenes/Main.tscn`, table
+`entities/encounters/tables/deep_space.tres`). Tests: `test/EncounterFieldTest.gd`.
+Playtest: `playtests/encounters.play`.
 
 ---
 
-## 1. The Problem
+## 1. The Idea
 
-The system is roughly 500,000 world units across — Veld orbits at 253,125, and the Sun's
-own radius is 9,000. Every resource node in the game today spawns in a ring bound to a
-planet or a station (`OrbitalRingSpawner`), all at game start, and
-lives until harvested.
-
-That works for rings because a ring is bounded and near the player. It does not work for
-interplanetary space. You cannot spawn a million nodes up front, and you cannot hand-place
-a world that large.
-
-So the space between planets is empty. The design doc asks it to have texture.
-
-## 2. The Core Idea
+The Void starts 340,000 units from the sun (`VoidZone.EDGE_RADIUS`); Veld orbits at
+253,125. Every planet ring is spawned by an `OrbitalRingSpawner`, bound to its body and
+refilled over time. That works for a ring because a ring is bounded and near the player. It
+does not work for the space between planets: it cannot be filled up front and cannot be
+hand-placed.
 
 > **Deep space is a deterministic function of the seed, streamed in cells.**
 
-Space is divided into cells. What lives in a cell is a pure function of
-`(seed, cell coordinates)` — computed on demand, never stored. Only the cells near the
-ship exist as live nodes; the rest is math that hasn't been run yet.
+What lives in a cell is a pure function of `(seed, cell coordinates)`, computed on demand and
+never stored. Only the cells around the ship exist as live nodes. Three properties follow:
 
-Cells are **polar**: a cell is a slice of a ring around the sun, and each ring turns at
-its own rate. A cell keeps its contents as its ring carries them around, so the world
-orbits without any of it having to be remembered.
+- **Stable.** Fly away and come back, it is still there. No save needed for the contents.
+- **Cheap everywhere.** The field costs the same at Veld as next to the sun.
+- **Emergent.** Cells are slices of rings that turn at their own rates, out of step with the
+  planets, so the stretch of space a given route crosses changes over a long session.
 
-Three properties fall out of this:
+The emptiness is the point. Most cells hold nothing, so finding something is an event rather
+than scenery.
 
-- **Stable.** Fly away and come back, it's still there. No save file needed.
-- **Infinite.** Cells are generated on demand, so the field costs the same at Veld as at
-  the Sun.
-- **Emergent.** The contents are fixed, but *which* cells a given route crosses depends on
-  where the planets are that trip, and on where the rings have turned to. The field runs
-  on a different rate curve from the planets, so nothing in the system is locked to
-  anything else in it.
+## 2. Cells
 
-That last point is what the design doc means by "the same trip can feel different."
+A cell is `Vector2i(band, sector)`: a ring counted outward from the sun, and a slice of that
+ring counted round from the ring's own rotating zero (`EncounterField.cell_of()`,
+`cell_centre()`).
 
-## 3. Architecture
+| Constant (`EncounterField.gd`) | Value | Meaning |
+|---|---|---|
+| `BAND_WIDTH` | 8,000 | Ring thickness, and roughly each sector's arc, so cells are about square |
+| `WINDOW_RADIUS` | 1 | A 3×3 window of cells is resident (~24,000 across) |
+| `CELL_CHECK_INTERVAL` | 0.25 s | How often the ship's cell is re-checked |
+| `SUN_EXCLUSION` | 20,000 | Rings whose middle is closer than this hold nothing |
+| `VOID_EXCLUSION` | 340,000 | Nothing at or past the Void's edge |
+| `PLANET_CLEARANCE` | 4,000 | Added to a planet's gravity radius as a keep-out |
+| `CELL_MARGIN` | 1,500 | Encounter origins are held this far off cell edges |
 
-### 3.1 `EncounterField`
+**Why 8,000.** It sits under the minimap's reach (`Minimap.world_range` = 10,000) and equal to
+the distance at which orbital nodes put themselves to sleep (`OrbitalNode.SLEEP_DISTANCE_SQ`
+= 8,000²). With a 3×3 window the nearest unloaded cell edge is always at least a cell away,
+so nothing is seen to pop in on screen or on the minimap.
 
-A `Node2D` in `Main`. Tracks the ship, keeps a 3×3 window of cells resident, and
-activates/releases cells as the ship crosses boundaries. Knows nothing about what an
-encounter *is* — it only knows cells, seeds, rates, and lifetimes.
+**Sectors per ring** are `round(TAU · band_mid / BAND_WIDTH)`: 16 at the innermost populated
+ring, 261 at the outermost. Because rings have different counts, a neighbour is "the sector
+of that ring the ship is currently under, ±1", found by angle, not by index.
 
-A cell is `Vector2i(band, sector)`: a ring counted outward from the sun, and a slice of
-that ring counted round from the ring's own rotating zero.
+**Where nothing goes.**
+- Inside `SUN_EXCLUSION`: the sun's own gravity well owns that space.
+- Past the Void's edge: salvage there would spoil the Void (nothing reflects, nothing
+  answers) and bait the player across a line they cannot safely cross. See `docs/WORLD.md`.
+- Inside any planet's gravity field plus `PLANET_CLEARANCE` (`_is_clear()`), where that
+  planet's own spawners already put resources. Planets move, so this is a "not right now"
+  test applied when the cell is generated, not part of the seed: the slot is skipped, not
+  consumed, and can turn up on a later load of the cell once the planet has moved on.
 
-**Band width: 8,000 units.** Chosen to sit just under two existing numbers:
+## 3. The Rings Turn
 
-- `Minimap.world_range` = 10,000 — the scanner's reach
-- `OrbitalNode.SLEEP_DISTANCE_SQ` = 8,000² — where nodes self-sleep
+Each ring turns rigidly about the sun (`band_rate()`). Angular rate falls off as `r^-1.5`,
+the way an orbit's does, pinned to 12 px/s of tangential drift at Sonder's orbit (112,500),
+and capped at 30 px/s.
 
-Sector count per ring is picked so each sector spans about 8,000 units of arc too, which
-keeps cells roughly square at every distance. A 3×3 window spans ~24,000 units, so the
-nearest edge of an unloaded cell is at least a cell away. Nothing ever pops in on screen
-or on the scanner.
+| Where | Tangential drift |
+|---|---|
+| Innermost populated ring (~20,000) | ~28 px/s |
+| Sonder (112,500) | 12 px/s |
+| Outermost populated ring (~332,000) | ~7 px/s |
 
-Neighbours are found by *angle*, not by index: rings have different sector counts, so
-"one ring out" means "the sector of that ring the ship is currently under", ±1.
+Visible if you sit and watch, never fast enough to be a hazard.
 
-### 3.2 `EncounterDef` (Resource)
+**Why that curve.** The planets in `HomeSystem.tscn` turn on a much flatter one (angular rate
+roughly `r^-0.5`). The field runs ahead of the planets on the inside and lags them on the
+outside, crossing near the middle of the system. Nothing is locked to anything else.
 
-One encounter type, as data. The base class holds the placement rules:
+**Nodes actually orbit.** Each spawned node gets an `OrbitalMotion` about the sun at its
+*ring's* rate, not its own radius's (`_set_adrift()`), so a cluster keeps its shape and nothing
+drifts out of the cell that owns it. A node therefore reports a real `get_orbital_velocity()`:
+flying into one bounces off what it is actually doing, and matching velocity to salvage it
+works.
+
+**The clock.** Ring rotation reads `elapsed()`: banked seconds plus wall time since streaming
+began, minus pause time (`EventBus.game_unpaused`). This is the same clock `OrbitalMotion`
+uses for planets. Accumulating `_process(delta)` would look identical at normal speed but
+scale with `Engine.time_scale`, which `OrbitalMotion` ignores, and the rings would race the
+nodes riding them. The clock holds still from a load until the ship is placed.
+
+The emergence is slow. A ring takes hours of play to turn appreciably, since it runs on the
+planets' timescale. Drift is visible moment to moment; "this crossing is different from last
+time" is a long-session effect, not a per-trip one.
+
+## 4. Tables and Defs
+
+### 4.1 `EncounterTable`
+
+A weighted list of `EncounterDef`s plus the sparseness dial. Rolling a cell
+(`EncounterField._generate()`):
+
+1. `roll_count()`: with probability `chance_per_cell`, `min_per_cell`–`max_per_cell`
+   encounters; otherwise none. Always draws exactly one number, so an empty cell never
+   shifts what a full one would hold.
+2. For each encounter, `pick()` filters to defs whose radius band contains the ring's middle
+   and picks by weight. Also always draws one number, even with nothing eligible.
+3. A random origin inside the cell, then the def's `plan()`.
+
+Shipped (`tables/deep_space.tres`): `chance_per_cell` **0.075**, one encounter per populated
+cell. About three cells in forty hold anything.
+
+### 4.2 `EncounterDef`
+
+One encounter type, as data (`EncounterDef.gd`):
 
 | Field | Meaning |
 |---|---|
-| `id` | stable string |
-| `weight` | relative odds against the other defs eligible at the same distance |
-| `min_radius` / `max_radius` | distance-from-sun band where it can appear (`max_radius: 0` = out to the edge) |
-| `budget` | at most this many may ever exist in one game (`0` = no limit) |
+| `id` | Stable name; also what budget claims record |
+| `contact_label` | What the encounter reads as (§6.3) |
+| `weight` | Relative odds against other defs eligible at the same distance |
+| `budget` | At most this many in one game (`0` = no limit) (§7.2) |
+| `min_radius` / `max_radius` | Distance-from-sun band (`max_radius` 0 = to the edge) |
 
-Generation is split in two, and that split is what makes slot keys mean anything:
+Generation is split in two so the world stays reproducible:
 
-- `plan(rng, origin) -> Array[Dictionary]` — one entry per node, in a stable order. **All**
-  randomness happens here, drawn from the cell's seeded generator.
-- `build(field, entry) -> Node` — turns one entry into a live node, and rolls nothing.
+- `plan(rng, origin)` rolls **every** random choice, drawn from the cell's seeded generator
+  (`RNG.get_seeded_rng(cell_seed)`, never `RNG.rng`), and returns one entry per node in a
+  stable order.
+- `build(field, entry)` turns one entry into a live node and rolls nothing.
+- `release(node)` hands it back: pooled nodes to `ResourceNodePool`, anything else freed.
 
-The field can only skip an already-harvested slot without shifting everything after it if
-the order is fixed before anything spawns. `release(node)` hands a node back — pooled
-nodes to the pool, anything else freed.
+The field can only skip a harvested slot without shifting everything after it if the order is
+fixed before anything spawns. Adding an encounter type is a new subclass plus a `.tres`; the
+field never changes.
 
-Adding a new encounter type is a new subclass plus a `.tres`. The field never changes.
+Radius banding is the pacing dial: a def banded inward simply does not exist in the outer
+system. ADR `docs/adr/0007-no-currency-upgrades-are-found-objects.md` leans on this (and on
+`budget`) for placing unique parts.
 
-**Budget** is for the things that should be a shock rather than a fixture. A budgeted
-encounter is *claimed* by the first slots the player actually flies near; once the budget
-is gone it simply isn't anywhere else. A claimed slot keeps its encounter forever, so
-going back to one you found doesn't spend another. The claims are saved as
-`"<slot>=<def id>"` alongside the consumed set.
+**RNG.** Field generation must not draw from `RNG.rng`; pulling from the shared stream would
+shift every other roll depending on where the player flew (`test_generation_does_not_disturb_the_shared_rng`).
 
-### 3.3 `EncounterTable` (Resource)
+## 5. What Is Out There
 
-A weighted list of `EncounterDef`s. Rolling a cell means: compute the cell's distance from
-the Sun, filter the table to defs whose band contains it, pick by weight.
+Four defs ship, in `entities/encounters/defs/`:
 
-Because the band is radius-based, the five-planet tone gradient from the design doc —
-mundane logistics near SR-7, industrial, research, military, then silence at TERRA-0 —
-falls out for free. A radio-echo def tagged `min_radius: 150000` is automatically a
-military-era echo.
+| Def | Class | Label | Weight | Budget | Band |
+|---|---|---|---|---|---|
+| `debris_cluster` | `DebrisClusterDef` | `DEBRIS` | 1.0 | – | everywhere |
+| `lone_container` | `ContainerDef` | `CONTAINER` | 0.35 | – | everywhere |
+| `small_derelict` | `WreckDef` | `DERELICT` | 0.12 | – | everywhere |
+| `clone_wreck` | `WreckDef` | `DERELICT` | 0.04 | 3 | ≥ 40,000 |
 
-### 3.4 Contacts
+Weights are picked by eye and have not been balanced against fuel cost.
 
-`EncounterContact` is one encounter as anything looking at it sees it: the nodes it put
-there, and what it reads as. A debris cluster is eight nodes but **one** contact. The
-field builds a contact per encounter as it generates a cell, drops nodes from it as they
-are salvaged, and forgets it once it is empty.
+### 5.1 Debris cluster
 
-Labels come from `EncounterDef.contact_label`, and encounters may deliberately share one:
-a **clone wreck reads as an ordinary `DERELICT`**, because from out there that is all
-anything could tell. You detour for routine salvage and find your own ship.
+A loose knot of scrap and dead debris. 4–10 pooled nodes (`Scrap1`–`5`, `Debris1`–`5`; 40%
+debris) scattered evenly over a 900-unit disc, scale 0.5–1.0, slow spin. Scrap is
+single-amount and harvests like ring scrap (three cuts, `ScrapNode.NORMAL_HITS`, 10% rolled
+trophy); debris (`DebrisNode`) cannot be harvested, is off the minimap, and only bounces and
+hurts. Fly through, take what is worth taking. Zero new art:
+a cluster costs nothing the planet rings don't already cost.
 
-There is no HUD panel reading these at the moment — see Phase 4. The grouping is kept
-because it is how the field models what it has placed, and because anything that ever
-reports contacts needs it.
+### 5.2 Lone container
 
-### 3.5 How sparse the void is
+A sealed container adrift on its own: one pooled `ContainerNode` (`entities/resources/`),
+always trophy grade. Five cuts instead of three (`ScrapNode.TROPHY_HITS`), +3 gems on the
+break, and on a GOOD or PERFECT cut the trophy gem table (`GemData.TROPHY_ROLL_WEIGHTS`: gem,
+crystal or artifact, never a shard; a botched cut still gives shards). It keeps its
+sparkles but does not pulse, because a pulsing box reads as soft. Nothing else is near it, so
+taking it costs a detour.
 
-`EncounterTable.chance_per_cell` is the dial. Most cells hold nothing; a cell that fires
-gets `min_per_cell`–`max_per_cell` encounters. Shipped values: **0.075 and one**, so about
-three cells in forty hold a single encounter.
+### 5.3 Small derelict
 
-`roll_count()` always draws exactly one number whatever the outcome, so a cell coming up
-empty cannot slide the sequence and change what its neighbours hold.
+A broken hauler (`entities/encounters/hulls/SmallFreighter.tscn`): longer and boxier than
+the player's arrowhead, spine broken open amidships. Built as a `DerelictShip` and salvaged
+the way an abandoned ship is (`docs/FLIGHT.md`): five cuts (`DerelictShip.HITS`), each
+releasing an even share of the hold, thinned by the timing grade (`GRADE_KEEP`: PERFECT keeps
+all, GOOD 80%, LATE/OVERLOAD 50%); the last cut adds the hull's own scrap break. Hold: 2–6
+gems from `shard, shard, gem, crystal`. Its harvest radius is widened to 24 from
+`DerelictShip`'s 12, which is sized for the player's own smaller ship.
 
-### 3.6 Slot keys and consumption
+### 5.4 Clone wreck
 
-Every spawned node gets a stable key: `"<band>:<sector>:<index>"`, where `index` is the
-node's position in the cell's deterministic generation order. It's written to the node's
-`spawner_key` field (which already exists on `OrbitalNode`, unused until now, and is
-already cleared in `on_despawn`).
+The same `WreckDef` with no `hull`: it copies the player's own `ship_polygon`, a wreck that
+matches their ship exactly. It is built **bare**, without the Components fitted to the
+player's hull (`docs/adr/0014-fitted-components-are-on-the-hull.md`): the ship as the cloning
+bay first printed it. Hold: 1–3 shards or gems, slower spin. `budget` 3, so it turns up two
+or three times a playthrough, and never inside 40,000.
 
-When a node is harvested, its key goes into a consumed set in the save. Generation skips
-consumed keys. Alongside it the save keeps one float: how many game seconds the rings
-have been turning. **That pair is the only persistent state in the entire system** —
-everything else regenerates from the seed.
+It reads as an ordinary `DERELICT` on purpose. You detour for routine salvage and find your
+own ship.
 
-Deep space stays stripped. Unlike planet rings, it does *not* refill on
-`resources_refresh_requested`. If you cleaned out a stretch of the void, it stays clean.
-That's the reward for having gone there.
+### 5.5 Field wrecks and `DerelictShip`
 
-## 4. Phases
+Two things make `DerelictShip` work out here. Field wrecks set `transient`, so
+`DerelictShip.snapshot_all()` skips them: the field rebuilds them from the seed, and saving
+them too would leave a second copy on every load. And `get_orbital_velocity()` returns drift
+*plus* the ring it rides, so anything matching velocity to salvage it doesn't slide out of
+harvest range partway through.
 
-### Phase 1 — Bones + one encounter type ✅
+## 6. From the Cockpit
 
-`EncounterField`, `EncounterDef`, `EncounterTable`, consumed set in `Save`. One encounter:
-a debris cluster built from pooled `ScrapNode`s and `DebrisNode`s — zero new art, zero new
-interactions. Cells were cartesian here; Phase 2 swapped them for polar behind
-`cell_of()` / `cell_centre()`.
+### 6.1 On the minimap
 
-The slice is complete when you can fly Rook → Crom, pass something, harvest it, fly home,
-come back, and find the space where it was now empty. `playtests/encounters.play` does
-exactly that.
+- **Cluster scrap** passes for debris until a Sweep ring reaches it: tinted down, no
+  sparkles, off the minimap, takes no cut (`ScrapNode._hides_until_pinged()`). See
+  `docs/SWEEP.md`.
+- **Containers and wrecks** never hide: a box is plainly a box, a hull plainly a hull.
+- **A wreck** shows as an unlabelled echo a little bigger than scrap
+  (`ui/minimap/DerelictMinimapTarget.gd`), pinned to the rim when out of range. Finding a
+  hull instead of a rock is the surprise of arriving.
 
-### Phase 2 — Orbital field ✅
+Field wrecks never hold Freight, so they get no Chart mark (`SystemMap.freight_marks()`).
 
-Cells became polar and the rings turn.
+### 6.2 Collisions
 
-**Rate.** Angular rate falls off as `r^-1.5`, the way an orbit's does, pinned to 12 px/s
-of tangential drift at Sonder's orbit (112,500). That gives 8–25 px/s across the system:
-visible if you sit still and watch, never fast enough to be a hazard.
+Field nodes are `OrbitalNode`s and collide like ring nodes: above 50 px/s relative they
+bounce the ship (or loose Freight) off at 30% speed, and above 150 px/s
+(`OrbitalNode.DAMAGE_SPEED_THRESHOLD`) they deal 0.5 hull per px/s over. Relative speed uses
+the node's ring velocity. Dense clusters are dangerous at speed.
 
-**Why that curve.** The planets in `HomeSystem.tscn` turn on a much flatter one — their
-angular rate goes roughly as `r^-0.5`, at 2.5–5.6 px/s. So the field runs ahead of the
-planets on the inside and lags behind them on the outside, crossing over near the middle
-of the system. Nothing is locked to anything else, which is the whole point.
+### 6.3 Contacts
 
-**Nodes actually orbit.** Each spawned node gets an `OrbitalMotion` around the sun at its
-*ring's* rate rather than its own radius's, so a ring turns rigidly: a cluster keeps its
-shape and nothing drifts out of the cell that owns it. It also means a node reports a real
-`get_orbital_velocity()`, so flying into one bounces off what it is actually doing.
+`EncounterContact` is one encounter as anything looking at it would see it: the nodes it
+placed and its `label`. A cluster of eight nodes is **one** contact. The field builds a
+contact per encounter as it generates a cell, drops nodes as they are salvaged, and forgets
+the contact once it is empty. `EncounterField.contacts_in_range(origin, radius)` returns live
+contacts nearest first.
 
-**The clock.** The rings turn on exactly the clock `OrbitalMotion` uses for planets:
-banked seconds plus wall time since this stretch began, minus any pause. It has to be the
-same clock. An earlier version accumulated `_process(delta)` instead, which looks identical
-at normal speed but scales with `Engine.time_scale`, and `OrbitalMotion` does not — so the
-rings would race ahead of the nodes riding them. The banked total is saved and restored
-alongside the consumed set.
+Nothing in the HUD reads contacts. A bearing/distance contact panel was built and removed: it
+was more instrument than the game wanted, and naming what was out there before you got there
+took something away from going to look. The grouping stays because it is how the field
+models what it placed.
 
-### Phase 3 — Content breadth ✅ (three of five)
+## 7. Persistence
 
-Three more encounters, all built on systems that already existed:
+### 7.1 Slot keys and consumption
 
-**Lone container** (`ContainerDef`). A sealed container adrift on its own, always trophy
-grade: five clean cuts instead of three, and a much better class of gem out of each. It is
-a pooled `ContainerNode` — a `ScrapNode` that overrides the new `_shape_scenes()` hook so
-it looks like a container rather than generic wreckage — registered in `ResourceNodePool`
-like any other variant.
+Every planned node gets a stable key `"<band>:<sector>:<index>"`, where `index` is its place
+in the cell's generation order. Indices advance for every planned node whether or not it is
+built, so a key means the same thing in every session. It is written to
+`OrbitalNode.spawner_key` (cleared in `on_despawn`).
 
-**Small derelict** (`WreckDef` + `hulls/SmallFreighter.tscn`). A broken hauler, longer and
-boxier than the player's arrowhead, salvaged the way an abandoned ship is: each cut
-recovers a share of the hold, and the hull breaks for scrap on the last one. Its
-`harvest_radius` is widened from `DerelictShip`'s default, which is sized for the player's
-own much smaller ship.
+When a field node is depleted (`resource_depleted`, any `ScrapNode` including
+`DerelictShip`), its key goes into the consumed set and is skipped on every later generation.
 
-**Clone wreck** (`WreckDef` with no `hull`). The same def with its hull left empty builds
-from the player's own `ship_polygon` instead — a wreck that matches their ship exactly.
-`budget: 3`, so it stays the two or three times a playthrough the design doc asks for.
+**Deep space does not refill.** Unlike planet rings, the field ignores
+`resources_refresh_requested`. A stripped stretch of the void stays stripped; that is the
+reward for having gone there.
 
-`DerelictShip` needed two changes to work out here. A `transient` flag, because field
-wrecks are rebuilt from the seed and `snapshot_all()` must skip them — without it every
-load would leave a second copy behind. And `get_orbital_velocity()` now returns its drift
-*plus* the ring it is riding; it used to report drift alone, which was right for an
-abandoned ship standing still and wrong for a wreck moving at 9 px/s. Anything matching
-its velocity to salvage it would have slid out of harvest range partway through.
+### 7.2 Budgets
 
-**Not done, and why:**
+A budgeted encounter is **claimed** by the first slots that build it, which means the first
+cells the player's 3×3 window loads. Once `claimed_count(id)` reaches `budget`, unclaimed
+slots simply don't have it. A claimed slot keeps its encounter forever, so returning to one
+you found does not spend another.
 
-- **Dead satellite.** Its interaction is the hacking terminal — collection Method 3 in
-  `docs/DESIGN.md` §4.2 — which does not exist yet. Without it a satellite is a differently
-  shaped piece of scrap, which is not the encounter.
-- **Region-keyed radio echoes.** `RobotRadio` and `RadioConversation` can carry the text,
-  but they present it as the guide robot transmitting, face card and all. The design doc
-  wants fragments of a dead civilization bouncing around empty space, read off the ship's
-  terminal. Routing them through the robot's panel would make a dead world's last
-  transmissions look like the cheerful guide talking, and would be hard to undo later.
-  They need an ambient presentation first — a small piece of UI work, not content work.
+### 7.3 Save and load
 
-### Phase 4 — Scanner signals (built, then removed)
+The field's whole persistent state is three values, in the save's `[encounters]` section
+(`scripts/Save.gd`, `EncounterField.snapshot()` / `restore()`):
 
-A HUD panel listing contacts by bearing and distance was built and then taken out again:
-it was more instrument than the game wanted, and naming what was out there before you got
-there took something away from going to look.
+| Key | Holds |
+|---|---|
+| `consumed` | Harvested slot keys |
+| `claimed` | Budget claims as `"<slot>=<def id>"` |
+| `elapsed` | Game seconds the rings have turned |
 
-What survives is `EncounterContact` (§3.4) and `contacts_in_range()`, which is where any
-future version of this would start. The design doc's decision — detour or stay on course —
-is still unbuilt, and so is the upgrade axis behind it (range, and the unreliable
-`UNKNOWN` contacts a late-game scanner picks up).
+Everything else regenerates from the seed. `scripts/Session.gd` restores the field before
+`planets_restored`; the field then releases its cells and waits for `ship_respawned` to stream
+around the ship, so no cell loads and no budget is claimed around where the ship used to be.
+A relaunch keeps the world and the field keeps streaming. A new game (`reset()`) forgets the
+consumed set, the claims and the clock.
 
-### Phase 5 — Anomalies and Titan events
+## 8. Hazards
 
-Same table, but gated on progression state instead of weight. `docs/IDEAS.md` has the
-content; the escalation tiers map onto radius bands plus Titan Influence (0-5, the count of
-Modules online - `docs/DESIGN.md` §2.4).
+**No combat.** Danger is environmental. The universe is indifferent, not hostile; nothing in
+the game shoots, chases or patrols.
 
-## 5. Risks
+Built hazards are collisions (§6.2, and body impacts in `docs/FLIGHT.md`) and the Void past
+the last orbit (`docs/WORLD.md`).
 
-**RNG pollution.** Field generation must draw from `RNG.get_seeded_rng(cell_seed)`, never
-`RNG.rng`. Pulling from the shared stream would shift every other roll in the game
-depending on where the player happened to fly — the same class of bug as VFX drawing from
-the shared RNG.
+## 9. Testing
 
-Note a pre-existing wrinkle: `ScrapNode._load_shape()` and the trophy roll in `on_spawn()`
-*do* use `RNG.rng`. Streaming therefore perturbs the global sequence as a side effect.
-Every existing spawner already does this, so it is not new, but it does mean scrap *shapes*
-in deep space are not reproducible across sessions even though their *positions* are.
-Worth fixing when the pool learns to take an RNG.
+- `test/EncounterFieldTest.gd`: cell geometry, ring rates and drift bounds, determinism
+  (same cell, same contents; turned ring, same contents in a new place), shared-RNG
+  isolation, consumption, save/restore, exclusions (sun, Void, planet gravity), table
+  weighting and sparseness, contacts, budgets and claims, each shipped def.
+- `playtests/encounters.play`: flies into deep space, watches the rings carry a node, leaves
+  and returns, harvests scrap and a container and checks they stay taken, checks the sun's
+  space is empty, the clone budget holds, and a save/reload keeps consumption, claims, clock
+  and doesn't duplicate wrecks.
+- Deep space is sparse enough that tests hunt for things: the playtest `seek <Kind>` command
+  (`scripts/Playtest.gd`) warps around the void on a fixed sequence, at least 60,000 from any
+  planet, until a field node of that kind is streaming. Anything asserting on a fixed location
+  breaks the next time the rarity dial moves.
 
-**Save growth.** The consumed set grows without bound. In practice it's small — a key is
-about twelve bytes and a player can only harvest so much — but a cell that has been fully
-stripped should eventually collapse to a single "cell cleared" entry.
+## Known gaps
 
-**Minimap churn.** Register/unregister happens on every cell transition. Batch it on
-activate/release; never do it per frame.
-
-**The emergence is slow.** A ring takes hours of play to turn appreciably, because it is
-pinned to the same timescale the planets already run on (TERRA-0's year is about 35 hours).
-Drift is visible moment to moment, but "this crossing is different from last time" is a
-long-session effect, not a per-trip one. Speeding the field up would make it clash with
-the planets it flies past.
-
-**Balance is unexamined.** Four encounter types with weights picked by eye (cluster 1.0,
-container 0.35, derelict 0.12, clone wreck 0.04) and a 0.3 chance that a cell holds
-anything. Whether a container is worth the fuel to reach it has not been played against
-the economy at all.
-
-**Deep space is sparse enough that tests have to hunt for things.** `playtests/encounters.play`
-uses a `seek` command that warps around the void until it finds what it needs, rather than
-assuming a given spot holds a container. Anything asserting on a particular location will
-break the next time the rarity dial moves.
+- **Partial cuts don't persist.** Only depletion is recorded. A wreck or container cut 3 of 5
+  times and left behind regenerates whole, hold restocked, when its cell reloads
+  (`EncounterField._detach()` / `_generate()`).
+- **Pooled nodes still touch the shared RNG.** `ScrapNode.on_spawn()` rolls a 10% trophy and
+  `_load_shape()` picks a shape from `RNG.rng`, and `DerelictShip.drops_for_hit()` uses it too.
+  Streaming perturbs the global sequence, and cluster scrap shapes and trophy status are not
+  reproducible across sessions even though positions are.
+- **`contacts_in_range()` and `contact_label` have no consumer** outside tests; the contact
+  layer is dormant (§6.3).
+- **The consumed set grows without bound** (`_consumed`, saved whole). Small in practice; a
+  fully stripped cell never collapses to a single entry.
+- **Unbalanced.** Weights and `chance_per_cell` have not been played against fuel cost, and
+  wreck/container yield is still gems, not the Components ADR 0007 says the void pays out.

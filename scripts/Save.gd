@@ -195,7 +195,7 @@ static func load_into(gs: GameState, ship: Ship, path: String = "") -> void:
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
 	RobotRadio.load_seen(load_radio_seen(path))
 	# Surveys are not kept: an old save's planetary scans stay behind, so its seams stay
-	# dormant with everyone else's (docs/OPENING.md §9).
+	# dormant with everyone else's (docs/SWEEP.md §7).
 	gs.scanned_planets.clear()
 	gs.spent_ore = load_ore_regrowth(path)
 	# Every Record comes back from the ledger's own store, then an old save's half-seated

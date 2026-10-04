@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## SR-7's right solar wing (docs/OPENING.md §2): left hanging on its hinge, pushed home by
+## SR-7's right solar wing (docs/OPENING.md §5): left hanging on its hinge, pushed home by
 ## the ship's hull - never clamped - and locked with a clunk once it is nearly true.
 
 const SAVE_FILE := "user://array_nudge_test_save.cfg"

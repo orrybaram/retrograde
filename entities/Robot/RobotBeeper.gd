@@ -1,7 +1,7 @@
 class_name RobotBeeper
 extends AudioStreamPlayer
 
-## The robot's voice: short procedural square-wave blips, no speech (DESIGN.md 5.3).
+## The robot's voice: short procedural square-wave blips, no speech (docs/STORY.md §3).
 ## blip() per typed character, chirp() when a line starts. Pitch follows the mood.
 
 const MIX_RATE := 22050

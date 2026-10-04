@@ -1,4 +1,4 @@
-# The ship's manual diagnostic (docs/OPENING.md §6, BootLog): a new game types a header
+# The ship's manual diagnostic (docs/OPENING.md §4, BootLog): a new game types a header
 # saying the controls are locked into the bottom-right corner, then FLIGHT, whose controls
 # come back as its heading types; each control stamps [ OK ] as it is used, and a finished
 # section clears. SONAR types in just outside a Sweep's reach of the FUEL TANK, MAGNET close

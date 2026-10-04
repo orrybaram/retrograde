@@ -155,7 +155,7 @@ func is_moon() -> bool:
 	return parent_planet != null and parent_planet.planet_type != PlanetType.SUN
 
 ## True once this Body has been surveyed. Nothing surveys in play now: the planetary
-## scan is gone until `ECHO` is designed (docs/OPENING.md §9).
+## scan is gone until `ECHO` is designed (docs/SWEEP.md §7).
 func is_scanned() -> bool:
 	var gs := _game_state()
 	return gs != null and gs.is_planet_scanned(save_key())

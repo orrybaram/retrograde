@@ -79,7 +79,7 @@ var dev_invulnerable := false
 var low_fuel_effect: LowFuelEffect = null  # vapor + the backfire when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
 var sonar: SonarPulse = null
-## The Marks a Sweep lays down near hardware that listens (docs/SWEEP.md).
+## The Marks a Sweep lays down near hardware that listens (docs/SWEEP.md §8).
 var resonance: Resonance = null
 var _sonar_blocked := false  # this hold of `action` began or passed somewhere it couldn't ping  # sonar resonance rings while `action` is held (see wants_sonar)
 
@@ -653,13 +653,13 @@ func get_cargo_weight() -> float:
 func is_cargo_full() -> bool:
 	return has_hold() and InventoryManager.get_total_weight() >= max_cargo_weight
 
-## A new game starts with no hold at all (docs/OPENING.md §9): until one is fitted,
+## A new game starts with no hold at all (docs/FREIGHT.md §6): until one is fitted,
 ## nothing harvests and the hold readouts stay hidden.
 func has_hold() -> bool:
 	return max_cargo_weight > 0.0
 
 ## Size the ship to what `gs` has fitted: the hold is the Cargo Bay's, or none at all
-## (docs/OPENING.md §9). Runs on fitting and on every load.
+## (docs/FREIGHT.md §6). Runs on fitting and on every load.
 func refit(state: GameState) -> void:
 	_fitted = state.fitted() if state else PackedStringArray()
 	max_cargo_weight = base_max_cargo_weight + Components.hold(Array(_fitted))
@@ -675,7 +675,7 @@ func fitted() -> PackedStringArray:
 # it; a new game and a relaunch both come through here (Session runs the rest).
 
 ## A new game: the ship as the scene builds it. Stats back to base, hull full, tank dry - a
-## new game wakes with no FUEL TANK seated (docs/OPENING.md), so fuel is something the
+## new game wakes with no FUEL TANK seated (docs/OPENING.md §3), so fuel is something the
 ## player has to go and get.
 func reset_to_initial_state() -> void:
 	max_hull = base_max_hull

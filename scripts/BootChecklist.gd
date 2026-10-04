@@ -1,7 +1,7 @@
 extends RefCounted
 class_name BootChecklist
 
-## The ship's manual diagnostic, run once on a new game (docs/OPENING.md §6, the boot text
+## The ship's manual diagnostic, run once on a new game (docs/OPENING.md §4, the boot text
 ## channel): a short terminal log that says the controls are locked for testing, releases
 ## them a system at a time, and stamps each [ OK ] the first time the pilot uses it. It is the model only - what is listed, what is done, how far
 ## each row has typed - so it can be tested without a scene. `BootLog` feeds it from the

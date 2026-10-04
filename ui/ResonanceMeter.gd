@@ -1,7 +1,7 @@
 extends Control
 class_name ResonanceMeter
 
-## The Sweep's bar in its other mode (docs/SWEEP.md §3): drawn under the ship, where the
+## The Sweep's bar in its other mode (docs/SWEEP.md §8): drawn under the ship, where the
 ## harvest meter sits, while a Sweep is held near hardware that listens (Resonance) - and
 ## nowhere else. R E S O N A N C E over six Slots and the marker of the hold; past the end
 ## of the bar it reads O V E R D R I V E, and letting go there is the Commit.

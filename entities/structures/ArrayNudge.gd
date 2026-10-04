@@ -1,7 +1,7 @@
 extends AnimatableBody2D
 class_name ArrayNudge
 
-## SR-7's right solar wing (docs/OPENING.md §2). Still on its hinge at the keel, but left
+## SR-7's right solar wing (docs/OPENING.md §5). Still on its hinge at the keel, but left
 ## hanging out of true. It is not Freight and nothing clamps it: the ship pushes it home
 ## with its hull. Pressed against the wing and moving or thrusting so as to turn it back,
 ## the wing turns; within SNAP_ANGLE of true it swings the rest of the way and locks with the same

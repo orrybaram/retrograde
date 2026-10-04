@@ -42,7 +42,7 @@ func test_the_last_line_holds_rather_than_moving_on() -> void:
 
 
 func test_the_lines_never_say_what_happened() -> void:
-	# SR-7's state is clued, never stated (docs/OPENING.md "Why it is broken").
+	# SR-7's state is clued, never stated (docs/OPENING.md §2, "Why it is broken").
 	for line in IntroScreen.LINES:
 		for word in ["sabotage", "clone", "destroy", "pilot"]:
 			assert_str(line.to_lower()).not_contains(word)

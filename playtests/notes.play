@@ -6,7 +6,7 @@
 # through it rather than by writing GameState directly.
 # Run: tools/play.sh playtests/notes.play   (frames land in .playtest/notes_*.png)
 
-# UNIT-7 is off when the game opens (docs/OPENING.md §5) and nothing wakes it yet, so
+# UNIT-7 is off when the game opens (docs/OPENING.md §7) and nothing wakes it yet, so
 # this scenario hands the player its Record directly rather than meeting it on the radio.
 press enter
 wait_until main.current_game_state == 1 15

@@ -28,7 +28,7 @@ const LOW_RATIO := 0.25
 const CRITICAL_RATIO := 0.10
 ## The ship's tank. Its limits are fixed: nothing is bought (docs/adr/0007).
 const CAPACITY := 150.0
-## What SR-7 puts in the tank for nothing (docs/OPENING.md §9): once its core is running,
+## What SR-7 puts in the tank for nothing (docs/FREIGHT.md §8): once its core is running,
 ## every dock and every relaunch tops the tank up to half, never higher.
 const FREE_FRACTION := 0.5
 ## Seconds between coughs while a Burn is being tried on a low tank. Rare when LOW,

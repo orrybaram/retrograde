@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## SR-7's core (docs/OPENING.md §5): dead until the station is whole, then on standby until
+## SR-7's core (docs/OPENING.md §6): dead until the station is whole, then on standby until
 ## the dock's console reboots it. Its bay is four window slots and a fifth, wider one, set
 ## permanently out of true.
 

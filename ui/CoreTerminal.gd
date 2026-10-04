@@ -1,7 +1,7 @@
 extends Control
 class_name CoreTerminal
 
-## SR-7's dock terminal while the core is cold (docs/OPENING.md §5), opened by LandedState
+## SR-7's dock terminal while the core is cold (docs/OPENING.md §6), opened by LandedState
 ## when the ship docks at a port nobody is awake to run. Not UNIT-7 and not the hub: the
 ## station's own maintenance console, on the core's standby battery, reporting what it can
 ## see and offering the one thing it can do.

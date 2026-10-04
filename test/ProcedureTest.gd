@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Procedures and the ship's side of them (docs/SWEEP.md): ProcedureDef matching, the
+## Procedures and the ship's side of them (docs/SWEEP.md §8): ProcedureDef matching, the
 ## Slots a hold lands in, the Commit, and the chaining window.
 
 const CORE: ProcedureDef = preload("res://entities/procedure/sr7_core.tres")

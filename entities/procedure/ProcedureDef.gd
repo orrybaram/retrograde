@@ -1,7 +1,7 @@
 extends Resource
 class_name ProcedureDef
 
-## A Procedure (docs/SWEEP.md §4): a sequence of Marks that a piece of hardware answers.
+## A Procedure (docs/SWEEP.md §8): a sequence of Marks that a piece of hardware answers.
 ## Two to four words, each an Operation and its Argument, then a Commit. The printed form -
 ## the Notation on a placard (ui/PlacardPanel.gd) - is drawn from `steps` too, so a
 ## Procedure and its documentation can never drift apart.
@@ -12,7 +12,7 @@ class_name ProcedureDef
 const OPERATIONS: Array[String] = ["", "SEAT", "CYCLE", "PURGE", "INDEX", "ECHO", "LOCKOUT"]
 ## The Notation's glyph column for each Operation - the optional channel, decodable only by
 ## seeing the same glyph beside the same dots again and again. Placeholders until the
-## stamped glyphs are designed (docs/SWEEP.md TODOs), and plain ASCII because the game's
+## stamped glyphs are designed (docs/IDEAS.md §1), and plain ASCII because the game's
 ## pixel font has nothing else.
 const GLYPHS: Array[String] = ["", "<seat>", "<cycle>", "<purge>", "<index>", "<echo>", "<lockout>"]
 
@@ -31,7 +31,7 @@ func marks() -> Array[int]:
 	return out
 
 ## How `entered` compares: `ok` when it is exactly this Procedure; otherwise `right` is how
-## many Marks are in their right place - a count, never which ones (docs/SWEEP.md §7) - and
+## many Marks are in their right place - a count, never which ones (docs/SWEEP.md §8) - and
 ## `incomplete` whether a word is missing its argument.
 func check(entered: Array) -> Dictionary:
 	var want := marks()

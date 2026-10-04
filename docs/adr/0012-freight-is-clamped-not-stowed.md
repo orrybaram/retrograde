@@ -5,6 +5,8 @@ date: 2026-09-21
 
 # Freight is clamped, not stowed, and delivered by flying it into place
 
+> **In the game (2026-10-04):** Holds. The Freight-on-an-abandoned-hull path in it is unreachable since abandoning was removed (ADR 0011).
+
 Some things the player recovers are too big for the hold. They are **Freight**: clamped rigidly to the ship's **nose** — hold `action` near the piece and a magnet draws it in and turns it into place — and pushed home ahead of the ship like a barge. While clamped, the Freight's mass and shape are the ship's — heavier and slower to turn — so every load handles differently. Freight never enters the hold and never counts against cargo capacity.
 
 Freight is a physical category, not a purpose. It is handed over one way: pushed into its place at the station and released. A **Section** of SR-7 goes into its own **Mount**, the gap in the station's silhouette it came from; a **Component** (ship upgrade) goes into the station's **Cradle**, and is then fitted from the station's menus once the player docks.

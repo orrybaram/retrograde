@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Fitting the Cargo Bay (docs/OPENING.md §9, docs/adr/0014): SR-7's dock offers SHIP, with
+## Fitting the Cargo Bay (docs/FREIGHT.md §6-7, docs/adr/0014): SR-7's dock offers SHIP, with
 ## a count of what waits in the Cradle, and SHIP has one FIT row for each Component waiting
 ## and a STOW row for each one on the hull. Fitted, it is the ship's 50-unit hold - kept through a save and a load,
 ## and gone again on a new game - and the wreck on Veld never puts another one back.

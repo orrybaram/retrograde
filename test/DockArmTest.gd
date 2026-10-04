@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## SR-7's dock arm (docs/OPENING.md §3, §5): run in until every piece of the station is
+## SR-7's dock arm (docs/OPENING.md §3, §6): run in until every piece of the station is
 ## home, so a new game has no dock; out on the core's battery once it is whole.
 
 var _world: Node2D
