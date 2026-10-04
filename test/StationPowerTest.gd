@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## SR-7 is dead until its core is cold-started (docs/OPENING.md §3, §5): StationPower, the
+## SR-7 is dead until its core is cold-started (docs/OPENING.md §3, §6): StationPower, the
 ## emergency alarms at the cuts, and the limp comm dish.
 
 

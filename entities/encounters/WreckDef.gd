@@ -6,7 +6,7 @@ class_name WreckDef
 ## for scrap on the last one.
 ##
 ## With no `hull` set it is built from the player's own hull instead — the clone
-## predecessor wreck from docs/DESIGN.md §4.1, a ship that matches theirs exactly. Those
+## predecessor wreck from docs/ENCOUNTERS.md §5.4, a ship that matches theirs exactly. Those
 ## want a `budget` so they stay a shock rather than a fixture.
 
 ## The silhouette to build the wreck from. Null means the player's own ship.

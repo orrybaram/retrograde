@@ -1,9 +1,11 @@
 ---
-status: accepted
+status: accepted, in part
 date: 2026-09-20
 ---
 
 # There is no currency; upgrades are found objects
+
+> **In the game (2026-10-04):** Holds: there is no store, nothing is bought, and the ship is upgraded only by found Components (only the Cargo Bay exists). Did not happen: gems, `GemMagnet` and `Economy` stay, as Stores - Deposited at SR-7 and spent automatically on hull and fuel, and at Gate terminals (`docs/FREIGHT.md` §8). No Component comes from an encounter yet.
 
 Credits, gems and selling are removed. The player is a scrapper, and a scrapper does not shop — they find a thing and bolt it on. An upgrade is not a purchase and not a recipe: it is **a physical object recovered from the world and fitted at a station**.
 

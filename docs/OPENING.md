@@ -1,15 +1,20 @@
 # RETROGRADE - The Opening
 
-Act 1: alone at a dead station, and the first thing the player ever switches on.
+Act 1 as built: alone at a dead station, the repair of it from its own debris, and the
+first thing the player ever switches on. Then the first Component.
 
-Companion to `docs/SWEEP.md` (the instrument) and ADR 0009 (the decision).
-This document is the *content*; `docs/SWEEP.md` is the *system*.
+The decisions behind it are ADR 0009 (the game opens alone) and ADR 0008 (UNIT-7 is a
+sincere fragment). The mechanics it runs on live elsewhere: Freight, Mounts, the Cradle,
+Components and Stores in `docs/FREIGHT.md`; the Sweep in `docs/SWEEP.md`; the drives and
+fuel in `docs/FLIGHT.md`. This document owns the beats, the placements, the words and the
+pacing.
 
 ---
 
 ## 1. The Shape
 
-**Act 1 is the repair of SR-7 from its own debris.** Three Sections fetched, one thing woken.
+**Act 1 is the repair of SR-7 from its own debris.** Three Sections fetched, one wing
+pushed home, one core woken.
 
 It is not a tutorial for the game. It is the game, performed once on a building instead of
 on a ship, before the player knows it is a mechanic:
@@ -21,260 +26,257 @@ game's only gesture on the one target where it is unambiguously good — fixing 
 house has no downside — and is therefore trained, by a genuinely benign example, to
 perform it on everything else. **The con is self-administered.**
 
-## 2. Why The Scene Already Supports It
+In play order:
 
-`scenes/HomeSystem.tscn` parents `OrbitalRingSpawner` to **Rook**, alongside
-`SpaceStation`. The debris is already in the right place.
+1. A record typed on a dark screen (§3).
+2. The ship adrift outside a dead SR-7, its controls locked (§3, §4).
+3. The ship's manual diagnostic hands the controls back one system at a time (§4).
+4. Three Sections fetched and seated, the hanging wing pushed home (§5).
+5. The core comes to standby, the dock runs out, the console reboots the core, the power
+   comes up (§6).
+6. UNIT-7 comes on the comms (§7).
+7. The dock opens (§8), and the first thing to go and get is a hold (§9).
 
-`entities/structures/SpaceStation.tscn` is a kit of named parts under `Visuals` - one
-polygon per piece of the station (`RingPod1-8`, `ModuleL/C/R`, `CentralHub`, `CentralCore`,
-`FuelTankL`, `RefuelBoom`, `KeelLower`, ...), each carrying its own detail as children.
+There is no clock anywhere in it. The Aux never runs out (ADR 0010), so nothing drains and
+nothing urges; a lost player is pointed, not hurried (§10).
 
-So a broken station is that scene with parts hidden, and a repair is a polygon appearing.
-**The silhouette of the player's house is the progress bar** - no UI, visible from anywhere
-in the ring, and legible at a glance from across the orbit.
+## 2. SR-7
 
-And it is a bar the player fills by hand. Each Section is Freight: clamped rigidly to the
-hull, flown home with its mass and shape dragging the ship's handling, and **released into
-its own gap in the silhouette**. Not docked, not fitted from a menu - flown into the hole.
-Components (ship upgrades) are delivered the same way, into the station's Cradle, and fitted
-from the dock's SHIP page once docked (ADR 0014), where they go on the hull for good. One delivery gesture for all Freight. SR-7's Cradle
-(decided 2026-09-27, ADR 0013) is a drop bay in the container strip, worked by the DORSAL
-ARM: brought near the drop point off the right mast, at any angle, the load is met by the
-arm's claw, let go of, and carried round into the bay, which takes it below. It only works
-once the arm is home and the core is running.
+`entities/structures/SpaceStation.tscn`, parented to **Rook** in `scenes/HomeSystem.tscn`
+alongside Rook's `OrbitalRingSpawner`, 6000 px out. It is a kit of named polygons under
+`Visuals`, so a missing part is a hidden polygon and a repair is one appearing. **The
+silhouette of the player's house is the progress bar** — no UI, legible from across the
+orbit.
 
-### Seating a Section
+Top to bottom: twin masts (`Mast1`, `Mast2`); the container strip (`Deck`) with the
+**DORSAL ARM**'s turntable (`Turntable`) and the Cradle's bay (`docs/FREIGHT.md`); eight
+ring pods; the three-module arm block flanked by radiator fans; the hub; the core
+(`CentralCore`, §6) with a long tank either side — the left one blown out, the right one the
+**FUEL TANK** Section; the refuel boom and dock (`DockArm`, §6); the belly module; and the
+truss keel carrying two solar wings, the left one the **SOLAR ARRAY** Section, the right one
+still on its hinge (`ArrayNudge`, §5). The comm dish hangs below the keel (`CommDish`).
 
-- **The Mount shows the cut, not the answer.** Where each Section belongs, the station
-  draws the edge it was cut from: a straight torch line, a row of empty bolt holes, a few
-  beads of slag. A gap in a silhouette does not read as a hole; a cut edge does. No ghost
-  outline, no glowing socket. It is a *cut* and never a tear because SR-7 was not damaged,
-  it was taken apart (§2, "Why it is broken").
-- **One Section, one Mount.** The tank only goes in the empty tank saddle.
-- **The flying is the hard part; the last few pixels are free.** Within about 40 px of its
-  Mount and 30° of its rotation (the docking tolerance), the action prompt reads
-  **RELEASE**. On release the Mount pulls it home over half a second, with a clunk, and the
-  polygon is the station again.
-- **Miss and nothing is lost.** Released outside tolerance, a Section just floats, still
-  clampable. It is a physics body: a bad approach bumps and bounces off the station, which
-  is feedback, and never damage.
-
-### SR-7's layout (locked 2026-09-21)
-
-Chosen from the silhouette lab (claude.ai/artifact/CCVHLMG6SyGxY5Shks5aSG, round 5,
-**CYLINDERS**). Top to bottom:
-
-- **Twin masts** on the top bar, a dish on each. Both stand; neither is a Section.
-- **Container strip**: solid deck with stock crates on it (art only) and the Cradle's bay
-  in it, and on a turntable in its middle the **DORSAL ARM**, a knuckle boom folded upright
-  (ADR 0013).
-- **Ring pods**: eight habitat pods with berthing collars between them. Permanent, not a
-  Section.
-- **Arm block**: three pressurised modules, flanked by cold scissor **radiator fans**.
-- **Hub** with a docking port at each end.
-- **Core** in the middle, with a **long cylindrical tank** on each side of it. The right
-  one is the **FUEL TANK** Section; its empty saddle is where the **refuel boom** comes off.
-- **Refuel boom**: a telescoping truss out to the right ending in a docking head. **The ship
-  docks here** (replacing the `SpacePort` docking) - but not at first: a new game finds it
-  run in, back inside the belly, and it only comes out once the station is whole (§3, §5;
-  `DockArm`, decided 2026-09-25).
-- **Belly module**: the clone vats, legible through the hull. One vat is empty and cracked,
-  and there is a tally scratched beside the row.
-- **Truss keel** below, carrying two **solar wings**. The left wing is the **SOLAR ARRAY**
-  Section. The right wing is still on its hinge but hangs 50° out of true, swaying limply
-  (`ArrayNudge`): it is nudged home, not fetched. Pressed against it and moving or
-  thrusting so as to turn it back, the ship's hull turns it; it only ever turns toward
-  true, and within 3° it swings home and locks with the seating clunk.
-
-Art direction for all of it: flat polygons in the three hull tones, one motif (45° corner
-chamfers and a light edge band on the outward face), real station parts (truss lattice,
-berthing collars, radiators, tanks), and no decorative clutter. Sections are the clean,
-machined pieces; the scrap around them is irregular and has no Lug.
+Sections are the clean, machined pieces. Everything else is weathered: `HullDamage` lays
+soot, scorch, punctures, dents, missing plates and a few tumbling chunks over the hull from
+a fixed seed (347), leaving the Sections and the core's bay clean. None of it is ever
+repaired — the cold start brings the lights back, not the paint. The left tank
+(`TankBreach`) has a ragged hole in its outer face and bleeds a thin sputtering stream of
+vapour forever; it is never fixed, because the tank that feeds the dock is the other one.
 
 ### Why it is broken
 
 **Never stated. Only clued.** A previous clone worked out what the cycle is and tried to end
-it by taking SR-7 apart. Everything in the opening is consistent with that, and nothing says
-it. Clues, in the art and the text:
+it by taking SR-7 apart. Nothing in the game says so. What is built that is consistent with
+it:
 
-- **Cut, not torn.** Every Mount is a clean torch line with its bolts removed. There is no
-  war damage anywhere on SR-7 ("nothing important happened here during the war").
-- **One direction.** `LAST VECTOR: LOCAL DEBRIS`: the Sections were cut free and pushed out
-  along roughly one heading, so they lie on a line, not scattered.
-- **The tank went first.** Cutting the tank that feeds the dock meant no clone could fly
-  out and do what the player is about to do.
-- **The core's slots sit out of true** (§5). Somebody refitted that panel in a hurry. The
-  cold start does not straighten it, and neither does anything else.
-- **The right solar wing** is wrenched 50° out of true, hanging limp off its hinge, but not
-  thrown clear. They ran out of
+- **Cut, not torn.** Every Mount is drawn as a clean torch line: a lip of plate, empty bolt
+  holes every 10 px, a bead of slag every third hole, squared bracket stubs (`Mount._draw`).
+  No ghost outline, no socket. A gap in a silhouette does not read as a hole; a cut edge
+  does.
+- **The tank that feeds the dock went first.** No clone could refuel and fly out to do what
+  the player is about to do.
+- **The core's slots sit out of true** (`CoreHousing.SLOT_KINK`), the way a panel refitted
+  in a hurry sits. The cold start does not straighten them, and nothing else does.
+- **The right wing** hangs 50° out of true off its hinge, not thrown clear. They ran out of
   time, or were stopped.
-- **The clone vats**: one empty and cracked, and a tally beside the row. Somebody was
-  counting.
-- **`0 CYCLES SINCE EVENT`**: the new-game intro's record (`ui/IntroScreen.gd`), read before
-  anything else. The event was not an accident, and it has only just happened (decided
-  2026-09-25, replacing `0347`).
+- **`0 CYCLES SINCE EVENT`** — the first thing the game says (§3). The event was not an
+  accident, and it has only just happened.
 
-Because the game is top-down, the station's interior is legible from outside by default.
-`CentralCore` is a polygon at the middle of the station. The player can see it. They never
-enter, and they never stop being the ship.
+Because the game is top-down, the station's interior is legible from outside. The player
+never enters and never stops being the ship.
 
-## 3. The Dead Station
+## 3. Waking Adrift
 
-**The ship wakes adrift** (decided 2026-09-25, replacing the docked start). The sabotage
-was who knows how long ago; the ship comes to hanging below and out past SR-7's belly,
-the station just off the top of the screen and Rook's debris ring out of view (revised
-2026-09-27), turning slowly over
-among fine flakes of debris that thin and are gone within a couple of minutes
-(`WakeDrift`). The stick is locked until the ship's manual diagnostic hands it back (§6,
-revised 2026-09-27): the tumble is the ship's own momentum, and the first touch of a turn
-key after that stops it (`Ship.drift_spin`, `ShipSpawner.spawn_adrift`).
+### The record
 
-Where the dock should be there is nothing. The refuel boom's arm is run in, back inside the
-hull, so SR-7 has no dock at all and nothing offers DOCK (`DockArm`, `SpacePort.deployed`).
-A death or a load before the station is whole wakes the ship in the same place.
+Only **New Game** opens on the intro (`ui/IntroScreen.gd`): three lines typed close up on a
+screen near enough to show its scanlines, a block cursor blinking before each, the picture
+creeping 3.5% closer as it plays.
 
-Nothing is on the comms: UNIT-7 is off until the wake (§5), so the game opens in silence. There is no damage report and no parts list -
-**the station says what is wrong by how it looks** (decided 2026-09-22, replacing the
-manifest):
+```
+KSD-78 SYSTEM, OUTER REGION.
+0 CYCLES SINCE EVENT.
+ALL FUNCTIONS CRITICAL.
+```
 
-- **No power.** Every light on SR-7 is out: dark glass in the windows, dead lenses on the
-  beacons. The power comes from the core, and the core can only be rebooted once every
-  piece is home (§5, decided 2026-09-22). The wings are pieces like the
-  others, not a switch (`StationPower`, `CoreHousing`).
-- **The dish hangs limp.** The comm dish below the keel has no drive: bowl down, swaying
-  a little on its post. Power back, it swings up and finds the Sun.
+Where you are, that something has just happened, and that everything is failing — in the
+flat voice of a record nobody signs. It never says what happened and never mentions the
+player. It holds on the finished text until ENTER (a first press finishes the typing;
+`PRESS ENTER` fades in dim a second after). `playtests/intro.play`.
+
+### The dark
+
+No boot terminal: that is the ship's computer coming up on a powered station
+(`ui/LoadingScreen.gd`), and SR-7 is dead. The intro hands straight to black, held 0.8 s,
+then the world fades up over 1.8 s (`Main.WAKE_BLACK_HOLD`, `WAKE_FADE_TIME`). The new game
+runs through `Session.new_game()`: world reset, UNIT-7 off (`RobotRadio.guide_awake =
+false`), ship reset to an empty tank and no hold.
+
+### Adrift
+
+The ship wakes **adrift below and out past SR-7's belly** (`ShipSpawner.spawn_adrift`,
+`ADRIFT_OFFSET` (700, 1100) in the station's frame): the station just off the top of the
+screen, Rook's debris ring (2400 px off the station at its nearest) out of view, the FUEL
+TANK in view ahead. It is turning slowly over (0.32 rad/s, `Ship.drift_spin`) and drifting
+off the station at a few px/s, among 42 flakes of fine debris that spread and are gone
+within two minutes (`WakeDrift`, 120 s, fading over the last 40). Touching a turn key stops
+the tumble at once.
+
+Where the dock should be there is nothing: the boom is run in, back inside the belly
+(`DockArm`, `SpacePort.deployed` false), so nothing offers DOCK. A relaunch or a load
+before the station is whole wakes the ship in the same place without the debris
+(`ShipSpawner.spawn_home`).
+
+Nothing is on the comms. UNIT-7 is off until the wake (§7); every radio call is dropped
+until then, so the game opens in silence.
+
+### What the station says
+
+There is no damage report and no parts list. **The station says what is wrong by how it
+looks:**
+
+- **No power.** Every window and beacon is dark (`StationLights`, `StationPower`). The
+  power comes from the core, and the core only reboots once every piece is home. The wings
+  are pieces like the others, not a switch.
+- **The dish hangs limp.** No drive: bowl down at 115°, swaying ±4° on its post
+  (`CommDish`).
 - **Every wound is alarmed.** At each empty Mount, and at the hanging wing's hinge, the
-  severed lines along the cut spit sparks and a red emergency lamp pulses slowly beside it
-  (`CutAlarm`). Each stops as its piece goes home, so the alarms are the to-do list.
-- **Power comes on while the player watches.** The core's cold start (§5) lights the station
-  slowly, one light at a time outward from the core; only then does
-  the dish strain up off its post, find the Sun, and send out one great ping in the Titan's purple - SR-7 back
-  on the air, and every piece of scrap across the ring lights up at once. From then on,
-  with the power on, a Sweep that reaches the dish is answered with the same purple ping.
+  severed lines spit sparks and a red emergency lamp pulses on a 2.8 s cycle, never fully
+  out (`CutAlarm`). Each stops as its piece goes home, so **the alarms are the to-do list.**
+  They are the only red on SR-7 (`Colors.DANGER`), and they are out of step with each other
+  so the station never flashes like one sign.
 
-- **There is no dock until it is whole** (decided 2026-09-25, replacing "docking it is met
-  by nobody"). The arm comes out at the end of the repair (§5), and docking then is met by
-  the station's console, not its hub: the hold is not taken in, because there is nobody
-  there to receive it. The station's hub appears for the first time at the wake, so the
-  wake is what hands the player the port. `SpacePort.needs_core` gates it on
-  the Progress ledger's `CORE_STARTED`, which §5's cold start flags and the save keeps - a station does
-  not go back to being dead. The gate is the world's state, not the radio's:
-  `RobotRadio.guide_awake` still governs only whether UNIT-7's tips play.
+Four wounds and a dark dish are the objective, with zero instruction.
 
-The emergency lamps are the only red on SR-7 (`Colors.DANGER`), and the pull still holds:
-nothing is marked, nothing counts. Three red lights and a dark dish are four lines of
-objective with zero instruction.
+## 4. The Manual Diagnostic
 
-## 4. The Three Sections
+The ship's own boot text, in flight (`ui/BootLog.gd` draws `scripts/BootChecklist.gd`;
+`scripts/ControlLock.gd` holds the controls). New game only, never saved, and a continue
+never shows it. `playtests/boot_log.play`.
 
-| Missing | Section | Teaches |
-|---|---|---|
-| `FUEL TANK — ABSENT` | right cylindrical tank | flight under load; the harvest Sweep (it is fused into a rock) |
-| `DORSAL ARM — ABSENT` | the arm on the container strip's turntable | debris is not scrap - it is tangled in things that hurt |
-| `SOLAR ARRAY — ABSENT` | left keel wing | the Sweep as a **search** tool - it is dark and beyond visual range |
+**The controls are locked from the new game's first frame** (`BootLog.prepare`), through
+the intro's dark and the wake, so the fade from black is not a window to fly in. 1.2 s into
+flight the log starts typing into the HUD's bottom-right corner, growing upward, in bare
+terminal text with no frame (above UNIT-7's panel when that is up):
 
-| Section | Size (px) | Mass | Accel | Lug |
-|---|---|---|---|---|
-| FUEL TANK | 130 × 50 capsule | 3.0 (full - fuel is heavy) | ×0.50 | middle of the outer flank, facing out; slides in sideways from the boom side |
-| DORSAL ARM | 236 × 65 folded arm | 2.0 | ×0.60 | elbow end, facing up; goes in shoulder-first from above; long and thin, the worst to turn |
-| SOLAR ARRAY | 150 × 50 wing | 1.0 | ×0.75 | outer tip, facing out; light but long, so it swings like a lance |
-| right wing (nudge) | 150 × 50 | - | push | none: it is still attached, and pushed home |
+```
+MANUAL DIAGNOSTIC
+CTRL AUTH ................. SYSTEM
 
-Placement (revised 2026-09-22), nearest first:
+PROPULSION
+THRUST ....... [UP]          [ OK ]
+REVERSE ...... [DOWN]        [ -- ]
+YAW .......... [LEFT][RIGHT] [ -- ]
+```
 
-- **FUEL TANK**: adrift in view ahead of where the ship wakes, 600 px to its right and well
-  clear of Rook's debris ring (revised 2026-09-27, from just off screen, where it sat in
-  the ring), keeping pace with SR-7 (not Rook). The first thing found by simply flying out.
-- **DORSAL ARM**: adrift in Rook's debris ring (3000 px out), going round with the ring
-  at the ring's own speed for that distance (`Mount.start_in_orbit`), so it has to be
-  caught up with rather than flown to.
-- **SOLAR ARRAY**: buried in Rook's ground on its sunlit face - the far side of Rook from
-  where SR-7 starts - with only its Lug end sticking out (`Mount.start_buried`). The
-  magnet reaches it but can't lift it: the ship clamps its Lug and flies away from the
-  ground. Short of the piece's pull threshold it only strains - the ground shudders and
-  throws dust, the camera shakes; held past it, the pull tears it out in a burst of dust,
-  rock and sparks, leaving a scar (`Freight.pull`, `GroundBreakFX`). The threshold is per
-  piece (`Mount.buried_pull_threshold`): the array is light and comes free on the Aux; a
-  heavier one can demand the Burn.
+A flight-computer readout, no sentences. Headings name the hardware under test, rows the
+control that exercises it. Each section's controls come back the moment its heading has
+typed. Each row stamps `[ OK ]` the first time the pilot uses it (YAW and STRAFE need both
+ways), so **the controls are taught as a checklist the player ticks off, not as popups.**
 
-Each hangs dead in its frame until the magnet first takes it.
+| Section | Opens when | Gives back | Row(s) |
+|---|---|---|---|
+| PROPULSION | 1.2 s after control | thrust, reverse, turn | THRUST, REVERSE, YAW |
+| SONAR | a loose piece's Lug within 360 px (a tapped Sweep's 280 + 80) | the Sweep | SWEEP; a Sweep that reaches Freight adds `CONTACT ... FREIGHT` |
+| CLAMP | the nose within 50 px of a Lug | the clamp | ENGAGE (HOLD; the stamp fills as the magnet pulls) |
+| RCS | 2.4 s after the pickup | strafe | STRAFE |
+| CLAMP RELEASE | a carried Section within 150 px of a seat | the let-go | RELEASE (HOLD; seating also passes it) |
 
-Each is a single object, recovered and fitted - the same verb as every upgrade in the game
-(ADR 0007), taught before the player has bolted anything to their own ship.
+A section whose rows are all OK clears 2 s later, and its name joins a list of passes under
+the header (`PROPULSION ..... [ OK ]`), so the log only holds what is still to do. A row left
+waiting more than 7 s flickers now and then; nothing else nags. Later sections unfold only
+when their moment comes, so the log never tells the player the shape of Act 1 before they
+have seen a tank. With all five cleared it prints `DIAGNOSTIC ... PASS` and
+`CTRL AUTH ... PILOT`, holds 3.5 s, and fades for good.
 
-### The array is the important one
+While CTRL AUTH is the system's, thrust is held to 50 px/s **relative to SR-7**
+(`ControlLock.SYSTEM_SPEED`; the frame the station, the tank and its Mount all move in), and
+the Burn is held off. Finishing, a load, a new game or a quit clears every lock and the cap,
+so none can outlive the log. A ship lost mid-diagnostic relaunches locked where it left off:
+the passed sections come back passed, the rest run again from their triggers. One lost after
+it passed brings nothing back.
 
-The first two can be found by looking. The array cannot: it is dark, it is outside visual
-range, and in a debris field it looks like every other piece of junk.
+It never names a place or a goal — only the ship's own controls.
 
-It is found by **sweeping and listening for what answers**. In one gesture, with no words:
+## 5. The Three Sections
 
-- the Sweep exists
-- sweeping nothing returns nothing
-- sweeping the right thing returns something
-- **things that answer are part of something; things that do not are just scrap**
+Each Section is Freight (`docs/FREIGHT.md`): clamped by its Lug, carried home rigid on the
+nose with its mass dragging the handling, and **released into its own gap in the
+silhouette** — not docked, not fitted from a menu, flown into the hole. Only the Section with
+the Mount's id fits, either way round; the flying is the hard part and the last few pixels
+are free (seat tolerance and the clunk are in `docs/FREIGHT.md`). Data in
+`entities/freight/Sections.gd`; placement on each `Mount` node in `SpaceStation.tscn`.
 
-That last line is the rule the entire game runs on, taught in minute four as a way of
-finding your own front door. It is also the first time the game asks the player to trust an
-instrument over their eyes, which is the habit every later discovery depends on.
+| Section | Mass (ship is 3.0) | Lug | Where a new game leaves it |
+|---|---|---|---|
+| FUEL TANK | 3.0 — full, fuel is heavy | middle of its flank; goes in sideways from the boom side | adrift, keeping pace with SR-7 at (1300, 1080) in the station's frame: about 600 px right of where the ship wakes, in view, well clear of the ring |
+| DORSAL ARM | 2.0 | elbow end; goes in shoulder-first onto the turntable | adrift in Rook's debris ring, 3000 px from Rook, going round at the ring's own speed for that distance (`Mount.start_in_orbit`) — caught up with, not flown to |
+| SOLAR ARRAY | 1.0 — light but long, swings like a lance | outer tip | buried in Rook's ground on its sunlit face, 62 px of it standing out, Lug end up (`Mount.start_buried`) |
 
-### The array is the pointer, not a clock
+Nearest first: the tank is the first thing found by simply flying out; the arm teaches that
+the ring moves; the array teaches the pull.
 
-The opening has no clock. The Aux never runs out (ADR 0010), so nothing is draining
-and nothing is urging. A player who cannot find the array must not be *hurried*; they must
-be *pointed*.
+**The array's pull.** The magnet couples onto its Lug but cannot lift it. The ship clamps
+and flies away from the ground: short of the pull threshold it only strains (the ground
+shudders and throws dust); held past it, it tears free in a burst of dust, rock and sparks
+(`Freight.pull`, `GroundBreakFX`). The array's threshold is the default 0.6 of the Aux's full
+thrust, so the Aux does it. The same verb fails on Veld (§9).
 
-So the array answers from further off than anything else. At the edge of its range a Sweep
-gets back something faint and broken - a partial ring, a stutter - and the answer firms up
-the closer the ship gets. Warmer, colder, entirely through the instrument. No timer, no
-marker, no text.
+**The fourth wound.** The right wing is not Freight and is never clamped (`ArrayNudge`). It
+hangs 50° out of true, swaying ±2.5°. Pressed against it with the hull (within 16 px) and
+moving or thrusting so as to turn it back, the wing turns, no faster than 35°/s and only
+ever toward true; within 3° it swings home and locks with the seating clunk.
 
-This is also what separates "answers" from "harvestable": scrap only ever reacts inside
-the emission, where the bar is. Something that answers from beyond the bar is part of
-something.
+**Finding them.** Every Section hangs dead in its frame until the magnet first takes it.
+Each answers a Sweep that reaches its Lug with a ping in the Titan's purple
+(`Freight.on_sonar_touched`) — **things that answer are part of something; scrap is not.**
+On the minimap each missing Section is a ping held on the rim, giving its bearing from the
+first frame (`ui/minimap/SectionMinimapTarget.gd`); it goes while the piece is clamped and
+for good once it is seated.
 
-When the same player later sweeps the survey marker outside the station and gets a ring
-back, they already know exactly what that means.
+A Section is never lost: while its Mount is empty and no piece of it exists, `Mount.ensure_section`
+puts one back where a new game leaves it. Seated state is the ledger's
+`Progress.SEATED_SECTIONS` and survives reloads. `playtests/restore_sr7.play`.
 
-## 5. The Wake
+## 6. The Wake
 
-The station's parts are back. The alarms are quiet, and for the first time SR-7 makes no
-noise at all - it is still dark. Then, as the last alarm dies, the core's **auxiliary
-lighting** comes up and catches with the same stutter as every other light on SR-7: two
-strips along the lip of its bay, the only light on the station until the wake.
+### Standby
 
-There is no standby lamp and nothing blinks (decided 2026-09-24). A blinking dot is a
-marker, which §6 forbids, and it collides with `CutAlarm` - the player has spent twenty
-minutes learning that a pulsing light is a wound, and this is not one. Service lighting is
-not addressed to the player at all: a panel that has come to standby has lit its own
-working area, and would have whether anybody was watching or not. It also explains itself
-on a station with no power, which the lamp never did: the core is running them off the same
-battery it is sitting on.
+The last piece home and the station is whole (`GameState.station_whole`: three Sections and
+the wing). The alarms are quiet and SR-7 is still dark. Then, 0.8 s after the last clunk,
+the core's **auxiliary lighting** comes up and catches with the same stutter as every other
+light on SR-7: two strips along the lip of its bay, the only light on the station until the
+wake (`CoreHousing`).
 
-What the strips light is the recess **around** the slots, not the slots. The bay lifts by
-almost nothing (`BAY_WASH`), so the dark slots appear as five faint notches in the hull.
+There is no standby lamp and nothing blinks. A blinking dot is a marker, and it collides with
+`CutAlarm` — the player has spent the act learning that a pulsing light is a wound. Service
+lighting is not addressed to the player at all: a panel at standby has lit its own working
+area, and would have whether anybody was watching or not. It also explains itself on a
+station with no power: the core is running the strips off its own battery.
 
-Sweep the core before the repairs and nothing happens - it is not part of a working system.
-Sweep it after, and it gives back a cold thump. It is on standby. It is cold.
+**What the core is.** Not a component in a housing — no disc, no rotor. It is a recessed bay
+of window slots set in ordinary hull, drawn exactly as `StationLights` draws every window on
+SR-7: four slots, then a fifth, wider and set apart, the row permanently out of true. The
+strips light the recess around the slots, barely (`BAY_WASH` 0.05), so the dark slots read as
+five faint notches. On standby a Sweep that reaches it gets a dull ring back; dead or running,
+nothing.
 
-### The arm comes out (decided 2026-09-25)
+### The arm comes out
 
-On the same battery, a beat after the strips hold, **the dock's arm runs out**
+On the same battery, 2.2 s after the last piece goes home, **the dock's arm runs out**
 (`DockArm`). It unlatches with the seating clunk where the boom leaves the belly, shudders
-a few pixels, then telescopes out along its track over three and a half seconds and locks
-with another clunk at the head. Half a second later the dock's lamps catch and start to
-blink: the first light on SR-7 that is addressed to the player, and it says only *here*.
+10 px, telescopes out along its track over 3.4 s and locks with another clunk at the head.
+Half a second later the dock's lamps catch and blink: the first light on SR-7 that is
+addressed to the player, and it says only *here*.
 
-The arm is a mask the boom slides out through (`clip_children`), so it emerges from the
-hull rather than appearing over it. Whether it is out is the world's state - the station
-whole, or the core running - and is never saved on its own; a load snaps it.
+The arm's track is a mask the boom slides out through, so it emerges from the hull rather than
+appearing over it. Whether it is out is the world's state — station whole, or core running —
+never saved on its own; a load snaps it.
 
 ### The console
 
 Docking at the head of the boom opens **the station's own maintenance console**
-(`CoreTerminal`), not the hub and not UNIT-7. It reports what it can see, true of a station
-that has just had its last piece put back:
+(`ui/CoreTerminal.gd`), not the hub and not UNIT-7:
 
 ```
 / S R - 7   C O R E /
@@ -288,58 +290,40 @@ CORE .............. COLD
   DEPART                UNDOCK
 ```
 
-ESC or the action key leaves it; the action key brings it back while docked. **REBOOT
-CORE** types a short log - `SEAT ... OK`, `CYCLE ... OK`, `CORE ... CAUGHT` - and steps
-aside. The camera pulls back from the dock so the player watches the rest from where they
-sit:
+Every line is true of a station that has just had its last piece put back. BACK leaves it;
+the action key brings it back while docked (the prompt reads `TERMINAL`). The tank is not
+topped up and the hold is not taken in: there is nobody there to receive it.
 
-- SEAT - the seating clunk lands and the shake carries it; the crooked row stays crooked.
-- CYCLE - it turns over, stutters, and the slots catch outward. The power comes up from
-  it: the lights one by one outward, then the dish finds the Sun and sends the purple ping
-  that lights up the scrap across the ring. Then the radio clicks on.
+**REBOOT CORE** types `SEAT .... OK`, `CYCLE .... OK`, `CORE .... CAUGHT` (the action key
+skips), closes, and hands the reboot to the core. The camera pulls back so the player
+watches the rest from where they sit (`LandedState._on_reboot_requested`):
 
-Once the dish has pinged, the camera comes back in and the port is open: somebody is home.
+- **SEAT** — 0.5 s, the seating clunk and the shake. Heard, never seen: nothing on the hull
+  moves, and the crooked row stays crooked.
+- **CYCLE** — 0.9 s later it turns over and the slots catch outward over 1.4 s, stuttering
+  before they hold. `Progress.CORE_STARTED` is flagged here, and saved.
+- **The power** comes up from the core: the station's lights catch one by one outward from
+  it, one every 0.16 s (`StationLights.WAKE_ORIGIN` is the core, so the wake is not a
+  cutscene played near it — it is the same light spreading from the first windows to catch).
+- **The dish** strains up off its post, slowly, finds the Sun, and sends out one great ping in
+  the Titan's purple (`CommDish.ping`, 12 Sweeps' reach): SR-7 back on the air, on whose
+  frequency is left to wonder. Scrap across the ring lights up at once. From now on a Sweep
+  that reaches the dish is answered the same way. The ping is not a Sweep and calls nothing.
+- 4 s for the ping to spread (`StationPower.PING_WATCH`), then UNIT-7 comes on (§7), and the
+  camera comes back in.
 
-It is deliberately simple for now. **It will become an easy puzzle** - a short sequence the
-player has to get right off the console - and grow from there; the log's two operations
-are the seed of it.
+The Procedure system is not used here. The core's operations are named SEAT and CYCLE,
+the two the Gates use (`docs/SWEEP.md`), and are done for the player by the console.
+`entities/procedure/sr7_core.tres` is read only by `test/ProcedureTest.gd`.
+`playtests/core_cold_start.play`.
 
-The Procedure (the placard and the RESONANCE bar, `docs/SWEEP.md`) is **no longer at the
-core** (decided 2026-09-25). Its code stays (`Resonance`, `ProcedureDef`, `PlacardPanel`,
-`ResonanceMeter`) for the Gates (ADR 0005); `sr7_core.tres` is no longer read by anything.
+## 7. UNIT-7 Comes On
 
-### What the core is (decided 2026-09-24)
-
-**It is not a component in a housing.** There is no disc, no rotor, nothing round - that
-draft died because a 68px shape inside a 220x130 slab does not read from the 260px the
-player works at, and when it does read it says *drawn carelessly* rather than *somebody
-unseated this by hand*.
-
-The core is a **recessed bay of window slots set in ordinary hull** (`CoreHousing`), and the
-slab is now plain pressurised hull with the same end caps and bulkhead lines as
-`CentralHub` and `BellyModule`. The slots are drawn exactly the way `StationLights` draws
-every other window on SR-7 - `SPACE_BG` when dark, `SUN` at 0.9 with two bloom layers when
-lit - so the core is the same fabric as the rest of the station, present and unremarkable
-from the first second of the game.
-
-Four slots, then a fifth, wider and set apart. **The row sits permanently out of true**
-(`SLOT_KINK`), the way a panel refitted in a hurry sits. Nothing straightens it and the
-cold start does not undo it: SR-7 keeps its scars, the way the cracked vat and the tally
-scratched beside it do. `SEAT` is therefore **heard, never seen** - the clunk lands and the
-shake carries it, and nothing on the hull moves.
-
-This costs nothing and pays for itself at the wake: `StationLights.WAKE_ORIGIN` is already
-`Vector2(0, 15)`, the core, so the station's lights already catch outward from this exact
-point. Making the core windows means the wake is not a cutscene played near the core - it
-is the same light spreading from the first windows on the station to catch.
-
-There is no silhouette (decided 2026-09-22). Where UNIT-7 was is not shown.
-
-### What it says first
-
-It has been off for 347 cycles and, under ADR 0008, does not know what it is. So: not
-"hello, welcome" - too composed. Confused first, and the cheer assembling itself out of
-nothing:
+The radio (`scripts/RobotRadio.gd`, shown by `ui/RadioPanel.gd`) is a link to UNIT-7 at
+SR-7, not a unit aboard. Until the cold start `guide_awake` is false and `request()` drops
+everything — tips, alarms, the Void, a lost ship. `CoreHousing` calls
+`RobotRadio.wake_guide()` once the station's power has finished waking, and the first
+transmission is `first_wake.tres`, which holds the game:
 
 ```
 > ...
@@ -351,273 +335,113 @@ nothing:
 > Right. What are we doing?
 ```
 
-`What are we doing?` is the first line of the trap, and it works because it is **sincere**.
-It genuinely does not know. It is asking. And the player - who has just spent twenty
-minutes learning, with no downside whatsoever, that fixing dead things is good - tells it.
+It does not know what it is (ADR 0008). Not "hello, welcome" — too composed. Confused first,
+the cheer assembling itself out of nothing. `What are we doing?` is the first line of the
+trap, and it works because it is **sincere**: it genuinely does not know, and the player —
+who has just spent the act learning, with no downside, that fixing dead things is good —
+tells it. `how long was that?` is a question the game does not answer.
 
-`how long was that?` is a question the game answers much later.
+The first transmission also files UNIT-7's Record in the Log (`_mark_guide_met`). A load
+sets `guide_awake` from the ledger. `playtests/radio.play` wakes it by hand to test the
+radio itself.
 
-## 6. Guidance Without Hand-Holding
+## 8. After The Wake: The Dock
 
-The principle everything is held to, and the one Videocult spent years getting wrong
-before conceding it eight months before Rain World shipped:
+With the core running, `SpacePort.is_open()` is true for good (`needs_core` gated on
+`CORE_STARTED`; a station does not go back to being dead). The gate is the world's state,
+not the radio's: `guide_awake` only governs whether UNIT-7 speaks.
+
+On the dock, a running SR-7:
+
+- **Tops the tank up to half** (`Drive.free_floor`, `FREE_FRACTION` 0.5 of 150) on every
+  dock and relaunch, never higher. A dead SR-7 gives nothing. The first thing it does after
+  the reboot is this.
+- **Takes in the hold** as Stores (the Deposit) and spends them on the ship with no menu —
+  `docs/FREIGHT.md`.
+- **Offers the hub** (`ui/SpacePortDialogue.gd`): `SHIP`, with a count of Components waiting
+  in the Cradle, above `DEPART`. There is no store (ADR 0007). SHIP is where Components are
+  fitted and stowed (ADR 0014, `docs/FREIGHT.md`).
+
+From here a relaunch or a continue comes up behind the **boot terminal**
+(`ui/LoadingScreen.gd`, a power-on self test whose sixth line is `Synchronizing clone
+manifest`), because the ship's computer is coming up on a powered station
+(`Session.relaunch`/`resume`, `launch.boots`). A new game never sees it.
+
+## 9. The Cargo Bay
+
+The ship wakes with **nothing**: an empty tank and no hold (`Ship.base_max_cargo_weight`
+0). No scrap, derelict, container or seam will harvest; a Sweep still lights them up and puts
+them on the minimap, but there is nothing to put anything in. Act 1 does not need one, and so
+the first thing after the wake is to go and get one.
+
+**The Cargo Bay is the first Component**, ADR 0007's model case made literal
+(`entities/freight/Components.gd`). It stands Lug-up between the two halves of a crashed
+hauler on Veld's ground, 205° round from Veld's +x (`entities/structures/HaulerWreck.gd`). It
+is in the world from minute one and dead to the Sweep until the cold start.
+
+1. **Heard.** The dish's ping at the cold start reaches the wreck from across the system, and
+   it pings on the minimap, held on the rim for its bearing, until it is identified
+   (`HaulerWreckMinimapTarget`). The bay answers a Sweep from up to 5000 px off, faint and
+   broken at the edge and firming up closer — warmer, colder, entirely through the
+   instrument (`Freight.answer_clarity`).
+2. **The need.** The first Sweep that finds scrap with no hold fitted, UNIT-7 names the
+   problem, never the place (`first_no_hold.tres`, pauses): `Oh. You haven't got a hold.
+   Not a small one. None at all.` ... `I'd tell you where to find one if I knew. I don't.
+   Sorry, pilot.` Sincere: it does not know where a hold is.
+3. **Named.** Within 1000 px (`Identifiable.RANGE`), UNIT-7 names the wreck flatly
+   (`hauler_identified.tres`, no pause): `Got it. HAULER, DOWN.` / `An old freighter. Came
+   down hard and broke her back, a long time ago. Nobody aboard.` Nobody can name it before
+   the cold start.
+4. **The pull.** The same verb as the array, and it fails: on the Aux the ship strains at the
+   end of the clamp and the ground holds. Only the Burn tears it free, on the half tank SR-7
+   gives. The lesson learned on Rook is the one that fails on Veld. Once free, the Aux lifts it
+   off. (Threshold, pull time and fuel cost: `docs/FREIGHT.md`, `playtests/cargo_bay.play`.)
+5. **Home.** Flown back as heavy Freight and delivered to SR-7's Cradle (`docs/FREIGHT.md`).
+6. **Fitted.** Docked, the hub's SHIP row counts it waiting; SHIP offers `FIT CARGO BAY`.
+   Fitted, the hold is 50, the cargo readout appears, and everything harvests. UNIT-7 says so
+   (`cargo_bay_fitted.tres`): `There. Bolted on, sealed, holding pressure. That is a hold!` /
+   `Fifty units. Everything out there will cut now, and whatever you bring home goes into the
+   Stores.` / `And the Stores keep you flying. Go on, then. Fill it.`
+
+Only then does the cutting tutorial (`first_scrap.tres`) wait for the first scrap the ship
+can cut (`RobotRadio.check_scrap`). `playtests/cargo_bay_lines.play`, `playtests/cargo_bay.play`.
+
+## 10. Guidance Without Hand-Holding
 
 > **Cosmological illegibility is the point. Operational illegibility is a bug.**
 
 The player must never wonder which button to press. They should constantly wonder what
-things mean. The rat knows the way home; it has no idea what a subway is.
+things mean.
 
-| Channel | Cost | Carries |
-|---|---|---|
-| Ship's cold-start boot text | free | the controls, literally, diegetically |
-| The dead station | art | objectives: dark lights, a limp dish, a red alarm at every cut |
-| Station silhouette | already built | progress |
-| Shape language | art | Sections look like they belong to the station; scrap does not |
-| `EventBus.action_message_changed` | already built | contextual verbs (HARVEST / DOCK) |
+| Channel | Carries |
+|---|---|
+| The intro record (§3) | where, and that something has just happened |
+| The manual diagnostic (§4) | the controls, literally, diegetically, as each is first needed |
+| The dead station (§3) | the objectives: dark lights, a limp dish, a red alarm at every cut |
+| The station's silhouette | progress |
+| Shape language | Sections are machined and look like the station; scrap does not |
+| The Sweep's purple answer (§5) | which things are part of something |
+| The minimap's rim pings (§5, §9) | the bearing to each missing piece, and to the hauler once heard |
+| `EventBus.action_message_changed` | contextual verbs (DOCK, TERMINAL, RELEASE) |
 
-**Anti-patterns:** no Titan-drawn markers on the Chart, no "press X to Y" popups, no
-completion percentage anywhere. The only list is the station itself: its alarms go quiet
-one by one as the pieces go home.
-
-**The ship's own marks are the exception, because they are the ship's.** The Chart's
-regions are the Titan's; laid over them are marks the ship made itself - the player's
-tracking point, and Freight it has handled (ADR 0012). Nothing is marked before the ship
-has touched it, so the first search for every Section is still a search.
-
-The boot text is the load-bearing one, and it promotes the Boot Terminal from
-`docs/IDEAS.md` out of the late game. The first thing the player ever reads is the ship
-talking to itself - which means that by the time they wonder whether that terminal accepts
+No completion percentage, no "press X to Y" popups, no text objective. The only list is the
+station itself: its alarms go quiet one by one as the pieces go home. The diagnostic is the
+ship talking to itself, so by the time the player wonders whether its terminal accepts
 input, they have been reading it since minute one.
 
-### The manual diagnostic (decided 2026-09-27)
+## 11. Known Gaps
 
-The boot text's in-flight half (`BootLog`, `BootChecklist`, `ControlLock`). A beat after a
-new game hands over control, the ship types its own manual diagnostic into the HUD's
-bottom-right corner (on top of UNIT-7's panel while that is up), growing upward, in bare
-terminal text with no frame:
-
-```
-MANUAL DIAGNOSTIC
-CTRL AUTH ................. SYSTEM
-
-PROPULSION
-THRUST ....... [UP]          [ OK ]
-REVERSE ...... [DOWN]        [ -- ]
-YAW .......... [LEFT][RIGHT] [ -- ]
-```
-
-A terse flight-computer readout, no sentences: status fields right-aligned under the
-stamps, headings naming the hardware under test (PROPULSION, SONAR, CLAMP, RCS, CLAMP
-RELEASE), rows the control that exercises it.
-
-**The controls are locked until their test.** Nothing answers until PROPULSION's heading has
-typed; then the stick comes back. Each later section gives back its own: SONAR the Sweep,
-CLAMP the magnet, RCS the strafe, CLAMP RELEASE the let-go. The locks go on with the new
-game's first frame, so the wake from black is not a window to fly in. While CTRL AUTH is
-the system's, thrust is held to 50 m/s relative to SR-7 (the frame the station, the tank
-and its Mount all move in) and the boost is held off. Finishing, a load, a new game or a
-quit clears every lock and the cap, so none can outlive the log. A ship lost mid-diagnostic
-comes back locked where it left off: the next clone reruns it with what had passed on
-file, and the rest runs again from its triggers (the tank is never lost, ADR 0012).
-
-Each row stamps `[ OK ]` the first time the pilot uses it, so the controls are taught as a
-checklist the player ticks off, not as popups. YAW and STRAFE need both ways. A section
-whose rows are all OK clears a moment later, so the log only holds what is still to do,
-and its system name joins a running list of passes under the header
-(`PROPULSION ..... [ OK ]`), which stays up to the end. `CTRL AUTH` is an aside: smaller
-than the log, and dim.
-Later sections **unfold** when their moment comes: SONAR when a loose piece's Lug is just
-outside a tapped Sweep's reach (a Sweep that reaches it logs `CONTACT ... FREIGHT`), CLAMP
-when the nose is close to a Lug (the stamp fills as a bar while the magnet pulls), RCS a
-beat after the pickup, CLAMP RELEASE when the load is close to its Mount (its stamp fills with
-the release hold). A row left waiting flickers now and then; nothing else nags. With every
-section cleared it prints `DIAGNOSTIC ... PASS` / `CTRL AUTH ... PILOT`, holds, and
-fades for good.
-
-It runs on a new game only and is never saved: a continue does not bring it back. It never
-names a place or a goal - only the ship's own controls, which §6 already assigns to it.
-Considered and set aside (prototyped 2026-09-27): stacked on the dashboard (moved to the
-corner after a play), overlay key cards and prompts pinned to
-the ship (the popups this section rules out), every section listed from the start (tells
-the player the shape of Act 1 before they have seen a tank), and the POST panel folding
-into the corner (the dark new-game start has no POST to fold).
-
-## 7. What Veld Withholds
-
-After the wake, Veld's job is to be **finishable**. Three to five hours: strip the ring,
-learn the planetary Sweep, work Rook's seams, find the first found-object upgrades, find
-the Gate, power it. Seen it, done it.
-
-This is deliberate. Curiosity about something distant requires the near field to be spent -
-emptiness is what makes a landmark read. So Veld is exhaustible on purpose, and exactly one
-thing is left over.
-
-### The survey marker
-
-`docs/IDEAS.md` calls this the Dead Object. It sits between the station and the first
-harvesting ring, slightly off the direct line: in frame on every run of the opening, never
-close enough to clip. A short thick cylinder with a flared collar, like a conduit terminus
-with the conduit missing. No lights, no door, no dock, debris palette.
-
-The one visual property that has to land: **it is clearly one machined piece, not
-wreckage.** Wreckage has broken edges. This has tolerances. That is what makes it read as
-intentional without reading as important.
-
-**Its name is boring, and that is the point.** `IDEAS.md` labels it `UNKNOWN`, which is an
-invitation. Instead UNIT-7 names it on close approach, the way it names any Unidentified
-find, and the name closes the question:
-
-```
-> SURVEY MARKER, DISUSED
-```
-
-That is not a lie. UNIT-7 sincerely reads it that way (ADR 0008). Late game, it is the
-worst line in Act 1.
-
-**On a Sweep, occasionally, one ring comes back.** No sound, no text, no HUD. Rare at
-Influence 0, more reliable at 1, consistent by 2-3 - so a player who half-noticed in hour
-two is confirmed in hour nine, keyed to the one dial the game already has.
-
-### The contradiction
-
-By the end of Veld the player can collect four readings for free, in any order, with an
-instrument they have had since minute one:
-
-| Sweep at | Returns |
-|---|---|
-| A rock | a hit |
-| Empty space | nothing |
-| The Gate, dark | nothing |
-| The Gate, powered | a ring, every time |
-| The survey marker | a ring, sometimes |
-
-**The thing parked outside their house behaves like a powered Gate.** Which is impossible,
-because nobody powered it.
-
-That is Veld's payload. Not a puzzle and not an answer - a contradiction the player finds
-themselves, that is fully falsifiable, and that they can go back and re-check any time.
-
-### If they try the Heartbeat early
-
-Somebody will. A rhythm input and an audible rhythm in the same game, and it is hour three.
-
-Not *it works* (collapses the arc). Not *nothing* (punishes the right idea with silence).
-
-**Every ring comes back at once, hard. And then nothing.** No reveal, no unlock. The object
-heard the whole thing and had nothing to say.
-
-They were not wrong. At Influence 0 the Heartbeat is faint and simple, and it gets louder
-and more complex as Modules come online - they were playing back a fragment. That is
-discoverable later, and in the meantime they will remember it for twenty hours.
-
-## 8. What Veld Must Not Have
-
-- No warden. (`docs/DESIGN.md` §4.6 already puts those from Sonder inward.)
-- No terminal hacking.
-- No answer to the survey marker.
-- The Heartbeat audible but not actionable - "faint, ignorable, but present."
-- No third Procedure. The core and the Gate are the only two, and they share their verbs.
-
-## 9. The Cargo Bay (decided 2026-09-26)
-
-The ship wakes with **nothing**: an empty tank and no hold. Not a small hold - none. No
-cargo readout on the HUD, no HOLD row in the Log, and no scrap, derelict, container or seam
-will harvest. A Sweep still lights them up and puts them on the minimap; there is simply
-nothing to put anything in. Act 1 does not need one, and so the first thing after the wake
-is to go and get one.
-
-**The Cargo Bay is the first Component**, and ADR 0007's model case made literal. It lies
-buried in Veld's surface inside a crashed hauler, Lug up. It is in the world from minute
-one and dead to the Sweep until SR-7's cold start; after that it answers from well beyond
-harvest range, the array's warmer-colder lesson reused.
-
-1. **Cold start.** SR-7 lights. From now on it tops the tank up to **half** every time
-   the ship docks or relaunches, never higher. A dead SR-7 gives nothing.
-2. **The need.** The first time a Sweep finds scrap that will not harvest, UNIT-7 names the
-   problem, never the place: there is nothing to put it in. It is sincere; it does not know
-   where a hold is (`first_no_hold.tres`). On close approach it names the wreck flatly,
-   `HAULER, DOWN` (`hauler_identified.tres`). SR-7's own dish ring at the cold start is not
-   a Sweep and never calls it.
-3. **The pull.** The player lands, clamps the Lug and flies away from the ground. On the Aux
-   the ship strains at the end of the clamp and the ground shudders and holds. Only the Burn
-   tears it free. Tuning: the tear-out costs about 20% of `max_fuel`, so the free half covers
-   it with room to spare. Once free it lifts off Veld on the Aux.
-4. **Home.** Flown back as Freight, heavy (ADR 0012), and released into SR-7's **Cradle**.
-5. **Fitting.** Docked, SR-7's menu offers `SHIP`, counting one Component waiting; SHIP
-   offers `FIT CARGO BAY`, blinking the bay in its place over the hull. UNIT-7 fits it: the
-   bay is strapped across the ship's back (heavier, and solid - ADR 0014), the hold becomes
-   50, the cargo readout appears, and everything harvests. UNIT-7 says so on FIT
-   (`cargo_bay_fitted.tres`), and the cutting tutorial (`first_scrap`) waits for the first
-   scrap after this.
-
-**The same pull on Rook.** The solar array's key-press tugs (§4) become the same verb: clamp
-and fly away. The array is light and Rook is small, so the Aux does it. The lesson learned in
-minute four is the one that fails on Veld.
-
-**There is no store** (ADR 0007, now in full). Credits become SR-7's **Stores**. The hold
-empties into them on docking (the **Deposit**, the old cash-in count re-aimed), and docking
-spends them automatically, with no menu: the hull patched first, then the tank topped past
-the free half. The ring pays for the trip, and the Cargo Bay is what lets it pay at all.
-Tuning target: one full hold of ordinary gems is about a full tank from empty. With the
-store go every `UpgradeItem`, so `max_hull` and `max_fuel` are fixed until Components exist,
-and the hold is 50 for good.
-
-**For now:** the planetary scan is removed and seams stay dormant with it - the store was
-the scanner's only source, and `ECHO` (`docs/SWEEP.md`) is not designed far enough to
-replace it. Visiting and Records are untouched; they never needed the scanner.
-
-**Open:** whether fitting stays a menu row; `ECHO` and the
-seams; old saves (credits, bought upgrades, a 50-unit hold with no Cargo Bay). The Gate's
-docking surface is also called a cradle in code (`Gate.CRADLE_HALF`, `GateTransit`) and
-should be renamed before SR-7's Cradle is built.
-
-**Tuning (#141).** The numbers the flow runs on, checked by `playtests/cargo_bay.play`,
-`playtests/dock.play` and `test/EconomyTest.gd`:
-
-| | Value | Where |
-|---|---|---|
-| Tank | 150 fuel (`max_fuel`); the Aux costs nothing, the Burn 6/s | `Ship`, `Main.tscn` |
-| Free half | 75 fuel on every dock or relaunch, never higher | `Drive.FREE_FRACTION` |
-| Cargo Bay hold | pull threshold 1.6 (the Aux tops out at 1.0), `pull_time` 4.25 s | `Components` |
-| Tear-out | about 29-30 fuel of Burn, 19-20% of the tank; about 45 fuel left over | measured |
-| Low tank | 15% left runs dry mid-pull, and the ground holds; the Aux flies home for another half | measured |
-| Ordinary gem | 6.85 ST in 1.11 hold units on average (GOOD rolls on plain scrap) | `GemData` |
-| Full hold | 50 units of ordinary gems, about 309 ST | `EconomyTest` |
-| Fuel | 2 ST a point: a full tank from empty is 300 ST, the tank past the free half 150 ST | `Economy` |
-| Hull | 3 ST a point: a whole hull from nothing is 300 ST, and it is paid first | `Economy` |
-
-So one full hold of ordinary gems is about a full tank from empty; a hold spent on a
-badly holed hull goes mostly to the patch. A Gate's Module (600 ST) is two full holds.
-
----
-
-## TODOs
-
-> **TODO**: Place the survey marker as an actual coordinate relative to `SpaceStation` and
-> `OrbitalRingSpawner` on Rook, and check it sits in frame on the common run without being
-> a collision hazard.
-> **TODO**: The tank is meant to be *fused into a rock* (§4, the harvest Sweep). Today it
-> hangs free at the ring's inner edge; the rock and the Sweep that frees it are not built.
-> **TODO**: The DORSAL ARM is meant to be snarled in things that hurt (§4). Today it hangs
-> in ordinary debris.
-> **TODO**: Write the ship's cold-start boot text. It has to carry thrust, turn, Sweep and
-> dock without ever reading as a tutorial popup.
-> **TODO**: The dry dock is not built. A dead SR-7 now gives nothing on a dock or a
-> relaunch, and a running one tops the tank up to half (`Drive.free_floor`), but
-> an empty tank before the cold start is a soft-lock until ADR 0010's Aux exists.
-> **TODO**: What the dock offers *after* the wake is ADR 0007's, not this document's:
-> there is no currency and no store, and SR-7 is a repair bay where UNIT-7 fits what the
-> player brings. The store is gone (#132); the hub the wake opens offers only `DEPART`
-> until fitting lands. After the Deposit, a running SR-7 spends Stores on the ship with
-> no menu (#137): the hull first, then the tank past the free half, as far as the
-> Stores go (`LandedState._start_service`).
-> **TODO**: UNIT-7's functional calls (relaunch, tow, the Void) still come from UNIT-7
-> before the core's cold start wakes it (`RobotRadio.wake_guide`), and need a speaker of
-> their own.
-> **TODO**: Playtest the opening for wandering. There is no clock by design; the array's
-> long-range answer (§4) is the only pointer. Tune its range until a lost player picks it
-> up without being led by the hand.
-> **TODO**: Range separates "answers" from "harvestable" (§4). Still decide how the
-> answering ring *looks* up close, where both are inside the bar.
-> **TODO**: The intro reads `0 CYCLES SINCE EVENT`: square "only just happened" with the
-> fine debris and the clone counter (`docs/DESIGN.md` §3.2 leaves its number open).
+- **The CoreTerminal's `DEPART  UNDOCK` row only closes the console**; it does not undock
+  (`ui/CoreTerminal.gd` `open()`: its action is `close`). Thrust is the way off.
+- **The SOLAR ARRAY has no long-range answer.** Sections have `answer_range` 0 and answer only
+  inside a Sweep's ring; the bearing comes from the minimap's rim ping instead, which is up
+  from the first frame. ADR 0009's "the mast answers from beyond the range anything else
+  does" is built only for the Cargo Bay.
+- **The station is battle-worn.** `HullDamage` (punctures, scorching, torn rims) and
+  `TankBreach` (a blown-out tank) sit uneasily beside the clue that SR-7 was cut apart and
+  not damaged; only the Mounts read as deliberate.
+- **The intro's `0 CYCLES SINCE EVENT`** is not squared with anything else: the clone count
+  (`GameState.death_count`) is shown nowhere but the dev panel.
+- **No speaker before the wake.** A ship lost or taken by the Void before the cold start
+  relaunches in silence: `RobotRadio.request` drops the call rather than anyone else making
+  it.

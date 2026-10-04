@@ -194,7 +194,7 @@ func test_arriving_never_powers_anything_down_or_up() -> void:
 
 # --- No fuel at a Gate ------------------------------------------------------
 
-## Fuel is SR-7's to give (docs/OPENING.md §9); a Gate's berth leaves the tank as it was,
+## Fuel is SR-7's to give (docs/WORLD.md §4, docs/FREIGHT.md §8); a Gate's berth leaves the tank as it was,
 ## even with SR-7's core running.
 func test_a_gate_dock_does_not_refuel() -> void:
 	_gs.progress.flag(Progress.CORE_STARTED)

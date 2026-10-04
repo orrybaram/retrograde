@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: not built
 date: 2026-09-20
 supersedes: 0002
 ---
 
 # The Chart is bought from the Merchant, not granted by Gates
+
+> **In the game (2026-10-04):** The game does not do this. Powering a Gate charts its region, as ADR 0002 decided, and there is no Merchant (`docs/WORLD.md` §8). The idea is kept in `docs/IDEAS.md` §7.
 
 ADR 0002 established that the Chart starts blank and fills in one region per powered Gate. It stays blank; it no longer fills from Gates. A region is **Charted** when the player buys that region's chart from the **Merchant** — a drifting vessel, one per region, that must be found before it can be traded with.
 

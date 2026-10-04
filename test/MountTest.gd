@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Seating a Section (docs/adr/0012, docs/OPENING.md §2-4): SR-7's FUEL TANK, SOLAR ARRAY
+## Seating a Section (docs/adr/0012, docs/FREIGHT.md §4): SR-7's FUEL TANK, SOLAR ARRAY
 ## and DORSAL ARM each go back into their own Mount, cut where they were taken off, and
 ## only there.
 

@@ -28,7 +28,7 @@ const GAME_OVER_MESSAGES := {
 }
 ## The dark takes a moment to finish closing before the next clone comes up.
 const CONSUMED_SILENCE := 2.4
-## Waking up (docs/DESIGN.md "Minute 1-2"): the screen holds dark for a beat before
+## Waking up (docs/OPENING.md §3): the screen holds dark for a beat before
 ## the world comes up, so a run opens on silence instead of a cut.
 const WAKE_BLACK_HOLD := 0.8
 const WAKE_FADE_TIME := 1.8
@@ -205,7 +205,7 @@ func _build_fade_overlay() -> void:
 	layer.add_child(_fade_rect)
 
 ## Hide the ship being placed. The boot terminal is the ship's computer coming up on a
-## powered station (docs/DESIGN.md "Minute 0-1"), so it only runs once the core has been
+## powered station (docs/OPENING.md §8), so it only runs once the core has been
 ## cold-started; until then the screen just goes dark. Returns whether it booted.
 func _cover_spawn(powered: bool) -> bool:
 	booted_last_spawn = powered and loading_screen != null
@@ -274,7 +274,7 @@ func start_game() -> void:
 		start_menu.visible = false
 	var session := _session()
 	await session.run(session.new_game())
-	# The ship checks its own controls, once, on a new game (docs/OPENING.md §6)
+	# The ship checks its own controls, once, on a new game (docs/OPENING.md §4)
 	if diagnostic:
 		get_tree().call_group("boot_log", "begin")
 

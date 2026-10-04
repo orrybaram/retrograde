@@ -1,9 +1,11 @@
 ---
-status: accepted
+status: reversed
 date: 2026-09-20
 ---
 
 # Abandoning the ship is always available
+
+> **In the game (2026-10-04):** Abandoning was built and then removed (commit f54a35e). There is no way to abandon the ship; it is lost only by destruction or the Void (`docs/FLIGHT.md` §9). The idea is kept in `docs/IDEAS.md` §9.
 
 With the Aux drive never running out (ADR 0010), the ship can no longer be stranded, and the fuel-depletion death in `docs/DESIGN.md` §4.7 has nothing left to trigger it. It is replaced by **abandon ship: a deliberate hold-to-confirm, available anywhere, at any time**, whatever the fuel state.
 

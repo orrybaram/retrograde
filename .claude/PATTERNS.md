@@ -57,7 +57,7 @@ Cradle.fit(id) / Cradle.stow(id) -> GameState.cradled + Progress.FITTED_COMPONEN
   previews itself. Handling is `Ship.handling(ids)` in eighths.
 - The art is Polygon2Ds so `DerelictShip` copies it: an abandoned hull wears its parts.
 
-## Procedures (docs/SWEEP.md, docs/OPENING.md §5)
+## Procedures (docs/SWEEP.md §8)
 
 ```
 Ship._drive_sonar release -> Resonance.available_for(ship)? -> Resonance.release(held)
@@ -71,11 +71,14 @@ Ship._drive_sonar release -> Resonance.available_for(ship)? -> Resonance.release
   show within `Resonance.REACH` of a listening one, flying free.
 - `ProcedureDef` (`entities/procedure/`) holds the steps; the placard draws from the same
   data. `check()` gives `ok`, a `right` count (never which) and `incomplete`.
-- SR-7's core is the first (`CoreHousing`): it listens once `CoreHousing.is_whole` (all
-  Sections plus the nudged wing), and its cold start flags `Progress.CORE_STARTED` in the
-  ledger (saved as `[sections] core_started`), which is SR-7's power (`StationPower`) and UNIT-7
-  awake (`RobotRadio.guide_awake`, `wake_guide()`). Dev panel: PROGRESS > SR-7 WHOLE /
-  SR-7 CORE. Playtest: `pt.seat_sr7()`, `pt.park_by_core()`, `playtests/core_cold_start.play`.
+- Nothing in play joins `procedure_listeners` today; the machinery is dormant
+  (`docs/SWEEP.md` §8). SR-7's core (`CoreHousing`) goes on standby once `is_whole` (all
+  Sections plus the nudged wing) and is rebooted from the dock's console
+  (`CoreTerminal` -> `CoreHousing.reboot()`, `docs/OPENING.md` §6). Its cold start flags
+  `Progress.CORE_STARTED` in the ledger (saved as `[sections] core_started`), which is
+  SR-7's power (`StationPower`) and UNIT-7 awake (`RobotRadio.guide_awake`,
+  `wake_guide()`). Dev panel: PROGRESS > SR-7 WHOLE / SR-7 CORE. Playtest:
+  `pt.seat_sr7()`, `pt.park_by_core()`, `playtests/core_cold_start.play`.
 
 ## Freight (clamped to the nose, docs/adr/0012)
 
@@ -231,9 +234,9 @@ EventBus.radio_message_requested(conv) -> RobotRadio (autoload: RadioQueue + sho
   Abandoning ship and the tractor-beam tow are gone.
 - `{name}` placeholders come from `conv.with_vars({...})`.
 
-## Ore seams & Landing (DESIGN.md 4.10)
+## Ore seams & Landing (docs/SWEEP.md §7, docs/FLIGHT.md §8)
 
-The planetary scan is removed (docs/OPENING.md §9): nothing surveys a Body, so seams stay
+The planetary scan is removed (docs/SWEEP.md §7, docs/IDEAS.md §13): nothing surveys a Body, so seams stay
 dormant until `ECHO` is designed. The survey plumbing is kept for it; playtests about seams
 wake them with `pt.survey("Rook")`.
 

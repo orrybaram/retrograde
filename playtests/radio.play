@@ -7,7 +7,7 @@
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
-# UNIT-7 is off on a new game and gives no tips (docs/OPENING.md §5); this scenario is
+# UNIT-7 is off on a new game and gives no tips (docs/OPENING.md §7); this scenario is
 # about the radio itself, so it wakes the guide by hand.
 eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
 # A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about

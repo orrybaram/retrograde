@@ -1,7 +1,7 @@
 extends Node
 class_name StationPower
 
-## SR-7's power (docs/OPENING.md §3, §5). The station is dead until its core is
+## SR-7's power (docs/OPENING.md §3, §6). The station is dead until its core is
 ## cold-started (CoreHousing) - and the core is only rebooted once every piece is home and
 ## the ship has docked, so the wings are pieces like the others, not a switch. Until then
 ## every light is out and the comm dish hangs limp on its post. Power coming in while the

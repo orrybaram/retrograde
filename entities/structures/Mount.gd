@@ -1,7 +1,7 @@
 extends Node2D
 class_name Mount
 
-## The cut place on SR-7 where one Section belongs (docs/adr/0012, docs/OPENING.md §2).
+## The cut place on SR-7 where one Section belongs (docs/adr/0012, docs/FREIGHT.md §4).
 ## Until the Section is seated, the station's `part` polygon is hidden, the parts of it
 ## that showed are cut out of the station's collision, and the edges it was cut from are
 ## drawn as they were left: a straight torch line, empty bolt holes, a few beads of slag,

@@ -16,7 +16,7 @@ signal transmission_ended
 signal confirmed(id: StringName)
 
 ## The Guide's designation; the same one its Record is filed under in the Log
-## (Automatons.GUIDE, docs/DESIGN.md 5.3).
+## (Automatons.GUIDE, docs/STORY.md §3).
 const SPEAKER_NAME := "UNIT-7"
 
 const MSG_WAKE := preload("res://entities/Robot/radio/messages/first_wake.tres")
@@ -37,7 +37,7 @@ var queue := RadioQueue.new()
 ## radio in a test never touches a save file; Main points the game's at the save.
 var save_path := ""
 
-## UNIT-7 is off when the game opens (docs/OPENING.md §5): the station is dead and nobody
+## UNIT-7 is off when the game opens (docs/OPENING.md §7): the station is dead and nobody
 ## is on the comms. Until the core's cold start at the end of Act 1 reboots it, every
 ## call - tips, alarms, the Void, a lost ship - is dropped (request() refuses them), and
 ## MSG_WAKE is the first thing it says. The radio is the comms system to reuse.

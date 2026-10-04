@@ -1,7 +1,7 @@
 extends Node2D
 class_name CutAlarm
 
-## What an open wound on SR-7 does while the Section is missing (docs/OPENING.md §2): the
+## What an open wound on SR-7 does while the Section is missing (docs/OPENING.md §3): the
 ## severed lines along the cut spit sparks, and a red emergency lamp beside it pulses slowly.
 ## Nothing says the station is broken - this does. Drawn, not particles, so it rides the
 ## station exactly, and on its own randomness, never the shared RNG.

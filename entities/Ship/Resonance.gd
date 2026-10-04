@@ -1,7 +1,7 @@
 extends Node
 class_name Resonance
 
-## The ship's side of a Procedure (docs/SWEEP.md §3-4): the Marks laid down so far, read
+## The ship's side of a Procedure (docs/SWEEP.md §8): the Marks laid down so far, read
 ## off how long each Sweep was held. The Sweep charges for as long as `action` is held;
 ## the bar across BAR_TIME is split into six Slots, and the Slot the key comes up in is the
 ## Mark - a tap is Slot 1. Held to the end of the bar, the release is the Commit instead,

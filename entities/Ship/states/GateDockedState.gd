@@ -6,7 +6,7 @@ class_name GateDockedState
 ## A Gate is not a port: there is no quartermaster and nothing to sell. All that is out
 ## here is the Gate's own terminal, which opens on arrival and asks for the Stores to
 ## bring the planet's Module online. Once it is online the Gate gives transit to any
-## other powered Gate, for nothing. It gives no fuel: that is SR-7's (docs/OPENING.md §9).
+## other powered Gate, for nothing. It gives no fuel: that is SR-7's (docs/WORLD.md §4, docs/FREIGHT.md §8).
 ## The launch key releases the ship the same way a port does.
 
 const CAMERA_ZOOM := Vector2(2.0, 2.0)

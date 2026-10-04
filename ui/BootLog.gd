@@ -1,7 +1,7 @@
 extends Control
 class_name BootLog
 
-## The ship's manual diagnostic on the HUD (docs/OPENING.md §6): a `BootChecklist` typed out in
+## The ship's manual diagnostic on the HUD (docs/OPENING.md §4): a `BootChecklist` typed out in
 ## bare terminal text in the bottom-right corner, growing upward - on top of UNIT-7's
 ## panel while that is up, which shares the corner. It runs once,
 ## on a new game, from a beat after control is handed over until every row is OK - then

@@ -42,7 +42,7 @@ assert pt.arm() != null and not pt.arm().out "SR-7's dock arm is in: there is no
 assert not pt.arm().get_port().accepts_docking() "nothing to dock at"
 screenshot 03_awake
 
-# Nobody is on the comms: UNIT-7 is off until the core's cold start (docs/OPENING.md §5)
+# Nobody is on the comms: UNIT-7 is off until the core's cold start (docs/OPENING.md §7)
 wait 3
 assert not pt.node("radio_panel").visible "no transmission on waking"
 assert not get_tree().root.get_node("RobotRadio").is_active() "the radio is quiet"

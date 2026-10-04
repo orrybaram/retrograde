@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Tests for SR-7's free half (docs/OPENING.md §9): once its core is running, every dock
+## Tests for SR-7's free half (docs/FREIGHT.md §8): once its core is running, every dock
 ## and every relaunch tops the tank up to half of `max_fuel`, never higher. A cold
 ## SR-7 gives nothing, and fuel past half only ever comes out of Stores.
 ##

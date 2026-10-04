@@ -1,9 +1,11 @@
 ---
-status: accepted
+status: not built
 date: 2026-09-20
 ---
 
 # Gates are powered by procedure, not credits
+
+> **In the game (2026-10-04):** The game does not do this. Gates are powered by paying Stores at the Gate's terminal (`docs/WORLD.md` §4). The Procedure machinery exists and is dormant (`docs/SWEEP.md` §8); the idea is kept in `docs/IDEAS.md` §1.
 
 A Gate was a price tag: fly to it, pay a large number of credits, the Module comes online. Instead, a Gate is powered by running the correct **Procedure** on it with the **Sweep** (`docs/SWEEP.md`). Credits are gone from the game entirely (ADR 0007), but even if they were not, the Gate would not want them.
 

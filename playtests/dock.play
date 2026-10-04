@@ -1,6 +1,6 @@
 # Docking at a port: gems fly out of the hold into the port while the HUD Stores count
 # rolls up, and SR-7 tops the tank up to its free half (~2.5s from empty) for nothing
-# (docs/OPENING.md §9). Dialogue opens after the Deposit; then Stores go to the hull
+# (docs/FREIGHT.md §8). Dialogue opens after the Deposit; then Stores go to the hull
 # first and the tank past half, with no menu, until they run out (issue #137).
 # Run: tools/play.sh playtests/dock.play   (frames land in .playtest/dock_*.png)
 

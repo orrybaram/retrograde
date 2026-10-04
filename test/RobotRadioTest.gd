@@ -28,7 +28,7 @@ func _radio() -> Node:
 
 
 func test_a_sleeping_guide_gives_no_tips() -> void:
-	# UNIT-7 is off when the game opens (docs/OPENING.md §5): nobody is on the comms.
+	# UNIT-7 is off when the game opens (docs/OPENING.md §7): nobody is on the comms.
 	var radio := _radio()
 	radio.guide_awake = false
 	radio.check_fuel(1.0, 100.0)

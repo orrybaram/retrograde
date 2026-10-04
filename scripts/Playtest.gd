@@ -875,7 +875,7 @@ func seam() -> OreDeposit:
 	return landed.ore if landed else null
 
 ## Survey a planet by hand, surfacing its ore seams. Nothing surveys in play now (the
-## planetary scan is gone until `ECHO`, docs/OPENING.md §9), so scenarios about the
+## planetary scan is gone until `ECHO`, docs/IDEAS.md §13), so scenarios about the
 ## dormant seams wake them this way.
 func survey(planet_name: String) -> void:
 	var p := planet(planet_name)

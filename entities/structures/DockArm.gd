@@ -1,7 +1,7 @@
 extends Polygon2D
 class_name DockArm
 
-## SR-7's refuel boom and the dock at its head (docs/OPENING.md §3, §5). A new game finds
+## SR-7's refuel boom and the dock at its head (docs/OPENING.md §3, §6). A new game finds
 ## it retracted: run back inside the belly module, out of sight, so the station has no dock
 ## at all and the ship wakes adrift beside it. It stays in until every piece of SR-7 is home.
 ## Then, on the core's standby battery (the same battery lighting the bay's aux strips,

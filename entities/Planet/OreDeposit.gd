@@ -4,7 +4,7 @@ class_name OreDeposit
 ## A seam of ore sitting just under a planet's surface: a handful of rough rock chunks,
 ## dark against the crust and flecked with mineral, that only show once the planet has
 ## been surveyed. Dormant for now: the planetary scan is gone and nothing surveys until
-## `ECHO` is designed (docs/OPENING.md §9), so no seam appears in play. Planets grow their own seams (Planet._spawn_ore, seeded
+## `ECHO` is designed (docs/SWEEP.md §7), so no seam appears in play. Planets grow their own seams (Planet._spawn_ore, seeded
 ## from the planet's key, so they land in the same places every session). The seam is a
 ## child of its Planet, so it rides the orbit.
 ##

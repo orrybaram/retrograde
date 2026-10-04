@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## There is no store, no upgrade and no planetary scan (docs/adr/0007, docs/OPENING.md §9).
+## There is no store, no upgrade and no planetary scan (docs/adr/0007, docs/OPENING.md §8, docs/IDEAS.md §13).
 ## SR-7's dock offers nothing to buy, the ship's limits are fixed, and an old save's
 ## bought upgrades and planetary scans are left behind when it loads.
 

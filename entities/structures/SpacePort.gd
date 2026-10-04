@@ -8,7 +8,7 @@ class_name SpacePort
 signal ship_landed(ship: Ship)
 signal ship_took_off(ship: Ship)
 
-## A port nobody is awake to run. SR-7 opens like this (docs/OPENING.md §3, §5): the
+## A port nobody is awake to run. SR-7 opens like this (docs/OPENING.md §3, §8): the
 ## station is dead, UNIT-7 is off in the cold core, and a ship that docks is met by
 ## nothing at all - no hub, no prompt for one, and no hold taken in, because there is
 ## nobody there to take delivery. The core's cold start opens it for good.

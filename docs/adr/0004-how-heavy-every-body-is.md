@@ -5,6 +5,8 @@ date: 2026-09-19
 
 # How heavy every Body is
 
+> **In the game (2026-10-04):** The rule holds. Since this was written Rook is trimmed light (`density_trim` 0.336, 1.0 G) and Aux thrust is 262.5, not 350, so the thrust-share table is stale: TERRA-0's surface now takes about 99% of the Aux. Current numbers: `docs/WORLD.md` §2, `docs/FLIGHT.md` §5.
+
 Every Body's mass is derived, not authored. `Planet._derived_mass()` works back from a
 target surface pull of
 

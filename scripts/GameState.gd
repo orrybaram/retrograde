@@ -15,7 +15,7 @@ var stores: int = 0 :
 		stores_changed.emit()
 
 ## Bodies that have been surveyed, keyed by Planet.save_key(). Nothing surveys a Body
-## now: the planetary scan is gone and `ECHO` is not designed yet (docs/OPENING.md §9), so
+## now: the planetary scan is gone and `ECHO` is not designed yet (docs/IDEAS.md §13), so
 ## this stays empty in play and is not saved. A survey fills in a Record and surfaces the
 ## Body's ore seams, which stay dormant until then.
 var scanned_planets: Dictionary = {}

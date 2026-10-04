@@ -33,7 +33,7 @@ const POWERED_GATES := "powered_gates"
 const SEATED_SECTIONS := "seated_sections"
 ## Components fitted to the ship from the Cradle, keyed by Components id.
 const FITTED_COMPONENTS := "fitted_components"
-## SR-7's core has been cold-started (docs/OPENING.md §5): the station has power and
+## SR-7's core has been cold-started (docs/OPENING.md §6): the station has power and
 ## UNIT-7 is awake. A single-key kind: `flag` it, and read it with `flagged`.
 const CORE_STARTED := "core_started"
 

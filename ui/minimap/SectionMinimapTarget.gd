@@ -1,7 +1,7 @@
 extends MinimapTarget
 class_name SectionMinimapTarget
 
-## MinimapTarget for a piece of SR-7 not yet back in its Mount (docs/OPENING.md §4): a
+## MinimapTarget for a piece of SR-7 not yet back in its Mount (docs/OPENING.md §5): a
 ## ping, so the beam finding it sends a ring out from it, where solid things only echo. Held
 ## on the rim when out of range, so it gives the bearing. Gone once the piece is seated, and
 ## while the ship has it clamped (it is right there on the nose).

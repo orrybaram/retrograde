@@ -1,6 +1,6 @@
 class_name Sections
 
-## The pieces of SR-7 that come back as Freight (docs/OPENING.md §4): each one's name,
+## The pieces of SR-7 that come back as Freight (docs/FREIGHT.md §4): each one's name,
 ## shape, Lug and mass. A Section is ordinary Freight with a `section` id, and it only
 ## fits the Mount with the same id (entities/structures/Mount.gd).
 ##

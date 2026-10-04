@@ -79,7 +79,7 @@ func enter() -> void:
 	# Stores, refresh resources
 	var at_port := locked_dockable.is_in_group("space_ports")
 	# A port nobody runs takes no delivery: the hold keeps what it carries until someone
-	# is awake to receive it (docs/OPENING.md §3, SpacePort.is_open).
+	# is awake to receive it (docs/OPENING.md §8, SpacePort.is_open).
 	var port_open := at_port and _port_is_open()
 	if at_port:
 		_start_refuel(gs)
@@ -103,7 +103,7 @@ func enter() -> void:
 		_show_enter_spaceport_message()
 	elif _awaiting_reboot():
 		# SR-7 whole and its core cold: the dock's console is the only thing awake
-		# (docs/OPENING.md §5), and it is what docking was for.
+		# (docs/OPENING.md §6), and it is what docking was for.
 		if instant:
 			_show_terminal_message()
 		else:
@@ -321,7 +321,7 @@ func _toggle_dialogue() -> void:
 				_dialogue.open_dialogue(spaceport)
 
 ## Tops the tank up to SR-7's free half, if it is below it. A cold SR-7 gives nothing,
-## and a tank already past half is left alone (docs/OPENING.md §9).
+## and a tank already past half is left alone (docs/FREIGHT.md §8).
 func _start_refuel(gs: GameState) -> void:
 	_refuel_target = ship.drive.free_floor(gs)
 	_refueling = ship.drive.fuel < _refuel_target

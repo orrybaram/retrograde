@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## Tests for PlanetScan: the inner-orbit reach that marks a Body Visited and the survey
-## readout its Record holds. The planetary scan itself is gone (docs/OPENING.md §9).
+## readout its Record holds. The planetary scan itself is gone (docs/IDEAS.md §13).
 
 var _gs: GameState
 

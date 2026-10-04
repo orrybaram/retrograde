@@ -5,6 +5,8 @@ date: 2026-09-18
 
 # The Log lists only what the player reached
 
+> **In the game (2026-10-04):** Holds. Nothing surveys a Body yet, so every Body Record reads `UNSURVEYED`; the Records tab stays empty until UNIT-7 is woken (ADR 0009). See `docs/WORLD.md` §9.
+
 The Log's Records tab holds one Record per Body the player has Visited and per Automaton they have met. It shows nothing else: no `? ? ?` placeholder rows, no dimmed entries for somewhere unreached, no "3 of 9 surveyed" count. A Body the player has not flown to has no row at all. The Chart is the Titan's map, handed over piece by piece; the Log is the player's own, and it can only hold what they went and got.
 
 A Body's Record appears the moment the ship enters its inner orbit (`Planet.scan_radius()`) and starts out carrying no survey. Scanning fills the survey in. Both states are permanent.

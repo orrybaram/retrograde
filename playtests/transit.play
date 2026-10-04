@@ -48,7 +48,7 @@ wait_until gs.titan_influence() == 2 3
 wait_until not pt.node("gate_terminal").is_booting() 8
 assert gs.stores == 400 "Veld's Gate took its 600 ST"
 
-# A Gate gives no fuel: that is SR-7's (docs/OPENING.md §9)
+# A Gate gives no fuel: that is SR-7's (docs/WORLD.md §4, docs/FREIGHT.md §8)
 assert pt.node("gate_terminal")._menu_items.size() == 2 "a powered Gate offers transit and the door, no fuel"
 wait 1.0
 assert ship.drive.fuel == 10.0 "the berth leaves the tank as it was"

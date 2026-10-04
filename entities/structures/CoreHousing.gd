@@ -1,7 +1,7 @@
 extends Node2D
 class_name CoreHousing
 
-## SR-7's core, in the hull section at the middle of the station (docs/OPENING.md §5): the
+## SR-7's core, in the hull section at the middle of the station (docs/OPENING.md §6): the
 ## end of Act 1. It is not a component in a housing - it is a recessed bay of window slots
 ## set in ordinary hull, drawn the way StationLights draws every other window on SR-7.
 ##

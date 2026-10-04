@@ -2,7 +2,7 @@ extends EncounterDef
 class_name DebrisClusterDef
 
 ## A loose knot of scrap and dead debris adrift between planets — the common transit
-## encounter from docs/DESIGN.md §4.1. Fly through, take what's worth taking.
+## encounter from docs/ENCOUNTERS.md §5.1. Fly through, take what's worth taking.
 ##
 ## Built entirely from the existing pooled resource variants, so a cluster costs nothing
 ## the planet rings don't already cost.
