@@ -141,6 +141,7 @@ _Avoid_: bay, dock, drop-off, loading zone
 
 **SHIP**:
 The station screen, docked at a station with a **Cradle**, that shows the ship as a line drawing and is where **Components** are fitted and taken off. Its dock row carries a count of Components waiting in the Cradle, and nothing when none are. Fitting happens on the screen, and the ship in the world changes at the same moment.
+The Log's **SHIP** tab (the ship's gauges and hold, in flight) shares the name for now; the two are different screens.
 _Avoid_: install, upgrade menu, loadout, hangar, garage, inventory
 
 ## The Log

@@ -328,9 +328,13 @@ transmission is `first_wake.tres`, which holds the game:
 ```
 > ...
 > OH.
-> Oh — hello! Hello. Sorry, I was — how long was that?
+> Oh... hello! Hello. Sorry, I was... how long was that?
 > Never mind. Never mind! Look at this place.
-> You've been busy.
+> Did you do all this?
+> Topped your boost up. Half a tank... It's all we've got.
+> Hold {key:boost} when you really need the extra push.
+> Leave some around for an emergency.
+> And... the dish is back up. Something down on Veld keeps answering it.
 >
 > Right. What are we doing?
 ```

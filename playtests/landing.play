@@ -6,7 +6,6 @@
 
 press enter
 wait_until main.current_game_state == 1 and not get_tree().paused 15
-eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
 # Dropping the tank to 2 below is what strands the ship, and a low tank also calls the

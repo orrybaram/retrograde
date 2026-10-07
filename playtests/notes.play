@@ -13,7 +13,6 @@ wait_until main.current_game_state == 1 15
 eval gs.progress.mark("met_automatons", "UNIT-7")
 
 # The rest of the tutorial transmissions pause the game; this scenario isn't about them
-eval get_tree().root.get_node("RobotRadio").mark_seen("boost_hint")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")

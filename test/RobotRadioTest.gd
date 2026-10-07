@@ -37,8 +37,6 @@ func test_a_sleeping_guide_gives_no_tips() -> void:
 	radio.check_scrap(true, true)
 	radio.check_swept_scrap(false)
 	radio.check_fitted(Components.CARGO_BAY)
-	radio.watch_for_boost()
-	radio.tick_boost_watch(radio.BOOST_HINT_AFTER + 1.0, false, true)
 	assert_bool(radio.is_active()).is_false()
 	# Nor anything asked of it directly: the Void, a Gate, a lost ship
 	assert_int(radio.request(_conv(&"call", Priority.URGENT))).is_equal(Result.REJECTED)
@@ -370,40 +368,6 @@ func test_confirming_a_paused_call_unpauses() -> void:
 
 # --- Triggers --------------------------------------------------------------------
 
-func test_boost_hint_waits_out_the_clock_then_fires_in_flight() -> void:
-	var radio := _radio()
-	radio.watch_for_boost()
-	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER - 1.0, false, true)
-	assert_bool(radio.is_active()).override_failure_message("fired early").is_false()
-	radio.tick_boost_watch(1.0, false, true)
-	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_BOOST_HINT)
-
-
-func test_boost_hint_never_fires_once_the_player_boosts() -> void:
-	var radio := _radio()
-	radio.watch_for_boost()
-	radio.tick_boost_watch(1.0, true, true)
-	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, true)
-	assert_bool(radio.is_active()).override_failure_message("hinted at a player who boosts").is_false()
-
-
-func test_boost_hint_holds_until_the_ship_is_flying() -> void:
-	var radio := _radio()
-	radio.watch_for_boost()
-	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, false)
-	assert_bool(radio.is_active()).override_failure_message("cut across a dock").is_false()
-	radio.tick_boost_watch(0.1, false, true)
-	assert_object(radio.queue.current).is_same(RADIO_SCRIPT.MSG_BOOST_HINT)
-
-
-func test_boost_hint_is_not_rearmed_once_seen() -> void:
-	var radio := _radio()
-	radio.mark_seen(RADIO_SCRIPT.MSG_BOOST_HINT.id)
-	radio.watch_for_boost()
-	radio.tick_boost_watch(RADIO_SCRIPT.BOOST_HINT_AFTER * 2.0, false, true)
-	assert_bool(radio.is_active()).is_false()
-
-
 func test_low_fuel_fires_below_threshold_and_interrupts_tips() -> void:
 	var radio := _radio()
 	radio.check_fuel(100.0, 100.0)
@@ -469,7 +433,7 @@ func test_scrap_hint_fires_when_harvest_becomes_available() -> void:
 
 # --- Data ------------------------------------------------------------------------
 
-const TIPS := [RADIO_SCRIPT.MSG_WAKE, RADIO_SCRIPT.MSG_BOOST_HINT, RADIO_SCRIPT.MSG_LOW_FUEL,
+const TIPS := [RADIO_SCRIPT.MSG_WAKE, RADIO_SCRIPT.MSG_LOW_FUEL,
 	RADIO_SCRIPT.MSG_CARGO_FULL, RADIO_SCRIPT.MSG_SCRAP, RADIO_SCRIPT.MSG_NO_HOLD,
 	RADIO_SCRIPT.MSG_LOW_HULL]
 ## Not tutorials: one-line alarms that fire mid-flight and deliberately do not pause.
@@ -513,7 +477,6 @@ func test_game_over_calls_have_nothing_to_confirm() -> void:
 
 func test_tutorials_and_game_over_pause_but_alarms_do_not() -> void:
 	assert_bool(RADIO_SCRIPT.MSG_WAKE.pause_game).is_true()
-	assert_bool(RADIO_SCRIPT.MSG_BOOST_HINT.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_SCRAP.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_LOW_FUEL.pause_game).is_true()
 	assert_bool(RADIO_SCRIPT.MSG_LOW_HULL.pause_game).is_true()

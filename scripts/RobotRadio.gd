@@ -20,7 +20,6 @@ signal confirmed(id: StringName)
 const SPEAKER_NAME := "UNIT-7"
 
 const MSG_WAKE := preload("res://entities/Robot/radio/messages/first_wake.tres")
-const MSG_BOOST_HINT := preload("res://entities/Robot/radio/messages/boost_hint.tres")
 const MSG_LOW_FUEL := preload("res://entities/Robot/radio/messages/first_low_fuel.tres")
 const MSG_LOW_HULL := preload("res://entities/Robot/radio/messages/first_low_hull.tres")
 const MSG_HULL_CRITICAL := preload("res://entities/Robot/radio/messages/hull_critical.tres")
@@ -44,16 +43,10 @@ var save_path := ""
 ## The core's cold start sets it (wake_guide); a load sets it from the ledger (CORE_STARTED).
 var guide_awake := false
 
-## Nothing teaches boosting any more — the wake-up call is story, not controls. If the
-## player hasn't found it after this much play, the guide mentions it.
-const BOOST_HINT_AFTER := 300.0
-
 var _seen: Dictionary = {}  # StringName -> true
 var _ship: Ship = null
 var _pausing := false  # this radio paused the tree
 var _pause_started := 0.0
-var _played := 0.0  # seconds of unpaused play since the session began
-var _watching_boost := false
 
 func _ready() -> void:
 	EventBus.radio_message_requested.connect(request)
@@ -197,14 +190,12 @@ func load_seen(ids: PackedStringArray) -> void:
 	for id in ids:
 		_seen[StringName(id)] = true
 	silence()
-	watch_for_boost()
 
 ## New game: every tip plays again.
 func reset() -> void:
 	_seen.clear()
 	_write_seen()
 	silence()
-	watch_for_boost()
 
 ## Into the save at `save_path`, when there is one to write to.
 func _write_seen() -> void:
@@ -227,34 +218,6 @@ func _bind_ship() -> void:
 	_ship = ship
 	ship.drive.changed.connect(func() -> void: check_fuel(ship.drive.fuel, ship.drive.max_fuel))
 	ship.cargo_changed.connect(check_cargo)
-
-## Starts the boost clock for a session. Nothing happens if the hint is already spent.
-func watch_for_boost() -> void:
-	_played = 0.0
-	_watching_boost = not has_seen(MSG_BOOST_HINT.id)
-
-## Pausable, so time spent reading a transmission or sitting in a menu doesn't count.
-func _process(delta: float) -> void:
-	if not _watching_boost or _ship == null:
-		return
-	# Lit, not just held: a boost tried on a dry tank or cut by a cough hasn't shown the
-	# player what the Burn does, so the hint still has something to teach
-	tick_boost_watch(delta, _ship.drive.is_lit(),
-			_ship.state_machine.current_state is FlyingState)
-
-## One step of the boost clock, taken apart from the ship so it can be driven directly.
-## The hint is held back until the player is actually flying, so it doesn't cut across
-## a dock or a seam.
-func tick_boost_watch(delta: float, boosting: bool, flying: bool) -> void:
-	if not _watching_boost or not guide_awake:
-		return
-	if boosting:
-		_watching_boost = false  # they worked it out on their own
-		return
-	_played += delta
-	if _played >= BOOST_HINT_AFTER and flying:
-		_watching_boost = false
-		request(MSG_BOOST_HINT)
 
 func check_fuel(fuel: float, max_fuel: float) -> void:
 	# A docked ship is filling up, not running dry: a relaunched clone comes up on a low

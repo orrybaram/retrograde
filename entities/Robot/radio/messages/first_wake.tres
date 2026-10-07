@@ -16,7 +16,7 @@ expression = &"surprise"
 
 [sub_resource type="Resource" id="line_3"]
 script = ExtResource("2_line")
-text = "Oh — hello! Hello. Sorry, I was — how long was that?"
+text = "Oh... hello! Hello. Sorry, I was... how long was that?"
 expression = &"talking"
 
 [sub_resource type="Resource" id="line_4"]
@@ -26,10 +26,30 @@ expression = &"happy"
 
 [sub_resource type="Resource" id="line_5"]
 script = ExtResource("2_line")
-text = "You've been busy."
-expression = &"wink"
+text = "Did you do all this?"
+expression = &"surprise"
 
 [sub_resource type="Resource" id="line_6"]
+script = ExtResource("2_line")
+text = "Topped your boost up. Half a tank... It's all we've got."
+expression = &"happy"
+
+[sub_resource type="Resource" id="line_7"]
+script = ExtResource("2_line")
+text = "Hold {key:boost} when you really need the extra push."
+expression = &"talking"
+
+[sub_resource type="Resource" id="line_8"]
+script = ExtResource("2_line")
+text = "Leave some around for an emergency."
+expression = &"neutral"
+
+[sub_resource type="Resource" id="line_9"]
+script = ExtResource("2_line")
+text = "And... the dish is back up. Something down on Veld keeps answering it."
+expression = &"worried"
+
+[sub_resource type="Resource" id="line_10"]
 script = ExtResource("2_line")
 text = "Right. What are we doing?"
 expression = &"neutral"
@@ -40,4 +60,4 @@ id = &"first_wake"
 priority = 1
 once = true
 pause_game = true
-lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4"), SubResource("line_5"), SubResource("line_6")])
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3"), SubResource("line_4"), SubResource("line_5"), SubResource("line_6"), SubResource("line_7"), SubResource("line_8"), SubResource("line_9"), SubResource("line_10")])
