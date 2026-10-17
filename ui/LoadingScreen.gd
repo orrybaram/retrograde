@@ -60,7 +60,6 @@ var _panel: PanelContainer = null
 var _title: Label = null
 var _meter: RichTextLabel = null
 var _ready_label: RichTextLabel = null
-var _scanlines: Control = null
 var _shown_at := 0.0
 var _elapsed := 0.0
 
@@ -91,7 +90,6 @@ func _process(_delta: float) -> void:
 	_elapsed = Time.get_ticks_msec() / 1000.0 - _shown_at
 	_render()
 	_place_title()
-	_scanlines.queue_redraw()
 
 # --- Layout ------------------------------------------------------------------
 
@@ -157,12 +155,6 @@ func _build() -> void:
 	tab.content_margin_right = 8
 	_title.add_theme_stylebox_override("normal", tab)
 	add_child(_title)
-
-	_scanlines = Control.new()
-	_scanlines.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_scanlines.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_scanlines.draw.connect(_draw_scanlines)
-	add_child(_scanlines)
 
 ## Hold the checklist and the bar at the width of a full row. The frame sizes itself
 ## around them and the container centres it, so text that grew as it typed would walk
@@ -283,15 +275,3 @@ static func _tint(text: String, color: Color) -> String:
 ## Mustard `mix` of the way up from the panel background: a solid dim, not a faded one.
 static func _ink(mix: float) -> Color:
 	return Colors.UI_BACKGROUND_SOLID.lerp(Colors.PRIMARY, mix)
-
-# --- CRT dressing ------------------------------------------------------------
-
-## One-pixel scanlines over the whole screen, plus a soft band rolling down it.
-func _draw_scanlines() -> void:
-	var view := _scanlines.size
-	var line := Color(Colors.PRIMARY, 0.05)
-	for y in range(0, int(view.y), 3):
-		_scanlines.draw_line(Vector2(0, y), Vector2(view.x, y), line, 1.0)
-	var band_height := 90.0
-	var roll := fmod(_elapsed * 140.0, view.y + band_height) - band_height
-	_scanlines.draw_rect(Rect2(0, roll, view.x, band_height), Color(Colors.PRIMARY, 0.012))

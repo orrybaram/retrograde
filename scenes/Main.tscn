@@ -64,20 +64,25 @@ script = ExtResource("30_pixel")
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=649798074]
 layer = 2
 
-[node name="HUD" parent="CanvasLayer" unique_id=466394536 instance=ExtResource("8")]
+[node name="Glow" type="CanvasGroup" parent="CanvasLayer" groups=["ui_glow"]]
+
+[node name="UI" type="Control" parent="CanvasLayer/Glow"]
+mouse_filter = 2
+
+[node name="HUD" parent="CanvasLayer/Glow/UI" unique_id=466394536 instance=ExtResource("8")]
 offset_left = 13.0
 offset_top = 12.0
 mouse_filter = 0
 
-[node name="StartMenu" parent="CanvasLayer" unique_id=669522817 instance=ExtResource("11")]
+[node name="StartMenu" parent="CanvasLayer/Glow/UI" unique_id=669522817 instance=ExtResource("11")]
 
-[node name="IndicatorManager" parent="CanvasLayer" unique_id=627728021 instance=ExtResource("13")]
+[node name="IndicatorManager" parent="CanvasLayer/Glow/UI" unique_id=627728021 instance=ExtResource("13")]
 
-[node name="SpacePortDialogue" parent="CanvasLayer" unique_id=1695530301 instance=ExtResource("14")]
+[node name="SpacePortDialogue" parent="CanvasLayer/Glow/UI" unique_id=1695530301 instance=ExtResource("14")]
 
-[node name="LogUI" parent="CanvasLayer" unique_id=215892337 instance=ExtResource("16")]
+[node name="LogUI" parent="CanvasLayer/Glow/UI" unique_id=215892337 instance=ExtResource("16")]
 
-[node name="GateTerminal" type="Control" parent="CanvasLayer"]
+[node name="GateTerminal" type="Control" parent="CanvasLayer/Glow/UI"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -88,7 +93,7 @@ mouse_filter = 2
 theme = ExtResource("27_term")
 script = ExtResource("26_gate")
 
-[node name="CoreTerminal" type="Control" parent="CanvasLayer"]
+[node name="CoreTerminal" type="Control" parent="CanvasLayer/Glow/UI"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -99,11 +104,11 @@ mouse_filter = 2
 theme = ExtResource("27_term")
 script = ExtResource("26_core")
 
-[node name="PauseMenu" parent="CanvasLayer" unique_id=125140598 instance=ExtResource("22")]
+[node name="PauseMenu" parent="CanvasLayer/Glow/UI" unique_id=125140598 instance=ExtResource("22")]
 
-[node name="LoadingScreen" parent="CanvasLayer" unique_id=63229698 instance=ExtResource("21")]
+[node name="LoadingScreen" parent="CanvasLayer/Glow/UI" unique_id=63229698 instance=ExtResource("21")]
 
-[node name="IntroScreen" type="Control" parent="CanvasLayer"]
+[node name="IntroScreen" type="Control" parent="CanvasLayer/Glow/UI"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -114,7 +119,7 @@ mouse_filter = 2
 theme = ExtResource("27_term")
 script = ExtResource("29_intro")
 
-[node name="DevPanel" type="Control" parent="CanvasLayer"]
+[node name="DevPanel" type="Control" parent="CanvasLayer/Glow/UI"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

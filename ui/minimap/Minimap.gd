@@ -95,6 +95,17 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(display_radius * 2 + 20, display_radius * 2 + 20)
 	_rng.seed = 7
 	_last_beam = beam_angle(now())
+	var disc := ShaderMaterial.new()
+	disc.shader = preload("res://ui/minimap/ScopeDisc.gdshader")
+	# The border is drawn 2 px wide on display_radius, so the edge fades just past it.
+	disc.set_shader_parameter("inner", display_radius - 0.25)
+	disc.set_shader_parameter("outer", display_radius + 1.5)
+	material = disc
+	resized.connect(_fit_disc)
+	_fit_disc()
+
+func _fit_disc() -> void:
+	(material as ShaderMaterial).set_shader_parameter("center", size / 2.0)
 
 func _process(_delta: float) -> void:
 	if not ship or not is_instance_valid(ship):

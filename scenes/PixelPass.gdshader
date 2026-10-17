@@ -15,7 +15,8 @@ uniform sampler2D screen_tex: hint_screen_texture, filter_nearest;
 uniform sampler2D screen_blur: hint_screen_texture, filter_linear_mipmap;
 
 uniform float pixel_size = 4.0;        // viewport px per art pixel
-uniform float scanlines: hint_range(0.0, 1.0) = 0.6;
+uniform float scanlines: hint_range(0.0, 1.0) = 0.05;
+uniform float line_height = 6.0;       // screen px per scanline, beam and gap together
 uniform bool quantize = false;          // snap to the Violet Signal palette
 uniform float dither: hint_range(0.0, 1.0) = 0.25;
 
@@ -93,8 +94,11 @@ void fragment() {
 	vec3 c = mix(left, right, smoothstep(0.0, 1.0, fract(x)));
 
 	// Scanline: distance from the line's centre, against a beam that widens with light.
-	// A line is never thinner than 2 px — at 1x there'd be no edge to fade.
-	float line_y = SCREEN_UV.y / texel.y / max(pixel_size, 2.0);
+	// A line is never thinner than 2 px — under that there'd be no edge to fade. Measured
+	// from the pixel's top edge, not its centre: centred, a 2 px line's two rows sit at
+	// equal distances from the middle, dim equally, and the line vanishes into a flat
+	// darkening.
+	float line_y = (SCREEN_UV.y / texel.y - 0.5) / max(line_height, 2.0);
 	float luma = dot(c, vec3(0.30, 0.59, 0.11));
 	float dy = abs(fract(line_y) - 0.5) * 2.0;  // 0 at centre, 1 at the line edge
 	float beam = mix(0.8, 1.2, luma);

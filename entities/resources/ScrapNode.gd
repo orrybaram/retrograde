@@ -91,7 +91,7 @@ func _ready() -> void:
 	if not _indicator_manager:
 		var main = get_tree().get_first_node_in_group("main")
 		if main:
-			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
+			_indicator_manager = main.get_node_or_null("CanvasLayer/Glow/UI/IndicatorManager")
 
 	# Initialize max_amount if not set
 	if max_amount == 0:
@@ -355,7 +355,7 @@ func on_spawn() -> void:
 	if not _indicator_manager:
 		var main = get_tree().get_first_node_in_group("main")
 		if main:
-			_indicator_manager = main.get_node_or_null("CanvasLayer/IndicatorManager")
+			_indicator_manager = main.get_node_or_null("CanvasLayer/Glow/UI/IndicatorManager")
 
 	timing = null
 	hits_left = NORMAL_HITS

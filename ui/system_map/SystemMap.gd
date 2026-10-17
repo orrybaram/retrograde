@@ -619,7 +619,6 @@ func draw_chart(c: Control) -> void:
 	_draw_nav_target(c, rect)
 	_draw_ship(c)
 	_draw_cursor(c)
-	_draw_scanlines(c)
 
 func _draw_starfield(c: Control) -> void:
 	# One multiline for the whole field: a star per 1px segment
@@ -631,16 +630,6 @@ func _draw_starfield(c: Control) -> void:
 		points.append(p + Vector2.RIGHT)
 		colors.append(Color(Colors.STAR, _star_alpha[i]))
 	c.draw_multiline_colors(points, colors, 1.0)
-
-func _draw_scanlines(c: Control) -> void:
-	# Faint CRT banding over the chart, matching the rest of the terminal UI
-	var points := PackedVector2Array()
-	var y := 0.0
-	while y < c.size.y:
-		points.append(Vector2(0.0, y))
-		points.append(Vector2(c.size.x, y))
-		y += 3.0
-	c.draw_multiline(points, Color(Colors.SPACE_BG, 0.12), 1.0)
 
 ## Everything past the last orbit, struck through with hazard hatching: one set of
 ## diagonals from the edge out, a second set crossing them past DEEP_RADIUS where

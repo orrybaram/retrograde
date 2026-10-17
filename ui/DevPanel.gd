@@ -650,6 +650,12 @@ func _look_rows() -> Array[Dictionary]:
 		func() -> bool: return pass_layer.enabled,
 		func(on: bool) -> void: pass_layer.enabled = on
 	))
+	rows.append(_toggle_row(
+		"ON UI",
+		"Scanlines and glow over the HUD and panels too, this one included. They stay full-res.",
+		func() -> bool: return pass_layer.on_ui,
+		func(on: bool) -> void: pass_layer.on_ui = on
+	))
 	rows.append(_value_row(
 		"PIXEL SIZE",
 		"Screen px per art pixel. 1 is scanlines alone; 2 is 640x360; 4 is Animal Well's 320x180.",
@@ -658,14 +664,21 @@ func _look_rows() -> Array[Dictionary]:
 		func(direction: int) -> void:
 			var sizes := PixelPass.PIXEL_SIZES
 			var i := sizes.find(pass_layer.pixel_size)
-			pass_layer.pixel_size = 1.0 if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
+			pass_layer.pixel_size = 2.0 if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
 	))
 	rows.append(_value_row(
 		"SCANLINES",
-		"How dark the gap between lines runs. ENTER puts it back to 60%.",
+		"How dark the gap between lines runs. ENTER puts it back to 5%.",
 		func() -> String: return "%d%%" % roundi(pass_layer.scanlines * 100.0),
 		func(direction: int) -> void:
-			pass_layer.scanlines = 0.6 if direction == 0 else pass_layer.scanlines + direction * 0.1
+			pass_layer.scanlines = 0.05 if direction == 0 else pass_layer.scanlines + direction * 0.01
+	))
+	rows.append(_value_row(
+		"LINE HEIGHT",
+		"Screen px per scanline, beam and gap together. ENTER puts it back to 6.",
+		func() -> String: return "%dpx" % pass_layer.line_height,
+		func(direction: int) -> void:
+			pass_layer.line_height = 6.0 if direction == 0 else pass_layer.line_height + direction
 	))
 	rows.append(_toggle_row(
 		"PALETTE",
@@ -699,6 +712,27 @@ func _look_rows() -> Array[Dictionary]:
 		func() -> String: return "%.2f" % pass_layer.glow_threshold,
 		func(direction: int) -> void:
 			pass_layer.glow_threshold = 0.4 if direction == 0 else pass_layer.glow_threshold + direction * 0.05
+	))
+	rows.append(_value_row(
+		"TEXT GLOW",
+		"Bloom on the UI alone, apart from the world's. ENTER puts it back to 0.2.",
+		func() -> String: return "%.1f" % pass_layer.text_glow,
+		func(direction: int) -> void:
+			pass_layer.text_glow = 0.2 if direction == 0 else pass_layer.text_glow + direction * 0.1
+	))
+	rows.append(_value_row(
+		"TEXT GLOW SIZE",
+		"How far the UI bloom reaches; each step doubles it. ENTER puts it back to 3.",
+		func() -> String: return "%d" % pass_layer.text_glow_size,
+		func(direction: int) -> void:
+			pass_layer.text_glow_size = 3 if direction == 0 else pass_layer.text_glow_size + direction
+	))
+	rows.append(_value_row(
+		"UI GLITCH",
+		"How often a strip of the UI slips sideways. ENTER puts it back to 20%.",
+		func() -> String: return "%d%%" % roundi(pass_layer.ui_glitch * 100.0),
+		func(direction: int) -> void:
+			pass_layer.ui_glitch = 0.2 if direction == 0 else pass_layer.ui_glitch + direction * 0.05
 	))
 	return rows
 

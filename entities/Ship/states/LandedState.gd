@@ -284,7 +284,7 @@ func _open_spaceport_dialogue() -> void:
 		# Get the current scene (Main node)
 		var current_scene = ship.get_tree().current_scene
 		if current_scene:
-			var canvas_layer = current_scene.get_node_or_null("CanvasLayer")
+			var canvas_layer = current_scene.get_node_or_null("CanvasLayer/Glow/UI")
 			if canvas_layer:
 				_dialogue = canvas_layer.get_node_or_null("SpacePortDialogue")
 	
@@ -303,7 +303,7 @@ func _toggle_dialogue() -> void:
 		# Get the current scene (Main node)
 		var current_scene = ship.get_tree().current_scene
 		if current_scene:
-			var canvas_layer = current_scene.get_node_or_null("CanvasLayer")
+			var canvas_layer = current_scene.get_node_or_null("CanvasLayer/Glow/UI")
 			if canvas_layer:
 				_dialogue = canvas_layer.get_node_or_null("SpacePortDialogue")
 	
