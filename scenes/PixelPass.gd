@@ -3,11 +3,12 @@ class_name PixelPass
 
 ## Prototype look: re-draws the world as chunky pixel art with a PVM-style scanline,
 ## after Animal Well's final pass. Its layer sits between the world (0) and the UI
-## CanvasLayer (2), so only the world gets pixelated. Off by default; the dev panel's
-## LOOK section drives it.
+## CanvasLayer (2), so only the world gets pixelated. On at 1x (scanlines only) by
+## default; the dev panel's LOOK section drives it.
 
 ## Viewport px per art pixel. All divide 1280x720 evenly, so cells stay square and whole.
-const PIXEL_SIZES: Array[float] = [2.0, 4.0, 5.0, 8.0]
+## 1x is the CRT alone: full-res art under the scanlines.
+const PIXEL_SIZES: Array[float] = [1.0, 2.0, 4.0, 5.0, 8.0]
 
 ## The opaque base colors of the Violet Signal palette, the ones quantizing snaps to.
 const PALETTE: Array[Color] = [
@@ -17,11 +18,11 @@ const PALETTE: Array[Color] = [
 	Colors.BLUE, Colors.PURPLE,
 ]
 
-var enabled := false:
+var enabled := true:
 	set(value):
 		enabled = value
 		visible = value
-var pixel_size := 4.0:
+var pixel_size := 1.0:
 	set(value):
 		pixel_size = value
 		_material.set_shader_parameter("pixel_size", value)
@@ -37,6 +38,23 @@ var dither := 0.25:
 	set(value):
 		dither = clampf(value, 0.0, 1.0)
 		_material.set_shader_parameter("dither", dither)
+
+## Bloom off the world's bright spots — windows, stars, engines. Done in the shader,
+## not a WorldEnvironment: 2D glow there only catches HDR colors above 1.0, and turning
+## on HDR 2D re-grades the whole palette.
+var glow := true:
+	set(value):
+		glow = value
+		_material.set_shader_parameter("glow", value)
+var glow_strength := 0.6:
+	set(value):
+		glow_strength = clampf(value, 0.0, 3.0)
+		_material.set_shader_parameter("glow_strength", glow_strength)
+## How bright a pixel must be before it blooms. Space is near 0, cream is ~0.9.
+var glow_threshold := 0.4:
+	set(value):
+		glow_threshold = clampf(value, 0.0, 1.0)
+		_material.set_shader_parameter("glow_threshold", glow_threshold)
 
 var _material := ShaderMaterial.new()
 
@@ -58,6 +76,10 @@ func _ready() -> void:
 	scanlines = scanlines
 	quantize = quantize
 	dither = dither
+
+	glow = glow
+	glow_strength = glow_strength
+	glow_threshold = glow_threshold
 
 	var rect := ColorRect.new()
 	rect.name = "Pass"

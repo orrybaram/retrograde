@@ -1,5 +1,5 @@
-# Prototype pixel-art pass (scenes/PixelPass.gd): the same frame with the pass off,
-# at 4x (320x180) and 2x (640x360), and with the palette snap on.
+# Prototype pixel-art pass (scenes/PixelPass.gd): the same frame at 1x (scanlines only),
+# with the pass off, at 4x (320x180) and 2x (640x360), and with the palette snap on.
 # Run: tools/play.sh playtests/pixel_pass.play   (frames land in .playtest/pixel_*.png)
 
 press enter
@@ -17,8 +17,16 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait 1.5
+screenshot pixel_0_1x
+eval pt.node("pixel_pass").set("glow", false)
+wait 0.1
+screenshot pixel_0_1x_noglow
+eval pt.node("pixel_pass").set("glow", true)
+eval pt.node("pixel_pass").set("enabled", false)
+wait 0.1
 screenshot pixel_1_off
 eval pt.node("pixel_pass").set("enabled", true)
+eval pt.node("pixel_pass").set("pixel_size", 4.0)
 wait 0.1
 screenshot pixel_2_4x
 eval pt.node("pixel_pass").set("pixel_size", 2.0)

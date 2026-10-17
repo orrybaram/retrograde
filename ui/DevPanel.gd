@@ -652,13 +652,13 @@ func _look_rows() -> Array[Dictionary]:
 	))
 	rows.append(_value_row(
 		"PIXEL SIZE",
-		"Screen px per art pixel. 4 is Animal Well's 320x180; 2 is 640x360.",
+		"Screen px per art pixel. 1 is scanlines alone; 2 is 640x360; 4 is Animal Well's 320x180.",
 		func() -> String:
 			return "%dx  %dx%d" % [pass_layer.pixel_size, 1280 / int(pass_layer.pixel_size), 720 / int(pass_layer.pixel_size)],
 		func(direction: int) -> void:
 			var sizes := PixelPass.PIXEL_SIZES
 			var i := sizes.find(pass_layer.pixel_size)
-			pass_layer.pixel_size = 4.0 if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
+			pass_layer.pixel_size = 1.0 if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
 	))
 	rows.append(_value_row(
 		"SCANLINES",
@@ -679,6 +679,26 @@ func _look_rows() -> Array[Dictionary]:
 		func() -> String: return "%d%%" % roundi(pass_layer.dither * 100.0),
 		func(direction: int) -> void:
 			pass_layer.dither = 0.25 if direction == 0 else pass_layer.dither + direction * 0.1
+	))
+	rows.append(_toggle_row(
+		"GLOW",
+		"Bloom off the world's bright spots. The UI doesn't glow.",
+		func() -> bool: return pass_layer.glow,
+		func(on: bool) -> void: pass_layer.glow = on
+	))
+	rows.append(_value_row(
+		"GLOW STRENGTH",
+		"How hard the bloom pushes. ENTER puts it back to 0.6.",
+		func() -> String: return "%.1f" % pass_layer.glow_strength,
+		func(direction: int) -> void:
+			pass_layer.glow_strength = 0.6 if direction == 0 else pass_layer.glow_strength + direction * 0.1
+	))
+	rows.append(_value_row(
+		"GLOW THRESHOLD",
+		"How bright a pixel must be before it blooms. Lower spreads it to hulls; ENTER puts it back to 0.40.",
+		func() -> String: return "%.2f" % pass_layer.glow_threshold,
+		func(direction: int) -> void:
+			pass_layer.glow_threshold = 0.4 if direction == 0 else pass_layer.glow_threshold + direction * 0.05
 	))
 	return rows
 
