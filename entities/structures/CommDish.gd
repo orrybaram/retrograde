@@ -5,8 +5,7 @@ class_name CommDish
 ## the Sun, so the dish swings to keep its bowl on the Sun. Its local +x is the way the bowl faces.
 ## With the station dead (StationPower) it has no drive: it hangs limp off its post, bowl
 ## down, swaying a little. Power back, it swings slowly up and finds the Sun again, and
-## once it is on the Sun it sends out one great ping in the Titan's purple - SR-7 is back
-## on the air, and on whose frequency is left for the player to wonder. From then on, with
+## once it is on the Sun it sends out one great ping - SR-7 is back on the air. From then on, with
 ## the power on, a Sweep that reaches the dish is answered with the same great ping.
 
 signal settled  ## Power back, and it has found the Sun.
@@ -28,7 +27,7 @@ const SETTLE_ANGLE := deg_to_rad(1.5)
 const PING_STRENGTH := 12.0
 const PING_ALPHA := 0.3
 const PING_WIDTH := 2.5
-## How long the dish glows purple as it pings, and how long after a ping it won't answer
+## How long the dish glows as it pings, and how long after a ping it won't answer
 ## another - its own ring reaches it the instant it leaves.
 const PING_GLOW_TIME := 0.9
 const PING_COOLDOWN := 2.5
@@ -88,15 +87,15 @@ func ping() -> void:
 		_pulse.sweep = false
 		add_child(_pulse)
 	_cooldown = PING_COOLDOWN
-	_pulse.send(PING_STRENGTH, PING_ALPHA, PING_WIDTH, Colors.TITAN)
-	# The dish itself lights up purple and fades back to its own colours (its parts only,
+	_pulse.send(PING_STRENGTH, PING_ALPHA, PING_WIDTH, Colors.PRIMARY)
+	# The dish itself lights up and fades back to its own colours (its parts only,
 	# not the ring riding on it)
 	if _glow:
 		_glow.kill()
 	_glow = create_tween().set_parallel().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	for part in get_children():
 		if part is CanvasItem and part != _pulse:
-			part.modulate = Colors.TITAN.lerp(Colors.CREAM, 0.25)
+			part.modulate = Colors.PRIMARY.lerp(Colors.CREAM, 0.25)
 			_glow.tween_property(part, "modulate", Color.WHITE, PING_GLOW_TIME)
 	EventBus.sonar_pulsed.emit(global_position)
 	_pulse._reach_listeners(global_position, PING_STRENGTH)

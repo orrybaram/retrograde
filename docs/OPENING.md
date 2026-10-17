@@ -305,9 +305,8 @@ watches the rest from where they sit (`LandedState._on_reboot_requested`):
 - **The power** comes up from the core: the station's lights catch one by one outward from
   it, one every 0.16 s (`StationLights.WAKE_ORIGIN` is the core, so the wake is not a
   cutscene played near it — it is the same light spreading from the first windows to catch).
-- **The dish** strains up off its post, slowly, finds the Sun, and sends out one great ping in
-  the Titan's purple (`CommDish.ping`, 12 Sweeps' reach): SR-7 back on the air, on whose
-  frequency is left to wonder. Scrap across the ring lights up at once. From now on a Sweep
+- **The dish** strains up off its post, slowly, finds the Sun, and sends out one great ping
+  (`CommDish.ping`, 12 Sweeps' reach): SR-7 back on the air. Scrap across the ring lights up at once. From now on a Sweep
   that reaches the dish is answered the same way. The ping is not a Sweep and calls nothing.
 - 4 s for the ping to spread (`StationPower.PING_WATCH`), then UNIT-7 comes on (§7), and the
   camera comes back in.
