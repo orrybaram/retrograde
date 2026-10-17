@@ -2,6 +2,14 @@ extends Control
 
 ## In-game HUD: boost gauge (around the minimap), hull segment bar, cargo weight, Stores, velocity readout,
 ## and the robot's radio panel. Subscribes to ship signals. (Action prompts live in IndicatorManager.)
+## The ship's manual diagnostic (BootLog) takes the dashboard's corner while a new game owes
+## it; the dashboard is dark until then, and spins back up a piece at a time once the pilot
+## has the controls.
+
+## The dashboard's pieces spinning up after the diagnostic: each one's spin, and the beat
+## before the next starts.
+const SPIN_TIME := 0.45
+const SPIN_STAGGER := 0.3
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
 @onready var boost_gauge: BoostGauge = $"DashboardAnchor/HBox/LeftColumn/MinimapDial/BoostGauge"
@@ -13,7 +21,15 @@ extends Control
 @onready var stores_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/StoresLabel"
 @onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
+## Spun up in this order: the minimap's dial, then the readouts top to bottom.
+@onready var dashboard_pieces: Array[Control] = [
+	$"DashboardAnchor/HBox/LeftColumn/MinimapDial",
+	$"DashboardAnchor/HBox/LeftColumn/VelocityLabel",
+	$"DashboardAnchor/HBox/RightColumn/HullRow",
+	$"DashboardAnchor/HBox/RightColumn/CargoRow",
+]
 var boot_log: BootLog = null
+var _spin: Tween = null
 
 var gs: Node = null
 var ship: Ship = null
@@ -34,12 +50,12 @@ func _ready() -> void:
 	add_child(PlacardPanel.new())
 	var radio := RadioPanel.new()
 	var tracking := TrackingIndicator.new()
-	tracking.blockers = [dashboard, radio]
+	boot_log = BootLog.new()
+	boot_log.dashboard = dashboard
+	tracking.blockers = [dashboard, radio, boot_log]
 	add_child(tracking)
 	add_child(radio)
 	add_child(HullWarning.new())
-	boot_log = BootLog.new()
-	boot_log.radio = radio
 	add_child(boot_log)
 	# Added last so it processes after _update_labels and rots the finished readouts
 	var glitch := HudGlitch.new()
@@ -102,8 +118,63 @@ func _fit_dashboard() -> void:
 	dashboard.offset_right = dashboard.offset_left + min_size.x
 
 func _process(dt: float) -> void:
+	_cede_corner()
 	_roll_stores(dt)
 	_update_labels()
+
+## Dark while the diagnostic has the corner. Back when it lets go: spun up if it handed the
+## pilot the controls, at once if anything else ended it (a load, a skipped opening).
+func _cede_corner() -> void:
+	var held := boot_log != null and boot_log.holds_corner()
+	if held:
+		if _spin:
+			_spin.kill()
+			_spin = null
+		dashboard.visible = false
+	elif not dashboard.visible:
+		dashboard.visible = true
+		if boot_log.handed_over:
+			boot_log.handed_over = false
+			_spin_up()
+		else:
+			_settle_pieces()
+
+## Each piece in turn: a flicker as it catches, then a spin and a grow into place.
+func _spin_up() -> void:
+	for piece in dashboard_pieces:
+		piece.modulate.a = 0.0
+	_spin = create_tween()
+	_spin.tween_interval(0.01)  # a frame for the containers to lay the pieces out
+	for i in dashboard_pieces.size():
+		var piece := dashboard_pieces[i]
+		var at := 0.01 + i * SPIN_STAGGER
+		_spin.parallel().tween_callback(func() -> void:
+			piece.pivot_offset = piece.size / 2.0
+			piece.scale = Vector2(0.1, 0.1)
+			piece.rotation = -PI).set_delay(at)
+		for f in 3:
+			_spin.parallel().tween_property(piece, "modulate:a", 1.0 if f % 2 == 0 else 0.3, 0.0).set_delay(at + f * 0.05)
+		_spin.parallel().tween_property(piece, "rotation", 0.0, SPIN_TIME).set_delay(at) \
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_spin.parallel().tween_property(piece, "scale", Vector2.ONE, SPIN_TIME).set_delay(at) \
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_spin.tween_callback(_settle_pieces)
+
+## Every piece where it belongs, lit, square and full size.
+func _settle_pieces() -> void:
+	for piece in dashboard_pieces:
+		piece.modulate.a = 1.0
+		piece.rotation = 0.0
+		piece.scale = Vector2.ONE
+
+## Whether the dashboard is up, done spinning and every piece in place, for scenarios.
+func dashboard_settled() -> bool:
+	if not dashboard.visible or (_spin and _spin.is_running()):
+		return false
+	for piece in dashboard_pieces:
+		if piece.modulate.a != 1.0 or piece.scale != Vector2.ONE or piece.rotation != 0.0:
+			return false
+	return true
 
 ## During a Deposit, tick the shown Stores count up toward `gs.stores`; otherwise
 ## (loads, a Gate powering up) snap to it.
