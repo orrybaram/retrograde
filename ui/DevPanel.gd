@@ -258,6 +258,7 @@ func _build_sections() -> void:
 		{"name": "GRAVITY", "build": _gravity_rows},
 		{"name": "PROGRESS", "build": _progress_rows},
 		{"name": "WARP", "build": _warp_rows},
+		{"name": "LOOK", "build": _look_rows},
 		{"name": "SAVE", "build": _save_rows},
 	]
 	_section_index = clampi(_section_index, 0, _sections.size() - 1)
@@ -636,6 +637,51 @@ func _surface_pull_percent(planet: Planet) -> float:
 
 
 # --- WARP --------------------------------------------------------------------
+
+func _look_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var pass_layer := get_tree().get_first_node_in_group("pixel_pass") as PixelPass
+	if pass_layer == null:
+		return rows
+
+	rows.append(_toggle_row(
+		"PIXEL PASS",
+		"Re-draws the world as low-res pixel art with a PVM scanline. The UI stays sharp.",
+		func() -> bool: return pass_layer.enabled,
+		func(on: bool) -> void: pass_layer.enabled = on
+	))
+	rows.append(_value_row(
+		"PIXEL SIZE",
+		"Screen px per art pixel. 4 is Animal Well's 320x180; 2 is 640x360.",
+		func() -> String:
+			return "%dx  %dx%d" % [pass_layer.pixel_size, 1280 / int(pass_layer.pixel_size), 720 / int(pass_layer.pixel_size)],
+		func(direction: int) -> void:
+			var sizes := PixelPass.PIXEL_SIZES
+			var i := sizes.find(pass_layer.pixel_size)
+			pass_layer.pixel_size = 4.0 if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
+	))
+	rows.append(_value_row(
+		"SCANLINES",
+		"How dark the gap between lines runs. ENTER puts it back to 60%.",
+		func() -> String: return "%d%%" % roundi(pass_layer.scanlines * 100.0),
+		func(direction: int) -> void:
+			pass_layer.scanlines = 0.6 if direction == 0 else pass_layer.scanlines + direction * 0.1
+	))
+	rows.append(_toggle_row(
+		"PALETTE",
+		"Snaps every world pixel to the nearest Violet Signal color.",
+		func() -> bool: return pass_layer.quantize,
+		func(on: bool) -> void: pass_layer.quantize = on
+	))
+	rows.append(_value_row(
+		"DITHER",
+		"Ordered dithering under the palette snap, so gradients band less.",
+		func() -> String: return "%d%%" % roundi(pass_layer.dither * 100.0),
+		func(direction: int) -> void:
+			pass_layer.dither = 0.25 if direction == 0 else pass_layer.dither + direction * 0.1
+	))
+	return rows
+
 
 func _warp_rows() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []

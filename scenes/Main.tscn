@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://fwg0xs6xishl"]
+[gd_scene load_steps=24 format=3 uid="uid://fwg0xs6xishl"]
 
 [ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
 [ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
@@ -25,6 +25,7 @@
 [ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="27_term"]
 [ext_resource type="Script" path="res://ui/DevPanel.gd" id="28_dev"]
 [ext_resource type="Script" path="res://ui/IntroScreen.gd" id="29_intro"]
+[ext_resource type="Script" path="res://scenes/PixelPass.gd" id="30_pixel"]
 
 [node name="Main" type="Node2D" unique_id=1692069879]
 script = ExtResource("1")
@@ -57,7 +58,11 @@ script = ExtResource("23_dust")
 script = ExtResource("24_enc")
 table = ExtResource("25_enct")
 
+[node name="PixelPass" type="CanvasLayer" parent="."]
+script = ExtResource("30_pixel")
+
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=649798074]
+layer = 2
 
 [node name="HUD" parent="CanvasLayer" unique_id=466394536 instance=ExtResource("8")]
 offset_left = 13.0

@@ -1,0 +1,38 @@
+# Prototype pixel-art pass (scenes/PixelPass.gd): the same frame with the pass off,
+# at 4x (320x180) and 2x (640x360), and with the palette snap on.
+# Run: tools/play.sh playtests/pixel_pass.play   (frames land in .playtest/pixel_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+eval pt.skip_opening()
+wait_until pt.state_name() == "LandedState" 5
+wait 0.5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.5
+wait 1.5
+screenshot pixel_1_off
+eval pt.node("pixel_pass").set("enabled", true)
+wait 0.1
+screenshot pixel_2_4x
+eval pt.node("pixel_pass").set("pixel_size", 2.0)
+wait 0.1
+screenshot pixel_3_2x
+eval pt.node("pixel_pass").set("quantize", true)
+wait 0.1
+screenshot pixel_4_2x_palette
+eval pt.node("pixel_pass").set("pixel_size", 4.0)
+wait 0.1
+screenshot pixel_5_4x_palette
+eval pt.node("pixel_pass").set("quantize", false)
+eval pt.node("pixel_pass").set("pixel_size", 2.0)
+hold turn_left 0.3
+hold thrust 1.5
+wait 1
+screenshot pixel_6_2x_flying
