@@ -151,8 +151,13 @@ func get_dock_distance() -> float:
 	return landing_lock_distance
 
 func get_dock_velocity() -> Vector2:
-	# Get SpacePort's velocity (it moves with its parent planet)
-	var parent = get_parent()
-	if parent is RigidBody2D:
-		return (parent as RigidBody2D).linear_velocity
-	return Vector2.ZERO
+	# The port moves with the body it is built on - its planet, or SR-7 through the dock
+	# arm's Slide - so walk up to that body, and count its spin at the dock's offset
+	var node := get_parent()
+	while node and not node is RigidBody2D:
+		node = node.get_parent()
+	var body := node as RigidBody2D
+	if body == null:
+		return Vector2.ZERO
+	var r := get_dock_position() - body.global_position
+	return body.linear_velocity + body.angular_velocity * Vector2(-r.y, r.x)
