@@ -45,6 +45,13 @@ var _freight_collider: CollisionPolygon2D = null
 var _turn_ratio := 1.0
 ## The Components on the hull (GameState.fitted, as of the last refit).
 var _fitted := PackedStringArray()
+## How far aft of the bare hull's tail the fitted parts reach, px (0 bare). The engines ride
+## on the furthest part's tail, so the exhaust, a dock's stand-off and the height the ship
+## lands at all move back with it.
+var aft_overhang := 0.0
+## Where the exhausts sit on the bare hull.
+const THRUSTER_AT := Vector2(-14, 0)
+const BOOST_AT := Vector2(-10, 0)
 
 signal cargo_changed(current_weight: float, max_weight: float)
 
@@ -154,6 +161,7 @@ func _ready() -> void:
 	# Store base stats from @export values (these are the unmodified base values)
 	base_max_hull = max_hull
 	base_max_cargo_weight = max_cargo_weight
+	_set_overhang()
 
 	# Create HealthComponent
 	health_component = HealthComponent.new()
@@ -363,7 +371,7 @@ func reset_boost_particles() -> void:
 	boost_particles.lifetime = original_boost_lifetime
 	boost_particles.one_shot = false
 	boost_particles.emitting = false
-	boost_particles.position = Vector2(-10, 0)  # Reset position
+	boost_particles.position = BOOST_AT - Vector2(aft_overhang, 0)  # Reset position
 
 ## Update the ship's physics mass based on current cargo weight, plus any Freight on the nose
 func update_mass_from_cargo() -> void:
@@ -664,11 +672,23 @@ func refit(state: GameState) -> void:
 	_fitted = state.fitted() if state else PackedStringArray()
 	max_cargo_weight = base_max_cargo_weight + Components.hold(Array(_fitted))
 	FittedParts.build(self, _fitted)
+	_set_overhang()
 	update_mass_from_cargo()
 
 ## The Components on the hull, as of the last refit.
 func fitted() -> PackedStringArray:
 	return _fitted
+
+func _set_overhang() -> void:
+	var tail := Freight.bounds(_hull_outline()).position.x
+	var reach := tail
+	for id in _fitted:
+		reach = minf(reach, Components.fitted_tail(id))
+	aft_overhang = tail - reach
+	if thruster_particles == null:
+		return  # refit before _ready: _ready places the exhausts
+	thruster_particles.position = THRUSTER_AT - Vector2(aft_overhang, 0)
+	boost_particles.position = BOOST_AT - Vector2(aft_overhang, 0)
 
 # --- Coming back: a new clone in this hull ----------------------------------------------
 # Nothing outside the ship writes its hull, motion, shake, spin or boost particles to reset
@@ -682,6 +702,7 @@ func reset_to_initial_state() -> void:
 	max_cargo_weight = base_max_cargo_weight
 	_fitted = PackedStringArray()
 	FittedParts.clear(self)
+	_set_overhang()
 	_apply_mass(base_mass)
 	drive.fuel = 0.0
 	_reset_flight()

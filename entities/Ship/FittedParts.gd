@@ -59,12 +59,12 @@ static func _part_art(id: String, outline: PackedVector2Array) -> Node2D:
 	fill.polygon = _inset(outline, 1.0)
 	fill.color = Colors.HULL_MID
 	part.add_child(fill)
-	for band in Components.fitted_bands(id):
-		var r := band as Rect2
-		var strap := Polygon2D.new()
-		strap.polygon = PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
-		strap.color = Colors.HULL_LIGHT
-		part.add_child(strap)
+	for piece in Components.fitted_bands(id) + Components.fitted_fixtures(id):
+		var r := piece as Rect2
+		var solid := Polygon2D.new()
+		solid.polygon = PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
+		solid.color = Colors.HULL_LIGHT
+		part.add_child(solid)
 	return part
 
 ## `outline` shrunk by `by` on every side, so the part below shows as a rim.

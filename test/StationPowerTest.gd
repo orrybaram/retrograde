@@ -211,10 +211,10 @@ func _powered_dish() -> CommDish:
 	return dish
 
 
-func test_the_power_on_ping_is_titan_purple() -> void:
+func test_the_power_on_ping_is_mustard() -> void:
 	var dish := _powered_dish()
 	var ring: Dictionary = dish.get_node("Ping")._rings[0]
-	assert_that(ring["color"]).is_equal(Colors.TITAN)
+	assert_that(ring["color"]).is_equal(Colors.PRIMARY)
 
 
 func test_a_powered_dish_answers_a_sweep_with_the_same_ping() -> void:
@@ -223,7 +223,7 @@ func test_a_powered_dish_answers_a_sweep_with_the_same_ping() -> void:
 	var before: int = dish.get_node("Ping").ring_count()
 	dish.on_sonar_touched()
 	assert_int(dish.get_node("Ping").ring_count()).is_equal(before + 1)
-	assert_that(dish.get_node("Ping")._rings.back()["color"]).is_equal(Colors.TITAN)
+	assert_that(dish.get_node("Ping")._rings.back()["color"]).is_equal(Colors.PRIMARY)
 	# Its own ring reaching it straight away is not another ping
 	dish.on_sonar_touched()
 	assert_int(dish.get_node("Ping").ring_count()).is_equal(before + 1)

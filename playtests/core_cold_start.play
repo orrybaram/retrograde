@@ -60,7 +60,7 @@ assert pt.state_name() == "LandedState" "watched from the dock"
 screenshot core_3_catching
 wait_until not pt.core().get_parent().get_node("Lights").is_waking() 15
 wait_until pt.core().get_parent().get_node("Visuals/KeelLower/CommDish").get_node_or_null("Ping") != null 20
-assert pt.core().get_parent().get_node("Visuals/KeelLower/CommDish").get_node("Ping")._rings[0]["color"] == Color(0.710, 0.541, 0.878, 1.0) "the dish finds the Sun and pings in the Titan's purple"
+assert pt.core().get_parent().get_node("Visuals/KeelLower/CommDish").get_node("Ping")._rings[0]["color"] == Color(0.910, 0.757, 0.439, 1.0) "the dish finds the Sun and pings in mustard"
 wait_until get_tree().get_first_node_in_group("hauler_wrecks").heard 4
 assert get_tree().get_first_node_in_group("hauler_wrecks")._minimap_target.is_minimap_visible() "the ping reaches the hauler on Veld: it pings on the minimap"
 assert not get_tree().paused and not get_tree().root.get_node("RobotRadio").guide_awake "the ping goes out before anyone is on the comms"

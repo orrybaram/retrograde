@@ -268,7 +268,7 @@ It stands Lug-up between the broken halves of a crashed hauler on Veld
 | Lug | one short end |
 | Buried | pull threshold **1.6** (the Aux tops out at 1.0, the Burn at 2.667), `pull_time` **4.25 s** |
 | Answers a Sweep | not at all until SR-7's cold start; then from up to **5000 px** (`answer_range`) |
-| Fitted form | 12 × 22 container strapped across the spine behind the cockpit, mass **+0.35** |
+| Fitted form | 10.5 × 19 hull section bolted on behind the hull by one coupling, carrying the engines aft with it, mass **+0.15** |
 | Fitted gives | a hold of **50** (`Components.hold`) |
 
 Torn free on the Burn, it lifts off Veld on the Aux. The dock's free half (§8) covers the

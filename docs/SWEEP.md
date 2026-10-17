@@ -64,7 +64,7 @@ fires as the ring leaves.
 |---|---|
 | Scrap (`ScrapNode`) | Found, not answering: lights up, one cream ring (§3) |
 | Freight Lug (`Freight`) | Titan-purple ring back; can answer from past the ring's reach, faint and broken (`docs/FREIGHT.md`) |
-| SR-7's comm dish (`CommDish`) | Once powered and on the Sun, a great purple ping (`docs/OPENING.md`) |
+| SR-7's comm dish (`CommDish`) | Once powered and on the Sun, a great ping (`docs/OPENING.md`) |
 | SR-7's core on standby (`CoreHousing`) | One dull ring off the hull; nothing when dead or running |
 
 An answer is sent by `SonarEcho.answer_ping`: one ring from the thing answering, in the Titan's
