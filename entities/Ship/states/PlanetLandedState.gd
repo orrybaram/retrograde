@@ -16,7 +16,7 @@ class_name PlanetLandedState
 ## under the beam are the ship's own, driven by Ship.wants_sonar.)
 
 const CAMERA_ZOOM := Vector2(1.5, 1.5)
-const LANDED_HEIGHT := 13.0  # ship centre above the surface (tail length)
+const LANDED_HEIGHT := 13.0  # bare ship centre above the surface (tail length)
 const SETTLE_TIME := 0.35
 
 var ore: OreDeposit = null
@@ -40,7 +40,7 @@ func enter() -> void:
 	var planet := ore.planet
 	_start_offset = ship.global_position - planet.global_position
 	_start_rotation = ship.rotation
-	_offset = ground_offset(ore, ship.global_position)
+	_offset = ground_offset(ore, ship.global_position, ship.aft_overhang)
 	_settle = 0.0
 	_launching = false
 
@@ -76,13 +76,14 @@ func exit() -> void:
 	ship.camera.zoom_camera_out()
 
 ## Where the ship sits relative to the planet centre: straight out from the surface at
-## its touchdown bearing, held within reach of the seam.
-static func ground_offset(deposit: OreDeposit, ship_position: Vector2) -> Vector2:
+## its touchdown bearing, held within reach of the seam, standing on the tail of whatever
+## is fitted furthest aft (`overhang`, Ship.aft_overhang).
+static func ground_offset(deposit: OreDeposit, ship_position: Vector2, overhang := 0.0) -> Vector2:
 	var planet := deposit.planet
 	var bearing := (ship_position - planet.global_position).angle()
 	var reach := deposit.reach_angle()
 	var clamped := deposit.global_rotation + clampf(angle_difference(deposit.global_rotation, bearing), -reach, reach)
-	return Vector2.from_angle(clamped) * (deposit.surface_radius() + LANDED_HEIGHT)
+	return Vector2.from_angle(clamped) * (deposit.surface_radius() + LANDED_HEIGHT + overhang)
 
 func physics_process(delta: float) -> void:
 	if not is_ship_valid() or not ore:

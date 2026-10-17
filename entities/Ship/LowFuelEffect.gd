@@ -61,7 +61,7 @@ func _backfire() -> void:
 	# Backfire: sparks and a smoke gout out of the exhaust.
 	var reverse := _ship.want_reverse_thrust and not _ship.want_thrust
 	var back := Vector2.LEFT.rotated(_ship.rotation) * (-1.0 if reverse else 1.0)
-	var origin := _ship.to_global(-EXHAUST if reverse else EXHAUST)
+	var origin := _ship.to_global(-EXHAUST if reverse else EXHAUST - Vector2(_ship.aft_overhang, 0))
 	for i in randi_range(12, 18):
 		_puffs.append({
 			"pos": origin,

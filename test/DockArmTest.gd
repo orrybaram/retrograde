@@ -95,3 +95,9 @@ func test_the_station_no_longer_carries_the_boom_in_its_own_collision() -> void:
 	# The boom collides from the arm, so it can come and go with it
 	var hull := _station.get_node("CollisionShape2D") as CollisionPolygon2D
 	assert_bool(Geometry2D.is_point_in_polygon(Vector2(300, 100), hull.polygon)).is_false()
+
+func test_the_port_moves_with_the_station_through_the_arm() -> void:
+	# The port hangs off the arm's Slide, not the station body: a ship let go of it must
+	# keep the station's motion, not be left standing as SR-7 drifts on
+	_station.linear_velocity = Vector2(30, -40)
+	assert_vector(_arm().get_port().get_dock_velocity()).is_equal(Vector2(30, -40))

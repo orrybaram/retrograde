@@ -222,8 +222,12 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		# Transform offset back to world space
 		locked_offset_from_target = dockable_transform.basis_xform(locked_offset_from_target)
 	
-	# Calculate desired position (target + offset)
-	var desired_pos = target_pos + locked_offset_from_target
+	# Calculate desired position (target + offset), stood further off the pad by however far
+	# the fitted parts reach aft of the hull - read live, so fitting one while docked moves
+	# the ship out rather than sinking its tail into the pad
+	# (in world px: SR-7's port is scaled, so not through its transform)
+	var stand_off := Vector2(0, -ship.aft_overhang).rotated(locked_dockable.global_rotation)
+	var desired_pos = target_pos + locked_offset_from_target + stand_off
 	
 	# Smooth docking animation: lerp position and rotation during animation phase
 	if animation_progress < 1.0:

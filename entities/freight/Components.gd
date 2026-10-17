@@ -9,8 +9,8 @@ class_name Components
 ##
 ## Fitted, a Component is part of the ship (docs/adr/0014): drawn on the hull, solid and
 ## heavy, in its one `place`. Its `fitted` form is cut down from the Freight one and laid
-## out in the ship's own space (nose +x); it never reaches aft of the hull's tail (x -13),
-## or the docked ship sits in SR-7's port pad.
+## out in the ship's own space (nose +x). A part that reaches aft of the hull's tail carries
+## the engines back with it (Ship.aft_overhang).
 
 const CARGO_BAY := "cargo_bay"
 
@@ -39,16 +39,27 @@ const DATA := {
 		"needs_power": true,
 		# Fitted, it is the ship's hold: 50 units of gems (Ship.refit).
 		"hold": 50.0,
-		# A container strapped across the spine behind the cockpit, wider than the hull so
-		# it reads from above. UNIT-7 cuts the hold out of the hauler's frame.
+		# A hull section bolted on behind the hull, a little wider so it reads from above,
+		# hung off the spine by one coupling across a gap. The engines move to its tail.
+		# UNIT-7 cuts the hold out of the hauler's frame.
 		"place": "spine",
 		"fitted": {
-			"outline": [Vector2(-13, -11), Vector2(-1, -11), Vector2(-1, 11), Vector2(-13, 11)],
-			# Added to the ship's own mass (3.0): turning keeps about 93%, and SHIP's
-			# handling bar loses one segment of eight (Ship.handling).
-			"mass": 0.35,
-			# Strap bands across it, drawn lighter.
-			"bands": [Rect2(-13, -4, 12, 1), Rect2(-13, 3, 12, 1)],
+			"outline": [
+				Vector2(-21.9, -8.4), Vector2(-20.8, -9.5), Vector2(-12.8, -9.5), Vector2(-11.4, -8),
+				Vector2(-11.4, 8), Vector2(-12.8, 9.5), Vector2(-20.8, 9.5), Vector2(-21.9, 8.4),
+			],
+			# Added to the ship's own mass (3.0): turning keeps about 91% - it sits far aft,
+			# so a little weight is a long lever - and SHIP's handling bar loses one segment
+			# of eight (Ship.handling).
+			"mass": 0.15,
+			# One rib across it, drawn lighter.
+			"bands": [Rect2(-17.1, -9.5, 1.4, 19)],
+			# Solid-coloured pieces off the outline: the coupling across the gap to the hull,
+			# and the engine block on its tail. Drawn, not solid.
+			"fixtures": [
+				Rect2(-12, -4, 3, 8),
+				Rect2(-23.8, -2, 1.9, 4), Rect2(-23.8, -9, 1.9, 2.5), Rect2(-23.8, 6.5, 1.9, 2.5),
+			],
 		},
 	},
 }
@@ -94,6 +105,21 @@ static func fitted_mass(id: String) -> float:
 ## The strap bands drawn across `id` once fitted, in the ship's space.
 static func fitted_bands(id: String) -> Array:
 	return _fitted(id).get("bands", [])
+
+## The solid pieces drawn off `id`'s outline once fitted (a coupling, an engine block), in
+## the ship's space. Not part of the collider.
+static func fitted_fixtures(id: String) -> Array:
+	return _fitted(id).get("fixtures", [])
+
+## The furthest aft `id` reaches once fitted, outline and fixtures both (ship x); 0 for one
+## that cannot be fitted.
+static func fitted_tail(id: String) -> float:
+	var tail := 0.0
+	for p in fitted_outline(id):
+		tail = minf(tail, p.x)
+	for f in fitted_fixtures(id):
+		tail = minf(tail, (f as Rect2).position.x)
+	return tail
 
 static func _fitted(id: String) -> Dictionary:
 	return DATA.get(id, {}).get("fitted", {})

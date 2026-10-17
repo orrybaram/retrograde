@@ -841,7 +841,7 @@ func hover_over_ore(planet_name: String, height: float, tilt_deg := 0.0, descent
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	var seam := p.get_ore_deposits()[0]
 	var up := seam.normal()
-	var pos := seam.global_position + up * (PlanetLandedState.LANDED_HEIGHT + height)
+	var pos := seam.global_position + up * (PlanetLandedState.LANDED_HEIGHT + ship.aft_overhang + height)
 	var rid := ship.get_rid()
 	var rot := up.angle() + deg_to_rad(tilt_deg)
 	PhysicsServer2D.body_set_state(rid, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rot, pos))
