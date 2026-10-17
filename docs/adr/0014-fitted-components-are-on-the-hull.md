@@ -20,8 +20,8 @@ Worked out in the concept page claude.ai/artifact/QqdiSR4BPo8w5ANv1GGrcx and a g
 ## Consequences
 
 - **Fitting a part where another sits sends the old one to the Cradle.** Taking a part off does the same, at any station with a Cradle, and is allowed even for the only hold: a ship with no hold is a state the game already has.
-- **The fitted form has its own outline and mass** alongside the Freight ones. The Cargo Bay's is +0.35 on the ship's 3.0, before cargo: turning keeps about 93%, and SHIP's handling bar (turn × acceleration, in eighths) drops from 8 to 7.
-- **The dock pad is 2 px behind the bare hull.** A fitted part must not reach further aft than the hull's tail (ship x ≈ −13), or the docked ship overlaps SR-7's port pad and reverse thrust undocks into it.
+- **The fitted form has its own outline and mass** alongside the Freight ones. The Cargo Bay's is +0.15 on the ship's 3.0, before cargo: it sits far aft, so turning keeps about 91%, and SHIP's handling bar (turn × acceleration, in eighths) drops from 8 to 7.
+- **A part may reach aft of the hull, and the engines go with it.** The dock pad is 2 px behind the bare hull's tail (ship x ≈ −13). A part that reaches further aft carries the engines to its own tail, and the ship stands that much further off a dock and that much higher on a planet (`Ship.aft_overhang`), so its tail never sinks into the pad or the ground.
 - **The schematic is terminal line art:** mustard hull, cream parts, a blinking ghost for a preview. Artifacts will draw in `Colors.TITAN`. Handling is shown as a segment bar, not MASS or TURN numbers.
 - **The world changes when the screen does.** `Ship.refit` runs on FIT, so the docked ship gains the part behind the menu.
 - **Fitted parts outlive the ship.** The cloning bay prints the spec (ADR 0011), so the new ship has them, and an abandoned hull keeps drawing its own: two copies, one a wreck. The wreck's parts are dead metal: they do not answer the Sweep and cannot be taken.

@@ -83,11 +83,16 @@ func _part(to_screen: Transform2D, id: String, color: Color) -> void:
 		return
 	_outline(to_screen * outline, color)
 	for band in Components.fitted_bands(id):
+		# A band is drawn as one line down its long side's middle
 		var r := band as Rect2
-		var mid := r.position.y + r.size.y / 2.0
-		draw_line(to_screen * Vector2(r.position.x, mid), to_screen * Vector2(r.end.x, mid), color, 1.0)
+		var c := r.get_center()
+		var along := Vector2(r.size.x / 2.0, 0) if r.size.x >= r.size.y else Vector2(0, r.size.y / 2.0)
+		draw_line(to_screen * (c - along), to_screen * (c + along), color, 1.0)
+	for fixture in Components.fitted_fixtures(id):
+		var r := fixture as Rect2
+		_outline(to_screen * PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]), color, 1.0)
 
-func _outline(points: PackedVector2Array, color: Color) -> void:
+func _outline(points: PackedVector2Array, color: Color, width := LINE) -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
-	draw_polyline(closed, color, LINE)
+	draw_polyline(closed, color, width)

@@ -49,7 +49,7 @@ func test_the_fitted_bay_is_drawn_and_solid() -> void:
 func test_the_fitted_bay_is_heavy() -> void:
 	var ship := _ship()
 	_fit_bay()
-	assert_float(ship.mass).is_equal_approx(3.35, 0.0001)
+	assert_float(ship.mass).is_equal_approx(3.15, 0.0001)
 	assert_float(ship.turn_ratio()).override_failure_message("slower to turn").is_less(1.0)
 	assert_float(ship.turn_ratio()).is_greater(0.9)
 
@@ -67,7 +67,7 @@ func test_refitting_does_not_stack_parts() -> void:
 	assert_int(ship.get_node("Body/" + FittedParts.ART).get_child_count()).is_equal(1)
 	var colliders := ship.get_children().filter(func(c: Node) -> bool: return String(c.name).begins_with(FittedParts.COLLIDER_PREFIX))
 	assert_int(colliders.size()).is_equal(1)
-	assert_float(ship.mass).is_equal_approx(3.35, 0.0001)
+	assert_float(ship.mass).is_equal_approx(3.15, 0.0001)
 
 # --- taking it off ---
 
@@ -112,12 +112,32 @@ func test_a_new_game_takes_the_parts_off() -> void:
 
 # --- the shape ---
 
-func test_the_fitted_bay_never_reaches_aft_of_the_hull() -> void:
-	# The docked ship clears SR-7's port pad by about 2 px (docs/adr/0014)
+func test_a_bare_hull_overhangs_nothing() -> void:
 	var ship := _ship()
-	var hull := Freight.bounds(ship._hull_outline())
-	var bay := Freight.bounds(Components.fitted_outline(Components.CARGO_BAY))
-	assert_float(bay.position.x).is_greater_equal(hull.position.x)
+	assert_float(ship.aft_overhang).is_equal(0.0)
+	assert_vector(ship.thruster_particles.position).is_equal(Ship.THRUSTER_AT)
+
+func test_the_fitted_bay_carries_the_engines_aft() -> void:
+	# It reaches past the hull's tail, so the exhausts, the dock's stand-off and the
+	# landing height all move back by the overhang (docs/adr/0014)
+	var ship := _ship()
+	_fit_bay()
+	var tail := Freight.bounds(ship._hull_outline()).position.x
+	var overhang := tail - Components.fitted_tail(Components.CARGO_BAY)
+	assert_float(overhang).is_greater(0.0)
+	assert_float(ship.aft_overhang).is_equal_approx(overhang, 0.001)
+	assert_vector(ship.thruster_particles.position).is_equal_approx(
+		Ship.THRUSTER_AT - Vector2(overhang, 0), Vector2(0.001, 0.001))
+	assert_vector(ship.boost_particles.position).is_equal_approx(
+		Ship.BOOST_AT - Vector2(overhang, 0), Vector2(0.001, 0.001))
+
+func test_stowing_the_bay_brings_the_engines_home() -> void:
+	var ship := _ship()
+	_fit_bay()
+	_gs.reset_all_state()
+	ship.reset_to_initial_state()
+	assert_float(ship.aft_overhang).is_equal(0.0)
+	assert_vector(ship.thruster_particles.position).is_equal(Ship.THRUSTER_AT)
 
 func test_an_abandoned_hull_keeps_drawing_its_parts() -> void:
 	var ship := _ship()

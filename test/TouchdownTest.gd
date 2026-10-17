@@ -101,6 +101,8 @@ func test_landed_pose_is_held_within_reach_of_the_seam() -> void:
 	var far := PlanetLandedState.ground_offset(ore, Vector2(-300, 300))
 	assert_float(absf(angle_difference(far.angle(), PI / 2.0))).is_equal_approx(ore.reach_angle(), 0.0001)
 	assert_float(far.length()).is_equal_approx(height, 0.01)
+	# A hold reaching aft of the hull stands the ship that much higher
+	assert_float(PlanetLandedState.ground_offset(ore, Vector2(3, 430), 11.0).length()).is_equal_approx(height + 11.0, 0.01)
 
 
 func _landed_ship(planet: Planet, ore: OreDeposit) -> Ship:
