@@ -2,10 +2,12 @@ extends Control
 class_name BootLog
 
 ## The ship's manual diagnostic on the HUD (docs/OPENING.md §4): a `BootChecklist` typed out in
-## bare terminal text in the bottom-right corner, growing upward - on top of UNIT-7's
-## panel while that is up, which shares the corner. It runs once,
-## on a new game, from a beat after control is handed over until every row is OK - then
-## DIAGNOSTIC COMPLETE holds, and it fades for good. Not saved: a continue never shows it.
+## bare terminal text in the dashboard's bottom-left corner, growing upward. It stands in for
+## the dashboard while the game owes it (holds_corner): the HUD keeps the dashboard dark
+## until the log is done, and powers its pieces back on once the pilot has the controls. It
+## runs once, on a new game, from a beat after control is handed over until every row is
+## OK - then DIAGNOSTIC COMPLETE holds, and it fades for good. Not saved: a continue never
+## shows it.
 ##
 ## While it runs the ship's controls are locked (ControlLock) and come back a section at a
 ## time, as each section's heading types: FLIGHT's stick, SONAR's Sweep, MAGNET's clamp,
@@ -21,10 +23,8 @@ class_name BootLog
 
 const TEXT_SIZE := 11
 const OUTLINE := 4
-## The corner it sits in: RadioPanel's margins (clear of the action prompt and the save
-## indicator), and the gap it keeps above that panel while it is up.
-const SCREEN_MARGIN := RadioPanel.SCREEN_MARGIN
-const GAP := 10.0
+## Its inset from the screen's left edge; its bottom edge is the dashboard's.
+const LEFT_MARGIN := 16.0
 ## A beat of flight before the first line types, so it reads as the ship waking up.
 const START_DELAY := 1.2
 const FADE_TIME := 1.2
@@ -48,7 +48,8 @@ const UNLOCKS := {
 }
 
 var checklist: BootChecklist = null
-var radio: Control = null
+## The dashboard it stands in for: its bottom edge is where the log sits.
+var dashboard: Control = null
 var _label: RichTextLabel
 var _delay := 0.0
 var _fade: Tween = null
@@ -57,6 +58,9 @@ var _carried := 0.0
 ## it has passed so far, which survive the ship being lost.
 var _owed := false
 var _passed: Array[String] = []
+## The last diagnostic ran to PASS, so the pilot was handed the controls (HUD powers the
+## dashboard up for this, and simply shows it for anything else that ends the log).
+var handed_over := false
 
 
 func _ready() -> void:
@@ -92,6 +96,7 @@ func _ready() -> void:
 func prepare() -> void:
 	_passed.clear()
 	_owed = true
+	handed_over = false
 	arm()
 
 
@@ -132,6 +137,7 @@ func stop() -> void:
 		_passed = checklist.cleared_sections()
 		if checklist.is_complete():
 			_owed = false
+			handed_over = true
 	checklist = null
 	ControlLock.clear()
 	if _fade:
@@ -144,6 +150,7 @@ func stop() -> void:
 func forget() -> void:
 	stop()
 	_owed = false
+	handed_over = false
 	_passed.clear()
 
 
@@ -158,6 +165,11 @@ func clear_now() -> void:
 
 func is_running() -> bool:
 	return checklist != null
+
+## Whether the log has the dashboard's corner: from a new game's first frame until it fades
+## for good, through a relaunch mid-diagnostic.
+func holds_corner() -> bool:
+	return _owed or checklist != null
 
 
 ## What the log reads right now, as plain text.
@@ -205,14 +217,12 @@ func _track_frame() -> void:
 	ControlLock.frame_velocity = station.linear_velocity if station else Vector2.ZERO
 
 
-## Bottom right, growing upward: its bottom edge on the corner's margin, or a gap above
-## UNIT-7's panel while that is up.
+## Bottom left, growing upward from the dashboard's bottom edge. Read off its offsets, not
+## its position, which HudGlitch shakes.
 func _place() -> void:
 	var box := _label.get_combined_minimum_size()
-	var bottom := get_parent_area_size().y - SCREEN_MARGIN.y
-	if radio and radio.visible:
-		bottom = radio.position.y - GAP
-	position = Vector2(get_parent_area_size().x - SCREEN_MARGIN.x - box.x, bottom - box.y)
+	var bottom := get_parent_area_size().y + (dashboard.offset_bottom if dashboard else 0.0)
+	position = Vector2(LEFT_MARGIN, bottom - box.y)
 
 
 func _read_ship(ship: Ship) -> void:

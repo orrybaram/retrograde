@@ -71,7 +71,7 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 ## below and out past the belly, far enough that the station (which reaches down to y 341,
 ## more with its wing hanging) sits just off the top of the screen, and the FUEL TANK is in
 ## view ahead - with Rook's debris ring (2400 px off the station at its nearest) out of view.
-const ADRIFT_OFFSET := Vector2(700, 1100)
+const ADRIFT_OFFSET := Vector2(700, 950)
 ## Its heading and slow tumble, rad and rad/s, and how it drifts off the station, px/s.
 const ADRIFT_ROTATION := 2.3
 const ADRIFT_SPIN := 0.32

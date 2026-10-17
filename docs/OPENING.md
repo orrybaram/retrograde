@@ -115,7 +115,7 @@ false`), ship reset to an empty tank and no hold.
 ### Adrift
 
 The ship wakes **adrift below and out past SR-7's belly** (`ShipSpawner.spawn_adrift`,
-`ADRIFT_OFFSET` (700, 1100) in the station's frame): the station just off the top of the
+`ADRIFT_OFFSET` (700, 950) in the station's frame): the station just off the top of the
 screen, Rook's debris ring (2400 px off the station at its nearest) out of view, the FUEL
 TANK in view ahead. It is turning slowly over (0.32 rad/s, `Ship.drift_spin`) and drifting
 off the station at a few px/s, among 42 flakes of fine debris that spread and are gone
@@ -155,9 +155,9 @@ The ship's own boot text, in flight (`ui/BootLog.gd` draws `scripts/BootChecklis
 never shows it. `playtests/boot_log.play`.
 
 **The controls are locked from the new game's first frame** (`BootLog.prepare`), through
-the intro's dark and the wake, so the fade from black is not a window to fly in. 1.2 s into
-flight the log starts typing into the HUD's bottom-right corner, growing upward, in bare
-terminal text with no frame (above UNIT-7's panel when that is up):
+the intro's dark and the wake, so the fade from black is not a window to fly in. The dashboard is
+dark the whole time: the log takes its bottom-left corner. 1.2 s into flight it starts
+typing there, growing upward, in bare terminal text with no frame:
 
 ```
 MANUAL DIAGNOSTIC
@@ -187,7 +187,11 @@ the header (`PROPULSION ..... [ OK ]`), so the log only holds what is still to d
 waiting more than 7 s flickers now and then; nothing else nags. Later sections unfold only
 when their moment comes, so the log never tells the player the shape of Act 1 before they
 have seen a tank. With all five cleared it prints `DIAGNOSTIC ... PASS` and
-`CTRL AUTH ... PILOT`, holds 3.5 s, and fades for good.
+`CTRL AUTH ... PILOT`, holds 3.5 s, and fades for good. Then the dashboard powers back on in its corner a
+piece at a time — the minimap's dial, the speed, the hull, the hold — each glitching in,
+cutting out and tearing sideways less and less until it catches with a flare and holds
+(`HUD._power_up`). Anything else that ends the log (a load) just puts
+the dashboard back.
 
 While CTRL AUTH is the system's, thrust is held to 50 px/s **relative to SR-7**
 (`ControlLock.SYSTEM_SPEED`; the frame the station, the tank and its Mount all move in), and
@@ -209,7 +213,7 @@ are free (seat tolerance and the clunk are in `docs/FREIGHT.md`). Data in
 
 | Section | Mass (ship is 3.0) | Lug | Where a new game leaves it |
 |---|---|---|---|
-| FUEL TANK | 3.0 — full, fuel is heavy | middle of its flank; goes in sideways from the boom side | adrift, keeping pace with SR-7 at (1300, 1080) in the station's frame: about 600 px right of where the ship wakes, in view, well clear of the ring |
+| FUEL TANK | 3.0 — full, fuel is heavy | middle of its flank; goes in sideways from the boom side | adrift, keeping pace with SR-7 at (1080, 910) in the station's frame: about 380 px right of where the ship wakes, in view, well clear of the ring |
 | DORSAL ARM | 2.0 | elbow end; goes in shoulder-first onto the turntable | adrift in Rook's debris ring, 3000 px from Rook, going round at the ring's own speed for that distance (`Mount.start_in_orbit`) — caught up with, not flown to |
 | SOLAR ARRAY | 1.0 — light but long, swings like a lance | outer tip | buried in Rook's ground on its sunlit face, 62 px of it standing out, Lug end up (`Mount.start_buried`) |
 
