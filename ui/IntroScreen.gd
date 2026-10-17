@@ -2,8 +2,8 @@ extends Control
 class_name IntroScreen
 
 ## The first thing a new game shows, before the boot terminal: three lines typed out on a
-## screen pushed in close, with a block cursor blinking after them. It holds
-## on the finished text until the player presses ENTER.
+## screen pushed in close, with a block cursor blinking after them. It holds on the
+## finished text until the player presses ENTER.
 ##
 ## Where you are, that something has just happened, and that everything is failing - in
 ## the flat voice of a record nobody signs. It never says what happened

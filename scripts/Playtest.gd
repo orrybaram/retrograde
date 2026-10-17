@@ -1244,7 +1244,7 @@ func nearest(group: String) -> Variant:
 
 func _ui_panels() -> Array:
 	var main := get_tree().get_first_node_in_group("main")
-	var layer := main.get_node_or_null("CanvasLayer/Glow/UI") if main else null
+	var layer := main.get_node_or_null("%UI") if main else null
 	return layer.get_children().filter(func(c): return c is CanvasItem) if layer else []
 
 func _collect_text(node: Node, lines: Array) -> void:

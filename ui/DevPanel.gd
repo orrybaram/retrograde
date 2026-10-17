@@ -638,105 +638,6 @@ func _surface_pull_percent(planet: Planet) -> float:
 
 # --- WARP --------------------------------------------------------------------
 
-func _look_rows() -> Array[Dictionary]:
-	var rows: Array[Dictionary] = []
-	var pass_layer := get_tree().get_first_node_in_group("pixel_pass") as PixelPass
-	if pass_layer == null:
-		return rows
-
-	rows.append(_toggle_row(
-		"PIXEL PASS",
-		"Re-draws the world as low-res pixel art with a PVM scanline. The UI stays sharp.",
-		func() -> bool: return pass_layer.enabled,
-		func(on: bool) -> void: pass_layer.enabled = on
-	))
-	rows.append(_toggle_row(
-		"ON UI",
-		"Scanlines and glow over the HUD and panels too, this one included. They stay full-res.",
-		func() -> bool: return pass_layer.on_ui,
-		func(on: bool) -> void: pass_layer.on_ui = on
-	))
-	rows.append(_value_row(
-		"PIXEL SIZE",
-		"Screen px per art pixel. 1 is scanlines alone; 2 is 640x360; 4 is Animal Well's 320x180.",
-		func() -> String:
-			return "%dx  %dx%d" % [pass_layer.pixel_size, 1280 / int(pass_layer.pixel_size), 720 / int(pass_layer.pixel_size)],
-		func(direction: int) -> void:
-			var sizes := PixelPass.PIXEL_SIZES
-			var i := sizes.find(pass_layer.pixel_size)
-			pass_layer.pixel_size = 2.0 if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
-	))
-	rows.append(_value_row(
-		"SCANLINES",
-		"How dark the gap between lines runs. ENTER puts it back to 5%.",
-		func() -> String: return "%d%%" % roundi(pass_layer.scanlines * 100.0),
-		func(direction: int) -> void:
-			pass_layer.scanlines = 0.05 if direction == 0 else pass_layer.scanlines + direction * 0.01
-	))
-	rows.append(_value_row(
-		"LINE HEIGHT",
-		"Screen px per scanline, beam and gap together. ENTER puts it back to 6.",
-		func() -> String: return "%dpx" % pass_layer.line_height,
-		func(direction: int) -> void:
-			pass_layer.line_height = 6.0 if direction == 0 else pass_layer.line_height + direction
-	))
-	rows.append(_toggle_row(
-		"PALETTE",
-		"Snaps every world pixel to the nearest Violet Signal color.",
-		func() -> bool: return pass_layer.quantize,
-		func(on: bool) -> void: pass_layer.quantize = on
-	))
-	rows.append(_value_row(
-		"DITHER",
-		"Ordered dithering under the palette snap, so gradients band less.",
-		func() -> String: return "%d%%" % roundi(pass_layer.dither * 100.0),
-		func(direction: int) -> void:
-			pass_layer.dither = 0.25 if direction == 0 else pass_layer.dither + direction * 0.1
-	))
-	rows.append(_toggle_row(
-		"GLOW",
-		"Bloom off the world's bright spots. The UI doesn't glow.",
-		func() -> bool: return pass_layer.glow,
-		func(on: bool) -> void: pass_layer.glow = on
-	))
-	rows.append(_value_row(
-		"GLOW STRENGTH",
-		"How hard the bloom pushes. ENTER puts it back to 0.6.",
-		func() -> String: return "%.1f" % pass_layer.glow_strength,
-		func(direction: int) -> void:
-			pass_layer.glow_strength = 0.6 if direction == 0 else pass_layer.glow_strength + direction * 0.1
-	))
-	rows.append(_value_row(
-		"GLOW THRESHOLD",
-		"How bright a pixel must be before it blooms. Lower spreads it to hulls; ENTER puts it back to 0.40.",
-		func() -> String: return "%.2f" % pass_layer.glow_threshold,
-		func(direction: int) -> void:
-			pass_layer.glow_threshold = 0.4 if direction == 0 else pass_layer.glow_threshold + direction * 0.05
-	))
-	rows.append(_value_row(
-		"TEXT GLOW",
-		"Bloom on the UI alone, apart from the world's. ENTER puts it back to 0.2.",
-		func() -> String: return "%.1f" % pass_layer.text_glow,
-		func(direction: int) -> void:
-			pass_layer.text_glow = 0.2 if direction == 0 else pass_layer.text_glow + direction * 0.1
-	))
-	rows.append(_value_row(
-		"TEXT GLOW SIZE",
-		"How far the UI bloom reaches; each step doubles it. ENTER puts it back to 3.",
-		func() -> String: return "%d" % pass_layer.text_glow_size,
-		func(direction: int) -> void:
-			pass_layer.text_glow_size = 3 if direction == 0 else pass_layer.text_glow_size + direction
-	))
-	rows.append(_value_row(
-		"UI GLITCH",
-		"How often a strip of the UI slips sideways. ENTER puts it back to 20%.",
-		func() -> String: return "%d%%" % roundi(pass_layer.ui_glitch * 100.0),
-		func(direction: int) -> void:
-			pass_layer.ui_glitch = 0.2 if direction == 0 else pass_layer.ui_glitch + direction * 0.05
-	))
-	return rows
-
-
 func _warp_rows() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	if _ship() == null:
@@ -796,6 +697,85 @@ func _warp_to_void() -> void:
 	if direction == Vector2.ZERO:
 		direction = Vector2.RIGHT
 	Playtest.warp_to(origin + direction * (VoidZone.EDGE_RADIUS + VOID_OVERSHOOT))
+
+
+# --- LOOK --------------------------------------------------------------------
+
+func _look_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var pixel := get_tree().get_first_node_in_group("pixel_pass") as PixelPass
+	var crt := get_tree().get_first_node_in_group("crt") as CRT
+	var ui := get_tree().get_first_node_in_group("ui_glow") as UIGlow
+	if pixel == null or crt == null or ui == null:
+		return rows
+
+	rows.append(_toggle_row(
+		"PIXEL PASS",
+		"Re-draws the world as low-res pixel art. The UI stays sharp.",
+		func() -> bool: return pixel.enabled,
+		func(on: bool) -> void: pixel.enabled = on
+	))
+	rows.append(_value_row(
+		"PIXEL SIZE",
+		"Screen px per art pixel. 1 is full res; 2 is 640x360; 4 is Animal Well's 320x180. ENTER puts it back to %dx." % PixelPass.DEFAULTS.pixel_size,
+		func() -> String:
+			return "%dx  %dx%d" % [pixel.pixel_size, 1280 / int(pixel.pixel_size), 720 / int(pixel.pixel_size)],
+		func(direction: int) -> void:
+			var sizes := PixelPass.PIXEL_SIZES
+			var i := sizes.find(pixel.pixel_size)
+			pixel.pixel_size = PixelPass.DEFAULTS.pixel_size if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
+	))
+	rows.append(_toggle_row(
+		"PALETTE",
+		"Snaps every world pixel to the nearest Violet Signal color.",
+		func() -> bool: return pixel.quantize,
+		func(on: bool) -> void: pixel.quantize = on
+	))
+	rows.append(_tune_row("DITHER", "Ordered dithering under the palette snap, so gradients band less.", pixel, &"dither", 0.1, _percent))
+
+	rows.append(_toggle_row(
+		"CRT",
+		"Scanlines and bloom over the whole picture, the UI included.",
+		func() -> bool: return crt.enabled,
+		func(on: bool) -> void: crt.enabled = on
+	))
+	rows.append(_tune_row("SCANLINES", "How dark the gap between lines runs.", crt, &"scanlines", 0.01, _percent))
+	rows.append(_tune_row("LINE HEIGHT", "Screen px per scanline, beam and gap together.", crt, &"line_height", 1.0,
+		func(v: float) -> String: return "%dpx" % v))
+	rows.append(_toggle_row(
+		"GLOW",
+		"Bloom off the bright spots: windows, stars, engines, text.",
+		func() -> bool: return crt.glow,
+		func(on: bool) -> void: crt.glow = on
+	))
+	rows.append(_tune_row("GLOW STRENGTH", "How hard the bloom pushes.", crt, &"glow_strength", 0.1,
+		func(v: float) -> String: return "%.1f" % v))
+	rows.append(_tune_row("GLOW THRESHOLD", "How bright a pixel must be before it blooms. Lower spreads it to hulls.", crt, &"glow_threshold", 0.05,
+		func(v: float) -> String: return "%.2f" % v))
+
+	rows.append(_tune_row("TEXT GLOW", "Bloom on the UI alone, on top of the CRT's.", ui, &"text_glow", 0.1,
+		func(v: float) -> String: return "%.1f" % v))
+	rows.append(_tune_row("TEXT GLOW SIZE", "How far the UI bloom reaches; each step doubles it.", ui, &"text_glow_size", 1,
+		func(v: int) -> String: return "%d" % v))
+	rows.append(_tune_row("UI GLITCH", "How often a strip of the UI slips sideways.", ui, &"glitch", 0.05, _percent))
+	return rows
+
+
+## A number on one of the LOOK nodes: arrows step it (its setter clamps), ENTER puts back
+## the value in the node's DEFAULTS. `step` matches the property's type, int or float.
+func _tune_row(label: String, note: String, target: Node, property: StringName, step: Variant, show: Callable) -> Dictionary:
+	var default: Variant = target.get("DEFAULTS")[property]
+	return _value_row(
+		label,
+		"%s ENTER puts it back to %s." % [note, show.call(default)],
+		func() -> String: return show.call(target.get(property)),
+		func(direction: int) -> void:
+			target.set(property, default if direction == 0 else target.get(property) + direction * step)
+	)
+
+
+static func _percent(v: float) -> String:
+	return "%d%%" % roundi(v * 100.0)
 
 
 # --- SAVE --------------------------------------------------------------------

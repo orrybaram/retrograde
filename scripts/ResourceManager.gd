@@ -45,19 +45,11 @@ func _on_hold_deposited(stores: int) -> void:
 
 ## `label` is the unit shown after the amount ("" for just the number); `style` picks the pop.
 func show_gain_indicator(amount: int, position: Vector2, label: String, color: Color, style: String = "") -> void:
-	# Find CanvasLayer to add indicator to
+	# With the rest of the UI, so it glows, bands and tears like it
 	var main = get_tree().get_first_node_in_group("main")
-	var canvas_layer: CanvasLayer = null
-
-	if main:
-		canvas_layer = main.get_node_or_null("CanvasLayer")
-
-	if not canvas_layer:
-		# Fallback: try to find CanvasLayer in scene tree
-		canvas_layer = get_tree().root.find_child("CanvasLayer", true, false) as CanvasLayer
-
-	if not canvas_layer:
-		push_error("Could not find CanvasLayer for resource gain indicator")
+	var ui: Control = main.get_node_or_null("%UI") if main else null
+	if not ui:
+		push_error("Could not find Main's UI for resource gain indicator")
 		return
 
 	var indicator = _gain_indicator_scene.instantiate() as ResourceGainIndicator
@@ -72,7 +64,7 @@ func show_gain_indicator(amount: int, position: Vector2, label: String, color: C
 	indicator.stack_offset = STACK_BASE + STACK_SPACING * _live.size()
 	indicator.x_offset = randf_range(-X_JITTER, X_JITTER)
 	_live.append(indicator)
-	canvas_layer.add_child(indicator)
+	ui.add_child(indicator)
 
 	# Wait for next frame to ensure _ready() is called and @onready vars are set
 	await get_tree().process_frame

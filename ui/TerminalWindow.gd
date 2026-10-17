@@ -41,7 +41,7 @@ func _init(size_px: Vector2, title: String, hint: String) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var dim := ColorRect.new()
-	dim.color = Color(Colors.SPACE_BG, 0.75)
+	dim.color = Colors.MODAL_DIM
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)

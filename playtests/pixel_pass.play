@@ -1,5 +1,7 @@
-# Prototype pixel-art pass (scenes/PixelPass.gd): the same frame at 1x (scanlines only),
-# with the pass off, at 4x (320x180) and 2x (640x360), and with the palette snap on.
+# The look passes: the PixelPass pixelates the world (scenes/PixelPass.gd), the CRT lays
+# scanlines and bloom over everything (scenes/CRT.gd), and UIGlow gives the UI its own
+# bloom (ui/UIGlow.gd). The same frame at 2x, with the CRT's glow off, both passes off,
+# at 4x (320x180), and with the palette snap on.
 # Run: tools/play.sh playtests/pixel_pass.play   (frames land in .playtest/pixel_*.png)
 
 press enter
@@ -17,21 +19,21 @@ press enter
 wait_until pt.visible_ui().is_empty() 2
 hold thrust 0.5
 wait 1.5
-screenshot pixel_0_1x
-eval pt.node("pixel_pass").set("glow", false)
+screenshot pixel_0_2x
+eval pt.node("crt").set("glow", false)
 wait 0.1
-screenshot pixel_0_1x_noglow
-eval pt.node("pixel_pass").set("glow", true)
+screenshot pixel_0_2x_noglow
+eval pt.node("crt").set("glow", true)
 eval pt.node("pixel_pass").set("enabled", false)
+eval pt.node("crt").set("enabled", false)
 wait 0.1
 screenshot pixel_1_off
 eval pt.node("pixel_pass").set("enabled", true)
+eval pt.node("crt").set("enabled", true)
 eval pt.node("pixel_pass").set("pixel_size", 4.0)
 wait 0.1
 screenshot pixel_2_4x
 eval pt.node("pixel_pass").set("pixel_size", 2.0)
-wait 0.1
-screenshot pixel_3_2x
 eval pt.node("pixel_pass").set("quantize", true)
 wait 0.1
 screenshot pixel_4_2x_palette
@@ -39,7 +41,10 @@ eval pt.node("pixel_pass").set("pixel_size", 4.0)
 wait 0.1
 screenshot pixel_5_4x_palette
 eval pt.node("pixel_pass").set("quantize", false)
+eval pt.node("pixel_pass").set("pixel_size", 1.0)
+assert not pt.node("pixel_pass").visible "at 1x with no palette the pass skips its draw"
 eval pt.node("pixel_pass").set("pixel_size", 2.0)
+assert pt.node("pixel_pass").visible "and draws again once it pixelates"
 hold turn_left 0.3
 hold thrust 1.5
 wait 1

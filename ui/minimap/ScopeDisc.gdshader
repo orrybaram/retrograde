@@ -2,7 +2,7 @@ shader_type canvas_item;
 
 // The scope's glass: everything the Minimap draws is kept to its disc. A clip_children
 // mask did this once, but clipping is a canvas group of its own and can't nest inside
-// the UI's glow group (it drew as a solid white disc).
+// UIGlow's canvas group (it drew as a solid white disc).
 
 uniform vec2 center;
 uniform float inner;    // fully drawn inside this

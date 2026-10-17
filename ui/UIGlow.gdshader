@@ -1,31 +1,34 @@
 shader_type canvas_item;
 
-// Bloom for the UI alone. Sits on the CanvasGroup that holds every panel, so the screen
-// texture here is just the UI drawn onto transparent: no world to bleed in, which a
-// pass over the whole frame can't tell apart. Same mip-tap bloom as PixelPass, read off
-// the group's premultiplied buffer, so empty space adds nothing and thin text blooms
-// softer than a solid bar.
+// The UI's own look, on the CanvasGroup that holds every panel (UIGlow.gd): the screen
+// texture here is just the UI drawn onto transparent, with no world to bleed in. Bloom
+// is read off the group's premultiplied buffer, so empty space adds nothing and thin
+// text blooms softer than a solid bar.
+//
+// Uniforms without defaults are pushed by UIGlow.gd.
+
+#include "res://scenes/bloom.gdshaderinc"
 
 uniform sampler2D screen_tex: hint_screen_texture, repeat_disable, filter_linear_mipmap;
 
-uniform float strength = 0.2;
+uniform float strength;
 uniform float threshold = 0.2;          // how bright before it blooms
-uniform int levels = 3;                 // mip levels summed: more reaches further
+uniform int levels;                     // mip levels summed: more reaches further
 
 // The boot screen's rolling band, on every UI surface: a faint strip of light creeping
 // down the glass. Only where the UI drew, so the world under it doesn't get one, and
-// only on surfaces: the dims behind a modal (70-75% opaque) don't, its panel (80%+) does.
-uniform vec3 band_color;               // Colors.PRIMARY, from PixelPass
+// only on surfaces: the dim behind a modal doesn't, the modal's panel does.
+uniform vec3 band_color;                // Colors.PRIMARY
 uniform float band_alpha = 0.012;
 uniform float band_height = 90.0;       // viewport px
 uniform float band_speed = 140.0;       // viewport px a second
-uniform float view_height = 720.0;
-uniform float band_min_alpha = 0.78;
+uniform float view_height;
+uniform float band_min_alpha;           // just over Colors.MODAL_DIM's
 
 // A tired tube: now and then a thin strip of rows slips sideways for a moment, its red
 // and blue pulling apart. Rises steeply: 0.2 is a couple of small tears a second, 1 is
 // dozens of wide ones, the set close to dying.
-uniform float glitch: hint_range(0.0, 1.0) = 0.2;
+uniform float glitch: hint_range(0.0, 1.0);
 const float GLITCH_HZ = 12.0;           // how often the dice are rolled
 const float GLITCH_SLOTS = 4.0;         // tears that can be live at once
 
@@ -62,19 +65,7 @@ void fragment() {
 		c.b = textureLod(screen_tex, uv - split, 0.0).b;
 	}
 
-	vec3 g = vec3(0.0);
-	for (int i = 1; i <= levels; i++) {
-		float lod = float(i);
-		vec2 o = texel * exp2(lod) * 0.5;
-		vec3 m = (textureLod(screen_tex, SCREEN_UV + vec2(o.x, o.y), lod).rgb
-			+ textureLod(screen_tex, SCREEN_UV + vec2(-o.x, o.y), lod).rgb
-			+ textureLod(screen_tex, SCREEN_UV + vec2(o.x, -o.y), lod).rgb
-			+ textureLod(screen_tex, SCREEN_UV + vec2(-o.x, -o.y), lod).rgb) * 0.25;
-		// Blurring dilutes thin strokes, so wider levels let dimmer averages through.
-		float cut = threshold * (1.0 - 0.13 * lod);
-		g += max(m - cut, vec3(0.0)) / max(1.0 - cut, 0.01);
-	}
-	g *= strength / 2.0;
+	vec3 g = mip_bloom(screen_tex, SCREEN_UV, texel, levels, threshold) * strength / 2.0;
 
 	// Glow lands on the text and spills past it into empty space, where it brings its
 	// own coverage. Back out of premultiplied for COLOR.
