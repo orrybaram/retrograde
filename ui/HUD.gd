@@ -3,13 +3,18 @@ extends Control
 ## In-game HUD: boost gauge (around the minimap), hull segment bar, cargo weight, Stores, velocity readout,
 ## and the robot's radio panel. Subscribes to ship signals. (Action prompts live in IndicatorManager.)
 ## The ship's manual diagnostic (BootLog) takes the dashboard's corner while a new game owes
-## it; the dashboard is dark until then, and spins back up a piece at a time once the pilot
-## has the controls.
+## it; the dashboard is dark until then, and glitches back on a piece at a time once the
+## pilot has the controls.
 
-## The dashboard's pieces spinning up after the diagnostic: each one's spin, and the beat
-## before the next starts.
-const SPIN_TIME := 0.45
-const SPIN_STAGGER := 0.3
+## The dashboard's pieces powering up after the diagnostic: how long each stutters before
+## it holds, the beat before the next starts, how often the stutter changes, how far a
+## cold piece tears sideways (px), and the flare as it catches.
+const POWER_TIME := 0.5
+const POWER_STAGGER := 0.28
+const POWER_ROLL := 0.04
+const POWER_TEAR := 6.0
+const POWER_FLARE := 0.08
+const POWER_FLARE_GAIN := 1.6
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
 @onready var boost_gauge: BoostGauge = $"DashboardAnchor/HBox/LeftColumn/MinimapDial/BoostGauge"
@@ -21,7 +26,7 @@ const SPIN_STAGGER := 0.3
 @onready var stores_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/StoresLabel"
 @onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
-## Spun up in this order: the minimap's dial, then the readouts top to bottom.
+## Powered up in this order: the minimap's dial, then the readouts top to bottom.
 @onready var dashboard_pieces: Array[Control] = [
 	$"DashboardAnchor/HBox/LeftColumn/MinimapDial",
 	$"DashboardAnchor/HBox/LeftColumn/VelocityLabel",
@@ -29,7 +34,12 @@ const SPIN_STAGGER := 0.3
 	$"DashboardAnchor/HBox/RightColumn/CargoRow",
 ]
 var boot_log: BootLog = null
-var _spin: Tween = null
+## Seconds into the power-up, or below 0 when none is running; each piece's laid-out
+## position while it tears; and its own RNG, so the stutter never shifts gameplay rolls.
+var _power_t := -1.0
+var _power_roll := 0.0
+var _power_home := {}
+var _power_rng := RandomNumberGenerator.new()
 
 var gs: Node = null
 var ship: Ship = null
@@ -119,60 +129,88 @@ func _fit_dashboard() -> void:
 
 func _process(dt: float) -> void:
 	_cede_corner()
+	_power_up_step(dt)
 	_roll_stores(dt)
 	_update_labels()
 
-## Dark while the diagnostic has the corner. Back when it lets go: spun up if it handed the
-## pilot the controls, at once if anything else ended it (a load, a skipped opening).
+## Dark while the diagnostic has the corner. Back when it lets go: powered up a piece at a
+## time if it handed the pilot the controls, at once if anything else ended it (a load, a
+## skipped opening).
 func _cede_corner() -> void:
 	var held := boot_log != null and boot_log.holds_corner()
 	if held:
-		if _spin:
-			_spin.kill()
-			_spin = null
+		if _power_t >= 0.0:
+			_settle_pieces()
 		dashboard.visible = false
 	elif not dashboard.visible:
 		dashboard.visible = true
 		if boot_log.handed_over:
 			boot_log.handed_over = false
-			_spin_up()
+			_power_up()
 		else:
 			_settle_pieces()
 
-## Each piece in turn: a flicker as it catches, then a spin and a grow into place.
-func _spin_up() -> void:
+## Each piece in turn stutters on: it cuts in and out and tears sideways, catching more
+## often as it warms, then flares as it holds.
+func _power_up() -> void:
+	_settle_pieces()
 	for piece in dashboard_pieces:
 		piece.modulate.a = 0.0
-	_spin = create_tween()
-	_spin.tween_interval(0.01)  # a frame for the containers to lay the pieces out
+	_power_t = 0.0
+	_power_roll = 0.0
+
+func _power_up_step(dt: float) -> void:
+	if _power_t < 0.0:
+		return
+	_power_t += dt
+	_power_roll -= dt
+	var reroll := _power_roll <= 0.0
+	if reroll:
+		_power_roll = POWER_ROLL
+	var done := true
 	for i in dashboard_pieces.size():
 		var piece := dashboard_pieces[i]
-		var at := 0.01 + i * SPIN_STAGGER
-		_spin.parallel().tween_callback(func() -> void:
-			piece.pivot_offset = piece.size / 2.0
-			piece.scale = Vector2(0.1, 0.1)
-			piece.rotation = -PI).set_delay(at)
-		for f in 3:
-			_spin.parallel().tween_property(piece, "modulate:a", 1.0 if f % 2 == 0 else 0.3, 0.0).set_delay(at + f * 0.05)
-		_spin.parallel().tween_property(piece, "rotation", 0.0, SPIN_TIME).set_delay(at) \
-				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		_spin.parallel().tween_property(piece, "scale", Vector2.ONE, SPIN_TIME).set_delay(at) \
-				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_spin.tween_callback(_settle_pieces)
+		var local := _power_t - i * POWER_STAGGER
+		if local < 0.0:
+			done = false
+			piece.modulate.a = 0.0
+			continue
+		if not _power_home.has(piece):
+			_power_home[piece] = piece.position  # laid out by now: where it tears back to
+		var home: Vector2 = _power_home[piece]
+		if local < POWER_TIME:
+			done = false
+			if reroll:
+				var warm := local / POWER_TIME
+				var lit := _power_rng.randf() < 0.25 + 0.65 * warm
+				piece.modulate = Color(Color.WHITE, _power_rng.randf_range(0.55, 1.0) if lit else _power_rng.randf_range(0.0, 0.12))
+				var tear := _power_rng.randf_range(-1.0, 1.0) * POWER_TEAR * (1.0 - warm) if _power_rng.randf() < 0.4 else 0.0
+				piece.position = home + Vector2(tear, 0.0)
+		elif local < POWER_TIME + POWER_FLARE:
+			done = false
+			piece.position = home
+			piece.modulate = Color.WHITE * POWER_FLARE_GAIN
+		else:
+			piece.position = home
+			piece.modulate = Color.WHITE
+	if done:
+		_settle_pieces()
 
-## Every piece where it belongs, lit, square and full size.
+## Every piece where it belongs and lit, the power-up over.
 func _settle_pieces() -> void:
 	for piece in dashboard_pieces:
-		piece.modulate.a = 1.0
-		piece.rotation = 0.0
-		piece.scale = Vector2.ONE
+		piece.modulate = Color.WHITE
+		if _power_home.has(piece):
+			piece.position = _power_home[piece]
+	_power_home.clear()
+	_power_t = -1.0
 
-## Whether the dashboard is up, done spinning and every piece in place, for scenarios.
+## Whether the dashboard is up, done powering up and every piece lit, for scenarios.
 func dashboard_settled() -> bool:
-	if not dashboard.visible or (_spin and _spin.is_running()):
+	if not dashboard.visible or _power_t >= 0.0:
 		return false
 	for piece in dashboard_pieces:
-		if piece.modulate.a != 1.0 or piece.scale != Vector2.ONE or piece.rotation != 0.0:
+		if piece.modulate != Color.WHITE:
 			return false
 	return true
 

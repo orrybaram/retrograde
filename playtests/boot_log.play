@@ -5,7 +5,7 @@
 # section clears. SONAR types in just outside a Sweep's reach of the FUEL TANK, MAGNET close
 # to its Lug, LATERAL a beat after the pickup, RELEASE close to its Mount - each unlocking
 # its own control. Once all five have cleared it reports DIAGNOSTIC ... PASS and fades, and
-# nothing is locked, and the dashboard spins back up a piece at a time. A ship lost mid-diagnostic comes back locked where it left off, its
+# nothing is locked, and the dashboard glitches back on a piece at a time. A ship lost mid-diagnostic comes back locked where it left off, its
 # passes on file; one lost after it, or a continue, never shows it.
 # Run: PLAYTEST_PORT=7831 tools/play.sh --headless playtests/boot_log.play
 
@@ -157,9 +157,9 @@ assert (ship.linear_velocity - pt.node("space_stations").linear_velocity).length
 wait_until not pt.recall("log").is_running() 8
 assert not pt.recall("log").is_running() and not pt.recall("log").visible "then it fades for good"
 wait_until pt.node("hud").dashboard.visible 1
-assert not pt.node("hud").dashboard_settled() "and the dashboard spins back up"
+assert not pt.node("hud").dashboard_settled() "and the dashboard powers back on"
 wait 0.4
-screenshot boot_log_2_spin_up
+screenshot boot_log_2_power_up
 wait_until pt.node("hud").dashboard_settled() 3
 assert pt.node("hud").dashboard_settled() "every piece in place"
 screenshot boot_log_3_dashboard

@@ -4,7 +4,7 @@ class_name BootLog
 ## The ship's manual diagnostic on the HUD (docs/OPENING.md §4): a `BootChecklist` typed out in
 ## bare terminal text in the dashboard's bottom-left corner, growing upward. It stands in for
 ## the dashboard while the game owes it (holds_corner): the HUD keeps the dashboard dark
-## until the log is done, and spins its pieces back up once the pilot has the controls. It
+## until the log is done, and powers its pieces back on once the pilot has the controls. It
 ## runs once, on a new game, from a beat after control is handed over until every row is
 ## OK - then DIAGNOSTIC COMPLETE holds, and it fades for good. Not saved: a continue never
 ## shows it.
@@ -58,7 +58,7 @@ var _carried := 0.0
 ## it has passed so far, which survive the ship being lost.
 var _owed := false
 var _passed: Array[String] = []
-## The last diagnostic ran to PASS, so the pilot was handed the controls (HUD spins the
+## The last diagnostic ran to PASS, so the pilot was handed the controls (HUD powers the
 ## dashboard up for this, and simply shows it for anything else that ends the log).
 var handed_over := false
 

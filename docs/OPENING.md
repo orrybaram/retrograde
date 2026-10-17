@@ -187,9 +187,10 @@ the header (`PROPULSION ..... [ OK ]`), so the log only holds what is still to d
 waiting more than 7 s flickers now and then; nothing else nags. Later sections unfold only
 when their moment comes, so the log never tells the player the shape of Act 1 before they
 have seen a tank. With all five cleared it prints `DIAGNOSTIC ... PASS` and
-`CTRL AUTH ... PILOT`, holds 3.5 s, and fades for good. Then the dashboard spins back up into its corner a
-piece at a time — the minimap's dial, the speed, the hull, the hold — each flickering on and
-turning into place (`HUD._spin_up`). Anything else that ends the log (a load) just puts
+`CTRL AUTH ... PILOT`, holds 3.5 s, and fades for good. Then the dashboard powers back on in its corner a
+piece at a time — the minimap's dial, the speed, the hull, the hold — each glitching in,
+cutting out and tearing sideways less and less until it catches with a flare and holds
+(`HUD._power_up`). Anything else that ends the log (a load) just puts
 the dashboard back.
 
 While CTRL AUTH is the system's, thrust is held to 50 px/s **relative to SR-7**
@@ -212,7 +213,7 @@ are free (seat tolerance and the clunk are in `docs/FREIGHT.md`). Data in
 
 | Section | Mass (ship is 3.0) | Lug | Where a new game leaves it |
 |---|---|---|---|
-| FUEL TANK | 3.0 — full, fuel is heavy | middle of its flank; goes in sideways from the boom side | adrift, keeping pace with SR-7 at (1150, 930) in the station's frame: about 450 px right of where the ship wakes, in view, well clear of the ring |
+| FUEL TANK | 3.0 — full, fuel is heavy | middle of its flank; goes in sideways from the boom side | adrift, keeping pace with SR-7 at (1080, 910) in the station's frame: about 380 px right of where the ship wakes, in view, well clear of the ring |
 | DORSAL ARM | 2.0 | elbow end; goes in shoulder-first onto the turntable | adrift in Rook's debris ring, 3000 px from Rook, going round at the ring's own speed for that distance (`Mount.start_in_orbit`) — caught up with, not flown to |
 | SOLAR ARRAY | 1.0 — light but long, swings like a lance | outer tip | buried in Rook's ground on its sunlit face, 62 px of it standing out, Lug end up (`Mount.start_buried`) |
 
