@@ -54,7 +54,7 @@ assert pt.state_name() == "FlyingState" "loitering at the fringe never takes the
 eval pt.warp_to(Vector2(352000, 0))
 wait 0.5
 assert get_node("/root/VoidZone").shroud > 0.5 "half swallowed"
-assert main.get_node("CanvasLayer/HUD/TrackingIndicator/VoidGlitch")._dirty "the waypoint tracker glitches with the HUD"
+assert main.get_node("%HUD/TrackingIndicator/VoidGlitch")._dirty "the waypoint tracker glitches with the HUD"
 screenshot void_3_dark
 # The Log and its chart glitch too
 press m
@@ -69,8 +69,8 @@ eval pt.warp_to(Vector2(200000, 0))
 wait_until not get_node("/root/VoidZone").is_inside() 3
 assert get_node("/root/VoidZone").shroud == 0.0 "sky is back"
 wait 0.2
-assert not main.get_node("CanvasLayer/HUD/TrackingIndicator/VoidGlitch")._dirty "the tracker is handed back clean"
-assert main.get_node("CanvasLayer/HUD/TrackingIndicator").modulate.a == 1.0 "lit"
+assert not main.get_node("%HUD/TrackingIndicator/VoidGlitch")._dirty "the tracker is handed back clean"
+assert main.get_node("%HUD/TrackingIndicator").modulate.a == 1.0 "lit"
 wait 2
 screenshot void_4_recovered
 
@@ -92,7 +92,7 @@ wait_until main.get_node("FadeLayer/FadeRect").visible 10
 assert not get_tree().get_first_node_in_group("void_shroud").visible "the Void's overlay is gone before the wake"
 assert get_node("/root/VoidZone").shroud == 0.0 "and so is the dark behind it"
 assert not get_tree().get_first_node_in_group("hull_alarm").visible "no hull alarm over the wake either"
-assert main.get_node("CanvasLayer/HUD/DashboardAnchor").modulate.a == 1.0 "nor a glitched dashboard"
+assert main.get_node("%HUD/DashboardAnchor").modulate.a == 1.0 "nor a glitched dashboard"
 screenshot void_6_wake_dark
 wait_until main.current_game_state == 1 30
 eval main.set("force_wake_sequence", false)

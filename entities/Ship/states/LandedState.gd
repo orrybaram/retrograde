@@ -284,9 +284,7 @@ func _open_spaceport_dialogue() -> void:
 		# Get the current scene (Main node)
 		var current_scene = ship.get_tree().current_scene
 		if current_scene:
-			var canvas_layer = current_scene.get_node_or_null("CanvasLayer")
-			if canvas_layer:
-				_dialogue = canvas_layer.get_node_or_null("SpacePortDialogue")
+			_dialogue = current_scene.get_node_or_null("%SpacePortDialogue")
 	
 	if _dialogue and _dialogue.has_method("open_dialogue"):
 		if not _dialogue.dialogue_closed.is_connected(_on_dialogue_closed):
@@ -303,9 +301,7 @@ func _toggle_dialogue() -> void:
 		# Get the current scene (Main node)
 		var current_scene = ship.get_tree().current_scene
 		if current_scene:
-			var canvas_layer = current_scene.get_node_or_null("CanvasLayer")
-			if canvas_layer:
-				_dialogue = canvas_layer.get_node_or_null("SpacePortDialogue")
+			_dialogue = current_scene.get_node_or_null("%SpacePortDialogue")
 	
 	if _dialogue and _dialogue.has_method("open_dialogue"):
 		if not _dialogue.dialogue_closed.is_connected(_on_dialogue_closed):

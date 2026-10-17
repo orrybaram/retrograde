@@ -184,6 +184,23 @@ Full-screen terminal menus (the Log) are built in code from shared parts:
 
 `Typewriter` lays text out after shaping (`VC_CHARS_AFTER_SHAPING`) so wrapped words don't jump lines while typing.
 
+### The look (PixelPass, CRT, UIGlow)
+
+```
+world (0) -> PixelPass (1, pixelate/palette) -> CanvasLayer (2) -> Glow (UIGlow) -> %UI -> panels
+                                              ... VoidShroud 40, fade 45 ... -> CRT (50, scanlines + bloom)
+```
+
+- Each pass owns one material and a `DEFAULTS` dict; the dev panel's LOOK rows read
+  their ENTER value from it (`_tune_row`), so a default is changed in one place.
+- Every UI panel lives under `CanvasLayer/Glow/UI`. Reach them by unique name
+  (`main.get_node("%HUD")`), never by path.
+- `clip_children` does not work inside the Glow group: clipping is a canvas group of its
+  own and draws as a solid white shape. Mask with a shader (`ui/minimap/ScopeDisc.gdshader`).
+- Modal backdrops use `Colors.MODAL_DIM` and must not go more opaque: the rolling band
+  keys off that alpha to skip the dim and land on the panel.
+- Bloom lives once, in `scenes/bloom.gdshaderinc`.
+
 ## The Void (hazard past the last orbit)
 
 ```
@@ -357,7 +374,7 @@ GameState.titan_influence() (0-5)
 
 ```
 F1 / ` -> DevPanel (ui/DevPanel.gd, CanvasLayer, group `dev_panel`)
-  -> SHIP / UPGRADES / PROGRESS / WARP / SAVE sections of rows
+  -> SHIP / UPGRADES / PROGRESS / WARP / LOOK / SAVE sections of rows
     -> GameState, Ship, InventoryManager, Playtest's warp helpers
 ```
 

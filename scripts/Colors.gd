@@ -61,6 +61,9 @@ const UI_BACKGROUND = SPACE_90
 const UI_BACKGROUND_LIGHT = SPACE_80
 const UI_BACKGROUND_SOLID = SPACE
 const UI_BORDER = MUSTARD
+## The dim behind a modal. No backdrop goes more opaque: UIGlow's rolling band keys off
+## this to land on a modal's panel and not on the dim around it.
+const MODAL_DIM = Color(SPACE, 0.75)
 
 const TEXT = CREAM
 const TEXT_SECONDARY = CREAM_SOFT

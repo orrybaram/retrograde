@@ -88,6 +88,8 @@ var _known := {}
 var _undiscovered := {}
 ## Its own dice: the scope's jitter and grain must never move gameplay rolls.
 var _rng := RandomNumberGenerator.new()
+## Keeps everything drawn to the disc.
+var _disc := ShaderMaterial.new()
 
 func _ready() -> void:
 	add_to_group("minimap")
@@ -95,6 +97,16 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(display_radius * 2 + 20, display_radius * 2 + 20)
 	_rng.seed = 7
 	_last_beam = beam_angle(now())
+	_disc.shader = preload("res://ui/minimap/ScopeDisc.gdshader")
+	# The border is drawn 2 px wide on display_radius, so the edge fades just past it.
+	_disc.set_shader_parameter("inner", display_radius - 0.25)
+	_disc.set_shader_parameter("outer", display_radius + 1.5)
+	material = _disc
+	resized.connect(_fit_disc)
+	_fit_disc()
+
+func _fit_disc() -> void:
+	_disc.set_shader_parameter("center", size / 2.0)
 
 func _process(_delta: float) -> void:
 	if not ship or not is_instance_valid(ship):

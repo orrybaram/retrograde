@@ -12,13 +12,13 @@ enum MainGameState {
 }
 
 @onready var ship := $Ship
-@onready var start_menu: StartMenu = $"CanvasLayer/StartMenu"
-@onready var loading_screen: LoadingScreen = $"CanvasLayer/LoadingScreen"
-@onready var intro_screen: IntroScreen = $"CanvasLayer/IntroScreen"
-@onready var log_ui: LogUI = $"CanvasLayer/LogUI"
+@onready var start_menu: StartMenu = %StartMenu
+@onready var loading_screen: LoadingScreen = %LoadingScreen
+@onready var intro_screen: IntroScreen = %IntroScreen
+@onready var log_ui: LogUI = %LogUI
 @onready var ship_spawner: ShipSpawner = $ShipSpawner
-@onready var pause_menu: PauseMenu = $"CanvasLayer/PauseMenu"
-@onready var hud: Control = $"CanvasLayer/HUD"
+@onready var pause_menu: PauseMenu = %PauseMenu
+@onready var hud: Control = %HUD
 
 ## What UNIT-7 radios once the next clone is up, per game-over reason. Nothing to
 ## confirm: the relaunch has already happened (and RobotRadio drops it before Act 1 ends).

@@ -2,8 +2,8 @@ extends Control
 class_name IntroScreen
 
 ## The first thing a new game shows, before the boot terminal: three lines typed out on a
-## screen so close the scanlines show, with a block cursor blinking after them. It holds
-## on the finished text until the player presses ENTER.
+## screen pushed in close, with a block cursor blinking after them. It holds on the
+## finished text until the player presses ENTER.
 ##
 ## Where you are, that something has just happened, and that everything is failing - in
 ## the flat voice of a record nobody signs. It never says what happened
@@ -38,9 +38,6 @@ const COMMA_PAUSE := 0.18
 ## ENTER that started the game mustn't also skip the typing.
 const SKIP_GUARD := 0.35
 
-## Close-up scanlines: every row is a fat band of dark, the way a CRT looks up close.
-const SCANLINE_STEP := 4
-const SCANLINE_ALPHA := 0.35
 ## The whole picture creeps closer while it plays, so it never sits dead still.
 const PUSH_IN := 0.035
 
@@ -48,7 +45,6 @@ signal finished
 
 var _text: RichTextLabel = null
 var _prompt: Label = null
-var _scanlines: Control = null
 var _body: Control = null
 var _elapsed := 0.0
 var _playing := false
@@ -92,7 +88,6 @@ func _process(delta: float) -> void:
 		return
 	_elapsed += delta
 	_render()
-	_scanlines.queue_redraw()
 	if _done:
 		_playing = false
 		finished.emit()
@@ -161,12 +156,6 @@ func _build() -> void:
 	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(vignette)
-
-	_scanlines = Control.new()
-	_scanlines.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_scanlines.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_scanlines.draw.connect(_draw_glass)
-	_body.add_child(_scanlines)
 
 ## The largest size, up to MAX_TEXT_SIZE, at which the longest line fits on one line.
 func _fit() -> void:
@@ -267,16 +256,3 @@ static func _is_typing(elapsed: float) -> bool:
 		if t >= 0.0 and t < _type_time(LINES[i]):
 			return true
 	return false
-
-# --- Glass -------------------------------------------------------------------
-
-## Thick scanlines, fat enough to count: the tube up close.
-func _draw_glass() -> void:
-	var view := _scanlines.size
-	var dark := Color(Colors.SPACE_BG, SCANLINE_ALPHA)
-	for y in range(0, int(view.y), SCANLINE_STEP):
-		_scanlines.draw_rect(Rect2(0, y, view.x, SCANLINE_STEP / 2.0), dark)
-	# A faint band rolling down, as on the boot screen.
-	var band_height := 140.0
-	var roll := fmod(_elapsed * 90.0, view.y + band_height) - band_height
-	_scanlines.draw_rect(Rect2(0, roll, view.x, band_height), Color(Colors.PRIMARY, 0.018))

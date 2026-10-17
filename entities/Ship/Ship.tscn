@@ -86,7 +86,7 @@ center_of_mass_mode = 1
 script = ExtResource("1")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1461028405]
-zoom = Vector2(0.6, 0.6)
+zoom = Vector2(1.2, 1.2)
 rotation_smoothing_enabled = true
 script = ExtResource("2_0tak2")
 
