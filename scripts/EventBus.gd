@@ -50,6 +50,10 @@ signal scrap_swept()
 ## A Sweep's ring reached a live chunk of scrap, found just now or long since: whether the
 ## ship can cut it is another matter (RobotRadio's no-hold call).
 
+signal readout_swept(readout: Node, tier: int, rows: Array)
+## A Sweep's ring read a SweepReadout, `tier` deep, showing `rows` (ReadoutRow): the HUD's
+## ContactLog types it out.
+
 signal gem_collected(item_id: String, world_position: Vector2)
 ## Emitted when the ship picks up a loose gem (after it is added to the hold).
 

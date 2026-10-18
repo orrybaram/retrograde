@@ -234,9 +234,12 @@ ever toward true; within 3° it swings home and locks with the seating clunk.
 **Finding them.** Every Section hangs dead in its frame until the magnet first takes it.
 Each answers a Sweep that reaches its Lug with a ping in the Titan's purple
 (`Freight.on_sonar_touched`) — **things that answer are part of something; scrap is not.**
-On the minimap each missing Section is a ping held on the rim, giving its bearing from the
-first frame (`ui/minimap/SectionMinimapTarget.gd`); it goes while the piece is clamped and
-for good once it is seated.
+On the minimap each missing Section is a ping held on the rim, giving its bearing
+(`ui/minimap/SectionMinimapTarget.gd`), but only once a Sweep has read its Mount
+(`docs/SWEEP.md` §10): the alarm at the cut leads the player to the Mount, and reading the
+Mount (`MOUNT / FUEL TANK`, `SECTION ... MARKED` in the HUD's corner) leads them to the piece.
+The FUEL TANK needs no ping to start with, being in view at the wake. The ping goes while the
+piece is clamped and for good once it is seated.
 
 A Section is never lost: while its Mount is empty and no piece of it exists, `Mount.ensure_section`
 puts one back where a new game leaves it. Seated state is the ledger's
@@ -428,7 +431,8 @@ things mean.
 | The station's silhouette | progress |
 | Shape language | Sections are machined and look like the station; scrap does not |
 | The Sweep's purple answer (§5) | which things are part of something |
-| The minimap's rim pings (§5, §9) | the bearing to each missing piece, and to the hauler once heard |
+| Sweep readouts (§5, `docs/SWEEP.md` §10) | what a Mount is and whether it is empty, typed in the HUD's corner in the ship's own voice |
+| The minimap's rim pings (§5, §9) | the bearing to each missing piece once its Mount is read, and to the hauler once heard |
 | `EventBus.action_message_changed` | contextual verbs (DOCK, TERMINAL, RELEASE) |
 
 No completion percentage, no "press X to Y" popups, no text objective. The only list is the
@@ -442,7 +446,7 @@ input, they have been reading it since minute one.
   (`ui/CoreTerminal.gd` `open()`: its action is `close`). Thrust is the way off.
 - **The SOLAR ARRAY has no long-range answer.** Sections have `answer_range` 0 and answer only
   inside a Sweep's ring; the bearing comes from the minimap's rim ping instead, which is up
-  from the first frame. ADR 0009's "the mast answers from beyond the range anything else
+  once the SOLAR ARRAY's Mount has been read. ADR 0009's "the mast answers from beyond the range anything else
   does" is built only for the Cargo Bay.
 - **The station is battle-worn.** `HullDamage` (punctures, scorching, torn rims) and
   `TankBreach` (a blown-out tank) sit uneasily beside the clue that SR-7 was cut apart and

@@ -42,6 +42,25 @@ Ship._drive_sonar -> Ship.wants_sonar() -> SonarPulse.charging (held) -> fire() 
   cut) until a ring reaches it, then `ScrapNode.reveal()` lights it up for the rest of its spawn and sends one cream `SonarEcho` ring back.
   Containers and derelicts opt out via `_hides_until_pinged()`. Playtest `stage_harvest` reveals.
 
+## Sweep Readouts (docs/SWEEP.md §10)
+
+```
+SweepReadout (child Node2D, sonar_listeners) -> on_swept -> tier_for(strength) -> rows_for(tier)
+  -> Progress.SWEPT_READOUTS[key] -> EventBus.readout_swept -> ContactLog (HUD bottom right)
+```
+
+- To make a thing readable, add a `SweepReadout` child with `key`, `heading`, `title` and
+  `rows` (`ReadoutRow`: label, value, tier 1-3). For live state, give the parent
+  `readout_rows(tier) -> Array[ReadoutRow]` instead. Tier 1 holds what the player needs.
+- Gate anything on having been read with `SweepReadout.on(owner).is_read()` (a Mount's
+  Section stays off the minimap until then: `Mount.marks_section`).
+- Presenters listen on `EventBus.readout_swept`; the readout itself never draws: `ContactLog`
+  (rows, bottom right), `ReadoutEcho` (name over the thing), and the Log's HARDWARE Records
+  (`RecordsTab.read_hardware`, reads the ledger, not the signal).
+- One scene, many instances (a Gate): `key` is a prefix and the owner's `save_key()` completes it.
+- Titan things set `undecipherable`: same read, rows shown as seeded glyph noise in
+  `Colors.TITAN`, nothing filed in the Log.
+
 ## Fitted Components (docs/adr/0014)
 
 ```

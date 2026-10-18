@@ -66,6 +66,7 @@ fires as the ring leaves.
 | Freight Lug (`Freight`) | Titan-purple ring back; can answer from past the ring's reach, faint and broken (`docs/FREIGHT.md`) |
 | SR-7's comm dish (`CommDish`) | Once powered and on the Sun, a great ping (`docs/OPENING.md`) |
 | SR-7's core on standby (`CoreHousing`) | One dull ring off the hull; nothing when dead or running |
+| A `SweepReadout` (SR-7's Mounts, Gates) | No ring: read into the HUD's corner and the Log (§10) |
 
 An answer is sent by `SonarEcho.answer_ping`: one ring from the thing answering, in the Titan's
 purple, reaching `ANSWER_REACH` (0.5) of the ping that woke it and fading as slowly. A big
@@ -374,7 +375,64 @@ maths is `TrackingSolution`, pure and shared. `test/TrackingTest.gd`, `playtests
 
 ---
 
-## 10. Known gaps
+## 10. Readouts
+
+A Sweep can **read** a thing as well as reach it. Anything that should tell the player about
+itself carries a `SweepReadout` (`scripts/components/SweepReadout.gd`), a `Node2D` added as a
+child; its position is the point the ring has to reach. It is deliberate: only what carries one
+can be read, and scrap, debris and Freight keep the answers in §2.
+
+```
+ring edge reaches SweepReadout.sonar_point() -> on_sonar_touched(strength) -> on_swept()
+  -> tier = tier_for(strength) -> rows = owner.readout_rows(tier), else its exported rows
+  -> Progress.SWEPT_READOUTS marked by key -> EventBus.readout_swept(readout, tier, rows)
+  -> ContactLog (HUD, bottom right) types the rows; ReadoutEcho blooms the name over the thing
+  -> the Log's Records keep a HARDWARE Record of it
+```
+
+| Ring | Tier | Reads |
+|---|---|---|
+| Tap (strength 1) | 1 | What the player needs: what it is and its state |
+| 1.5 s held (strength 2) | 2 | Detail |
+| 3 s held (strength 3+) | 3 | Clues, never the story |
+
+- **Only the ship's Sweep reads**: `on_swept`, so SR-7's dish (`SonarPulse.sweep` off) reads
+  nothing. A readout draws nothing and never answers in purple.
+- **Rows** are `ReadoutRow` resources (`label`, `value`, `tier`). An owner with live state
+  gives them itself with `readout_rows(tier)`.
+- **A read is a ledger fact** (`Progress.SWEPT_READOUTS`, by the readout's `key`, saved under
+  `[progress]`), so what reading unlocks holds for the save.
+- **The ContactLog** (`ui/ContactLog.gd`) types each read in the diagnostic's grammar
+  (`MOUNT / FUEL TANK`, then `STATE ...... EMPTY` rows ending in the diagnostic's stamp column)
+  into the bottom-right corner, above UNIT-7's panel while that is up. An entry holds `HOLD`
+  (6 s) after typing, then fades; at most `MAX_ENTRIES` (3), newest at the bottom; a re-read
+  types over its own entry.
+- **The ReadoutEcho** (`ui/ReadoutEcho.gd`) blooms the thing's title (or heading) over it in the
+  world, typed, held `HOLD` (2.2 s) and faded, so the eye knows which thing answered. It hides
+  while it overlaps a HUD panel.
+- **The Log keeps it.** Each read earns a Record under **H A R D W A R E** in the Records tab
+  (`RecordsTab.read_hardware`), in the order read, holding every row down to the deepest tier
+  ever read (`SweepReadout.depth_read`; a deeper read is kept as `<key>#<tier>`), as the thing
+  stands now. Unread tiers have no row (ADR 0003).
+- **Titan things are undecipherable, for now** (`undecipherable`): read like anything else, but
+  heading, title and rows come back as `RobotFaces.GLITCH_CHARS` noise of the same shape, the same
+  every time (seeded by the key), all in the Titan's purple but the dot leaders. Nothing is filed in
+  the Log. Every Gate carries one (`Gate.tscn`, key prefix `gate`, so `gate:<save_key>`;
+  `Gate.readout_rows`: STATE, MODULE), kept for the day it can be read.
+
+**SR-7's Mounts** each carry one (`SpaceStation.tscn`, keys `mount_fuel_tank`,
+`mount_solar_array`, `mount_dorsal_arm`). `Mount.readout_rows`: `STATE` EMPTY / SEATED and, while
+empty, `SECTION ... MARKED` (tier 1); `EDGE ... TORCH CUT` (2); `FRACTURE ... NONE` (3). Reading
+the Mount is what puts its Section's rim ping on the minimap (`Mount.marks_section`,
+`SectionMinimapTarget`): the alarm at the cut leads to the Mount, the Mount to the piece. A charged
+Sweep beside the station reads every Mount in reach at once.
+
+Tested by `test/SweepReadoutTest.gd`, `test/ContactLogTest.gd`, `test/ReadoutEchoTest.gd`,
+`test/HardwareRecordTest.gd`, `test/SectionMinimapTargetTest.gd`, `playtests/readout.play`.
+
+---
+
+## 11. Known gaps
 
 - **The ring runs out of scrap.** Refill spawns the missing count at `debris_ratio` (0.93), but
   only scrap ever goes missing, so harvested scrap comes back mostly as debris: clear all 14 and
@@ -387,5 +445,6 @@ maths is `TrackingSolution`, pure and shared. `test/TrackingTest.gd`, `playtests
   playtests ever tracks one (`GameState.scanned_planets`, `OreDeposit`).
 - **`HarvestTiming` says overload makes "Slag".** There is no Slag item; LATE and OVERLOAD
   roll shards (`GemData.roll`).
+- **Nothing deciphers a Titan readout yet.** Gates read back as noise and stay that way.
 - **`Ship.is_locked_to_planet()`** is true while docked (`LandedState`), not landed on a body;
   the magnet uses it to switch off at port.
