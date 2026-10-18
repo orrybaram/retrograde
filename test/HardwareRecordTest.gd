@@ -10,13 +10,14 @@ func before_test() -> void:
 	_gs.set_process(false)
 	add_child(_gs)
 
-func _readout(key: String, title: String) -> SweepReadout:
+func _readout(key: String, title: String, category := "") -> SweepReadout:
 	var owner_node := auto_free(Node2D.new()) as Node2D
 	add_child(owner_node)
 	var r := SweepReadout.new()
 	r.key = key
 	r.heading = "MOUNT"
 	r.title = title
+	r.category = category
 	r.rows = [ReadoutRow.make("STATE", "EMPTY"), ReadoutRow.make("EDGE", "TORCH CUT", 2),
 		ReadoutRow.make("FRACTURE", "NONE", 3)]
 	owner_node.add_child(r)
@@ -82,3 +83,37 @@ func test_the_cursor_runs_on_into_hardware() -> void:
 	assert_int(tab._hardware_index()).is_equal(1)
 	tab.handle_action(&"menu_down")
 	assert_int(tab._hardware_index()).override_failure_message("wraps back to the top").is_equal(0)
+
+
+func test_hardware_is_filed_under_its_place_in_first_read_order() -> void:
+	var tank := _readout("a", "FUEL TANK", "SR-7")
+	var gauge := _readout("c", "GAUGE")
+	var array := _readout("b", "SOLAR ARRAY", "SR-7")
+	tank.read(1.0)
+	gauge.read(1.0)
+	array.read(1.0)
+	var filed := RecordsTab.file_hardware(RecordsTab.read_hardware(get_tree(), _gs))
+	assert_array(filed).override_failure_message("a place's things together, read order within") \
+		.contains_exactly([tank, array, gauge])
+
+
+func test_a_place_is_named_once_over_its_things() -> void:
+	_readout("a", "FUEL TANK", "SR-7").read(1.0)
+	_readout("b", "SOLAR ARRAY", "SR-7").read(1.0)
+	var text := _text_of(_records_tab())
+	assert_int(text.count("SR-7")).is_equal(1)
+	assert_int(text.find("SR-7")).is_less(text.find("FUEL TANK"))
+
+
+func test_the_cursor_follows_the_filed_order() -> void:
+	var tank := _readout("a", "FUEL TANK", "SR-7")
+	var gauge := _readout("c", "GAUGE")
+	var array := _readout("b", "SOLAR ARRAY", "SR-7")
+	tank.read(1.0)
+	gauge.read(1.0)
+	array.read(1.0)
+	var tab := _records_tab()
+	tab.handle_action(&"menu_down")
+	assert_bool(_text_of(tab._detail).has("SOLAR ARRAY")) \
+		.override_failure_message("the row under FUEL TANK is SOLAR ARRAY, not the one read next").is_true()
+	assert_bool(_text_of(tab._detail).has("SR-7 / MOUNT")).is_true()

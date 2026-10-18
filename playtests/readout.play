@@ -66,6 +66,7 @@ press tab
 assert pt.node("log_ui").active_tab_title() == "RECORDS" "on Records"
 assert pt.node("log_ui")._tabs[1]._read.size() == 1 "one Mount read"
 assert str(pt.screen_text()).contains("H A R D W A R E") "the Hardware section"
+assert str(pt.screen_text()).contains("SR-7") "filed under the station"
 assert str(pt.screen_text()).contains("TORCH CUT") "the tank's Record holds what the charged ring read"
 screenshot readout_3_records
 press i

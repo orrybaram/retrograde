@@ -421,6 +421,9 @@ ring edge reaches SweepReadout.sonar_point() -> on_sonar_touched(strength) -> on
   (`RecordsTab.read_hardware`), in the order read, holding every row down to the deepest tier
   ever read (`SweepReadout.depth_read`; a deeper read is kept as `<key>#<tier>`), as the thing
   stands now. Unread tiers have no row (ADR 0003).
+  Hardware is filed by place (`SweepReadout.category`): a place's things sit indented under its
+  name (`SR-7`), places in the order their first thing was read, and the Record's subtitle reads
+  `SR-7 / MOUNT` (`RecordsTab.file_hardware`). A readout with no `category` sits unfiled.
 - **Titan things are undecipherable, for now** (`undecipherable`): read like anything else, but
   heading, title and rows come back as `RobotFaces.GLITCH_CHARS` noise of the same shape, the same
   every time (seeded by the key), all in the Titan's purple but the dot leaders. Nothing is filed in
@@ -428,7 +431,7 @@ ring edge reaches SweepReadout.sonar_point() -> on_sonar_touched(strength) -> on
   `Gate.readout_rows`: STATE, MODULE), kept for the day it can be read.
 
 **SR-7's Mounts** each carry one (`SpaceStation.tscn`, keys `mount_fuel_tank`,
-`mount_solar_array`, `mount_dorsal_arm`). `Mount.readout_rows`: `STATE` EMPTY / SEATED and, while
+`mount_solar_array`, `mount_dorsal_arm`, filed under `SR-7`). `Mount.readout_rows`: `STATE` EMPTY / SEATED and, while
 empty, `SECTION ... MARKED` (tier 1); `EDGE ... TORCH CUT` (2); `FRACTURE ... NONE` (3). Reading
 the Mount is what puts its Section's rim ping on the minimap (`Mount.marks_section`,
 `SectionMinimapTarget`): the alarm at the cut leads to the Mount, the Mount to the piece. Like any

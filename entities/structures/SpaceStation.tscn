@@ -1291,18 +1291,21 @@ start_in_orbit = true
 [node name="SweepReadout" type="Node2D" parent="FuelTankMount"]
 script = ExtResource("6_readout")
 key = "mount_fuel_tank"
+category = "SR-7"
 heading = "MOUNT"
 title = "FUEL TANK"
 
 [node name="SweepReadout" type="Node2D" parent="SolarArrayMount"]
 script = ExtResource("6_readout")
 key = "mount_solar_array"
+category = "SR-7"
 heading = "MOUNT"
 title = "SOLAR ARRAY"
 
 [node name="SweepReadout" type="Node2D" parent="DorsalArmMount"]
 script = ExtResource("6_readout")
 key = "mount_dorsal_arm"
+category = "SR-7"
 heading = "MOUNT"
 title = "DORSAL ARM"
 

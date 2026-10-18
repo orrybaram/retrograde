@@ -40,6 +40,8 @@ const TEXT_SIZE := TerminalWindow.TEXT_SIZE
 ## Section headings inside the list column. Smaller than TerminalWindow.header(): these
 ## label a list within a column rather than a panel of the screen.
 const HEADING_SIZE := TerminalWindow.SMALL_SIZE
+## How far a place's Hardware sits in from the place's name (file_hardware).
+const PLACE_INDENT := 12.0
 ## How wide the open Record is. A Note is written in lines, not reflowed prose, so
 ## the pane has to be wide enough to hold an authored line without breaking it.
 const DETAIL_WIDTH := 440.0
@@ -66,7 +68,7 @@ var _met: Array[NPCData] = []
 # --- Hardware ----------------------------------------------------------------
 var _hardware: VBoxContainer
 var _hardware_rows: VBoxContainer
-## The readouts the Sweep has read, in the order it read them.
+## The readouts the Sweep has read, filed by place (file_hardware).
 var _read: Array[SweepReadout] = []
 ## One cursor over every row in the tab, Bodies first, then Automatons, then Hardware, so
 ## UP / DOWN carry from one section into the next with no second level of navigation.
@@ -173,7 +175,7 @@ func refresh() -> void:
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	_visited = gs.progress.list(Progress.VISITED_BODIES) if gs else PackedStringArray()
 	_met = Automatons.met(gs)
-	_read = read_hardware(get_tree(), gs)
+	_read = file_hardware(read_hardware(get_tree(), gs))
 	_cursor = clampi(_cursor, 0, maxi(_row_count() - 1, 0))
 	# An empty list is correct output for a player who has stayed home and met nobody.
 	_empty.visible = _row_count() == 0
@@ -372,16 +374,41 @@ static func read_hardware(tree: SceneTree, state: GameState) -> Array[SweepReado
 	return out
 
 
+## `read` filed by place (SweepReadout.category): each place's things together, the places in
+## the order their first thing was read, and read order kept within a place. The cursor runs
+## through them in this order, so it moves down the list as drawn.
+static func file_hardware(read: Array[SweepReadout]) -> Array[SweepReadout]:
+	var places: PackedStringArray = []
+	var by_place := {}
+	for r in read:
+		if not by_place.has(r.category):
+			places.append(r.category)
+			by_place[r.category] = []
+		by_place[r.category].append(r)
+	var out: Array[SweepReadout] = []
+	for place in places:
+		out.append_array(by_place[place])
+	return out
+
+
 ## One row per piece of Hardware read: what it is on the left, its first row's value (its
-## state) on the right.
+## state) on the right. A place's things sit indented under its name; a thing filed under no
+## place sits at the section's own margin.
 func _draw_hardware_rows() -> void:
 	_clear(_hardware_rows)
+	var place := ""
 	for i in _read.size():
 		var r := _read[i]
+		if r.category != place:
+			place = r.category
+			if place != "":
+				_hardware_rows.add_child(_place_heading(place))
 		var selected := i == _hardware_index()
 		var row := HBoxContainer.new()
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_theme_constant_override("separation", 8)
+		if place != "":
+			row.add_child(_indent())
 		row.add_child(TerminalWindow.label(">" if selected else " ", TEXT_SIZE, Colors.PRIMARY))
 		row.add_child(TerminalWindow.label(r.title if r.title != "" else r.heading, TEXT_SIZE,
 				Colors.PRIMARY if selected else Colors.TEXT))
@@ -392,6 +419,19 @@ func _draw_hardware_rows() -> void:
 		_hardware_rows.add_child(row)
 
 
+## A place's name over its things in the Hardware list: quieter than a section heading, and
+## not a row, so the cursor passes over it.
+func _place_heading(place: String) -> Control:
+	return TerminalWindow.label(place, HEADING_SIZE, Colors.PRIMARY_DIM)
+
+
+func _indent() -> Control:
+	var gap := Control.new()
+	gap.custom_minimum_size.x = PLACE_INDENT
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return gap
+
+
 ## The selected Hardware's Record: what it is, then every row the Sweep has read it to,
 ## as the thing stands now. Unread tiers have no row (docs/adr/0003).
 func _draw_hardware_detail(index: int) -> void:
@@ -400,8 +440,15 @@ func _draw_hardware_detail(index: int) -> void:
 	var r := _read[index]
 	_detail.add_child(TerminalWindow.label(r.title if r.title != "" else r.heading,
 			TerminalWindow.HEADER_SIZE, Colors.PRIMARY))
+	# What it is and where: `MOUNT` under a title, `SR-7 / MOUNT` once it has a place.
+	var subtitle: PackedStringArray = []
+	if r.category != "":
+		subtitle.append(r.category)
 	if r.title != "":
-		_detail.add_child(TerminalWindow.label(r.heading, TerminalWindow.SMALL_SIZE, Colors.PRIMARY_DIM))
+		subtitle.append(r.heading)
+	if not subtitle.is_empty():
+		_detail.add_child(TerminalWindow.label(" / ".join(subtitle), TerminalWindow.SMALL_SIZE,
+				Colors.PRIMARY_DIM))
 	_detail.add_child(_note_gap())
 	for row in r.rows_for(r.depth_read()):
 		_detail.add_child(TerminalWindow.label(hardware_line(row), TEXT_SIZE, Colors.TEXT))

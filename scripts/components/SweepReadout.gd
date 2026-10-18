@@ -32,6 +32,9 @@ const MAX_TIER := 3
 ## What kind of thing it is, and which one: `MOUNT` / `FUEL TANK`.
 @export var heading := ""
 @export var title := ""
+## Where it is filed in the Log's Hardware section: the place it belongs to, `SR-7`. Things
+## of one place are listed together under it; "" files it under no place.
+@export var category := ""
 ## The rows, for an owner with no `readout_rows(tier)`.
 @export var rows: Array[ReadoutRow] = []
 ## Part of the Titan: read, but not one character of it can be made out.
