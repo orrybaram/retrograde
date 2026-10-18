@@ -1,0 +1,24 @@
+# Quitting mid-diagnostic (BootLog): the save still owes it, so CONTINUE runs it again from
+# the top - locked from the first frame, nothing passed - rather than dropping it.
+# Run: PLAYTEST_PORT=7832 tools/play.sh --headless playtests/boot_log_continue.play
+
+eval main.set("force_boot_log", true)
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval pt.remember("log", pt.node("boot_log"))
+wait_until pt.recall("log").checklist.is_live("flight") 8
+hold thrust 0.5
+wait_until pt.recall("log").checklist.is_done("thrust") 3
+assert pt.recall("log").checklist.is_done("thrust") "THRUST stamped before the quit"
+
+# --- Quit and continue: the diagnostic starts over ---
+reload
+assert pt.recall("log").is_running() "a continue mid-diagnostic runs it again"
+assert pt.recall("log").has_locks() "locked from the first frame"
+assert not pt.recall("log").checklist.is_done("thrust") "from the top: nothing stamped"
+wait_until pt.recall("log").text().contains("MANUAL DIAGNOSTIC") 4
+wait_until pt.recall("log").checklist.is_live("flight") 8
+hold thrust 0.5
+wait_until pt.recall("log").checklist.is_done("thrust") 3
+assert pt.recall("log").checklist.is_done("thrust") "and it runs as before"
+quit

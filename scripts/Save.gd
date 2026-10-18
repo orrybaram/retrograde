@@ -19,6 +19,9 @@ const ORE_SECTION := "ore"
 const ORE_REGROW_KEY := "regrow"
 const SECTION_SECTION := "sections"
 const SECTION_CRADLE_KEY := "cradled"
+const OPENING_SECTION := "opening"
+## The manual diagnostic (BootLog) hasn't passed yet: a continue runs it again from the top.
+const DIAGNOSTIC_OWED_KEY := "diagnostic_owed"
 
 ## `path` defaults to the game save.
 static func save(gs: GameState, ship: Ship, path: String = "") -> void:
@@ -73,6 +76,9 @@ static func save(gs: GameState, ship: Ship, path: String = "") -> void:
 	for kind in Progress.KINDS:
 		Progress.FileStore.put(cfg, kind, gs.progress.list(kind))
 	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, gs.cradled)
+	if ship and ship.is_inside_tree():
+		var boot_log := ship.get_tree().get_first_node_in_group("boot_log") as BootLog
+		cfg.set_value(OPENING_SECTION, DIAGNOSTIC_OWED_KEY, boot_log != null and boot_log.is_owed())
 
 	# Deep space doesn't refill, so remember which slots have already been stripped —
 	# and how far its rings have turned, which is the rest of where an encounter is.
@@ -139,6 +145,23 @@ static func load_ore_regrowth(path: String = "") -> Dictionary:
 		for ore_id in spent:
 			out[str(ore_id)] = float(spent[ore_id])
 	return out
+
+## Writes whether the diagnostic is still owed into an existing save the moment it passes,
+## so quitting before the next full save doesn't run it again. With no save yet this does
+## nothing.
+static func save_diagnostic_owed(owed: bool, path: String = "") -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(_file(path)) != OK:
+		return
+	cfg.set_value(OPENING_SECTION, DIAGNOSTIC_OWED_KEY, owed)
+	cfg.save(_file(path))
+
+## Whether the save was left mid-diagnostic. A save from before this was kept owes none.
+static func load_diagnostic_owed(path: String = "") -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(_file(path)) != OK:
+		return false
+	return bool(cfg.get_value(OPENING_SECTION, DIAGNOSTIC_OWED_KEY, false))
 
 ## Writes what is waiting in SR-7's Cradle into an existing save the moment it changes,
 ## in flight: the Components in it, and the saved Freight without any of them,

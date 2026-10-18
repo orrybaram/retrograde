@@ -6,8 +6,8 @@ class_name BootLog
 ## the dashboard while the game owes it (holds_corner): the HUD keeps the dashboard dark
 ## until the log is done, and powers its pieces back on once the pilot has the controls. It
 ## runs once, on a new game, from a beat after control is handed over until every row is
-## OK - then DIAGNOSTIC COMPLETE holds, and it fades for good. Not saved: a continue never
-## shows it.
+## OK - then DIAGNOSTIC COMPLETE holds, and it fades for good. Only whether it is still owed
+## is saved: a continue from a game quit mid-diagnostic runs it again from the top.
 ##
 ## While it runs the ship's controls are locked (ControlLock) and come back a section at a
 ## time, as each section's heading types: FLIGHT's stick, SONAR's Sweep, MAGNET's clamp,
@@ -138,6 +138,7 @@ func stop() -> void:
 		if checklist.is_complete():
 			_owed = false
 			handed_over = true
+			Save.save_diagnostic_owed(false)
 	checklist = null
 	ControlLock.clear()
 	if _fade:
@@ -161,6 +162,11 @@ func has_locks() -> bool:
 
 func clear_now() -> void:
 	stop()
+
+
+## This game hasn't passed the diagnostic yet (Save keeps it).
+func is_owed() -> bool:
+	return _owed
 
 
 func is_running() -> bool:

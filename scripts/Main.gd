@@ -278,14 +278,20 @@ func start_game() -> void:
 	if diagnostic:
 		get_tree().call_group("boot_log", "begin")
 
-## Continue the save, through the Session pipeline (Session.resume).
+## Continue the save, through the Session pipeline (Session.resume). A game quit before the
+## manual diagnostic passed runs it again from the top, locked from the first frame.
 func load_game() -> void:
 	clear_screen_effects()
-	get_tree().call_group("boot_log", "forget")  # a continue never owes the diagnostic
+	var diagnostic := Save.load_diagnostic_owed() and (force_boot_log or not Playtest.active)
+	get_tree().call_group("boot_log", "forget")
+	if diagnostic:
+		get_tree().call_group("boot_log", "prepare")
 	if start_menu:
 		start_menu.visible = false
 	var session := _session()
 	await session.run(session.resume())
+	if diagnostic:
+		get_tree().call_group("boot_log", "begin")
 
 func _show_game_over_delayed(reason: String) -> void:
 	# Let the explosion play out before the next clone comes up
