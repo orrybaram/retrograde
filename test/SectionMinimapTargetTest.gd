@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## SR-7's missing pieces ping on the minimap's sonar (docs/OPENING.md §5) until each is
-## back in its Mount.
+## SR-7's missing pieces ping on the minimap's sonar (docs/OPENING.md §5) once a Sweep has
+## read their Mount, until each is back in it.
 
 var _world: Node2D
 var _gs: GameState
@@ -26,9 +26,23 @@ func _target(id: String) -> SectionMinimapTarget:
 func _piece(id: String, at := Vector2(2000, 0)) -> Freight:
 	return Freight.spawn_section(_world, id, at, 0.0)
 
+func _read_mount(id: String) -> void:
+	SweepReadout.on(Mount.for_section(get_tree(), id)).read(1.0)
+
+
+func test_a_missing_piece_is_off_the_map_until_its_mount_is_read() -> void:
+	_piece(Sections.FUEL_TANK)
+	var t := _target(Sections.FUEL_TANK)
+	assert_bool(t.is_minimap_visible()).override_failure_message("unread Mount, no ping").is_false()
+	_read_mount(Sections.FUEL_TANK)
+	assert_bool(t.is_minimap_visible()).is_true()
+	assert_bool(_target(Sections.SOLAR_ARRAY).mount.marks_section()) \
+		.override_failure_message("reading one Mount marks only its own piece").is_false()
+
 
 func test_a_missing_piece_pings_from_where_it_is() -> void:
 	var f := _piece(Sections.FUEL_TANK)
+	_read_mount(Sections.FUEL_TANK)
 	var t := _target(Sections.FUEL_TANK)
 	assert_bool(t.is_minimap_visible()).is_true()
 	assert_bool(t.is_ping()).override_failure_message("a missing part answers the beam").is_true()
@@ -45,6 +59,7 @@ func test_no_pulse_without_a_piece() -> void:
 
 func test_a_seated_piece_stops_pulsing() -> void:
 	_piece(Sections.FUEL_TANK)
+	_read_mount(Sections.FUEL_TANK)
 	var m := Mount.for_section(get_tree(), Sections.FUEL_TANK)
 	var t := SectionMinimapTarget.new(m)
 	m.seated = true

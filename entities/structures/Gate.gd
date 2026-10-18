@@ -170,6 +170,14 @@ func _exit_tree() -> void:
 
 # --- State -------------------------------------------------------------------
 
+## What a Sweep reads off it (SweepReadout, undecipherable for now): what it would say once
+## the ship can make it out.
+func readout_rows(tier: int) -> Array[ReadoutRow]:
+	var out: Array[ReadoutRow] = [ReadoutRow.make("STATE", "POWERED" if is_powered() else "DORMANT")]
+	if tier >= 2:
+		out.append(ReadoutRow.make("MODULE", "ONLINE" if is_powered() else "OFFLINE", 2))
+	return out
+
 ## The planet whose Module this Gate powers; the key both are saved under.
 func save_key() -> String:
 	return parent_planet.save_key() if parent_planet else ""

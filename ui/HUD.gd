@@ -74,6 +74,13 @@ func _ready() -> void:
 	add_child(radio)
 	add_child(HullWarning.new())
 	add_child(boot_log)
+	var contacts := ContactLog.new()
+	contacts.radio = radio
+	tracking.blockers.append(contacts)
+	add_child(contacts)
+	var echo := ReadoutEcho.new()
+	echo.blockers = [dashboard, radio, boot_log, contacts]
+	add_child(echo)
 	# Added last so it processes after _update_labels and rots the finished readouts
 	var glitch := HudGlitch.new()
 	glitch.name = "HudGlitch"

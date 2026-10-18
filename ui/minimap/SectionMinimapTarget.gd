@@ -3,8 +3,10 @@ class_name SectionMinimapTarget
 
 ## MinimapTarget for a piece of SR-7 not yet back in its Mount (docs/OPENING.md §5): a
 ## ping, so the beam finding it sends a ring out from it, where solid things only echo. Held
-## on the rim when out of range, so it gives the bearing. Gone once the piece is seated, and
-## while the ship has it clamped (it is right there on the nose).
+## on the rim when out of range, so it gives the bearing. Not there until a Sweep has read
+## the piece's Mount (Mount.marks_section): the alarm at the cut leads the player to the
+## Mount, and the Mount to the piece. Gone once the piece is seated, and while the ship has
+## it clamped (it is right there on the nose).
 
 var mount: Mount
 var _section: Freight = null
@@ -25,7 +27,7 @@ func is_ping() -> bool:
 	return true
 
 func is_minimap_visible() -> bool:
-	if mount == null or not is_instance_valid(mount) or mount.seated:
+	if mount == null or not is_instance_valid(mount) or mount.seated or not mount.marks_section():
 		return false
 	var f := _piece()
 	return f != null and not f.is_clamped()

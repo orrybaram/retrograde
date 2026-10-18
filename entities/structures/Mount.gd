@@ -76,10 +76,13 @@ var _tracking: NodeTrackingTarget
 var _seating: Tween
 ## Sparks along the cut and a red strobe beside it, while the Section is missing.
 var alarm: CutAlarm
+## What a Sweep reads off this Mount (SpaceStation.tscn puts one under each).
+var _readout: SweepReadout
 
 func _ready() -> void:
 	add_to_group("mounts")
 	z_index = 1
+	_readout = SweepReadout.on(self)
 	_part = get_node_or_null(part) as Polygon2D
 	_collision = get_node_or_null(collision) as CollisionPolygon2D
 	if _part:
@@ -151,6 +154,24 @@ static func matching_seat(piece: Transform2D, seat_poses: Array[Transform2D]) ->
 static func in_tolerance(piece: Transform2D, mount: Transform2D) -> bool:
 	return piece.origin.distance_to(mount.origin) <= SEAT_RANGE \
 		and absf(angle_difference(piece.get_rotation(), mount.get_rotation())) <= SEAT_ANGLE
+
+## What a Sweep reads off this Mount (SweepReadout): whether its Section is home, and while
+## it is not, that the Section is now marked on the minimap - reading the Mount is what
+## marks it (marks_section). The cut is clean and nothing tore: the clue, never the story.
+func readout_rows(tier: int) -> Array[ReadoutRow]:
+	var out: Array[ReadoutRow] = [ReadoutRow.make("STATE", "SEATED" if seated else "EMPTY")]
+	if not seated:
+		out.append(ReadoutRow.make("SECTION", "MARKED"))
+	if tier >= 2:
+		out.append(ReadoutRow.make("EDGE", "TORCH CUT", 2))
+	if tier >= 3:
+		out.append(ReadoutRow.make("FRACTURE", "NONE", 3))
+	return out
+
+## Whether the minimap shows where this Mount's Section is (SectionMinimapTarget): once a
+## Sweep has read the Mount. A Mount with nothing to read marks it from the start.
+func marks_section() -> bool:
+	return _readout == null or _readout.is_read()
 
 func tracking_target() -> NodeTrackingTarget:
 	if _tracking == null:

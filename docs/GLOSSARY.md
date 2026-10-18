@@ -83,6 +83,10 @@ _Avoid_: boost (in dialogue and docs; `boost` is the input's name), afterburner,
 Letting go of `action` sends one ring out from the ship; holding first charges that ring to reach further. Things that are part of something **answer** it in purple; at a scrap or seam the bar fills and releasing grades the cut. It is the one thing the ship can always do in open flight — except while carrying **Freight**, when `action` clamps and releases instead (docs/SWEEP.md).
 _Avoid_: minigame, ping, scan
 
+**Readout**:
+What a **Sweep** reads off a thing that carries a `SweepReadout`: a heading and rows typed into the HUD's corner, a tap one tier deep, a charged ring deeper, kept as a Hardware **Record** in the **Log**. Only things given one can be read. Reading a **Mount** marks its **Section** on the minimap. Things of the Titan read back as noise, for now.
+_Avoid_: scan, info, tooltip, ping
+
 **Procedure**:
 A sequence of **Marks** laid down with the **Sweep** that a piece of hardware answers. Built and dormant: nothing in play uses one (`docs/SWEEP.md` §8, `docs/IDEAS.md` §1).
 _Avoid_: code, combo, puzzle, spell
@@ -151,7 +155,7 @@ The player's own screen (`I`), kept by the ship, not by the Titan: what is in th
 _Avoid_: inventory, menu, codex, knowledge repository, database
 
 **Record**:
-One entry in the **Log**: a **Body** the player has **Visited**, or an **Automaton** they have met. A **Body**'s **Record** reads `UNSURVEYED`: nothing surveys a Body yet. The **Log** never shows `? ? ?` — a thing the player has not reached has no row at all, so the **Log** cannot reveal the shape of the system (docs/adr/0003).
+One entry in the **Log**: a **Body** the player has **Visited**, an **Automaton** they have met, or a piece of Hardware a **Sweep** has read (**Readout**). A **Body**'s **Record** reads `UNSURVEYED`: nothing surveys a Body yet. The **Log** never shows `? ? ?` — a thing the player has not reached has no row at all, so the **Log** cannot reveal the shape of the system (docs/adr/0003).
 _Avoid_: entry, dossier, file
 
 **Note**:

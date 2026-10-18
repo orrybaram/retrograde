@@ -1,8 +1,8 @@
 class_name RecordsTab
 extends LogTab
 
-## The Log's second tab: one Record per Body the player has Visited and per Automaton
-## they have met. Both sections list down the left; one detail column on the right
+## The Log's second tab: one Record per Body the player has Visited, per Automaton
+## they have met, and per piece of Hardware a Sweep has read (SweepReadout). Both sections list down the left; one detail column on the right
 ## carries whichever Record the cursor is on, whichever section that is. One cursor runs
 ## through both sections, top to bottom, and one rule divides the tab full height.
 ##
@@ -13,6 +13,10 @@ extends LogTab
 ##
 ## A Record about an Automaton is the player's own note on it, not the Automaton being
 ## present: nothing speaks from inside the Log (docs/GLOSSARY.md).
+##
+## A Hardware Record is what the Sweep read, as deep as it has ever read it
+## (SweepReadout.depth_read), and as the thing stands now. Something undecipherable has no
+## Record: nothing was learned from it.
 
 ## Shown while the player holds no Records. It says what earns one; it never hints at
 ## how many there are to find.
@@ -21,6 +25,7 @@ const EMPTY_STATE := [
 	"",
 	"A BODY EARNS ITS RECORD WHEN YOU FLY INTO ITS ORBIT.",
 	"AN AUTOMATON EARNS ONE WHEN YOU MEET IT.",
+	"HARDWARE EARNS ONE WHEN A SWEEP READS IT.",
 ]
 
 ## What a Record reads before the Body has been surveyed. The Body itself is known — the
@@ -58,8 +63,13 @@ var _automatons: VBoxContainer
 var _automaton_rows: VBoxContainer
 ## The Automatons the player has met, in Automatons.ALL order.
 var _met: Array[NPCData] = []
-## One cursor over every row in the tab, Bodies first and Automatons after, so UP /
-## DOWN carry from one section into the next with no second level of navigation.
+# --- Hardware ----------------------------------------------------------------
+var _hardware: VBoxContainer
+var _hardware_rows: VBoxContainer
+## The readouts the Sweep has read, in the order it read them.
+var _read: Array[SweepReadout] = []
+## One cursor over every row in the tab, Bodies first, then Automatons, then Hardware, so
+## UP / DOWN carry from one section into the next with no second level of navigation.
 var _cursor := 0
 
 
@@ -112,6 +122,8 @@ func _build() -> void:
 	lists.add_child(_bodies)
 	_automatons = _build_automatons()
 	lists.add_child(_automatons)
+	_hardware = _section("H A R D W A R E", func(rows: VBoxContainer) -> void: _hardware_rows = rows)
+	lists.add_child(_hardware)
 	lists.add_child(TerminalWindow.filler())
 	_columns.add_child(lists)
 
@@ -161,23 +173,30 @@ func refresh() -> void:
 	gs = get_tree().get_first_node_in_group("game_state") as GameState
 	_visited = gs.progress.list(Progress.VISITED_BODIES) if gs else PackedStringArray()
 	_met = Automatons.met(gs)
+	_read = read_hardware(get_tree(), gs)
 	_cursor = clampi(_cursor, 0, maxi(_row_count() - 1, 0))
 	# An empty list is correct output for a player who has stayed home and met nobody.
 	_empty.visible = _row_count() == 0
 	_columns.visible = _row_count() > 0
 	_bodies.visible = not _visited.is_empty()
 	_automatons.visible = not _met.is_empty()
+	_hardware.visible = not _read.is_empty()
 	_redraw()
 
 
 ## Every row the cursor moves through, across both sections.
 func _row_count() -> int:
-	return _visited.size() + _met.size()
+	return _visited.size() + _met.size() + _read.size()
 
 
 ## Where the cursor sits in the Automatons section; negative while it is on a Body.
 func _automaton_index() -> int:
 	return _cursor - _visited.size()
+
+
+## Where the cursor sits in the Hardware section; negative above it.
+func _hardware_index() -> int:
+	return _cursor - _visited.size() - _met.size()
 
 
 func _draw_rows() -> void:
@@ -207,7 +226,9 @@ func _draw_rows() -> void:
 func _draw_detail() -> void:
 	_clear(_detail)
 	var index := _automaton_index()
-	if index >= 0:
+	if _hardware_index() >= 0:
+		_draw_hardware_detail(_hardware_index())
+	elif index >= 0:
 		_draw_automaton_detail(index)
 	elif not _visited.is_empty():
 		_draw_body_detail(_visited[_cursor])
@@ -270,6 +291,7 @@ func _move_cursor(direction: int) -> void:
 func _redraw() -> void:
 	_draw_rows()
 	_draw_automaton_rows()
+	_draw_hardware_rows()
 	_draw_detail()
 
 
@@ -329,3 +351,65 @@ func _clear(box: Container) -> void:
 	for child in box.get_children():
 		box.remove_child(child)
 		child.free()
+
+
+# --- Hardware ----------------------------------------------------------------
+
+## Every readout in `tree` the ledger says a Sweep has read, in the order they were read.
+## Undecipherable ones are left out: nothing was learned from them.
+static func read_hardware(tree: SceneTree, state: GameState) -> Array[SweepReadout]:
+	var out: Array[SweepReadout] = []
+	if state == null:
+		return out
+	var by_key := {}
+	for node in tree.get_nodes_in_group("sweep_readouts"):
+		var r := node as SweepReadout
+		if r and not r.undecipherable and r.ledger_key() != "":
+			by_key[r.ledger_key()] = r
+	for at in state.progress.list(Progress.SWEPT_READOUTS):
+		if by_key.has(at):
+			out.append(by_key[at])
+	return out
+
+
+## One row per piece of Hardware read: what it is on the left, its first row's value (its
+## state) on the right.
+func _draw_hardware_rows() -> void:
+	_clear(_hardware_rows)
+	for i in _read.size():
+		var r := _read[i]
+		var selected := i == _hardware_index()
+		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_theme_constant_override("separation", 8)
+		row.add_child(TerminalWindow.label(">" if selected else " ", TEXT_SIZE, Colors.PRIMARY))
+		row.add_child(TerminalWindow.label(r.title if r.title != "" else r.heading, TEXT_SIZE,
+				Colors.PRIMARY if selected else Colors.TEXT))
+		row.add_child(TerminalWindow.spacer())
+		var rows := r.rows_for(1)
+		row.add_child(TerminalWindow.label(rows[0].value if not rows.is_empty() else r.heading,
+				TEXT_SIZE, Colors.PRIMARY_DIM))
+		_hardware_rows.add_child(row)
+
+
+## The selected Hardware's Record: what it is, then every row the Sweep has read it to,
+## as the thing stands now. Unread tiers have no row (docs/adr/0003).
+func _draw_hardware_detail(index: int) -> void:
+	if index >= _read.size():
+		return
+	var r := _read[index]
+	_detail.add_child(TerminalWindow.label(r.title if r.title != "" else r.heading,
+			TerminalWindow.HEADER_SIZE, Colors.PRIMARY))
+	if r.title != "":
+		_detail.add_child(TerminalWindow.label(r.heading, TerminalWindow.SMALL_SIZE, Colors.PRIMARY_DIM))
+	_detail.add_child(_note_gap())
+	for row in r.rows_for(r.depth_read()):
+		_detail.add_child(TerminalWindow.label(hardware_line(row), TEXT_SIZE, Colors.TEXT))
+
+
+## `STATE ........ EMPTY`, in the contact log's columns.
+static func hardware_line(row: ReadoutRow) -> String:
+	var line := ""
+	for seg in BootChecklist.field(row.label, row.value, Colors.TEXT):
+		line += seg[0]
+	return line
