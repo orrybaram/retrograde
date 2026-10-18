@@ -22,6 +22,10 @@ func get_minimap_node() -> Node2D:
 func echo_world_radius() -> float:
 	return 0.0
 
+## How strongly its echo comes back, 0..1: scales the smudge's brightness and flash.
+func echo_strength() -> float:
+	return 1.0
+
 ## A planet: comes back as a disc at true scale rather than a smudge.
 func is_body() -> bool:
 	return false
@@ -32,6 +36,11 @@ func echo_is_diamond() -> bool:
 
 ## Answers the beam with a ping (a hollow ring) rather than a solid echo.
 func is_ping() -> bool:
+	return false
+
+## Charted rather than found: its place is known, so it is drawn steady at its live
+## position every frame instead of waiting on the beam (Minimap._draw_chart).
+func is_charted() -> bool:
 	return false
 
 ## Keep coming back on the rim when out of range, so it can be found.

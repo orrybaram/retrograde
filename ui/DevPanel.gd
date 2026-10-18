@@ -39,6 +39,14 @@ const STORES_JUMP := 25000
 const GRAVITY_STEP := 1.25
 ## How far a gravity row can be pushed either way, so a slip can always be walked back.
 const GRAVITY_LIMIT := Vector2(0.01, 100.0)
+## LEFT/RIGHT on the minimap range multiplies or divides it by this, so each step is the
+## same amount of zoom whether the scope is close in or far out.
+const MINIMAP_STEP := 1.25
+## World units across the minimap's radius, either way.
+const MINIMAP_LIMIT := Vector2(1_000.0, 200_000.0)
+## LEFT/RIGHT on the HUD size moves it by this much, between these limits.
+const HUD_SCALE_STEP := 0.05
+const HUD_SCALE_LIMIT := Vector2(0.5, 2.0)
 ## How far off a planet's centre an orbit warp parks, as a multiple of its scan radius.
 const ORBIT_DISTANCE := 1.0
 ## Warping to the Void parks this far inside its edge, so the clock is already running.
@@ -706,6 +714,34 @@ func _look_rows() -> Array[Dictionary]:
 	var pixel := get_tree().get_first_node_in_group("pixel_pass") as PixelPass
 	var crt := get_tree().get_first_node_in_group("crt") as CRT
 	var ui := get_tree().get_first_node_in_group("ui_glow") as UIGlow
+	var minimap := get_tree().get_first_node_in_group("minimap") as Minimap
+	var hud = get_tree().get_first_node_in_group("hud") # untyped: HUD has no class_name
+
+	if hud:
+		rows.append(_value_row(
+			"HUD SIZE",
+			"Scales the dashboard - minimap, boost gauge and readouts - from the bottom-left corner, %.2fx a step. ENTER puts it back to %.2fx." % [
+				HUD_SCALE_STEP, hud.DEFAULT_DASHBOARD_SCALE],
+			func() -> String: return "%.2fx" % hud.dashboard_scale,
+			func(direction: int) -> void:
+				# Snapped to the step, so repeated nudges don't drift off the round numbers
+				var moved := snappedf(hud.dashboard_scale + direction * HUD_SCALE_STEP, HUD_SCALE_STEP)
+				hud.dashboard_scale = hud.DEFAULT_DASHBOARD_SCALE if direction == 0 \
+					else clampf(moved, HUD_SCALE_LIMIT.x, HUD_SCALE_LIMIT.y)
+		))
+
+	if minimap:
+		rows.append(_value_row(
+			"MINIMAP RANGE",
+			"World units from the minimap's centre to its rim. RIGHT zooms out, LEFT in, %.2fx a step; ENTER puts it back to %d." % [
+				MINIMAP_STEP, roundi(Minimap.DEFAULT_WORLD_RANGE)],
+			func() -> String: return "%d" % roundi(minimap.world_range),
+			func(direction: int) -> void:
+				var moved := minimap.world_range * (MINIMAP_STEP if direction > 0 else 1.0 / MINIMAP_STEP)
+				minimap.world_range = Minimap.DEFAULT_WORLD_RANGE if direction == 0 \
+					else clampf(moved, MINIMAP_LIMIT.x, MINIMAP_LIMIT.y)
+		))
+
 	if pixel == null or crt == null or ui == null:
 		return rows
 

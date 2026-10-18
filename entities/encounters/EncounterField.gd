@@ -16,7 +16,7 @@ class_name EncounterField
 ## the rings have turned. See docs/ENCOUNTERS.md.
 
 ## Radial thickness of a ring, and roughly the arc each cell spans — cells come out about
-## square. Smaller than both the scanner's reach (Minimap.world_range, 10000) and the
+## square. No smaller than the scanner's reach (Minimap.DEFAULT_WORLD_RANGE, 1500) or the
 ## distance at which nodes put themselves to sleep (OrbitalNode.SLEEP_DISTANCE_SQ, 8000),
 ## so with a 3x3 window nothing is ever seen to appear.
 const BAND_WIDTH := 8000.0

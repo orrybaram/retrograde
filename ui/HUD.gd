@@ -34,6 +34,13 @@ const POWER_FLARE_GAIN := 1.6
 	$"DashboardAnchor/HBox/RightColumn/CargoRow",
 ]
 var boot_log: BootLog = null
+const DEFAULT_DASHBOARD_SCALE := 1.35
+## How big the dashboard draws, scaled from its bottom-left corner so it stays tucked into
+## the screen's. The dev panel adjusts it; not saved.
+var dashboard_scale := DEFAULT_DASHBOARD_SCALE:
+	set(value):
+		dashboard_scale = value
+		_apply_dashboard_scale()
 ## Seconds into the power-up, or below 0 when none is running; each piece's laid-out
 ## position while it tears; and its own RNG, so the stutter never shifts gameplay rolls.
 var _power_t := -1.0
@@ -126,6 +133,14 @@ func _fit_dashboard() -> void:
 	var min_size = dashboard.get_combined_minimum_size()
 	dashboard.offset_top = -min_size.y
 	dashboard.offset_right = dashboard.offset_left + min_size.x
+	_apply_dashboard_scale()
+
+
+func _apply_dashboard_scale() -> void:
+	if not dashboard:
+		return
+	dashboard.pivot_offset = Vector2(0.0, dashboard.size.y)
+	dashboard.scale = Vector2.ONE * dashboard_scale
 
 func _process(dt: float) -> void:
 	_cede_corner()

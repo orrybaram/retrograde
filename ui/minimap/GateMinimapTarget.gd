@@ -1,8 +1,8 @@
 extends MinimapTarget
 class_name GateMinimapTarget
 
-## MinimapTarget for a Gate: a medium echo, and nothing to say whether it is powered.
-## Not shown at all until it has been found: its planet surveyed (dormant: nothing surveys yet), or the Gate
+## MinimapTarget for a Gate: a small charted ring, and nothing to say whether it is powered.
+## Not on the chart at all until it has been found: its planet surveyed (dormant: nothing surveys yet), or the Gate
 ## itself reached and named (Gate.identify). A Gate is discovered, never pointed at, and it
 ## does not pin to the rim (docs/adr/0002).
 
@@ -29,3 +29,6 @@ func is_minimap_visible() -> bool:
 
 func get_minimap_node() -> Node2D:
 	return gate
+
+func is_charted() -> bool:
+	return true

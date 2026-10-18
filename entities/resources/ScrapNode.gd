@@ -7,8 +7,8 @@ class_name ScrapNode
 ## the last hit breaks the scrap into a bigger burst. HP mirrors hits left for visuals.
 ## Returns to pool via ResourceNodePool after the depletion animation completes.
 ##
-## Scrap passes for debris until a Sweep finds it: dark, no sparkles, off the minimap, and
-## it takes no cut. A ring reaching it lights it up for the rest of its spawn and sends one
+## Scrap passes for debris until a Sweep finds it: dark, no sparkles, a plain debris echo on
+## the minimap, and it takes no cut. A ring reaching it lights it up for the rest of its spawn and sends one
 ## cream ring back. It is not an answer - nothing purple - scrap is not part of the Titan,
 ## it only shows itself.
 
@@ -242,6 +242,8 @@ func _register_with_minimap() -> void:
 			minimap.unregister_target(minimap_target)
 		minimap_target = ResourceMinimapTarget.new(self)
 		minimap.register_target(minimap_target)
+	# Until a Sweep finds it, it echoes as debris
+	_register_debris_echo()
 
 func _process(delta: float) -> void:
 	if _state_machine and _state_machine.current_state:
@@ -328,11 +330,7 @@ func _deplete_resource() -> void:
 
 	EventBus.unregister_resource_node(self)
 
-	if minimap_target:
-		var minimap = Minimap.get_instance(get_tree())
-		if minimap:
-			minimap.unregister_target(minimap_target)
-		minimap_target = null
+	_unregister_from_minimap()
 
 	# Visual is already hidden by the pop animation — return to pool immediately
 	returned_to_pool.emit()

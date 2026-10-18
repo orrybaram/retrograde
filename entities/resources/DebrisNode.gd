@@ -2,7 +2,7 @@ extends OrbitalNode
 class_name DebrisNode
 
 ## Non-harvestable orbital decoration. Extends OrbitalNode but disables
-## harvest detection (Area2D monitoring) and minimap registration.
+## harvest detection (Area2D monitoring). Comes back on the minimap as plain debris.
 
 func _ready() -> void:
 	_uses_harvest_detection = false
@@ -15,8 +15,7 @@ func _ready() -> void:
 	monitorable = false
 
 func _register_with_minimap() -> void:
-	# Debris not shown on minimap
-	pass
+	_register_debris_echo()
 
 func on_spawn() -> void:
 	super.on_spawn()

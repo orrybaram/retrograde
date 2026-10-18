@@ -35,7 +35,7 @@ func is_minimap_visible() -> bool:
 		return false
 	if resource._is_depleted:
 		return false
-	# Scrap no Sweep has found yet is just debris, and debris isn't on the map
+	# Scrap no Sweep has found yet echoes as debris instead (DebrisMinimapTarget)
 	return resource.revealed
 
 func get_minimap_node() -> Node2D:

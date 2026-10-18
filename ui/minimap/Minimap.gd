@@ -1,19 +1,23 @@
 extends Control
 class_name Minimap
 
-## The ship's sonar: a beam sweeps the scope, and whatever it crosses
-## comes back as an echo that fades until the next pass. There are two kinds of contact:
+## The ship's scope, laid out the way a bridge overlays radar on a chart: the chart is
+## what is known, the sweep is what is found.
 ##
-## - **Solid echoes.** Every body, station, Gate, hull and chunk of scrap comes back as the
-##   same mustard smudge, stretched a little along the sweep. Size is the only thing that
-##   tells them apart: an echo is as big as the thing is (planets are discs at true scale),
-##   down to ECHO_MIN_PX. Reading the scope is a skill, not a legend.
+## - **The chart** (MinimapTarget.is_charted). Planets, the Sun, stations and Gates are drawn
+##   steady at their live positions every frame, never waiting on the beam: planets as dim
+##   discs at true scale, a station traced as its own outline so home can be picked out (a diamond
+##   once it is too small to read), a Gate as a small ring.
+##   The beam still lights a planet's near face as it passes - a crescent return that
+##   fades - the way real sonar only hears the side turned toward it.
+## - **Solid echoes.** Every hull, chunk of scrap and bit of debris comes back as the same
+##   mustard smudge, stretched a little along the sweep. Size is the only thing that tells
+##   them apart, down to ECHO_MIN_PX. Reading the scope is a skill, not a legend.
 ## - **Pings.** Things that answer (MinimapTarget.is_ping): when the beam crosses one it
 ##   sends a hollow ring out, and goes quiet until the next pass.
 ##
-## Home (a station) is the one echo with its own shape, a diamond, so it can be picked out.
-## And anything that turns up after the game has started - scrap a Sweep finds, a Gate
-## once its planet is scanned - rings out once with its first echo: a discovery.
+## Anything that turns up after the game has started - scrap a Sweep finds, a Gate once its
+## planet is scanned - rings out once the first time the beam crosses it: a discovery.
 ##
 ## Echoes are phosphor: each is stamped where the beam found it and fades in place, so a
 ## moving contact leaves stale returns behind. The ship at the centre, the nav target's
@@ -45,14 +49,24 @@ const PING_RINGS := 1
 const PING_REACH_PX := 10.0
 const PING_ALPHA := 0.8
 const PING_LINE_PX := 1.0
-## A planet's disc is drawn this much bigger than true scale, so small ones still read.
-const BODY_SCALE := 1.3
+## The chart: a planet's fill and outline, and home's diamond.
+const CHART_FILL_ALPHA := 0.1
+const CHART_LINE_ALPHA := 0.4
+const CHART_HOME_ALPHA := 0.75
+const STATION_LINE_PX := 1.0
+## A planet's return: how much of its outline the beam lights, centred on the ship, and
+## how faint. A hairline whatever the planet's size - at close range a planet fills the
+## scope, and a return scaled to it would drown everything else.
+const CRESCENT_DEG := 120.0
+const CRESCENT_WIDTH_PX := 1.0
+const CRESCENT_ALPHA := 0.35
 
 ## The display radius of the minimap in pixels
 @export var display_radius: float = 70.0
 
-## The world range that the minimap covers (in world units)
-@export var world_range: float = 10000.0
+## The world range that the minimap covers (in world units). The dev panel zooms it.
+const DEFAULT_WORLD_RANGE := 1500.0
+@export var world_range: float = DEFAULT_WORLD_RANGE
 
 @export var ring_color: Color = Colors.PRIMARY_MEDIUM
 @export var border_color: Color = Colors.UI_BORDER
@@ -78,7 +92,7 @@ const NAV_MARGIN := 4.0 # clearance the nav diamond keeps around the echo it rin
 var targets: Array[MinimapTarget] = []
 var ship: Ship = null
 
-## Echoes on the glass: {target, world (position when found), jitter, time, radius, ping, body}
+## Echoes on the glass: {target, world (position when found), jitter, time, radius, ping, body, pin, charted, strength, discovered}
 var _echoes: Array[Dictionary] = []
 var _last_beam := 0.0
 ## Targets the scope has known about (instance id -> true): whatever was already there, or
@@ -137,8 +151,9 @@ static func glow(age: float) -> float:
 ## An echo's radius on the scope, px: as big as the thing is, never smaller than the minimum.
 func echo_radius(target: MinimapTarget) -> float:
 	var r := target.echo_world_radius() / world_range * display_radius
+	# A body is at true scale: drawn any bigger, a ship skimming its surface sits inside it
 	if target.is_body():
-		return maxf(r * BODY_SCALE, ECHO_MIN_PX)
+		return maxf(r, ECHO_MIN_PX)
 	return maxf(r * ECHO_SCALE, ECHO_MIN_PX)
 
 ## Stamp an echo for everything the beam passed over since last frame, and let the old
@@ -152,8 +167,15 @@ func _sweep() -> void:
 		if not target or not target.is_minimap_visible():
 			continue
 		var id := target.get_instance_id()
+		var charted := target.is_charted()
+		# The chart already shows it: the beam only lights a body's near face, or rings
+		# out a discovery
+		if charted and not (target.is_body() or _undiscovered.has(id)):
+			continue
 		var world := target.get_minimap_position()
 		var at = _to_minimap(center, world, ship_rotation, target.pins_to_edge())
+		if charted and target.is_body():
+			at = _body_return_point(center, world, echo_radius(target), ship_rotation)
 		if at == null:
 			continue
 		var bearing := fposmod(((at as Vector2) - center).angle(), TAU)
@@ -163,8 +185,7 @@ func _sweep() -> void:
 		_echoes.append({
 			"target": target, "world": world, "jitter": jitter, "time": t,
 			"radius": echo_radius(target), "ping": target.is_ping(), "body": target.is_body(),
-			"pin": target.pins_to_edge(), "diamond": target.echo_is_diamond(),
-			"discovered": _undiscovered.erase(id),
+			"pin": target.pins_to_edge(), "charted": charted, "strength": target.echo_strength(), "discovered": _undiscovered.erase(id),
 		})
 	var keep := SWEEP_PERIOD * 1.05 + AFTERGLOW
 	_echoes = _echoes.filter(func(e: Dictionary) -> bool: return t - e["time"] <= keep)
@@ -200,6 +221,7 @@ func _draw() -> void:
 		return
 	var ship_rotation := ship.rotation if rotate_with_ship else 0.0
 	_draw_void(center, ship_rotation)
+	_draw_chart(center, ship_rotation)
 	var t := now()
 	var beam := beam_angle(t)
 	_draw_trail(center, beam)
@@ -227,32 +249,20 @@ func _draw_trail(center: Vector2, beam: float) -> void:
 		draw_colored_polygon(wedge, Color(Colors.PRIMARY, 0.14 * BEAM_ALPHA * (1.0 - f0)))
 
 func _draw_echo(center: Vector2, e: Dictionary, age: float, ship_rotation: float) -> void:
+	if e["charted"]:
+		_draw_charted_return(center, e, age, ship_rotation)
+		return
 	var at = _to_minimap(center, e["world"], ship_rotation, e["pin"])
 	if at == null:
 		return
 	var pos: Vector2 = at + e["jitter"]
-	var a := glow(age)
+	var a := glow(age) * float(e["strength"])
 	var r: float = e["radius"]
 	if e["ping"]:
 		_draw_ping(pos, age, a)
 		return
 	if e["discovered"]:
 		_draw_rings(pos, age)
-	if e["diamond"]:
-		var h := maxf(r, HOME_MIN_PX)
-		var points := PackedVector2Array([pos + Vector2(0, -h), pos + Vector2(h, 0), pos + Vector2(0, h), pos + Vector2(-h, 0)])
-		var halo := PackedVector2Array()
-		for p in points:
-			halo.append(pos + (p - pos) * 1.6)
-		draw_colored_polygon(halo, Color(Colors.PRIMARY, 0.18 * a))
-		draw_colored_polygon(points, Color(Colors.PRIMARY, 0.95 * a))
-		if age < HIT_FLASH_TIME:
-			draw_colored_polygon(points, Color(Colors.CREAM, HIT_FLASH * (1.0 - age / HIT_FLASH_TIME)))
-		return
-	if e["body"]:
-		draw_circle(pos, r, Color(Colors.PRIMARY, 0.22 * a))
-		draw_arc(pos, r, 0, TAU, 32, Color(Colors.PRIMARY, 0.75 * a), maxf(1.0, r * 0.12), true)
-		return
 	# A smudge along the sweep: the arc of the echo's own range, a little each way
 	var rel := pos - center
 	var d := maxf(rel.length(), 0.001)
@@ -261,7 +271,76 @@ func _draw_echo(center: Vector2, e: Dictionary, age: float, ship_rotation: float
 	draw_arc(center, d, th - half, th + half, 6, Color(Colors.PRIMARY, 0.22 * a), r * 2.6)
 	draw_arc(center, d, th - half * 0.7, th + half * 0.7, 6, Color(Colors.PRIMARY, 0.95 * a), r * 1.3)
 	if age < HIT_FLASH_TIME:
-		draw_circle(pos, r * 0.9, Color(Colors.CREAM, HIT_FLASH * (1.0 - age / HIT_FLASH_TIME)))
+		draw_circle(pos, r * 0.9, Color(Colors.CREAM, HIT_FLASH * float(e["strength"]) * (1.0 - age / HIT_FLASH_TIME)))
+
+## What the beam adds to something already on the chart, drawn where it is now (the chart
+## moves with it): a planet's crescent, or a discovery's rings.
+func _draw_charted_return(center: Vector2, e: Dictionary, age: float, ship_rotation: float) -> void:
+	var target: MinimapTarget = e["target"]
+	if not target or not target.is_minimap_visible():
+		return
+	var pos := _to_minimap_unclamped(center, target.get_minimap_position(), ship_rotation)
+	if e["discovered"]:
+		_draw_rings(pos, age)
+	if not e["body"]:
+		return
+	var r := echo_radius(target)
+	var a := glow(age)
+	# Phosphor: only the fresh part of the return reads, the floor would leave a ring
+	a = maxf(0.0, a - AFTERGLOW_FLOOR) / (1.0 - AFTERGLOW_FLOOR)
+	if a <= 0.0:
+		return
+	var toward := (center - pos).angle()
+	var half := deg_to_rad(CRESCENT_DEG) * 0.5
+	draw_arc(pos, r, toward - half, toward + half, 48, Color(Colors.PRIMARY, CRESCENT_ALPHA * a), CRESCENT_WIDTH_PX, true)
+
+## Where the beam meets a body: the point of its outline nearest the ship. Null if the
+## body is off the scope altogether, or the ship is inside it.
+func _body_return_point(center: Vector2, world: Vector2, r: float, ship_rotation: float) -> Variant:
+	var pos := _to_minimap_unclamped(center, world, ship_rotation)
+	var d := (pos - center).length()
+	if d <= r or d - r > display_radius:
+		return null
+	return center + (pos - center) / d * (d - r)
+
+# --- The chart -----------------------------------------------------------------
+
+## Everything charted, at its live position: planets as dim discs, home as a diamond, a
+## Gate as a small ring. Never swept, so it never fades.
+func _draw_chart(center: Vector2, ship_rotation: float) -> void:
+	for target in targets:
+		if not target or not target.is_charted() or not target.is_minimap_visible():
+			continue
+		var pos := _to_minimap_unclamped(center, target.get_minimap_position(), ship_rotation)
+		var r := echo_radius(target)
+		if (pos - center).length() - maxf(r, HOME_MIN_PX) > display_radius:
+			continue
+		if target.is_body():
+			draw_circle(pos, r, Color(Colors.PRIMARY, CHART_FILL_ALPHA))
+			draw_arc(pos, r, 0, TAU, 48, Color(Colors.PRIMARY, CHART_LINE_ALPHA), 1.0, true)
+		elif target is SpaceStationMinimapTarget and r >= HOME_MIN_PX:
+			_draw_station(center, target as SpaceStationMinimapTarget, ship_rotation)
+		elif target.echo_is_diamond():
+			var h := maxf(r, HOME_MIN_PX)
+			var points := PackedVector2Array([pos + Vector2(0, -h), pos + Vector2(h, 0), pos + Vector2(0, h), pos + Vector2(-h, 0)])
+			var halo := PackedVector2Array()
+			for p in points:
+				halo.append(pos + (p - pos) * 1.6)
+			draw_colored_polygon(halo, Color(Colors.PRIMARY, 0.18 * CHART_HOME_ALPHA))
+			draw_colored_polygon(points, Color(Colors.PRIMARY, CHART_HOME_ALPHA))
+		else:
+			draw_arc(pos, r, 0, TAU, 16, Color(Colors.PRIMARY, CHART_LINE_ALPHA * 1.5), 1.0, true)
+
+## A station as its own outline: the merged silhouette, traced in a single line.
+func _draw_station(center: Vector2, target: SpaceStationMinimapTarget, ship_rotation: float) -> void:
+	var line := Color(Colors.PRIMARY, CHART_HOME_ALPHA)
+	for contour in target.chart_outline():
+		var points := PackedVector2Array()
+		for p in contour:
+			points.append(_to_minimap_unclamped(center, p, ship_rotation))
+		if points.size() > 2:
+			points.append(points[0])
+			draw_polyline(points, line, STATION_LINE_PX, true)
 
 ## A ping: hollow rings going out from where the beam found it, and a dot left behind.
 func _draw_ping(pos: Vector2, age: float, a: float) -> void:

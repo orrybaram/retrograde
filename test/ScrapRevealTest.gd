@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## Scrap passes for debris until a Sweep ring reaches it: tinted dark, sparkles hidden, off
-## the minimap and taking no cut. The ring lights it up for the rest of its spawn.
+## Scrap passes for debris until a Sweep ring reaches it: tinted dark, sparkles hidden, a
+## plain debris echo on the minimap and taking no cut. The ring lights it up for the rest of its spawn.
 
 var _scrap: ScrapNode
 
@@ -31,6 +31,19 @@ func test_hidden_scrap_is_off_the_minimap() -> void:
 	assert_bool(target.is_minimap_visible()).is_false()
 	_scrap.reveal(false)
 	assert_bool(target.is_minimap_visible()).is_true()
+
+func test_hidden_scrap_echoes_as_debris_until_found() -> void:
+	var target := DebrisMinimapTarget.new(_scrap)
+	assert_bool(target.is_minimap_visible()).is_true()
+	assert_float(target.echo_world_radius()).is_equal(ResourceMinimapTarget.ECHO_RADIUS)
+	_scrap.reveal(false)
+	assert_bool(target.is_minimap_visible()).is_false()
+
+func test_debris_is_on_the_minimap() -> void:
+	var debris := ResourceNodePool.get_instance("Debris1", self) as DebrisNode
+	await get_tree().process_frame
+	assert_bool(DebrisMinimapTarget.new(debris).is_minimap_visible()).is_true()
+	ResourceNodePool.return_instance(debris)
 
 func test_a_ring_reaching_it_lights_it_up() -> void:
 	_scrap.on_sonar_touched()

@@ -33,6 +33,8 @@ var _orbital_motion = null
 var _rotation_speed: float = 0.0
 var _collision_area_cached: Area2D = null
 var minimap_target: ResourceMinimapTarget = null
+## The plain debris echo: a DebrisNode's only target, and unfound scrap's until a Sweep lights it.
+var debris_target: DebrisMinimapTarget = null
 var spawner_key: String = ""
 var skip_minimap_registration: bool = false
 
@@ -238,12 +240,7 @@ func on_spawn() -> void:
 
 ## Called when returning to pool. Unregister and reset all state.
 func on_despawn() -> void:
-	# Unregister from minimap
-	if minimap_target:
-		var minimap = Minimap.get_instance(get_tree())
-		if minimap:
-			minimap.unregister_target(minimap_target)
-		minimap_target = null
+	_unregister_from_minimap()
 
 	# Reset state variables
 	_cached_in_range = false
@@ -316,6 +313,25 @@ func _reset_visual_state() -> void:
 func _register_with_minimap() -> void:
 	# Virtual - subclasses override
 	pass
+
+## Put this node on the scope as plain debris (DebrisMinimapTarget).
+func _register_debris_echo() -> void:
+	var minimap = Minimap.get_instance(get_tree())
+	if not minimap:
+		return
+	if debris_target:
+		minimap.unregister_target(debris_target)
+	debris_target = DebrisMinimapTarget.new(self)
+	minimap.register_target(debris_target)
+
+## Take every echo this node has off the scope.
+func _unregister_from_minimap() -> void:
+	var minimap = Minimap.get_instance(get_tree())
+	for target in [minimap_target, debris_target]:
+		if target and minimap:
+			minimap.unregister_target(target)
+	minimap_target = null
+	debris_target = null
 
 static func _on_ship_respawned() -> void:
 	_cached_ship = null

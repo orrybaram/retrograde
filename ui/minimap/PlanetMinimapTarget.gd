@@ -1,8 +1,8 @@
 extends MinimapTarget
 class_name PlanetMinimapTarget
 
-## MinimapTarget for a Planet (or the Sun): a disc at true scale. The biggest thing on the
-## scope, and still just an echo.
+## MinimapTarget for a Planet (or the Sun): a disc at true scale, charted. The beam
+## only lights the face turned toward the ship.
 
 var planet: Planet
 
@@ -25,3 +25,6 @@ func is_minimap_visible() -> bool:
 
 func get_minimap_node() -> Node2D:
 	return planet
+
+func is_charted() -> bool:
+	return true
