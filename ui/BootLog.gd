@@ -22,6 +22,9 @@ class_name BootLog
 ## for when to open the later sections.
 
 const TEXT_SIZE := 11
+## The log's own size, bigger than the corner's other text; the dev panel tunes `text_size`.
+const DEFAULT_SIZE := 16
+const SIZE_LIMIT := Vector2i(8, 32)
 const OUTLINE := 4
 ## Its inset from the screen's left edge; its bottom edge is the dashboard's.
 const LEFT_MARGIN := 16.0
@@ -61,6 +64,12 @@ var _passed: Array[String] = []
 ## The last diagnostic ran to PASS, so the pilot was handed the controls (HUD powers the
 ## dashboard up for this, and simply shows it for anything else that ends the log).
 var handed_over := false
+## Font size of the log; its small aside scales with it.
+var text_size := DEFAULT_SIZE:
+	set(value):
+		text_size = clampi(value, SIZE_LIMIT.x, SIZE_LIMIT.y)
+		if _label:
+			_apply_size()
 
 
 func _ready() -> void:
@@ -74,15 +83,11 @@ func _ready() -> void:
 	_label.scroll_active = false
 	_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_label.add_theme_font_size_override("normal_font_size", TEXT_SIZE)
 	_label.add_theme_color_override("default_color", Colors.PRIMARY)
 	_label.add_theme_color_override("font_outline_color", Colors.SPACE_BG)
 	_label.add_theme_constant_override("outline_size", OUTLINE)
 	add_child(_label)
-	var font := _label.get_theme_font("normal_font")
-	if font:
-		var width := BootChecklist.LABEL_COL + BootChecklist.KEY_COL + BootChecklist.STAMP_OK.length() + 1
-		_label.custom_minimum_size.x = font.get_string_size("0".repeat(width), HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE).x
+	_apply_size()
 	EventBus.sonar_pulsed.connect(func(_origin: Vector2) -> void: _use(BootChecklist.SWEEP))
 	EventBus.freight_answered.connect(func() -> void:
 		if checklist:
@@ -119,6 +124,7 @@ func begin() -> void:
 	if not _owed:
 		return
 	checklist = BootChecklist.new()
+	checklist.small_size = _small_size()
 	checklist.restore(_passed)
 	_delay = START_DELAY
 	_carried = 0.0
@@ -215,6 +221,22 @@ func _process(dt: float) -> void:
 		_fade = create_tween()
 		_fade.tween_property(self, "modulate:a", 0.0, FADE_TIME)
 		_fade.tween_callback(stop)
+
+
+func _small_size() -> int:
+	return maxi(1, roundi(text_size * float(BootChecklist.SMALL_SIZE) / TEXT_SIZE))
+
+
+func _apply_size() -> void:
+	_label.add_theme_font_size_override("normal_font_size", text_size)
+	if checklist:
+		checklist.small_size = _small_size()
+		_label.text = checklist.render()
+	var font := _label.get_theme_font("normal_font")
+	if font:
+		var width := BootChecklist.LABEL_COL + BootChecklist.KEY_COL + BootChecklist.STAMP_OK.length() + 1
+		_label.custom_minimum_size.x = font.get_string_size("0".repeat(width), HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x
+	_label.reset_size()
 
 
 ## The speed cap counts in SR-7's frame: keep its velocity current.

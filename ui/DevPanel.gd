@@ -730,6 +730,17 @@ func _look_rows() -> Array[Dictionary]:
 					else clampf(moved, HUD_SCALE_LIMIT.x, HUD_SCALE_LIMIT.y)
 		))
 
+	var boot_log := get_tree().get_first_node_in_group("boot_log") as BootLog
+	if boot_log:
+		rows.append(_value_row(
+			"DIAGNOSTIC SIZE",
+			"Font size of the opening's manual diagnostic log, 1pt a step (%d-%d). ENTER puts it back to %d." % [
+				BootLog.SIZE_LIMIT.x, BootLog.SIZE_LIMIT.y, BootLog.DEFAULT_SIZE],
+			func() -> String: return "%dpt" % boot_log.text_size,
+			func(direction: int) -> void:
+				boot_log.text_size = BootLog.DEFAULT_SIZE if direction == 0 else boot_log.text_size + direction
+		))
+
 	if minimap:
 		rows.append(_value_row(
 			"MINIMAP RANGE",

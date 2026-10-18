@@ -102,6 +102,8 @@ var time := 0.0
 ## How far the hold in progress has got (0-1): the magnet's pull, or the release. A hold
 ## row's stamp fills with it.
 var hold_progress := 0.0
+## The aside's font size; BootLog scales it with the log's.
+var small_size := SMALL_SIZE
 var _rows: Array[Dictionary] = []
 var _used := {}
 var _open := {}
@@ -416,7 +418,7 @@ func _render(bbcode: bool) -> String:
 		if typing or (row == _rows[-1] and is_complete() and cursor_on):
 			line += "[color=#%s]%s[/color]" % [Colors.hex(Colors.PRIMARY), CURSOR] if bbcode else CURSOR
 		if bbcode and row.get("small", false):
-			line = "[font_size=%d]%s[/font_size]" % [SMALL_SIZE, line]
+			line = "[font_size=%d]%s[/font_size]" % [small_size, line]
 		lines.append(line)
 	return "\n".join(lines)
 
