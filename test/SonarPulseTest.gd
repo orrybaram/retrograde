@@ -112,3 +112,31 @@ func test_a_hold_that_was_refused_stays_ignored_until_let_go() -> void:
 	assert_int(_ship.sonar.ring_count()).is_equal(0)
 	await _hold_action(true)
 	assert_bool(_ship.sonar.charging).is_true()
+
+func _readout_at(at: Vector2) -> SweepReadout:
+	var owner_node := auto_free(Node2D.new()) as Node2D
+	add_child(owner_node)
+	owner_node.global_position = at
+	var r := SweepReadout.new()
+	owner_node.add_child(r)
+	return r
+
+func test_a_sweep_reads_only_the_readout_closest_to_the_ship() -> void:
+	_ship.global_position = Vector2.ZERO
+	var far := _readout_at(Vector2(200, 0))
+	var near := _readout_at(Vector2(-80, 40))
+	var beyond := _readout_at(Vector2(-60, 0) * 100.0)
+	assert_object(_ship.sonar.closest_readout(Vector2.ZERO, 1.0)).is_same(near)
+	var read: Array[Node] = []
+	var on_read := func(r: Node, _tier: int, _rows: Array) -> void: read.append(r)
+	EventBus.readout_swept.connect(on_read)
+	_ship.sonar.send(3.0)
+	await await_millis(int(SonarPulse.LIFETIME * 3.0 * 1000.0) + 100)
+	EventBus.readout_swept.disconnect(on_read)
+	assert_array(read).contains_exactly([near])
+	assert_bool(far.is_inside_tree() and beyond.is_inside_tree()).is_true()
+
+func test_nothing_in_reach_reads_nothing() -> void:
+	_ship.global_position = Vector2.ZERO
+	_readout_at(Vector2(SonarPulse.END_RADIUS * 2.0, 0))
+	assert_object(_ship.sonar.closest_readout(Vector2.ZERO, 1.0)).is_null()

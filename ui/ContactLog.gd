@@ -8,7 +8,8 @@ class_name ContactLog
 ##
 ## Each read is an entry that types, holds and fades; the newest is at the bottom, nearest
 ## the corner, and the oldest goes when there are too many. A read of something already
-## showing types its entry over again instead of adding another.
+## showing keeps its entry up: what is typed stays, only what is new types on (a deeper
+## read's rows), and the hold starts over.
 
 const TEXT_SIZE := BootLog.TEXT_SIZE
 const OUTLINE := BootLog.OUTLINE
@@ -52,10 +53,13 @@ func show_read(readout: Node, _tier: int, rows: Array) -> void:
 	var id := r.get_instance_id()
 	for entry in _entries:
 		if entry.id == id:
+			var shown := mini(int(entry.age * TYPE_RATE), entry.length)
+			var kept := mini(shown, _common_prefix(_flat(entry.lines), _flat(lines)))
 			entry.lines = lines
 			entry.length = _length(lines)
-			entry.age = 0.0
+			entry.age = kept / TYPE_RATE
 			entry.label.modulate.a = 1.0
+			entry.label.text = _render(lines, kept)
 			return
 	var entry := {"id": id, "label": _make_label(), "lines": lines, "length": _length(lines), "age": 0.0}
 	_entries.append(entry)
@@ -138,6 +142,23 @@ static func _render(lines: Array, chars: int) -> String:
 			typed += "[color=#%s]%s[/color]" % [Colors.hex(seg[1]), shown.replace("[", "[lb]")]
 		out.append(typed)
 	return "\n".join(out)
+
+
+## `lines` as the characters they type, in order.
+static func _flat(lines: Array) -> String:
+	var out := ""
+	for line in lines:
+		for seg in line:
+			out += seg[0]
+	return out
+
+
+static func _common_prefix(a: String, b: String) -> int:
+	var n := mini(a.length(), b.length())
+	for i in n:
+		if a[i] != b[i]:
+			return i
+	return n
 
 
 static func _length(lines: Array) -> int:

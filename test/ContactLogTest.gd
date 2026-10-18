@@ -55,6 +55,33 @@ func test_reading_the_same_thing_again_types_over_its_entry() -> void:
 	assert_bool(_log.text().contains("TORCH CUT")).is_true()
 
 
+func test_reading_the_same_thing_again_leaves_it_up() -> void:
+	var r := _readout("FUEL TANK")
+	_log.show_read(r, 1, _rows())
+	_type_out()
+	var typed := _log.text()
+	_log._process(ContactLog.HOLD - 1.0)
+	_log.show_read(r, 1, _rows())
+	assert_str(_log.text()).override_failure_message("not wiped to retype").is_equal(typed)
+	_log._process(0.05)
+	assert_str(_log.text()).is_equal(typed)
+	_log._process(ContactLog.HOLD - 0.5)
+	assert_int(_log._entries.size()).override_failure_message("its hold started over").is_equal(1)
+
+
+func test_a_deeper_read_types_on_only_what_is_new() -> void:
+	var r := _readout("FUEL TANK")
+	_log.show_read(r, 1, _rows())
+	_type_out()
+	var typed := _log.text()
+	_log.show_read(r, 2, [ReadoutRow.make("STATE", "EMPTY"), ReadoutRow.make("EDGE", "TORCH CUT", 2)])
+	_log._process(0.05)
+	assert_bool(_log.text().begins_with(typed)).override_failure_message("what was typed stays").is_true()
+	assert_bool(_log.text().contains("TORCH CUT")).is_false()
+	_type_out()
+	assert_bool(_log.text().contains("TORCH CUT")).is_true()
+
+
 func test_too_many_reads_drop_the_oldest() -> void:
 	for i in ContactLog.MAX_ENTRIES + 1:
 		_log.show_read(_readout("PART %d" % i), 1, _rows())

@@ -55,7 +55,7 @@ SweepReadout (child Node2D, sonar_listeners) -> on_swept -> tier_for(strength) -
 - Gate anything on having been read with `SweepReadout.on(owner).is_read()` (a Mount's
   Section stays off the minimap until then: `Mount.marks_section`).
 - Presenters listen on `EventBus.readout_swept`; the readout itself never draws: `ContactLog`
-  (rows, bottom right), `ReadoutEcho` (name over the thing), and the Log's HARDWARE Records
+  (rows, bottom right), `ReadoutShimmer` (the thing shimmers), and the Log's HARDWARE Records
   (`RecordsTab.read_hardware`, reads the ledger, not the signal).
 - One scene, many instances (a Gate): `key` is a prefix and the owner's `save_key()` completes it.
 - Titan things set `undecipherable`: same read, rows shown as seeded glyph noise in

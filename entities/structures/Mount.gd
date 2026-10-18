@@ -168,6 +168,14 @@ func readout_rows(tier: int) -> Array[ReadoutRow]:
 		out.append(ReadoutRow.make("FRACTURE", "NONE", 3))
 	return out
 
+## What shimmers when a Sweep reads it (ReadoutShimmer): the cut edges it draws, and the
+## Section itself once it is home - that is the station's polygon, not a child.
+func shimmer_items() -> Array[CanvasItem]:
+	var out: Array[CanvasItem] = [self]
+	if _part:
+		out.append(_part)
+	return out
+
 ## Whether the minimap shows where this Mount's Section is (SectionMinimapTarget): once a
 ## Sweep has read the Mount. A Mount with nothing to read marks it from the start.
 func marks_section() -> bool:

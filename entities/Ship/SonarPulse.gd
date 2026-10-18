@@ -103,8 +103,11 @@ static func strength_for(held_seconds: float) -> float:
 
 ## Tell every listener within reach when this ring's edge arrives at it. The timers hold
 ## instance ids, not nodes, so a listener freed meanwhile is simply skipped. A ring carrying
-## `marks` hands them to listeners that take a Procedure.
+## `marks` hands them to listeners that take a Procedure. A Sweep reads only the one
+## SweepReadout in reach closest to the ship (closest_readout); the rest hear a plain ring.
 func _reach_listeners(origin: Vector2, strength: float, marks: Array[int] = []) -> void:
+	var reader := closest_readout(origin, strength)
+	var reads := reader.get_instance_id() if reader else 0
 	for node in get_tree().get_nodes_in_group("sonar_listeners"):
 		if not node.has_method("sonar_point") or not node.has_method("on_sonar_touched"):
 			continue
@@ -131,8 +134,22 @@ func _reach_listeners(origin: Vector2, strength: float, marks: Array[int] = []) 
 					listener.on_sonar_touched(answer_strength, clarity)
 				else:
 					listener.on_sonar_touched(strength)
-				if sweep and listener.has_method("on_swept"):
+				if sweep and listener.has_method("on_swept") and (not listener is SweepReadout or id == reads):
 					listener.on_swept())
+
+## The SweepReadout a ring of `strength` from `origin` reaches first - the one it reads - or null.
+func closest_readout(origin: Vector2, strength: float) -> SweepReadout:
+	var best: SweepReadout = null
+	var best_d := INF
+	for node in get_tree().get_nodes_in_group("sweep_readouts"):
+		var r := node as SweepReadout
+		if r == null:
+			continue
+		var d := origin.distance_to(r.sonar_point())
+		if d < best_d and time_to_reach(d, strength) >= 0.0:
+			best = r
+			best_d = d
+	return best
 
 ## The strength an answer from `distance` px off, past the reach of a ring of `strength`,
 ## is sent back with: enough that its ring (SonarEcho.answer_ping) comes back to the ship.

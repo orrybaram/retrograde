@@ -383,10 +383,11 @@ child; its position is the point the ring has to reach. It is deliberate: only w
 can be read, and scrap, debris and Freight keep the answers in §2.
 
 ```
+Sweep fires -> SonarPulse.closest_readout: the one readout in reach nearest the ship
 ring edge reaches SweepReadout.sonar_point() -> on_sonar_touched(strength) -> on_swept()
   -> tier = tier_for(strength) -> rows = owner.readout_rows(tier), else its exported rows
   -> Progress.SWEPT_READOUTS marked by key -> EventBus.readout_swept(readout, tier, rows)
-  -> ContactLog (HUD, bottom right) types the rows; ReadoutEcho blooms the name over the thing
+  -> ContactLog (HUD, bottom right) types the rows; ReadoutShimmer shimmers the thing
   -> the Log's Records keep a HARDWARE Record of it
 ```
 
@@ -396,6 +397,8 @@ ring edge reaches SweepReadout.sonar_point() -> on_sonar_touched(strength) -> on
 | 1.5 s held (strength 2) | 2 | Detail |
 | 3 s held (strength 3+) | 3 | Clues, never the story |
 
+- **One read a Sweep**: of every readout a ring reaches, only the one closest to the ship when
+  it fires is read (`SonarPulse.closest_readout`); the rest hear a plain ring.
 - **Only the ship's Sweep reads**: `on_swept`, so SR-7's dish (`SonarPulse.sweep` off) reads
   nothing. A readout draws nothing and never answers in purple.
 - **Rows** are `ReadoutRow` resources (`label`, `value`, `tier`). An owner with live state
@@ -405,11 +408,15 @@ ring edge reaches SweepReadout.sonar_point() -> on_sonar_touched(strength) -> on
 - **The ContactLog** (`ui/ContactLog.gd`) types each read in the diagnostic's grammar
   (`MOUNT / FUEL TANK`, then `STATE ...... EMPTY` rows ending in the diagnostic's stamp column)
   into the bottom-right corner, above UNIT-7's panel while that is up. An entry holds `HOLD`
-  (6 s) after typing, then fades; at most `MAX_ENTRIES` (3), newest at the bottom; a re-read
-  types over its own entry.
-- **The ReadoutEcho** (`ui/ReadoutEcho.gd`) blooms the thing's title (or heading) over it in the
-  world, typed, held `HOLD` (2.2 s) and faded, so the eye knows which thing answered. It hides
-  while it overlaps a HUD panel.
+  (6 s) after typing, then fades; at most `MAX_ENTRIES` (3), newest at the bottom. Re-reading
+  something already showing leaves its entry up: the typed text stays, only new rows (a deeper
+  read) type on, and the hold starts over.
+- **The ReadoutShimmer** (`ui/ReadoutShimmer.gd`) makes the thing itself shimmer: diagonal bands
+  of light (`ReadoutShimmer.gdshader`, added on top so dark hull lights too) run across the owner
+  and every CanvasItem under it without a material of its own, for `DURATION` (1.6 s), cream, or
+  the Titan's purple when undecipherable - so the eye knows which thing answered. No words in the
+  world; the material is handed back after. An owner whose look lives elsewhere names it with
+  `shimmer_items()` (a Mount adds its Section's station polygon, so a seated tank shimmers).
 - **The Log keeps it.** Each read earns a Record under **H A R D W A R E** in the Records tab
   (`RecordsTab.read_hardware`), in the order read, holding every row down to the deepest tier
   ever read (`SweepReadout.depth_read`; a deeper read is kept as `<key>#<tier>`), as the thing
@@ -424,10 +431,10 @@ ring edge reaches SweepReadout.sonar_point() -> on_sonar_touched(strength) -> on
 `mount_solar_array`, `mount_dorsal_arm`). `Mount.readout_rows`: `STATE` EMPTY / SEATED and, while
 empty, `SECTION ... MARKED` (tier 1); `EDGE ... TORCH CUT` (2); `FRACTURE ... NONE` (3). Reading
 the Mount is what puts its Section's rim ping on the minimap (`Mount.marks_section`,
-`SectionMinimapTarget`): the alarm at the cut leads to the Mount, the Mount to the piece. A charged
-Sweep beside the station reads every Mount in reach at once.
+`SectionMinimapTarget`): the alarm at the cut leads to the Mount, the Mount to the piece. Like any
+Sweep, a charged one beside the station reads only the nearest Mount.
 
-Tested by `test/SweepReadoutTest.gd`, `test/ContactLogTest.gd`, `test/ReadoutEchoTest.gd`,
+Tested by `test/SweepReadoutTest.gd`, `test/ContactLogTest.gd`, `test/ReadoutShimmerTest.gd`,
 `test/HardwareRecordTest.gd`, `test/SectionMinimapTargetTest.gd`, `playtests/readout.play`.
 
 ---
