@@ -96,7 +96,7 @@ func run(launch: Launch) -> void:
 
 
 ## A new game: the world as the scene starts it, nothing earned, and the ship adrift outside
-## SR-7 with its dock's arm still in (docs/OPENING.md §3). SR-7 is dark, so nothing boots:
+## SR-7 with its dock's arm still in. SR-7 is dark, so nothing boots:
 ## the dark covers the spawn. The planets are announced before the ship is placed, as on a
 ## resume; EncounterField waits for the respawn to load the cells around the ship.
 func new_game() -> Launch:

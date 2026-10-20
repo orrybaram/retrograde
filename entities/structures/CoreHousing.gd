@@ -1,7 +1,7 @@
 extends Node2D
 class_name CoreHousing
 
-## SR-7's core, in the hull section at the middle of the station (docs/OPENING.md §6): the
+## SR-7's core, in the hull section at the middle of the station: the
 ## end of Act 1. It is not a component in a housing - it is a recessed bay of window slots
 ## set in ordinary hull, drawn the way StationLights draws every other window on SR-7.
 ##
@@ -48,7 +48,7 @@ const SLOT_X: Array[float] = [-75.0, -43.0, -11.0, 21.0, 70.0]
 ## How far each slot sits out of true. Nobody straightens these and the cold start does not
 ## undo them: the row was refitted in a hurry by whoever took SR-7 apart, and the station
 ## keeps its scars the way the cracked vat and the tally scratched beside it do
-## (docs/OPENING.md §2, "Why it is broken" - clued, never stated).
+## (clued, never stated).
 const SLOT_KINK: Array[Vector2] = [
 	Vector2(-3.2, -4.0), Vector2(-1.6, 7.0), Vector2(0.0, -4.0),
 	Vector2(1.6, 7.0), Vector2(3.2, -4.0),

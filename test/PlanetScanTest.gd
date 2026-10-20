@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## Tests for PlanetScan: the inner-orbit reach that marks a Body Visited and the survey
-## readout its Record holds. The planetary scan itself is gone (docs/IDEAS.md §13).
+## readout its Record holds. The planetary scan itself is gone.
 
 var _gs: GameState
 
@@ -52,7 +52,7 @@ func test_deepest_prefers_the_deeper_field() -> void:
 
 
 ## The sun is a Body like any other: it is reached by the same rule, and its survey
-## honestly reports no ore (docs/GLOSSARY.md, Body; docs/adr/0003).
+## honestly reports no ore (Body).
 func test_the_sun_reads_like_any_other_body() -> void:
 	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN)
 	sun.planet_name = "Sun"

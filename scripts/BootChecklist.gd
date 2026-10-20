@@ -1,8 +1,8 @@
 extends RefCounted
 class_name BootChecklist
 
-## The ship's manual diagnostic, run once on a new game (docs/OPENING.md §4, the boot text
-## channel): a short terminal log that says the controls are locked for testing, releases
+## The ship's manual diagnostic, run once on a new game in the boot text
+## channel: a short terminal log that says the controls are locked for testing, releases
 ## them a system at a time, and stamps each [ OK ] the first time the pilot uses it. It is the model only - what is listed, what is done, how far
 ## each row has typed - so it can be tested without a scene. `BootLog` feeds it from the
 ## ship and draws it on the HUD.
@@ -102,6 +102,8 @@ var time := 0.0
 ## How far the hold in progress has got (0-1): the magnet's pull, or the release. A hold
 ## row's stamp fills with it.
 var hold_progress := 0.0
+## The aside's font size; BootLog scales it with the log's.
+var small_size := SMALL_SIZE
 var _rows: Array[Dictionary] = []
 var _used := {}
 var _open := {}
@@ -416,7 +418,7 @@ func _render(bbcode: bool) -> String:
 		if typing or (row == _rows[-1] and is_complete() and cursor_on):
 			line += "[color=#%s]%s[/color]" % [Colors.hex(Colors.PRIMARY), CURSOR] if bbcode else CURSOR
 		if bbcode and row.get("small", false):
-			line = "[font_size=%d]%s[/font_size]" % [SMALL_SIZE, line]
+			line = "[font_size=%d]%s[/font_size]" % [small_size, line]
 		lines.append(line)
 	return "\n".join(lines)
 

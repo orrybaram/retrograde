@@ -479,7 +479,7 @@ static func _arrival_radius(body: Node2D) -> float:
 
 ## The chart is the Titan's own map, handed over one region at a time: powering a
 ## planet's Gate charts that planet, its orbit, its moons and their orbits, its station
-## and the Gate itself (docs/adr/0002). Nothing else is drawn, however close the ship
+## and the Gate itself. Nothing else is drawn, however close the ship
 ## has flown to it — the minimap is what covers "what is near me".
 ##
 ## Home is the exception. The player's own planet and its station are on the chart from
@@ -958,7 +958,7 @@ func _gate_label(gate: Gate) -> String:
 	var planet := gate.parent_planet
 	return "%s GATE" % (planet.planet_name if planet else gate.save_key()).to_upper()
 
-## The ship's own marks (docs/adr/0012): Freight it has handled and let go of, and hulls
+## The ship's own marks: Freight it has handled and let go of, and hulls
 ## abandoned with Freight still clamped, labelled with what they hold. Each is
 ## {"position", "label", "hull"}. They are the ship's, not the Titan's, so they are drawn
 ## over uncharted space too. Untouched Freight and empty derelicts have none.

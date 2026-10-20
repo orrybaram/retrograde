@@ -3,9 +3,9 @@ You are implementing GitHub issue #{number}: {title}
 {body}
 
 Before writing code:
-- Read CLAUDE.md and .claude/PATTERNS.md for the project's rules (Colors autoload, monospace, arrow-key UI, state machines, case-sensitive res:// paths).
-- Read CONTEXT.md for the domain glossary. Use its vocabulary in code, comments and UI text: Titan, Module, Gate, Core, Sun Station, Titan Influence, Automaton, Unidentified, Chart, Charted. Never write "warp gate", "teleport" or "containment".
-- Read docs/adr/0001-titan-is-powered-down-not-contained.md and docs/adr/0002-chart-starts-blank-and-is-filled-by-gates.md. The Titan is powered down, not imprisoned; the player only ever restores.
+- Read CLAUDE.md for the project's rules (Colors autoload, monospace, arrow-key UI, state machines, case-sensitive res:// paths).
+- Use the game's vocabulary in code, comments and UI text: Titan, Module, Gate, Core, Sun Station, Titan Influence, Automaton, Unidentified, Chart, Charted. Never write "warp gate", "teleport" or "containment".
+- The Titan is powered down, not imprisoned; the player only ever restores.
 
 The Gate foundation is already on main (issue #68). Build on it; do not reimplement or rename it:
 - `entities/structures/Gate.gd` (`class_name Gate`): `save_key()`, `is_powered()`, `can_afford(gs)`, `power(gs)`, the `Dockable` methods, `RADIUS`, `DOCK_DISTANCE`, `@export power_cost`. Five Gates are already placed in `scenes/HomeSystem.tscn` under Veld, Crom, Sonder, Roke and TERRA-0.

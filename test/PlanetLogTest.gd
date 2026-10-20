@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## Visited: a Body whose inner orbit the ship has entered earns its Record in the Log
-## (docs/adr/0003). Covers the marking reach, the moon and sun
+## Visited: a Body whose inner orbit the ship has entered earns its Record in the Log.
+## Covers the marking reach, the moon and sun
 ## keys, the save round trip, and the Records tab that reads it back.
 
 const SAVE_FILE := "user://visit_test_save.cfg"
@@ -76,7 +76,7 @@ func test_a_record_is_earned_once() -> void:
 	assert_int(_gs.progress.count(Progress.VISITED_BODIES)).is_equal(1)
 
 
-## Visiting works from the first minute and surveys nothing (docs/adr/0003).
+## Visiting works from the first minute and surveys nothing.
 func test_visiting_does_not_survey() -> void:
 	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
 	var planet_log := _planet_log()
@@ -216,7 +216,7 @@ func test_the_detail_pane_is_the_survey_readout() -> void:
 			.contains_exactly(Array(PlanetScan.readout_lines(planet)))
 
 ## The unscanned Record holds the rows a Record carries either way and says plainly
-## that nothing has surveyed the Body — never `? ? ?` (docs/adr/0003).
+## that nothing has surveyed the Body — never `? ? ?`.
 func test_scanning_swaps_the_no_survey_line_for_the_readout() -> void:
 	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
 	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
@@ -243,8 +243,8 @@ func test_a_surveyed_moon_still_names_what_it_orbits() -> void:
 	assert_str(detail).contains("BARREN")
 
 ## The sun reads honestly through the same instrument as everything else: its own class,
-## no habitability and no ore, with no row left empty and no special case (docs/GLOSSARY.md,
-## Body). It is not a moon, so it carries no ORBITS row.
+## no habitability and no ore, with no row left empty and no special case.
+## It is not a moon, so it carries no ORBITS row.
 func test_the_suns_record_reads_honestly() -> void:
 	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")
 	_gs.progress.mark(Progress.VISITED_BODIES, sun.save_key())

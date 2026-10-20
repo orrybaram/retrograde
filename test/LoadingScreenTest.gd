@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## Tests for the boot terminal. The clone manifest line is a story beat, not filler
-## (docs/OPENING.md §8), so it's pinned here against a tidy-up.
+## Tests for the boot terminal. The clone manifest line is a story beat, not filler,
+## so it's pinned here against a tidy-up.
 
 const SCENE := preload("res://ui/LoadingScreen.tscn")
 

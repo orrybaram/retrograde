@@ -6,8 +6,8 @@ class_name IntroScreen
 ## finished text until the player presses ENTER.
 ##
 ## Where you are, that something has just happened, and that everything is failing - in
-## the flat voice of a record nobody signs. It never says what happened
-## (docs/OPENING.md §2, "Why it is broken"), and it never mentions the player.
+## the flat voice of a record nobody signs. It never says what happened,
+## and it never mentions the player.
 
 const LINES: Array[String] = [
 	"KSD-78 SYSTEM, OUTER REGION.",

@@ -1,7 +1,7 @@
 extends Node2D
 class_name HaulerWreck
 
-## The crashed hauler on Veld (docs/OPENING.md §9): a long freighter broken in two across
+## The crashed hauler on Veld: a long freighter broken in two across
 ## the planet's ground, and between the halves, standing Lug-up out of the dirt where it
 ## was torn from the spine, its hold - the Cargo Bay, the first Component. The wreck is
 ## only looks; the Cargo Bay is Freight like any other, buried (Freight.bury_in) so it
@@ -17,7 +17,7 @@ const BAY_EXPOSED := 70.0
 ## How far off straight up it leans (radians).
 const BAY_LEAN := 0.12
 
-## Unidentified until flown to (docs/GLOSSARY.md, Identifiable): once SR-7's cold start has
+## Unidentified until flown to (Identifiable): once SR-7's cold start has
 ## UNIT-7 awake to look, the ship coming within Identifiable.RANGE gets it named, flatly.
 const NAME := "HAULER, DOWN"
 const MSG_IDENTIFIED := preload("res://entities/Robot/radio/messages/hauler_identified.tres")

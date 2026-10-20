@@ -6,7 +6,7 @@ extends GdUnitTestSuite
 ## the one cursor running through both.
 ##
 ## The Log lists only what the player reached, so the empty state has to stay
-## reachable (docs/adr/0003).
+## reachable.
 
 const RADIO_SCRIPT := preload("res://scripts/RobotRadio.gd")
 const SAVE_FILE := "user://automaton_test_save.cfg"
@@ -108,7 +108,7 @@ func test_every_step_of_influence_reveals_the_guides_notes() -> void:
 
 
 ## A Note is the player's own writing, not the Guide talking: terminal uppercase, and
-## none of the Guide's radio or greeting register (docs/GLOSSARY.md).
+## none of the Guide's radio or greeting register.
 func test_the_guides_notes_are_not_the_guide_talking() -> void:
 	for note in GUIDE.notes_at(Gate.MODULE_COUNT):
 		assert_str(note).is_equal(note.to_upper())
@@ -135,7 +135,7 @@ func test_a_met_automaton_gets_a_row_under_the_heading() -> void:
 	assert_bool(tab._empty.visible).is_false()
 
 
-## No Record, no row and no heading — and never `? ? ?` (docs/adr/0003).
+## No Record, no row and no heading — and never `? ? ?`.
 func test_nothing_met_and_nowhere_visited_leaves_the_empty_state_up() -> void:
 	var tab := _records_tab()
 	assert_array(tab._met).is_empty()
@@ -183,7 +183,7 @@ func test_the_pane_lists_the_notes_the_player_has_reached() -> void:
 
 
 ## A locked Note leaves no placeholder and no count — the pane shows what the player
-## reached and nothing standing in for the rest (docs/adr/0003).
+## reached and nothing standing in for the rest.
 func test_a_locked_note_leaves_nothing_behind_in_the_pane() -> void:
 	_gs.progress.mark(Progress.MET_AUTOMATONS, "UNIT-7")
 	var tab := _records_tab()

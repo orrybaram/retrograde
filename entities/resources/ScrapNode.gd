@@ -11,6 +11,10 @@ class_name ScrapNode
 ## the minimap, and it takes no cut. A ring reaching it lights it up for the rest of its spawn and sends one
 ## cream ring back. It is not an answer - nothing purple - scrap is not part of the Titan,
 ## it only shows itself.
+##
+## Found, it can be read up close like a Mount (a discoverable Readout):
+## every piece shares the key `scrap` (`scrap_trophy` for a trophy), so the first one read
+## files the Log's Record for scrap and the rest only show their rows.
 
 signal harvest_started
 signal harvest_stopped
@@ -24,6 +28,9 @@ signal can_harvest_changed(can_harvest: bool)
 
 const NORMAL_HITS := 3
 const TROPHY_HITS := 5
+## How close the ship comes to read found scrap: tighter than a Mount's, since scrap sits
+## among debris and only the nearest thing in reach reads.
+const READOUT_REACH := 140.0
 
 ## What unfound scrap is tinted down to: the colour of the ring's debris.
 const DORMANT_COLOR := Colors.HULL_MID
@@ -39,19 +46,19 @@ const REVEAL_ECHO_WIDTH := 2.0
 @export var is_trophy: bool = false:
 	set(value):
 		is_trophy = value
+		_sync_readout()
 		if is_node_ready() and is_trophy:
 			_activate_trophy()
 
 var _ship_in_range: Ship = null
 var _is_depleted: bool = false
-var _indicator_target = null
-var _indicator_manager = null
 var sparkle_particles: SparkleParticles = null
 var _trophy_pulse_tween: Tween = null
 var _state_machine: StateMachine
 var health_component: HealthComponent
 var _shape_instance: Node2D = null
 var timing: HarvestTiming = null  # created lazily when a harvest starts; null = untouched
+var _readout: Readout = null
 var hits_left: int = NORMAL_HITS
 ## Found by a Sweep ring this spawn. Until then it looks and acts like debris.
 var revealed := false
@@ -72,6 +79,9 @@ func _ready() -> void:
 	monitoring = false  # HarvestCone detects us via area_entered; we don't body-detect the ship
 	_load_shape()  # before super so OrbitalNode caches CollisionArea from the shape sub-scene
 	super._ready()
+	# Only scrap that hides is read this way; a container or a derelict says what it is by shape
+	if _hides_until_pinged():
+		_add_readout()
 
 	health_component = HealthComponent.new()
 	health_component.name = "HealthComponent"
@@ -85,13 +95,6 @@ func _ready() -> void:
 
 	# Register with EventBus
 	EventBus.register_resource_node(self)
-
-	# Find IndicatorManager
-	_indicator_manager = get_tree().get_first_node_in_group("indicator_manager")
-	if not _indicator_manager:
-		var main = get_tree().get_first_node_in_group("main")
-		if main:
-			_indicator_manager = main.get_node_or_null("%IndicatorManager")
 
 	# Initialize max_amount if not set
 	if max_amount == 0:
@@ -155,6 +158,38 @@ func _pulses_when_trophy() -> bool:
 func _hides_until_pinged() -> bool:
 	return true
 
+func _add_readout() -> void:
+	Readout.register_kind("scrap", "SCRAP", "", "SALVAGE", [
+		ReadoutRow.make("HITS", "%d TO BREAK" % NORMAL_HITS), ReadoutRow.make("YIELD", "MOSTLY SHARDS")])
+	Readout.register_kind("scrap_trophy", "SCRAP", "TROPHY", "SALVAGE", [
+		ReadoutRow.make("HITS", "%d TO BREAK" % TROPHY_HITS), ReadoutRow.make("YIELD", "GEM OR BETTER")])
+	_readout = Readout.new()
+	_readout.name = "Readout"
+	_readout.heading = "SCRAP"
+	_readout.category = "SALVAGE"
+	_readout.reach = READOUT_REACH
+	_readout.discoverable = true
+	add_child(_readout)
+	_sync_readout()
+
+## A trophy is filed as its own kind.
+func _sync_readout() -> void:
+	if _readout:
+		_readout.key = "scrap_trophy" if is_trophy else "scrap"
+		_readout.title = "TROPHY" if is_trophy else ""
+
+## Readable (Readout.discoverable) once a Sweep has found it, until it is cut apart.
+func is_found() -> bool:
+	return revealed and not _is_depleted and is_in_group("resource_nodes")
+
+## What found scrap reads as up close: whether it has been cut into, how many hits are left,
+## and what it tends to give (GemData.roll: a trophy rolls no shards on a clean hit).
+func readout_rows() -> Array[ReadoutRow]:
+	var full := TROPHY_HITS if is_trophy else NORMAL_HITS
+	return [ReadoutRow.make("STATE", "INTACT" if hits_left >= full else "CUT"),
+		ReadoutRow.make("HITS", "%d TO BREAK" % hits_left),
+		ReadoutRow.make("YIELD", "GEM OR BETTER" if is_trophy else "MOSTLY SHARDS")]
+
 ## A ring has to reach the scrap itself.
 func sonar_point() -> Vector2:
 	return global_position
@@ -201,7 +236,7 @@ func reveal(animate := true) -> void:
 	if is_trophy:
 		_start_trophy_pulse()
 	if _state_machine and _state_machine.current_state is ScrapInRangeState:
-		_register_indicator()
+		_hold_lock()
 
 ## Pass for debris: tinted down to DORMANT_COLOR, sparkles hidden. (Sparkles go by alpha,
 ## not `visible`: _find_visual_node() turns every Node2D child visible.)
@@ -315,7 +350,7 @@ func _deplete_resource() -> void:
 
 	_is_depleted = true
 	resource_depleted.emit()
-	_unregister_indicator()
+	_release_lock()
 
 	# Disable all collision so ship can't interact.
 	# Also disconnect body_shape_entered — Godot can fire it during reparent even with monitoring=false,
@@ -348,13 +383,6 @@ func on_spawn() -> void:
 
 	EventBus.register_resource_node(self)
 
-	# Find indicator manager
-	_indicator_manager = get_tree().get_first_node_in_group("indicator_manager")
-	if not _indicator_manager:
-		var main = get_tree().get_first_node_in_group("main")
-		if main:
-			_indicator_manager = main.get_node_or_null("%IndicatorManager")
-
 	timing = null
 	hits_left = NORMAL_HITS
 	if _hides_until_pinged():
@@ -368,15 +396,14 @@ func on_spawn() -> void:
 		_state_machine.change_state("ScrapIdleState")
 
 func on_despawn() -> void:
-	# Reset state machine first — triggers state cleanup (beam stop, indicator, ship state, etc.)
+	# Reset state machine first — triggers state cleanup (beam stop, lock, ship state, etc.)
 	if _state_machine and not (_state_machine.current_state is ScrapIdleState):
 		_state_machine.change_state("ScrapIdleState")
 
 	# Unregister from EventBus
 	EventBus.unregister_resource_node(self)
 
-	# Unregister indicator
-	_unregister_indicator()
+	_release_lock()
 
 	# Remove from group
 	if is_in_group("resource_nodes"):
@@ -385,7 +412,6 @@ func on_despawn() -> void:
 	# Reset state variables
 	_is_depleted = false
 	_ship_in_range = null
-	_indicator_target = null
 
 	if _reveal_tween:
 		_reveal_tween.kill()
@@ -410,18 +436,15 @@ func on_despawn() -> void:
 
 	super.on_despawn()
 
-func _register_indicator() -> void:
-	if _indicator_manager and not _indicator_target and not _is_depleted and revealed:
-		var target_class = load("res://ui/indicators/ResourceIndicatorTarget.gd")
-		if target_class:
-			_indicator_target = target_class.new(self)
-			if _indicator_manager.has_method("register_target"):
-				_indicator_manager.register_target(_indicator_target)
+## While the ship is in range to cut it, found scrap holds its lock (ReadoutLock), so the
+## player sees which piece a harvest press will cut.
+func _hold_lock() -> void:
+	if _readout and is_found():
+		get_tree().call_group("readout_lock", "hold", _readout, true)
 
-func _unregister_indicator() -> void:
-	if _indicator_manager and _indicator_target:
-		_indicator_manager.unregister_target(_indicator_target)
-		_indicator_target = null
+func _release_lock() -> void:
+	if _readout and is_inside_tree():
+		get_tree().call_group("readout_lock", "hold", _readout, false)
 
 func max_hits() -> int:
 	return TROPHY_HITS if is_trophy else NORMAL_HITS

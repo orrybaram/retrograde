@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://ba1t3g4te0001"]
 
 [ext_resource type="Script" path="res://entities/structures/Gate.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/components/SweepReadout.gd" id="2_readout"]
+[ext_resource type="Script" path="res://scripts/components/Readout.gd" id="2_readout"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_berth"]
 size = Vector2(88, 7)
@@ -16,7 +16,7 @@ script = ExtResource("1")
 position = Vector2(0, 100)
 shape = SubResource("RectangleShape2D_berth")
 
-[node name="SweepReadout" type="Node2D" parent="."]
+[node name="Readout" type="Node2D" parent="."]
 script = ExtResource("2_readout")
 key = "gate"
 heading = "GATE"

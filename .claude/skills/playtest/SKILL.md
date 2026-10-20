@@ -11,11 +11,33 @@ Each run gets its own `user://playtest/save_<pid>.cfg` (deleted when it ends), s
 save is never touched and parallel runs — including other worktrees, which share the user dir — can't
 clobber each other's saved state.
 
+## Running alongside other sessions
+
+Other agents run playtests from this checkout and its worktrees at the same time.
+
+- `serve` and `playctl` default to port 7777. Give a live session its own port
+  (`tools/play.sh serve 7788`, then `PLAYTEST_PORT=7788 tools/playctl ...`): if 7777 is taken,
+  `serve` fails only in `.playtest/godot.log` and every `playctl` drives the other agent's game.
+  Check the first screenshot's path is inside your worktree.
+- Run scenarios headless and one at a time. Two windowed runs steal each other's focus, which
+  drops held keys and shows up as an unrelated assert failing. Options go before the target:
+  after it, `--headless` is taken as the port and ignored.
+- `screenshot` and `burst` need a window. To verify headless, copy the scenario into
+  `playtests/_tmp/` (scenario paths must be inside the project, or the run hangs), drop those
+  lines, run it, delete the copy.
+- A windowed `serve` also takes the real keyboard: if the user is at the window, their keys
+  mix with yours. Measure input headless.
+- Run only the scenarios that touch your change (grep `playtests/` for the groups, helpers and
+  nodes involved); the full set is 40+ minutes serially.
+- Judge a run by its exit status: the output is piped through `grep` and block-buffered, so a
+  tailed log is stale. Kill a stuck run with `pkill -f "playtest="`.
+- Before blaming your change for a failure, run the same scenario at `HEAD` in a scratch worktree.
+
 ## Two modes
 
 **Explore live** (figure out what happens, step by step):
 ```bash
-tools/play.sh serve                 # windowed; add --headless before `serve` for no window
+tools/play.sh serve 7788            # windowed; add --headless before `serve` for no window
 tools/playctl state                 # JSON: main_state, paused, ui_open, ship{state,fuel,hull,speed,...}, nearest{planet,space_port,...}
 tools/playctl screen                # all text visible on UI panels
 tools/playctl press enter           # start menu -> NEW GAME
@@ -78,11 +100,11 @@ Release timing is driven with `wait_until pt.staged.timing.progress >= pt.staged
 `playtests/wreck.play` blows the ship up with a stocked hold: 70% of it stays at the wreck through respawn, the loose-gem lifetime and a save reload, then gets collected (`pt.wreck_gem_count()`, `pt.warp_to_wreck()`).
 
 
-`playtests/freight_reload.play`, `freight_void.play` and `freight_track.play` cover Freight never being lost (docs/adr/0012): pieces survive reloads in place (saved carrying, the ship reloads in flight with the load clamped), a load stays clamped through the Void's edge and turns up 1 km inside it when the dark takes the ship, while loose Freight stops just inside it (or where it is, let go of past it), letting go marks a piece on the Chart and tracks it (re-clamping tracks HOME). Helpers: `pt.freight()`, `pt.freight_near(pos, [radius])`, `pt.chart_marks()`. Headless runs tick physics slower than frames: use `wait 0.1`, not `frames`, after an input that has to land, and between two `hold action`s. A sleeping derelict only notices the ship every 180 frames: warp ~1500 px from it, `wait 3.5`, then warp in and `stage_harvest` at once (waiting right beside it lets the harvest cone's enter event fire early, and staging then flakes).
+`playtests/freight_reload.play`, `freight_void.play` and `freight_track.play` cover Freight never being lost: pieces survive reloads in place (saved carrying, the ship reloads in flight with the load clamped), a load stays clamped through the Void's edge and turns up 1 km inside it when the dark takes the ship, while loose Freight stops just inside it (or where it is, let go of past it), letting go marks a piece on the Chart and tracks it (re-clamping tracks HOME). Helpers: `pt.freight()`, `pt.freight_near(pos, [radius])`, `pt.chart_marks()`. Headless runs tick physics slower than frames: use `wait 0.1`, not `frames`, after an input that has to land, and between two `hold action`s. A sleeping derelict only notices the ship every 180 frames: warp ~1500 px from it, `wait 3.5`, then warp in and `stage_harvest` at once (waiting right beside it lets the harvest cone's enter event fire early, and staging then flakes).
 
 `playtests/restore_sr7.play` is Act 1's repair: a new game docks at the head of SR-7's refuel boom, the FUEL TANK, SOLAR ARRAY and DORSAL ARM hang dead on one line in Rook's debris, each is fetched and seated in its Mount, and the hanging right wing is pushed home by thrusting into it (`ArrayNudge`); all of it survives reloads. Helpers: `pt.mount(id)`, `pt.section(id)`, `pt.stage_at_mount(id, offset, turn_deg)`, `pt.nudge()`, `pt.stage_nudge()`. Point the nose at a Lug with `(-f.lug_facing_global()).angle()` - Lugs face different ways.
 
-`playtests/cradle.play` delivers the Cargo Bay to SR-7's Cradle, the drop bay worked by the DORSAL ARM's claw (ADR 0013): clamping it tracks `CRADLE` (the drop point), the glide slope lamps read `HIGH`/`LEVEL`/`LOW` (`pt.cradle().slope_reading()`), flown in turned the arm reaches and closes on it, let go it is recorded at once (`gs.cradled`, a list) and taken below, the bay opens again, and a reload keeps it with no copy back on Veld. Helpers: `pt.cradle()` (a `DorsalClaw`), `pt.stage_at_cradle(id, offset, turn_deg)` (offset from the drop point in the station's frame, +x right; digs a buried piece out first). The claw only works with the DORSAL ARM seated and the core running: `pt.seat_sr7()` then `pt.skip_opening(false)`.
+`playtests/cradle.play` delivers the Cargo Bay to SR-7's Cradle, the drop bay worked by the DORSAL ARM's claw: clamping it tracks `CRADLE` (the drop point), the glide slope lamps read `HIGH`/`LEVEL`/`LOW` (`pt.cradle().slope_reading()`), flown in turned the arm reaches and closes on it, let go it is recorded at once (`gs.cradled`, a list) and taken below, the bay opens again, and a reload keeps it with no copy back on Veld. Helpers: `pt.cradle()` (a `DorsalClaw`), `pt.stage_at_cradle(id, offset, turn_deg)` (offset from the drop point in the station's frame, +x right; digs a buried piece out first). The claw only works with the DORSAL ARM seated and the core running: `pt.seat_sr7()` then `pt.skip_opening(false)`.
 
 `playtests/void.play` flies past the last orbit into the Void: the robot's warning, loitering safely at the fringe (there is no clock), the stars draining and the dashboard rotting as the ship goes deeper, turning back, then reaching the deep line and being consumed (`ConsumedState`, no wreck and no derelict) and relaunching. Everything runs off depth. State is under `state.void` (`inside`, `depth`, `shroud`, `distance_left`); the autoload is `get_node("/root/VoidZone")`.
 
@@ -110,7 +132,7 @@ still taking a waypoint on it, a purple link between two powered Gates, and both
 
 `playtests/radio.play` departs the dock and checks the guide robot's transmission: typing, ENTER skip, TAB (`press radio_next`) advance/close, low-fuel auto-dismiss, the paused scrap tutorial, the explosion (the ship relaunches on its own, then the guide's call plays with nothing to confirm), and hiding behind menus (`.playtest/radio_*.png`). The controls (on undock) and scrap tutorials pause the game, so other scenarios first run `eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")` / `("first_scrap")`. `press space` (or `enter`/`radio_next`) finishes a line, then moves on. A lost ship relaunches on its own (no GameOverMenu, no radio confirm). UNIT-7 is off until the end of Act 1 and `pt.skip_opening()` leaves it off, so a scenario that needs its calls runs `eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)`. The panel is `pt.node("radio_panel")`; the queue is `get_tree().root.get_node("RobotRadio")`. Expressions can't use `&"..."` literals — compare StringNames to plain strings.
 
-Planet helpers: `pt.planet(name)`, `pt.park_near_planet(name, dist, [angle_deg])` (parks riding along with the planet, nose away), `pt.redock()` (warp to the home port and dock). There is no store and no planetary scan: SR-7's dock menu is just `DEPART`, and ore seams stay dormant until surveyed by hand with `pt.survey(name)`.
+Planet helpers: `pt.planet(name)`, `pt.park_near_planet(name, dist, [angle_deg])` (parks riding along with the planet, nose away), `pt.redock()` (warp to the home port and dock). There is no store and no planetary scan: SR-7's dock menu is `SHIP` above `DEPART` (elsewhere just `DEPART`), and ore seams stay dormant until surveyed by hand with `pt.survey(name)`.
 
 `playtests/ores.play` checks holding in Rook's orbit surveys nothing, then surveys it by hand (`pt.survey("Rook")`) and checks its ore seam: buried before, surfaced with a ping, on the minimap, tracked as `ORE`, riding the orbit (`.playtest/ores_*.png`). Seams: `pt.ore("Rook")`, `pt.planet("Rook").get_ore_deposits()`.
 

@@ -2,10 +2,10 @@ extends Control
 class_name SpacePortDialogue
 
 ## Space Port hub menu - small left-side panel listing what the dock offers.
-## There is no store (docs/adr/0007). At SR-7, whose Cradle is where Components wait, the
+## There is no store. At SR-7, whose Cradle is where Components wait, the
 ## hub offers SHIP (with a count of what is waiting, and none when nothing is) above
-## DEPART. SHIP widens the panel into ShipPage, where Components are fitted and taken off
-## (docs/adr/0014); BACK returns to the hub. Elsewhere the only row is DEPART.
+## DEPART. SHIP widens the panel into ShipPage, where Components are fitted and taken off;
+## BACK returns to the hub. Elsewhere the only row is DEPART.
 
 var ship: Ship = null
 var spaceport: SpacePort = null

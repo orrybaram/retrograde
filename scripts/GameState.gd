@@ -5,7 +5,7 @@ class_name GameState
 ## ore seams, SR-7's Cradle and the Progress ledger (every Record the player has earned).
 ## Populated by Save.load() at game start; serialized by Save.save() on dock/game-over.
 ## Emits stores_changed. There are no upgrades to track: the ship's limits are fixed until
-## a found Component is fitted (docs/adr/0007).
+## a found Component is fitted.
 
 signal stores_changed
 
@@ -15,7 +15,7 @@ var stores: int = 0 :
 		stores_changed.emit()
 
 ## Bodies that have been surveyed, keyed by Planet.save_key(). Nothing surveys a Body
-## now: the planetary scan is gone and `ECHO` is not designed yet (docs/IDEAS.md §13), so
+## now: the planetary scan is gone and `ECHO` is not designed yet, so
 ## this stays empty in play and is not saved. A survey fills in a Record and surfaces the
 ## Body's ore seams, which stay dormant until then.
 var scanned_planets: Dictionary = {}
@@ -31,7 +31,7 @@ var progress := Progress.new()
 
 ## The Components let go of into SR-7's Cradle and waiting there to be fitted (Components
 ## ids, oldest first). The Cradle is always open, so any number can wait. Each is permanent
-## until it is fitted, and one taken off the ship comes back here (docs/adr/0014).
+## until it is fitted, and one taken off the ship comes back here.
 var cradled := PackedStringArray()
 
 ## Death counter - tracks total number of deaths (not displayed to player)

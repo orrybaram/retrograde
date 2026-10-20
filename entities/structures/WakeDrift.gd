@@ -1,8 +1,8 @@
 extends Node2D
 class_name WakeDrift
 
-## The fine debris the ship wakes among, adrift just outside SR-7 at the start of a new game
-## (docs/OPENING.md §3): flakes of hull, a few chips of something brighter, all turning
+## The fine debris the ship wakes among, adrift just outside SR-7 at the start of a new game:
+## flakes of hull, a few chips of something brighter, all turning
 ## slowly and spreading out from where the ship has been hanging. Nothing to harvest and
 ## nothing to hit - it is set dressing that says *you have been out here a while*, and it
 ## thins and is gone within a couple of minutes.

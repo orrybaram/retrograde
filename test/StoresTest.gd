@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## Credits are gone: what the hold brings home is SR-7's Stores, filled by the Deposit
-## (docs/adr/0007). Stores survive a save under their own name, an old save's credits are
+## Credits are gone: what the hold brings home is SR-7's Stores, filled by the Deposit.
+## Stores survive a save under their own name, an old save's credits are
 ## left behind, and dying costs none of them.
 
 const SAVE_FILE := "user://stores_test_save.cfg"

@@ -1,6 +1,6 @@
 # Docking at a port: gems fly out of the hold into the port while the HUD Stores count
-# rolls up, and SR-7 tops the tank up to its free half (~2.5s from empty) for nothing
-# (docs/FREIGHT.md §8). Dialogue opens after the Deposit; then Stores go to the hull
+# rolls up, and SR-7 tops the tank up to its free half (~2.5s from empty) for nothing.
+# Dialogue opens after the Deposit; then Stores go to the hull
 # first and the tank past half, with no menu, until they run out (issue #137).
 # Run: tools/play.sh playtests/dock.play   (frames land in .playtest/dock_*.png)
 
@@ -10,7 +10,7 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
-# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# A new game opens adrift outside SR-7. This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5

@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## A fitted Component is on the hull (docs/adr/0014): drawn there, solid, and heavy. Taken
+## A fitted Component is on the hull: drawn there, solid, and heavy. Taken
 ## off, it waits in the Cradle and the hull is bare again. The ship in the game weighs 3.0
 ## (Main.tscn), so the ships here do too.
 
@@ -119,7 +119,7 @@ func test_a_bare_hull_overhangs_nothing() -> void:
 
 func test_the_fitted_bay_carries_the_engines_aft() -> void:
 	# It reaches past the hull's tail, so the exhausts, the dock's stand-off and the
-	# landing height all move back by the overhang (docs/adr/0014)
+	# landing height all move back by the overhang
 	var ship := _ship()
 	_fit_bay()
 	var tail := Freight.bounds(ship._hull_outline()).position.x

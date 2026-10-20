@@ -3,7 +3,7 @@ class_name EncounterTable
 
 ## The weighted list of things that can turn up in deep space, and how many of them a
 ## single cell may hold. Which entries are in play depends only on the cell's distance
-## from the sun, so a cell's roll is reproducible. See docs/ENCOUNTERS.md.
+## from the sun, so a cell's roll is reproducible.
 
 @export var entries: Array[EncounterDef] = []
 

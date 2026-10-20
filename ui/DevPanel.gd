@@ -574,7 +574,7 @@ func _orbit_planets() -> Array[Planet]:
 
 ## Tune gravity by feel: the whole system at once, or one Body at a time. Every row moves
 ## `Planet.dev_gravity_scale` or a Body's `density_trim` and then recomputes its mass, so
-## the Record and the pull the ship flies against stay the same number (docs/adr/0004).
+## the Record and the pull the ship flies against stay the same number.
 ## Nothing here is saved - it is for finding a number to put in the scene, not for keeping.
 func _gravity_rows() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
@@ -728,6 +728,17 @@ func _look_rows() -> Array[Dictionary]:
 				var moved := snappedf(hud.dashboard_scale + direction * HUD_SCALE_STEP, HUD_SCALE_STEP)
 				hud.dashboard_scale = hud.DEFAULT_DASHBOARD_SCALE if direction == 0 \
 					else clampf(moved, HUD_SCALE_LIMIT.x, HUD_SCALE_LIMIT.y)
+		))
+
+	var boot_log := get_tree().get_first_node_in_group("boot_log") as BootLog
+	if boot_log:
+		rows.append(_value_row(
+			"DIAGNOSTIC SIZE",
+			"Font size of the opening's manual diagnostic log, 1pt a step (%d-%d). ENTER puts it back to %d." % [
+				BootLog.SIZE_LIMIT.x, BootLog.SIZE_LIMIT.y, BootLog.DEFAULT_SIZE],
+			func() -> String: return "%dpt" % boot_log.text_size,
+			func(direction: int) -> void:
+				boot_log.text_size = BootLog.DEFAULT_SIZE if direction == 0 else boot_log.text_size + direction
 		))
 
 	if minimap:

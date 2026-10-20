@@ -4,7 +4,7 @@ class_name GateMinimapTarget
 ## MinimapTarget for a Gate: a small charted ring, and nothing to say whether it is powered.
 ## Not on the chart at all until it has been found: its planet surveyed (dormant: nothing surveys yet), or the Gate
 ## itself reached and named (Gate.identify). A Gate is discovered, never pointed at, and it
-## does not pin to the rim (docs/adr/0002).
+## does not pin to the rim.
 
 ## Roughly a Gate's reach, world px.
 const ECHO_RADIUS := 220.0

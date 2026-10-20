@@ -1,8 +1,10 @@
-# Sweep readouts (docs/SWEEP.md §10): a Sweep that reaches one of SR-7's empty Mounts reads
-# it into the HUD's bottom-right corner, a tap one tier deep and a charged ring deeper. Reading
-# the Mount is what puts its Section on the minimap; an unread Mount's piece stays off it,
-# and a read survives a reload. The name blooms over what was read, the Log's Records keep a
-# Hardware Record of it, and a Gate - part of the Titan - reads back as noise in purple.
+# Readouts: coming close to one of SR-7's empty Mounts reads it, every
+# row at once, into the HUD's bottom-right corner - no Sweep needed. Reading the Mount is what
+# puts its Section on the minimap; an unread Mount's piece stays off it, and a read survives a
+# reload. Only the readout nearest the ship reads, and a tether from its entry locks brackets
+# onto what was read; the Log's Records keep a Hardware Record of it, filed under SR-7, and a
+# Gate - part of the Titan - reads back as noise in purple. Scrap is found by a Sweep first,
+# then read up close the same way, and the first piece files one SCRAP Record.
 # Run: tools/play.sh playtests/readout.play   (add --headless to skip screenshots)
 
 press enter
@@ -18,37 +20,32 @@ assert not pt.mount("fuel_tank").marks_section() "an unread Mount marks nothing"
 assert not pt.mount("fuel_tank")._minimap_target.is_minimap_visible() "the tank is off the minimap"
 assert pt.node("contact_log") != null and not pt.node("contact_log").visible "nothing read yet"
 
-# Out beside the fuel tank's cut, in a tap's reach of it
-eval pt.warp_to(pt.recall("station").to_global(Vector2(360, 19)))
+# Where a new game starts is out of every Mount's reach
+wait 1
+assert not pt.node("contact_log").visible "nothing read at the start"
+assert not pt.mount("fuel_tank").get_node("Readout").is_read() "the start is out of reach"
+
+# Out beside the fuel tank's cut: close enough, and it reads by itself
+eval pt.warp_to(pt.recall("station").to_global(Vector2(280, 19)))
 eval ship.set("linear_velocity", pt.recall("station").linear_velocity)
-wait 0.3
-assert ship.global_position.distance_to(pt.mount("fuel_tank").global_position) < 260.0 "in a tap's reach"
-
-screenshot readout_0_unread
-
-# A tap reads tier 1
-press action
-wait_until pt.node("contact_log").text().contains("SECTION") 3
+wait_until pt.node("readout_lock").is_locked(pt.mount("fuel_tank").get_node("Readout")) 3
+wait 0.35
+screenshot readout_1a_lock
+wait_until pt.node("contact_log").text().contains("FRACTURE") 6
 assert pt.node("contact_log").text().begins_with("MOUNT / FUEL TANK") "the Mount's heading"
 assert pt.node("contact_log").text().contains("EMPTY") "what state it is in"
-assert pt.node("readout_echo").lines().has("FUEL TANK") "the name blooms over the Mount"
-assert pt.node("readout_echo")._echoes[0].label.visible "drawn: nothing in front of it"
-assert not pt.node("contact_log").text().contains("TORCH CUT") "a tap reads no deeper"
+assert pt.node("contact_log").text().contains("TORCH CUT") "every row at once"
 assert pt.mount("fuel_tank").marks_section() "read, it marks its Section"
 assert pt.mount("fuel_tank")._minimap_target.is_minimap_visible() "the tank is on the minimap"
 assert not pt.mount("solar_array").marks_section() "the array's Mount was not read"
 assert not pt.mount("solar_array")._minimap_target.is_minimap_visible() "the array stays off the minimap"
-screenshot readout_1_tap
+screenshot readout_1_close
 
-# A charged ring reads deeper, over the same entry, and reaches the other Mounts too
-down action
-wait 3.2
-up action
-wait_until pt.node("contact_log").text().contains("FRACTURE") 4
-assert pt.node("contact_log").text().contains("TORCH CUT") "tier 2"
-assert pt.node("contact_log").text().count("FUEL TANK") == 1 "the same Mount's entry, typed over"
-assert pt.mount("solar_array").marks_section() "the charged ring reached the array's Mount"
-screenshot readout_2_charged
+# A Sweep reads nothing more
+press action
+wait 1.5
+assert pt.node("contact_log").text().count("FUEL TANK") == 1 "still the one entry"
+assert not pt.mount("solar_array").marks_section() "the Sweep reads no Mount"
 
 # It fades on its own
 wait 9
@@ -58,33 +55,56 @@ assert not pt.node("contact_log").visible "gone once it has held"
 eval pt.save_now()
 reload
 assert pt.mount("fuel_tank").marks_section() "still marked after a reload"
-assert pt.mount("solar_array").marks_section() "and the array's"
 
-# The Log keeps a Hardware Record of each, as deep as it was read
+# The Log keeps a Hardware Record of each
 press i
 wait_until pt.visible_ui().has("LogUI") 2
 press tab
 assert pt.node("log_ui").active_tab_title() == "RECORDS" "on Records"
-assert pt.node("log_ui")._tabs[1]._read.size() == 3 "three Mounts read"
+assert pt.node("log_ui")._tabs[1]._read.size() == 1 "one Mount read"
 assert str(pt.screen_text()).contains("H A R D W A R E") "the Hardware section"
-assert str(pt.screen_text()).contains("TORCH CUT") "the tank's Record holds what the charged ring read"
+assert str(pt.screen_text()).contains("SR-7") "filed under the station"
+assert str(pt.screen_text()).contains("TORCH CUT") "the tank's Record holds every row"
 screenshot readout_3_records
 press i
 wait_until pt.visible_ui().is_empty() 2
 
 # A Gate is part of the Titan: read, but nothing in it can be made out
 eval pt.park_at_gate("Veld", 120.0)
-wait 0.3
-press action
+wait_until pt.node("readout_lock").is_locked(pt.gate("Veld").get_node("Readout")) 3
 wait_until pt.node("contact_log").visible 3
 wait 1.5
 assert not pt.node("contact_log").text().contains("GATE") "no heading to read"
 assert not pt.node("contact_log").text().contains("DORMANT") "no state to read"
-assert pt.node("readout_echo").lines().size() == 1 and pt.node("readout_echo").lines()[0] != "GATE" "noise over the Gate"
 screenshot readout_4_gate
-assert pt.gate("Veld").get_node("SweepReadout").is_read() "read all the same"
+assert pt.gate("Veld").get_node("Readout").is_read() "read all the same"
 press i
 wait_until pt.visible_ui().has("LogUI") 2
-assert pt.node("log_ui")._tabs[1]._read.size() == 3 "nothing learned from it for the Log"
+assert pt.node("log_ui")._tabs[1]._read.size() == 1 "nothing learned from it for the Log"
+press i
+wait_until pt.visible_ui().is_empty() 2
+
+# Scrap: found by a Sweep, then read up close like a Mount
+eval pt.warp_to(pt.nearest_kind("Scrap").global_position + Vector2(220, 0))
+frames 30
+eval pt.set("staged", pt.nearest_kind("Scrap"))
+assert not pt.staged.get_node("Readout").readable() "unfound scrap passes for debris"
+press action
+wait_until pt.staged.revealed 3
+wait 0.5
+assert not pt.staged.get_node("Readout").is_read() "found from range is not read"
+eval pt.warp_to(pt.staged.global_position + Vector2(50, 0))
+wait_until pt.node("readout_lock").is_locked(pt.staged.get_node("Readout")) 3
+wait 0.35
+screenshot readout_5_scrap
+wait_until pt.node("contact_log").text().contains("YIELD") 6
+assert pt.node("contact_log").text().contains("SCRAP") "scrap's heading"
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+assert pt.node("log_ui").active_tab_title() == "RECORDS" "on Records"
+assert pt.node("log_ui")._tabs[1]._read.size() == 2 "the Mount and one Record for scrap"
+assert str(pt.screen_text()).contains("SALVAGE") "filed under salvage"
+screenshot readout_6_records
 press i
 state

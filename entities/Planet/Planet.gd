@@ -17,7 +17,7 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 @export var radius: float = 160.0
 ## Converts mass to pull. It cancels out of surface_gravity() - _derived_mass()
 ## divides by it - so changing it rescales the mass numbers without changing how any
-## Body reads or pulls. Density is the dial that moves gravity (docs/adr/0004).
+## Body reads or pulls. Density is the dial that moves gravity.
 @export var gravitational_constant: float = 4.0
 @export var color: Color = Colors.PLANET_DEFAULT: set = _set_color
 @export var density_trim: float = 1.0 ## Deviation from this class's DENSITY; 1.0 unless the Body is genuinely unusual
@@ -44,7 +44,7 @@ enum PlanetRole {NONE, FRONTIER, INDUSTRIAL, RESEARCH, MILITARY, HOMEWORLD}
 ## Surface gravity readouts divide by this (px/s^2 per unit mass) to show G.
 const STANDARD_GRAVITY := 50.0
 ## How dense each class of Body is, against EARTH_LIKE. Surface pull works out as
-## density * sqrt(radius) (docs/adr/0004), so a wider Body always outweighs a narrower one
+## density * sqrt(radius), so a wider Body always outweighs a narrower one
 ## of the same stuff and the big worlds are the ones that pull hard. The spread is narrow
 ## on purpose: a Body's size already carries most of the difference, and a wide density
 ## spread on top of it pushes the heavy end past landable. SUN is the exception
@@ -116,7 +116,7 @@ func _get_gravity_strength() -> float:
 ## What this Body should read at the surface, in G: how dense it is, against how wide it
 ## is, measured from TERRA-0. This is the one rule every Body is sized by - the sun included,
 ## which is why the sun's Record reads crushing and a pebble of a moon reads like
-## nothing (docs/adr/0004).
+## nothing.
 func target_surface_gravity() -> float:
 	var density: float = DENSITY.get(planet_type, DENSITY[PlanetType.ROCKY])
 	var size := pow(radius / REFERENCE_RADIUS, RADIUS_EXPONENT)
@@ -155,13 +155,13 @@ func is_moon() -> bool:
 	return parent_planet != null and parent_planet.planet_type != PlanetType.SUN
 
 ## True once this Body has been surveyed. Nothing surveys in play now: the planetary
-## scan is gone until `ECHO` is designed (docs/SWEEP.md §7).
+## scan is gone until `ECHO` is designed.
 func is_scanned() -> bool:
 	var gs := _game_state()
 	return gs != null and gs.is_planet_scanned(save_key())
 
 ## True once the ship has entered this Body's inner orbit, which earns it a Record in
-## the Log whether or not it has been surveyed (docs/adr/0003).
+## the Log whether or not it has been surveyed.
 func is_visited() -> bool:
 	var gs := _game_state()
 	return gs != null and gs.progress.holds(Progress.VISITED_BODIES, save_key())
@@ -173,7 +173,7 @@ func _game_state() -> GameState:
 
 ## The Body in `tree` carrying this save key, or null when it isn't loaded. For the Log,
 ## which holds keys rather than nodes: it looks up a Body it already has a Record for
-## and never lists the group, which would spoil the shape of the system (docs/adr/0003).
+## and never lists the group, which would spoil the shape of the system.
 static func find_by_key(tree: SceneTree, key: String) -> Planet:
 	if key == "":
 		return null

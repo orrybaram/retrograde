@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## A new game starts with no hold at all (docs/OPENING.md §9): a dry tank, no hold
+## A new game starts with no hold at all: a dry tank, no hold
 ## readouts, and nothing - scrap, derelict, container or seam - offers to harvest.
 
 var _gs: GameState

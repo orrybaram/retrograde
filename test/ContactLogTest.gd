@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## What a Sweep reads types into the HUD's corner, holds, and fades (ui/ContactLog.gd).
+## What the ship reads up close types into the HUD's corner, holds, and fades (ui/ContactLog.gd).
 
 var _log: ContactLog
 
@@ -8,10 +8,10 @@ func before_test() -> void:
 	_log = auto_free(ContactLog.new()) as ContactLog
 	add_child(_log)
 
-func _readout(title: String) -> SweepReadout:
+func _readout(title: String) -> Readout:
 	var owner_node := auto_free(Node2D.new()) as Node2D
 	add_child(owner_node)
-	var r := SweepReadout.new()
+	var r := Readout.new()
 	r.heading = "MOUNT"
 	r.title = title
 	owner_node.add_child(r)
@@ -26,7 +26,7 @@ func _type_out() -> void:
 
 
 func test_a_read_types_out_its_heading_and_rows() -> void:
-	_log.show_read(_readout("FUEL TANK"), 1, _rows())
+	_log.show_read(_readout("FUEL TANK"), _rows())
 	assert_bool(_log.visible).is_true()
 	_log._process(0.05)
 	assert_str(_log.text()).override_failure_message("the heading has started typing").is_not_empty()
@@ -48,16 +48,43 @@ func test_rows_end_in_the_diagnostics_column() -> void:
 
 func test_reading_the_same_thing_again_types_over_its_entry() -> void:
 	var r := _readout("FUEL TANK")
-	_log.show_read(r, 1, _rows())
-	_log.show_read(r, 2, [ReadoutRow.make("STATE", "EMPTY"), ReadoutRow.make("EDGE", "TORCH CUT", 2)])
+	_log.show_read(r, _rows())
+	_log.show_read(r, [ReadoutRow.make("STATE", "EMPTY"), ReadoutRow.make("EDGE", "TORCH CUT")])
 	_type_out()
 	assert_int(_log._entries.size()).is_equal(1)
 	assert_bool(_log.text().contains("TORCH CUT")).is_true()
 
 
+func test_reading_the_same_thing_again_leaves_it_up() -> void:
+	var r := _readout("FUEL TANK")
+	_log.show_read(r, _rows())
+	_type_out()
+	var typed := _log.text()
+	_log._process(ContactLog.HOLD - 1.0)
+	_log.show_read(r, _rows())
+	assert_str(_log.text()).override_failure_message("not wiped to retype").is_equal(typed)
+	_log._process(0.05)
+	assert_str(_log.text()).is_equal(typed)
+	_log._process(ContactLog.HOLD - 0.5)
+	assert_int(_log._entries.size()).override_failure_message("its hold started over").is_equal(1)
+
+
+func test_a_changed_read_types_on_only_what_is_new() -> void:
+	var r := _readout("FUEL TANK")
+	_log.show_read(r, _rows())
+	_type_out()
+	var typed := _log.text()
+	_log.show_read(r, [ReadoutRow.make("STATE", "EMPTY"), ReadoutRow.make("EDGE", "TORCH CUT")])
+	_log._process(0.05)
+	assert_bool(_log.text().begins_with(typed)).override_failure_message("what was typed stays").is_true()
+	assert_bool(_log.text().contains("TORCH CUT")).is_false()
+	_type_out()
+	assert_bool(_log.text().contains("TORCH CUT")).is_true()
+
+
 func test_too_many_reads_drop_the_oldest() -> void:
 	for i in ContactLog.MAX_ENTRIES + 1:
-		_log.show_read(_readout("PART %d" % i), 1, _rows())
+		_log.show_read(_readout("PART %d" % i), _rows())
 	_type_out()
 	assert_int(_log._entries.size()).is_equal(ContactLog.MAX_ENTRIES)
 	assert_bool(_log.text().contains("PART 0")).is_false()
@@ -65,7 +92,7 @@ func test_too_many_reads_drop_the_oldest() -> void:
 
 
 func test_an_entry_holds_then_fades_away() -> void:
-	_log.show_read(_readout("FUEL TANK"), 1, _rows())
+	_log.show_read(_readout("FUEL TANK"), _rows())
 	_type_out()
 	_log._process(ContactLog.HOLD - 2.0)
 	assert_int(_log._entries.size()).override_failure_message("still holding").is_equal(1)
@@ -75,7 +102,7 @@ func test_an_entry_holds_then_fades_away() -> void:
 
 
 func test_it_answers_the_event_bus() -> void:
-	EventBus.readout_swept.emit(_readout("SOLAR ARRAY"), 1, _rows())
+	EventBus.readout_read.emit(_readout("SOLAR ARRAY"), _rows())
 	_type_out()
 	assert_bool(_log.text().begins_with("MOUNT / SOLAR ARRAY")).is_true()
 

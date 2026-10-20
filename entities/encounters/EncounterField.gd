@@ -13,7 +13,7 @@ class_name EncounterField
 ## different every time you cross it.
 ##
 ## The one piece of persistent state is which slots the player has harvested, and how far
-## the rings have turned. See docs/ENCOUNTERS.md.
+## the rings have turned.
 
 ## Radial thickness of a ring, and roughly the arc each cell spans — cells come out about
 ## square. No smaller than the scanner's reach (Minimap.DEFAULT_WORLD_RANGE, 1500) or the

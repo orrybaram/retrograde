@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## The Cargo Bay buried on Veld (docs/OPENING.md §9): a hauler wreck with the first
+## The Cargo Bay buried on Veld: a hauler wreck with the first
 ## Component standing Lug-up in it, dead to the Sweep until SR-7's cold start and answering
 ## from far off after it, too deep for the Aux to pull and torn out only by the Burn.
 

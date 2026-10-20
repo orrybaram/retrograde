@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-## SR-7's missing pieces ping on the minimap's sonar (docs/OPENING.md §5) once a Sweep has
-## read their Mount, until each is back in it.
+## SR-7's missing pieces ping on the minimap's sonar once the ship has
+## read their Mount up close, until each is back in it.
 
 var _world: Node2D
 var _gs: GameState
@@ -27,7 +27,7 @@ func _piece(id: String, at := Vector2(2000, 0)) -> Freight:
 	return Freight.spawn_section(_world, id, at, 0.0)
 
 func _read_mount(id: String) -> void:
-	SweepReadout.on(Mount.for_section(get_tree(), id)).read(1.0)
+	Readout.on(Mount.for_section(get_tree(), id)).read()
 
 
 func test_a_missing_piece_is_off_the_map_until_its_mount_is_read() -> void:

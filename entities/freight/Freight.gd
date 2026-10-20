@@ -1,7 +1,7 @@
 extends RigidBody2D
 class_name Freight
 
-## Something too big for the hold (docs/adr/0012): clamped rigidly to the ship's nose at
+## Something too big for the hold: clamped rigidly to the ship's nose at
 ## its one Lug and pushed home ahead of it. Let go, it coasts on as the ship was moving -
 ## same velocity, same heading, plus a slow drift off the nose, losing only a trace of speed
 ## to DRAG - and gravity never bends its path. While clamped it is not a body of its own:
@@ -53,7 +53,7 @@ const LUG_GLOW_TIME := 0.6
 const CLAMP_FLASH_TIME := 0.35
 
 ## The ship has had hold of this piece. From then on it is never lost from view: let go,
-## it is marked on the Chart and tracked (docs/adr/0012). Never touched, it has no mark.
+## it is marked on the Chart and tracked. Never touched, it has no mark.
 var handled := false
 
 ## Which Section of SR-7 this is (Sections.gd), or "" for any other Freight. A Section
@@ -69,7 +69,7 @@ var component := ""
 ## reaches: faint and broken at the edge, firming up closer (answer_clarity). 0 answers
 ## only where a ring reaches, like any piece.
 var answer_range := 0.0
-## Dead to the Sweep until SR-7's core is cold-started (the Cargo Bay, docs/OPENING.md §9).
+## Dead to the Sweep until SR-7's core is cold-started (the Cargo Bay).
 var answers_needs_power := false
 ## How clear (0..1) an answer is from the very edge of `answer_range`.
 const FAINTEST_ANSWER := 0.2
@@ -450,7 +450,7 @@ static func void_return_point(pos: Vector2, sun: Vector2) -> Vector2:
 	var out := pos - sun
 	return sun + (out.normalized() if out.length() > 0.0 else Vector2.RIGHT) * VOID_RETURN_RADIUS
 
-# --- saving (docs/adr/0012: saved where it is, never respawned or despawned) ---
+# --- saving (saved where it is, never respawned or despawned) ---
 
 ## This piece as plain data: where it is, how it is moving, and whether it is clamped.
 func to_row() -> Dictionary:

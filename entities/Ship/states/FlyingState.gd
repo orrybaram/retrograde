@@ -111,7 +111,7 @@ func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 				continue
 			if not (collider is RigidBody2D):
 				continue
-			# A clamped load collides, but its knocks don't reach the hull (yet: docs/adr/0012)
+			# A clamped load collides, but its knocks don't reach the hull (yet)
 			if ship.is_freight_shape(state.get_contact_local_shape(i)):
 				continue
 

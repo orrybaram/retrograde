@@ -1,7 +1,7 @@
 extends RefCounted
 class_name FittedParts
 
-## The Components fitted to the ship, on the hull (docs/adr/0014): each one drawn over the
+## The Components fitted to the ship, on the hull: each one drawn over the
 ## Body and solid, a collider of its own on the ship. Ship.refit rebuilds them from what is
 ## fitted; its mass and turn come from Ship._apply_mass.
 ##

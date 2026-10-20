@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Freight (docs/adr/0012): the magnet, the pose a Lug fixes, the release meter, and how
+## Freight: the magnet, the pose a Lug fixes, the release meter, and how
 ## a clamped load slows turning without touching unladen flight.
 
 const NOSE := Vector2(10, 0)

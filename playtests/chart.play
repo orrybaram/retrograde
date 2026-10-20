@@ -1,6 +1,6 @@
 # The Chart starts blank and is filled in by powering Gates: it opens holding only Rook,
 # its station and the void, and a planet's region arrives — named, live and drawn in a
-# piece at a time — when that planet's Gate is powered (docs/adr/0002).
+# piece at a time — when that planet's Gate is powered.
 # Run: tools/play.sh playtests/chart.play   (frames land in .playtest/chart_*.png)
 
 press enter
@@ -8,7 +8,7 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 # The controls and scrap tutorials pause the game; this scenario isn't about them
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
-# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# A new game opens adrift outside SR-7. This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5

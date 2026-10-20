@@ -1,7 +1,7 @@
 extends RefCounted
 class_name Drive
 
-## The ship's two engines (docs/adr/0010), owned by the Ship as `ship.drive`.
+## The ship's two engines, owned by the Ship as `ship.drive`.
 ##
 ## The **Aux** is ordinary thrust: free, always available, never out. Nothing here can
 ## take it away, so nothing here models it - there is no Aux fuel, meter or cough.
@@ -26,9 +26,9 @@ enum Level { OK, LOW, CRITICAL }
 
 const LOW_RATIO := 0.25
 const CRITICAL_RATIO := 0.10
-## The ship's tank. Its limits are fixed: nothing is bought (docs/adr/0007).
+## The ship's tank. Its limits are fixed: nothing is bought.
 const CAPACITY := 150.0
-## What SR-7 puts in the tank for nothing (docs/FREIGHT.md §8): once its core is running,
+## What SR-7 puts in the tank for nothing: once its core is running,
 ## every dock and every relaunch tops the tank up to half, never higher.
 const FREE_FRACTION := 0.5
 ## Seconds between coughs while a Burn is being tried on a low tank. Rare when LOW,

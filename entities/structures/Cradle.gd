@@ -1,7 +1,7 @@
 extends Node2D
 class_name Cradle
 
-## SR-7's Cradle (docs/adr/0012, docs/FREIGHT.md §5): where a Component delivered as Freight
+## SR-7's Cradle: where a Component delivered as Freight
 ## is let go of, to be fitted from the station's menus once the player docks. This is the
 ## contract the rest of the game talks to - the ship's release (CarryingState.home_for),
 ## the clamped piece's tracker (Freight.destination), the dock's FIT rows
@@ -59,10 +59,10 @@ func waiting() -> PackedStringArray:
 	var gs := _game_state()
 	return gs.cradled if gs else PackedStringArray()
 
-## Fit `id` - or, with none given, the first Component waiting - to the ship
-## (docs/FREIGHT.md §6): it is the ship's now, not the Cradle's. The Cargo Bay makes the
-## hold. A Component already in `id`'s place comes off and waits here instead
-## (docs/adr/0014). Returns the Component fitted, or "" with nothing to fit.
+## Fit `id` - or, with none given, the first Component waiting - to the ship:
+## it is the ship's now, not the Cradle's. The Cargo Bay makes the
+## hold. A Component already in `id`'s place comes off and waits here instead.
+## Returns the Component fitted, or "" with nothing to fit.
 func fit(id := "") -> String:
 	var gs := _game_state()
 	if gs == null or gs.cradled.is_empty():

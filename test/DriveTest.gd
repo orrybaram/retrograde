@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## The Drive on its own, no scene tree (entities/Ship/Drive.gd, docs/adr/0010): whether
+## The Drive on its own, no scene tree (entities/Ship/Drive.gd): whether
 ## the Burn is lit, the cough a low tank gives it, the free half, and clamping. The
 ## Aux is never modelled here, so nothing the Drive does can take ordinary thrust away.
 

@@ -1,12 +1,12 @@
 # Notes: UNIT-7's Record sours as the Titan wakes. One Note from the first
 # transmission, further Notes as Modules come online, and nothing at all standing in
-# for the ones the player has not reached yet (docs/adr/0003).
+# for the ones the player has not reached yet.
 #
 # The dev panel's MODULES ONLINE row is the preview path, so the steps are driven
 # through it rather than by writing GameState directly.
 # Run: tools/play.sh playtests/notes.play   (frames land in .playtest/notes_*.png)
 
-# UNIT-7 is off when the game opens (docs/OPENING.md §7) and nothing wakes it yet, so
+# UNIT-7 is off when the game opens and nothing wakes it yet, so
 # this scenario hands the player its Record directly rather than meeting it on the radio.
 press enter
 wait_until main.current_game_state == 1 15
@@ -16,7 +16,7 @@ eval gs.progress.mark("met_automatons", "UNIT-7")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
-# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# A new game opens adrift outside SR-7. This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5

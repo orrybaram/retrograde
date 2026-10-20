@@ -1,14 +1,15 @@
 extends Control
 class_name ContactLog
 
-## What the Sweep reads (SweepReadout, docs/SWEEP.md §10), typed into the HUD's bottom-right
+## What the ship reads up close (Readout), typed into the HUD's bottom-right
 ## corner in the manual diagnostic's grammar: a heading, then dot-leader rows whose values
 ## end in the diagnostic's stamp column. It grows upward from the corner, above UNIT-7's
 ## panel while that is up.
 ##
 ## Each read is an entry that types, holds and fades; the newest is at the bottom, nearest
 ## the corner, and the oldest goes when there are too many. A read of something already
-## showing types its entry over again instead of adding another.
+## showing keeps its entry up: what is typed stays, only what has changed types on, and the
+## hold starts over.
 
 const TEXT_SIZE := BootLog.TEXT_SIZE
 const OUTLINE := BootLog.OUTLINE
@@ -39,23 +40,26 @@ func _ready() -> void:
 	_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stack.add_theme_constant_override("separation", TEXT_SIZE)
 	add_child(_stack)
-	EventBus.readout_swept.connect(show_read)
+	EventBus.readout_read.connect(show_read)
 	visible = false
 
 
-## Type out what `readout` read, `tier` deep.
-func show_read(readout: Node, _tier: int, rows: Array) -> void:
-	var r := readout as SweepReadout
+## Type out what `readout` read.
+func show_read(readout: Node, rows: Array) -> void:
+	var r := readout as Readout
 	if r == null:
 		return
 	var lines := entry_lines(r.shown_heading(), r.shown_title(), rows, r.undecipherable)
 	var id := r.get_instance_id()
 	for entry in _entries:
 		if entry.id == id:
+			var shown := mini(int(entry.age * TYPE_RATE), entry.length)
+			var kept := mini(shown, _common_prefix(_flat(entry.lines), _flat(lines)))
 			entry.lines = lines
 			entry.length = _length(lines)
-			entry.age = 0.0
+			entry.age = kept / TYPE_RATE
 			entry.label.modulate.a = 1.0
+			entry.label.text = _render(lines, kept)
 			return
 	var entry := {"id": id, "label": _make_label(), "lines": lines, "length": _length(lines), "age": 0.0}
 	_entries.append(entry)
@@ -76,6 +80,20 @@ static func entry_lines(heading: String, title: String, rows: Array, titan := fa
 			line[0][1] = Colors.TITAN
 		lines.append(line)
 	return lines
+
+
+## Where `readout`'s entry is, for ReadoutLock's tether: {point: the left end of its heading,
+## in this log's canvas, alpha}. Empty when it has none.
+func entry_state(readout: Node) -> Dictionary:
+	var id := readout.get_instance_id()
+	for entry in _entries:
+		if entry.id == id:
+			var label: RichTextLabel = entry.label
+			return {
+				"point": label.global_position + Vector2(0.0, TEXT_SIZE * 0.6),
+				"alpha": label.modulate.a,
+			}
+	return {}
 
 
 ## What the log reads right now, as plain text: what a player sees typed so far.
@@ -138,6 +156,23 @@ static func _render(lines: Array, chars: int) -> String:
 			typed += "[color=#%s]%s[/color]" % [Colors.hex(seg[1]), shown.replace("[", "[lb]")]
 		out.append(typed)
 	return "\n".join(out)
+
+
+## `lines` as the characters they type, in order.
+static func _flat(lines: Array) -> String:
+	var out := ""
+	for line in lines:
+		for seg in line:
+			out += seg[0]
+	return out
+
+
+static func _common_prefix(a: String, b: String) -> int:
+	var n := mini(a.length(), b.length())
+	for i in n:
+		if a[i] != b[i]:
+			return i
+	return n
 
 
 static func _length(lines: Array) -> int:

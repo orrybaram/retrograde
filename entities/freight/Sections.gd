@@ -1,6 +1,6 @@
 class_name Sections
 
-## The pieces of SR-7 that come back as Freight (docs/FREIGHT.md §4): each one's name,
+## The pieces of SR-7 that come back as Freight: each one's name,
 ## shape, Lug and mass. A Section is ordinary Freight with a `section` id, and it only
 ## fits the Mount with the same id (entities/structures/Mount.gd).
 ##
@@ -41,7 +41,7 @@ const DATA := {
 	# The claw's knuckle boom (DorsalClaw), folded the way it stows: the boom up from the
 	# shoulder, the forearm back down beside it, the claw by the shoulder. Held by the elbow
 	# end, it goes in shoulder-first, down onto the turntable. Long and thin, it turns far
-	# worse than the others (docs/adr/0012) - the hardest carry of the three.
+	# worse than the others - the hardest carry of the three.
 	DORSAL_ARM: {
 		"label": "DORSAL ARM",
 		"mass": 2.0,

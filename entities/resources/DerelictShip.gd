@@ -7,7 +7,7 @@ class_name DerelictShip
 ## decides how much of that share survives, so all-PERFECT salvage recovers 100%.
 ## The hull itself is always worth something: the final hit adds a normal scrap break
 ## on top, and a ship abandoned with an empty hold salvages like ordinary scrap. Not pooled: lives in the world until broken, and is saved with the game.
-## Abandoned with Freight clamped, it keeps the load on its nose (docs/adr/0012), damps
+## Abandoned with Freight clamped, it keeps the load on its nose, damps
 ## to a full stop instead of a slow drift, and is marked on the Chart with what it holds.
 ## Breaking it frees the Freight, parked beside the wreck.
 
@@ -31,7 +31,7 @@ var loot: Array[String] = []    # gems still aboard
 var drift := Vector2.ZERO
 var spin := 0.0
 var hull_source: Node2D = null  # polygons to copy for the visual (the player's hull)
-## Copy the Components fitted to `hull_source` too (docs/adr/0014). A hull the player left
+## Copy the Components fitted to `hull_source` too. A hull the player left
 ## wears its parts; a clone wreck is the ship as the cloning bay first printed it, bare.
 var wears_fitted := true
 var hull_only := false          # abandoned empty: salvages like plain scrap
@@ -166,7 +166,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	EventBus.unregister_resource_node(self)
-	_unregister_indicator()
+	_release_lock()
 	if minimap_target:
 		var minimap = Minimap.get_instance(get_tree())
 		if minimap:

@@ -19,6 +19,4 @@ assets/
 # Exports
 export_presets.cfg
 
-# Design doc (110KB - read on demand, not every conversation)
-docs/
 
