@@ -4,7 +4,7 @@ class_name PlanetScan
 ## What there is to know about a Body, as rows of text: the inner-orbit reach that marks
 ## it Visited, and the survey format its Record in the Log shows. Pure logic. Nothing
 ## surveys a Body in play now - the planetary scan is gone until `ECHO` is designed
-## (docs/IDEAS.md §13) - so the survey rows only show for a Body marked scanned.
+## - so the survey rows only show for a Body marked scanned.
 
 ## Width of the class column in a one-line summary, so a column of them lines up.
 const CLASS_COLUMN := 11
@@ -14,7 +14,7 @@ const LABEL_COLUMN := 13
 ## The Body whose inner orbit `pos` sits deepest in (relative to that Body's scan
 ## range, so a moon wins inside its parent's field), or null when none holds it.
 ## Inner orbit is the whole of the reach: flying past the edge of the gravity field is
-## not enough. Entering it is what marks a Body Visited (docs/adr/0003).
+## not enough. Entering it is what marks a Body Visited.
 static func deepest(pos: Vector2, planets: Array) -> Planet:
 	var best: Planet = null
 	var best_depth := INF
@@ -38,7 +38,7 @@ static func identity_lines(designation: String, orbits: String) -> PackedStringA
 
 ## Survey readout rows for a scanned planet, label column padded for monospace. This is
 ## the one survey format in the game: the Body's Record in the Log holds these rows. The
-## sun is surveyed like any other Body and honestly reports no ore (docs/GLOSSARY.md).
+## sun is surveyed like any other Body and honestly reports no ore.
 static func readout_lines(planet: Planet) -> PackedStringArray:
 	var lines := identity_lines(planet.planet_name.to_upper(),
 			planet.parent_planet.planet_name.to_upper() if planet.is_moon() else "")

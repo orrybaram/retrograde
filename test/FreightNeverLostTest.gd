@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Freight is never lost (docs/adr/0012): saved where it is, stopped at the Void's edge,
+## Freight is never lost: saved where it is, stopped at the Void's edge,
 ## marked and tracked once handled, and kept on a derelict hull holding it.
 
 const EDGE := 340_000.0

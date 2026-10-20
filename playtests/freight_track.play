@@ -1,4 +1,4 @@
-# Handled Freight is marked and tracked (docs/adr/0012): letting go of a piece marks it
+# Handled Freight is marked and tracked: letting go of a piece marks it
 # on the Chart and tracks it at once, over a manual waypoint; clamping it again clears
 # the mark and tracks its destination (a Section's Mount, a Component's Cradle, HOME for
 # anything else). A piece
@@ -11,7 +11,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
-# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# A new game opens adrift outside SR-7. This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5

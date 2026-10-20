@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## The H A R D W A R E section of the Log's Records tab: one Record per thing the ship has
-## read up close (ui/log/RecordsTab.gd, docs/SWEEP.md §10).
+## read up close (ui/log/RecordsTab.gd).
 
 var _gs: GameState
 

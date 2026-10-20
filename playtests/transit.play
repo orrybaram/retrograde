@@ -10,7 +10,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 # A tank run down far enough to be worth filling would trip the low-fuel call too
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
-# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# A new game opens adrift outside SR-7. This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 # Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
@@ -47,7 +47,7 @@ wait_until gs.titan_influence() == 2 3
 wait_until not pt.node("gate_terminal").is_booting() 8
 assert gs.stores == 400 "Veld's Gate took its 600 ST"
 
-# A Gate gives no fuel: that is SR-7's (docs/WORLD.md §4, docs/FREIGHT.md §8)
+# A Gate gives no fuel: that is SR-7's
 assert pt.node("gate_terminal")._menu_items.size() == 2 "a powered Gate offers transit and the door, no fuel"
 wait 1.0
 assert ship.drive.fuel == 10.0 "the berth leaves the tank as it was"

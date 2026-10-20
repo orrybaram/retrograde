@@ -2,7 +2,7 @@ extends Node
 class_name PlanetLog
 
 ## Marks a Body Visited. Flying into a Body's inner orbit (Planet.scan_radius()) earns
-## it its Record in the Log. The Record carries no survey (docs/adr/0003). Permanent: it is
+## it its Record in the Log. The Record carries no survey. Permanent: it is
 ## marked in the Progress ledger, which writes it through the moment it happens, because a
 ## Body is reached in open flight with no dock to hang a full save off. Works from the
 ## first minute. Added to the Ship at runtime.

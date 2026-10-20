@@ -574,7 +574,7 @@ func _orbit_planets() -> Array[Planet]:
 
 ## Tune gravity by feel: the whole system at once, or one Body at a time. Every row moves
 ## `Planet.dev_gravity_scale` or a Body's `density_trim` and then recomputes its mass, so
-## the Record and the pull the ship flies against stay the same number (docs/adr/0004).
+## the Record and the pull the ship flies against stay the same number.
 ## Nothing here is saved - it is for finding a number to put in the scene, not for keeping.
 func _gravity_rows() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []

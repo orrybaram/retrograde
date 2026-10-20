@@ -23,8 +23,7 @@ class_name Ship
 
 @export var max_cargo_weight: float = 0.0  # Hold space (gems take 1-3 units each); the ship starts with none
 
-# Base stats (stored at initialization). The ship's limits are fixed: nothing is bought
-# (docs/adr/0007).
+# Base stats (stored at initialization). The ship's limits are fixed: nothing is bought.
 var base_max_hull: float = 100.0
 var base_max_cargo_weight: float = 0.0
 @export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
@@ -37,7 +36,7 @@ const NOSE := Vector2(10, 0)
 ## softened by this power: 1.0 is physical, 0.5 its square root.
 const FREIGHT_TURN_EXPONENT := 0.5
 
-## Freight clamped to the nose (docs/adr/0012), or null. Set only through the verbs below
+## Freight clamped to the nose, or null. Set only through the verbs below
 ## (carry, let_go, surrender_to_void, hand_over, discard_freight): non-null exactly while
 ## the ship is in CarryingState.
 var freight: Freight = null
@@ -63,7 +62,7 @@ var want_reverse_thrust := false
 var want_strafe_left := false
 var want_strafe_right := false
 ## A slow tumble the ship keeps, rad/s, until the player first turns or thrusts: how a new game opens,
-## the ship adrift outside SR-7 (docs/OPENING.md §3). 0 is under control.
+## the ship adrift outside SR-7. 0 is under control.
 var drift_spin := 0.0
 var want_boost := false
 var gs: GameState = null
@@ -77,7 +76,7 @@ var hull_strength: float:
 			# A repair or a save being restored all land here rather than
 			# in take_damage, so this is where the readouts have to be told.
 			health_component.hp_changed.emit(health_component.current_hp, health_component.max_hp)
-## The Aux and the Burn (docs/adr/0010): the tank, the free half, the cough, and
+## The Aux and the Burn: the tank, the free half, the cough, and
 ## whether the boost is lit. Every fuel read and write goes through it.
 var drive := Drive.new()
 ## Dev-panel overrides (ui/DevPanel.gd), off in normal play. Nothing but that panel
@@ -86,7 +85,7 @@ var dev_invulnerable := false
 var low_fuel_effect: LowFuelEffect = null  # vapor + the backfire when the tank runs low
 var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
 var sonar: SonarPulse = null
-## The Marks a Sweep lays down near hardware that listens (docs/SWEEP.md §8).
+## The Marks a Sweep lays down near hardware that listens.
 var resonance: Resonance = null
 var _sonar_blocked := false  # this hold of `action` began or passed somewhere it couldn't ping  # sonar resonance rings while `action` is held (see wants_sonar)
 
@@ -198,7 +197,7 @@ func _ready() -> void:
 	magnet.name = "GemMagnet"
 	add_child(magnet)
 
-	# Visiting a Body works from the first minute (docs/adr/0003).
+	# Visiting a Body works from the first minute.
 	var planet_log := PlanetLog.new()
 	planet_log.name = "PlanetLog"
 	add_child(planet_log)
@@ -661,13 +660,13 @@ func get_cargo_weight() -> float:
 func is_cargo_full() -> bool:
 	return has_hold() and InventoryManager.get_total_weight() >= max_cargo_weight
 
-## A new game starts with no hold at all (docs/FREIGHT.md §6): until one is fitted,
+## A new game starts with no hold at all: until one is fitted,
 ## nothing harvests and the hold readouts stay hidden.
 func has_hold() -> bool:
 	return max_cargo_weight > 0.0
 
-## Size the ship to what `gs` has fitted: the hold is the Cargo Bay's, or none at all
-## (docs/FREIGHT.md §6). Runs on fitting and on every load.
+## Size the ship to what `gs` has fitted: the hold is the Cargo Bay's, or none at all.
+## Runs on fitting and on every load.
 func refit(state: GameState) -> void:
 	_fitted = state.fitted() if state else PackedStringArray()
 	max_cargo_weight = base_max_cargo_weight + Components.hold(Array(_fitted))
@@ -695,7 +694,7 @@ func _set_overhang() -> void:
 # it; a new game and a relaunch both come through here (Session runs the rest).
 
 ## A new game: the ship as the scene builds it. Stats back to base, hull full, tank dry - a
-## new game wakes with no FUEL TANK seated (docs/OPENING.md §3), so fuel is something the
+## new game wakes with no FUEL TANK seated, so fuel is something the
 ## player has to go and get.
 func reset_to_initial_state() -> void:
 	max_hull = base_max_hull
@@ -711,7 +710,7 @@ func reset_to_initial_state() -> void:
 	cargo_changed.emit(0.0, max_cargo_weight)
 
 ## A relaunch after a loss (destroyed, or taken by the Void): the next clone comes up in
-## this hull. Fitted upgrades persist (the cloning bay prints the ship's spec, ADR 0011),
+## this hull. Fitted upgrades persist (the cloning bay prints the ship's spec),
 ## the hull is whole, and SR-7 tops the tank up to its free half once its core runs. A
 ## load still on the nose stays out here, where the ship was lost.
 func relaunch(state: GameState) -> void:

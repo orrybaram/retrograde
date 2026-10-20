@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## UNIT-7's Cargo Bay lines (docs/OPENING.md §9): the first Sweep that finds scrap with no
+## UNIT-7's Cargo Bay lines: the first Sweep that finds scrap with no
 ## hold to put it in gets the need named - never the place - the hauler on Veld is named
 ## flatly on close approach, fitting gets a word, and the cutting tutorial waits for a
 ## hold to cut into.

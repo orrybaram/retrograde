@@ -82,8 +82,8 @@ func _setup_orbital_motion() -> void:
 	_orbital_motion.set_physics_process(false)
 
 # Collision area (polygon) - bounce and damage when hitting precise shape. Per shape, so a
-# knock on Freight clamped to the ship bounces the ship without reaching its hull
-# (docs/adr/0012), and loose Freight bounces off the same way the ship does.
+# knock on Freight clamped to the ship bounces the ship without reaching its hull,
+# and loose Freight bounces off the same way the ship does.
 func _on_collision_area_entered(_body_rid: RID, body: Node2D, body_shape: int, _local_shape: int) -> void:
 	var ship := body as Ship
 	if ship == null and not (body is Freight):

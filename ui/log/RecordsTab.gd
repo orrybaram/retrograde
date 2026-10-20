@@ -7,12 +7,12 @@ extends LogTab
 ## through both sections, top to bottom, and one rule divides the tab full height.
 ##
 ## The Log lists only what the player reached — no row for anywhere unvisited, and
-## never `? ? ?` (docs/adr/0003). The Bodies section reads the ledger's Progress.VISITED_BODIES
+## never `? ? ?`. The Bodies section reads the ledger's Progress.VISITED_BODIES
 ## and never the `planets` group: a row per Body in the scene would tell the player how
-## many there are to find, which is the spoiler docs/adr/0002 protects.
+## many there are to find, and that is a spoiler.
 ##
 ## A Record about an Automaton is the player's own note on it, not the Automaton being
-## present: nothing speaks from inside the Log (docs/GLOSSARY.md).
+## present: nothing speaks from inside the Log.
 ##
 ## A Hardware Record is what the ship read, as the thing stands now; for a kind many things
 ## share (every piece of scrap), what the kind reads as. Something undecipherable has no
@@ -223,7 +223,7 @@ func _draw_rows() -> void:
 
 ## The one detail column, opened out on whichever Record the cursor is on. A Body's
 ## Record is instrument output and an Automaton's is Notes, so the two do not share a
-## voice (docs/GLOSSARY.md) — but they do share this column, which is what keeps the rule
+## voice — but they do share this column, which is what keeps the rule
 ## beside it running full height instead of stopping at an empty pane.
 func _draw_detail() -> void:
 	_clear(_detail)
@@ -300,7 +300,7 @@ func _redraw() -> void:
 # --- Automatons --------------------------------------------------------------
 
 ## One row per Automaton the player has met: designation on the left, the station it is
-## found at on the right. Nobody met, no rows and no heading (docs/adr/0003).
+## found at on the right. Nobody met, no rows and no heading.
 func _draw_automaton_rows() -> void:
 	_clear(_automaton_rows)
 	for i in _met.size():
@@ -330,7 +330,7 @@ func _draw_automaton_detail(index: int) -> void:
 			TerminalWindow.SMALL_SIZE, Colors.PRIMARY_DIM))
 	# Notes arrive one Module at a time, so a Record read early is a portrait and the
 	# one Note keyed to no Modules online. The rest are absent until their step, with
-	# nothing standing in for them (docs/adr/0003).
+	# nothing standing in for them.
 	for note in npc.notes_at(gs.titan_influence() if gs else 0):
 		_detail.add_child(_note_gap())
 		var line := TerminalWindow.label(note, TEXT_SIZE, Colors.TEXT)

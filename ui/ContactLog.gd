@@ -1,7 +1,7 @@
 extends Control
 class_name ContactLog
 
-## What the ship reads up close (Readout, docs/SWEEP.md §10), typed into the HUD's bottom-right
+## What the ship reads up close (Readout), typed into the HUD's bottom-right
 ## corner in the manual diagnostic's grammar: a heading, then dot-leader rows whose values
 ## end in the diagnostic's stamp column. It grows upward from the corner, above UNIT-7's
 ## panel while that is up.

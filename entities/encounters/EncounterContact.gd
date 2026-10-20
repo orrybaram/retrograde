@@ -4,7 +4,7 @@ class_name EncounterContact
 ## One encounter out in the world, as the scanner sees it: whatever it put there, and
 ## what it reads as. A debris cluster is eight nodes but one contact — the scanner is a
 ## decision aid ("detour or stay on course"), and eight rows for one knot of scrap would
-## drown that decision. See docs/ENCOUNTERS.md.
+## drown that decision.
 
 ## What the scanner calls it. Several encounters can share a label on purpose — a clone
 ## wreck reads as an ordinary DERELICT, because from out here that is all it is.

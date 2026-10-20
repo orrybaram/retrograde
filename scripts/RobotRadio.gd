@@ -16,7 +16,7 @@ signal transmission_ended
 signal confirmed(id: StringName)
 
 ## The Guide's designation; the same one its Record is filed under in the Log
-## (Automatons.GUIDE, docs/STORY.md §3).
+## (Automatons.GUIDE).
 const SPEAKER_NAME := "UNIT-7"
 
 const MSG_WAKE := preload("res://entities/Robot/radio/messages/first_wake.tres")
@@ -36,7 +36,7 @@ var queue := RadioQueue.new()
 ## radio in a test never touches a save file; Main points the game's at the save.
 var save_path := ""
 
-## UNIT-7 is off when the game opens (docs/OPENING.md §7): the station is dead and nobody
+## UNIT-7 is off when the game opens: the station is dead and nobody
 ## is on the comms. Until the core's cold start at the end of Act 1 reboots it, every
 ## call - tips, alarms, the Void, a lost ship - is dropped (request() refuses them), and
 ## MSG_WAKE is the first thing it says. The radio is the comms system to reuse.
@@ -152,7 +152,7 @@ func _unpause() -> void:
 
 ## The radio is a link to UNIT-7 at SR-7, so a transmission going on air is the player
 ## meeting the Guide: from the first one they hold its Record, and the Records tab is
-## never empty (docs/GLOSSARY.md, docs/adr/0003). Marked in the Progress ledger like a named
+## never empty. Marked in the Progress ledger like a named
 ## Gate is, which writes it through - the first transmission comes long before any dock.
 func _mark_guide_met() -> void:
 	if not is_inside_tree():
@@ -251,7 +251,7 @@ func _on_harvest_available_changed(can_harvest: bool) -> void:
 	check_scrap(can_harvest, cargo_bay_fitted())
 
 ## The cutting tutorial waits for the first scrap the ship can actually cut, which is only
-## ever after the Cargo Bay is fitted (docs/OPENING.md §9).
+## ever after the Cargo Bay is fitted.
 func check_scrap(can_harvest: bool, fitted: bool) -> void:
 	if guide_awake and can_harvest and fitted:
 		request(MSG_SCRAP)
@@ -260,7 +260,7 @@ func _on_scrap_swept() -> void:
 	check_swept_scrap(cargo_bay_fitted())
 
 ## A Sweep found scrap and the ship has nowhere to put it: UNIT-7 names the need, never
-## the place (docs/OPENING.md §9). It sincerely does not know where a hold is (ADR 0008).
+## the place. It sincerely does not know where a hold is.
 func check_swept_scrap(fitted: bool) -> void:
 	if guide_awake and not fitted:
 		request(MSG_NO_HOLD)
@@ -271,7 +271,7 @@ func check_fitted(id: String) -> void:
 		request(MSG_CARGO_BAY_FITTED)
 
 ## The Cargo Bay is on the ship: there is a hold, and scrap can be cut. Not once fitted
-## but now - it can be stowed again (docs/adr/0014).
+## but now - it can be stowed again.
 func cargo_bay_fitted() -> bool:
 	if not is_inside_tree():
 		return false

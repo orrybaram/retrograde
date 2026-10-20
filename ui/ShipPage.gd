@@ -1,7 +1,7 @@
 extends VBoxContainer
 class_name ShipPage
 
-## SHIP (docs/GLOSSARY.md, docs/adr/0014): the dock's page for the ship itself. A line
+## SHIP: the dock's page for the ship itself. A line
 ## drawing of the hull with what is fitted, the ship's STATUS, and below them the rows
 ## SpacePortDialogue runs (`rows`): FIT for each Component waiting in the Cradle, STOW for
 ## each one on the hull, BACK. The row under the cursor previews itself: a FIT blinks its

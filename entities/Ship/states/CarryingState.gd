@@ -1,7 +1,7 @@
 extends FlyingState
 class_name CarryingState
 
-## Flying with Freight clamped to the nose (docs/adr/0012). Everything FlyingState does -
+## Flying with Freight clamped to the nose. Everything FlyingState does -
 ## thrust, turning (slowed by the load through Ship.turn_ratio), knocks, particles - except
 ## that `action` means one thing here: hold it to let go, anywhere - a deliberate hold, so
 ## a tap never drops the load. Let go within tolerance of its Mount, a Section is pulled

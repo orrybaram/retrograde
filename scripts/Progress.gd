@@ -2,7 +2,7 @@ extends RefCounted
 class_name Progress
 
 ## The Progress ledger: every fact the player has earned, by kind, each one written through
-## to a Store the moment it is marked. Nothing goes backwards (CONTEXT.md): a fact, once
+## to a Store the moment it is marked. Nothing goes backwards: a fact, once
 ## marked, holds for the rest of the save, so there is no way to unmark one. A new game is
 ## a `fresh` ledger; a continue is `resumed` from the Store.
 ##
@@ -15,10 +15,10 @@ class_name Progress
 ## Cradle when it is fitted, and the ledger never takes anything back.
 
 ## Bodies the ship has flown into the inner orbit of, keyed by Planet.save_key(), in visit
-## order. Each one holds a Record in the Log (docs/adr/0003).
+## order. Each one holds a Record in the Log.
 const VISITED_BODIES := "visited_bodies"
 ## Gates the Guide has named, keyed by Gate.save_key(). A Gate reads as `? ? ?` on the
-## minimap until then (docs/GLOSSARY.md, Unidentified).
+## minimap until then (Unidentified).
 const IDENTIFIED_GATES := "identified_gates"
 ## Wrecks UNIT-7 has named, keyed by HaulerWreck.save_key(). Unidentified until then, like
 ## a Gate.
@@ -33,7 +33,7 @@ const POWERED_GATES := "powered_gates"
 const SEATED_SECTIONS := "seated_sections"
 ## Components fitted to the ship from the Cradle, keyed by Components id.
 const FITTED_COMPONENTS := "fitted_components"
-## SR-7's core has been cold-started (docs/OPENING.md §6): the station has power and
+## SR-7's core has been cold-started: the station has power and
 ## UNIT-7 is awake. A single-key kind: `flag` it, and read it with `flagged`.
 const CORE_STARTED := "core_started"
 ## Things the ship has read up close, keyed by Readout.key. A Mount marks its Section on the

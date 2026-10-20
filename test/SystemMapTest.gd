@@ -70,7 +70,7 @@ func test_arrival_radius_clears_a_planet_bulk() -> void:
 # --- Charted regions ---------------------------------------------------------
 
 ## The chart opens holding home and nothing else: the system is out there, but the
-## Titan has not handed any of it over yet (docs/adr/0002).
+## Titan has not handed any of it over yet.
 func test_a_new_chart_holds_only_home() -> void:
 	var sun := _planet("Sun")
 	var veld := _planet("Veld", sun)

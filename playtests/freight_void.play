@@ -1,4 +1,4 @@
-# The Void cannot take Freight (docs/adr/0012): a load stays clamped through the edge,
+# The Void cannot take Freight: a load stays clamped through the edge,
 # and when the dark takes the ship the load turns up on the same bearing, 1 km (1000 px)
 # inside the edge, at rest, marked and tracked. Loose Freight never drifts out through
 # the edge, and a piece let go of past it stops where it is.
@@ -10,7 +10,7 @@ eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
-# A new game opens adrift outside SR-7 (docs/OPENING.md §3). This scenario is not about
+# A new game opens adrift outside SR-7. This scenario is not about
 # the opening: skip it, and start docked at a running station.
 eval pt.skip_opening()
 wait_until pt.state_name() == "LandedState" 5

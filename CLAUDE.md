@@ -1,7 +1,6 @@
 # Retrograde
 
-2D space exploration game in Godot 4.6 with a retro terminal / CRT look. The design rules and
-vocabulary below come first; name things in code and dialogue the way the glossary does.
+2D space exploration game in Godot 4.6 with a retro terminal / CRT look.
 
 
 ## Running and testing

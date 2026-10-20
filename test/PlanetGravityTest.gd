@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## Tests for how heavy a Body is (docs/adr/0004). Mass is derived from class density and
+## Tests for how heavy a Body is. Mass is derived from class density and
 ## radius, so surface pull is density times radius: a wider Body always outweighs a
 ## narrower one of the same stuff. These guard the ordering the home system is built on -
 ## the sun an order of magnitude clear of everything, no moon outweighing its planet.
@@ -82,8 +82,7 @@ func test_the_home_system_holds_every_body_this_suite_expects() -> void:
 
 
 ## The Core sits in the sun and it is meant to be the last and hardest place to reach
-## (docs/GLOSSARY.md, Sun Station). Before ADR 0004 the sun read 1.6 G and Rook, a moon, read
-## 1.7 G.
+## (Sun Station).
 func test_the_sun_outweighs_every_other_body_several_times_over() -> void:
 	var bodies := _home_bodies()
 	var sun: Planet = null

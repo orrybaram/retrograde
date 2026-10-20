@@ -3,7 +3,7 @@ class_name ContainerNode
 
 ## A sealed cargo container, still intact. Salvages like scrap but always comes out
 ## trophy grade — it takes five clean cuts and what's inside is worth the detour.
-## Spawned by the encounter field out in deep space (see docs/ENCOUNTERS.md).
+## Spawned by the encounter field out in deep space.
 
 const _SHAPE := preload("res://entities/resources/ScrapShapes/ContainerShape.tscn")
 

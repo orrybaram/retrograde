@@ -1,7 +1,7 @@
 extends Control
 class_name BootLog
 
-## The ship's manual diagnostic on the HUD (docs/OPENING.md §4): a `BootChecklist` typed out in
+## The ship's manual diagnostic on the HUD: a `BootChecklist` typed out in
 ## bare terminal text in the dashboard's bottom-left corner, growing upward. It stands in for
 ## the dashboard while the game owes it (holds_corner): the HUD keeps the dashboard dark
 ## until the log is done, and powers its pieces back on once the pilot has the controls. It

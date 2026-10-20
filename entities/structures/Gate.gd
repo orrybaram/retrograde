@@ -21,9 +21,9 @@ class_name Gate
 ## docks with the same rules as a port: the berth is the dock surface, the ship comes
 ## in slow and lined up, and GateDockedState clamps it there.
 ##
-## Unidentified until flown to (docs/GLOSSARY.md): it is an unnamed ring on the minimap until
+## Unidentified until flown to: it is an unnamed ring on the minimap until
 ## the ship gets inside Identifiable.RANGE of it, at which point the Guide says what it
-## is and the chart names it. The Guide never points at one beforehand (docs/adr/0002).
+## is and the chart names it. The Guide never points at one beforehand.
 ##
 ## One Gate in the system is not a planet's: the Core's Gate at the Sun Station, which
 ## waits on all five Modules rather than on Stores (`is_core`).

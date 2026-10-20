@@ -2,7 +2,7 @@ extends Resource
 class_name NPCData
 
 ## One Automaton: how it looks, the station it is stationed at, and the
-## Record the player keeps about it in the Log (docs/GLOSSARY.md: Automaton, Record, Note).
+## Record the player keeps about it in the Log.
 
 @export var npc_name: String = ""
 ## The designation on its own, e.g. "UNIT-7". This is what its Record is filed under
@@ -16,7 +16,7 @@ class_name NPCData
 ## The Notes on this Automaton's Record, in the player's own voice. Note i appears once
 ## Titan Influence reaches note_influence[i], which is how a Record sours as the Titan
 ## wakes. The first Note is keyed to 0 so a Record is never empty on first meeting; a
-## Note the player has not reached is absent, never teased (docs/adr/0003).
+## Note the player has not reached is absent, never teased.
 @export var record_notes: Array[String] = []
 ## Titan Influence (0-5) each Note in record_notes waits for, index for index.
 @export var note_influence: Array[int] = []

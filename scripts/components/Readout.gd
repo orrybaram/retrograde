@@ -1,7 +1,7 @@
 extends Node2D
 class_name Readout
 
-## What a thing tells the player about itself once the ship is close (docs/SWEEP.md §10). Put
+## What a thing tells the player about itself once the ship is close. Put
 ## one under anything that should: when the ship comes within `reach` of this node's position,
 ## the thing is read, every row at once. Only what carries one is read - it is deliberate,
 ## never everything. It draws nothing: it says what it read on EventBus.readout_read, and the

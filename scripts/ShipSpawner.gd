@@ -67,7 +67,7 @@ func spawn_at_dock(dockable: Node2D, instant: bool = true) -> void:
 	print("Ship spawned at dock: ", dockable.name, " position: ", spawn_pos)
 	spawn_complete.emit()
 
-## Where the ship wakes adrift beside SR-7 (docs/OPENING.md §3), in the station's space:
+## Where the ship wakes adrift beside SR-7, in the station's space:
 ## below and out past the belly, far enough that the station (which reaches down to y 341,
 ## more with its wing hanging) sits just off the top of the screen, and the FUEL TANK is in
 ## view ahead - with Rook's debris ring (2400 px off the station at its nearest) out of view.

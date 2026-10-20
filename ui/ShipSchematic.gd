@@ -1,7 +1,7 @@
 extends Control
 class_name ShipSchematic
 
-## SHIP's drawing of the ship from above (docs/adr/0014): terminal line art, the hull in
+## SHIP's drawing of the ship from above: terminal line art, the hull in
 ## mustard, fitted Components in cream, and a blinking ghost of a Component about to be
 ## fitted. A place with nothing in it is never drawn. Components are drawn from the same
 ## outlines the hull wears (Components.fitted_outline), so the drawing cannot disagree

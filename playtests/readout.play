@@ -1,4 +1,4 @@
-# Readouts (docs/SWEEP.md §10): coming close to one of SR-7's empty Mounts reads it, every
+# Readouts: coming close to one of SR-7's empty Mounts reads it, every
 # row at once, into the HUD's bottom-right corner - no Sweep needed. Reading the Mount is what
 # puts its Section on the minimap; an unread Mount's piece stays off it, and a read survives a
 # reload. Only the readout nearest the ship reads, and a tether from its entry locks brackets

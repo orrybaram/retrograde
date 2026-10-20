@@ -15,7 +15,7 @@ const BORDER_WIDTH := 2
 
 # --- Tab strip ---------------------------------------------------------------
 ## A tab is a control, not a header, so it carries a plain word rather than the spaced
-## letters of a title (docs/PATTERNS.md). Selection is carried by the notch itself -
+## letters of a title. Selection is carried by the notch itself -
 ## the lit one opens into the window - so the label needs no prefix marker.
 const TAB_SELECTED_PREFIX := ""
 const TAB_UNSELECTED_PREFIX := ""

@@ -12,7 +12,7 @@ class_name ScrapNode
 ## cream ring back. It is not an answer - nothing purple - scrap is not part of the Titan,
 ## it only shows itself.
 ##
-## Found, it can be read up close like a Mount (a discoverable Readout, docs/SWEEP.md §10):
+## Found, it can be read up close like a Mount (a discoverable Readout):
 ## every piece shares the key `scrap` (`scrap_trophy` for a trophy), so the first one read
 ## files the Log's Record for scrap and the rest only show their rows.
 

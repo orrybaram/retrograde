@@ -214,8 +214,8 @@ func test_flying_close_enough_gets_the_gate_named() -> void:
 	assert_bool(gate.is_identified()).is_true()
 
 
-## Reaching it is the only trigger — the guide never points at a Gate beforehand
-## (docs/adr/0002), and it only ever has to be named once.
+## Reaching it is the only trigger — the guide never points at a Gate beforehand,
+## and it only ever has to be named once.
 func test_reaching_a_gate_asks_the_guide_to_name_it_once() -> void:
 	var gate := _gate(_planet("Veld"))
 	var requested: Array[RadioConversation] = []

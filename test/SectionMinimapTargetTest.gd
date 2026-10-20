@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-## SR-7's missing pieces ping on the minimap's sonar (docs/OPENING.md §5) once the ship has
+## SR-7's missing pieces ping on the minimap's sonar once the ship has
 ## read their Mount up close, until each is back in it.
 
 var _world: Node2D

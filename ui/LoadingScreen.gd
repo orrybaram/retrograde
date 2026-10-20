@@ -6,8 +6,8 @@ class_name LoadingScreen
 ##
 ## Every row is on screen from the first frame - pending ones ghosted, the running one
 ## bright with dots writing out behind a cursor, finished ones dimmed and stamped
-## [ OK ] - so the panel holds still and can be read rather than scrolling past
-## (docs/OPENING.md §8). Scanlines and a slow roll band sell the CRT.
+## [ OK ] - so the panel holds still and can be read rather than scrolling past.
+## Scanlines and a slow roll band sell the CRT.
 
 const TITLE := "/ S Y S T E M   B O O T /"
 const SUBTITLE := "P O W E R - O N   S E L F   T E S T"
@@ -48,8 +48,7 @@ var _boot_messages: Array[String] = [
 	"Calibrating sensors",
 	"Establishing communication protocols",
 	"Scanning for celestial bodies",
-	# Sits between two mundane lines on purpose: nobody reads it the first time
-	# (docs/OPENING.md §8).
+	# Sits between two mundane lines on purpose: nobody reads it the first time.
 	"Synchronizing clone manifest",
 	"Generating orbital calculations",
 	"Finalizing generation",

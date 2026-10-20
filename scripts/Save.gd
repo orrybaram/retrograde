@@ -113,7 +113,7 @@ static func load_radio_seen(path: String = "") -> PackedStringArray:
 	return PackedStringArray(cfg.get_value(RADIO_SECTION, RADIO_SEEN_KEY, PackedStringArray()))
 
 ## The saved deep-space field: harvested slots, and how far its rings had turned.
-## Feed straight to EncounterField.restore(). See docs/ENCOUNTERS.md.
+## Feed straight to EncounterField.restore().
 static func load_encounters(path: String = "") -> Dictionary:
 	var cfg := ConfigFile.new()
 	if cfg.load(path if path != "" else Playtest.save_path()) != OK:
@@ -218,7 +218,7 @@ static func load_into(gs: GameState, ship: Ship, path: String = "") -> void:
 	gs.death_count = int(cfg.get_value("stats", "death_count", 0))
 	RobotRadio.load_seen(load_radio_seen(path))
 	# Surveys are not kept: an old save's planetary scans stay behind, so its seams stay
-	# dormant with everyone else's (docs/SWEEP.md §7).
+	# dormant with everyone else's.
 	gs.scanned_planets.clear()
 	gs.spent_ore = load_ore_regrowth(path)
 	# Every Record comes back from the ledger's own store, then an old save's half-seated

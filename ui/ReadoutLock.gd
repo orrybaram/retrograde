@@ -1,7 +1,7 @@
 extends Control
 class_name ReadoutLock
 
-## What ties a read to the thing it read (docs/SWEEP.md §10). When the ship reads something
+## What ties a read to the thing it read. When the ship reads something
 ## up close, a dotted tether draws straight out of its entry's heading in the ContactLog to
 ## the thing, and lock brackets close around it where the tether lands. Both hold until the
 ## entry fades. Something of the Titan's locks in its purple.

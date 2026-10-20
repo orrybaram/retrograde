@@ -3,7 +3,7 @@ class_name EncounterDef
 
 ## One kind of deep-space encounter, as data. Placement rules live here; the thing
 ## itself is built by a subclass. Adding a new encounter type is a new subclass plus a
-## .tres — EncounterField never changes. See docs/ENCOUNTERS.md.
+## .tres — EncounterField never changes.
 ##
 ## Generation is split in two so that the world stays reproducible:
 ##   plan()  rolls every random choice and returns one entry per node, in a stable order
@@ -26,7 +26,7 @@ class_name EncounterDef
 @export var budget: int = 0
 
 ## The band of distances from the sun where this can appear. The five-planet tone
-## gradient in docs/STORY.md §5 falls out of these: a def banded past MV-1's orbit is a
+## gradient falls out of these: a def banded past MV-1's orbit is a
 ## military-era encounter without having to say so.
 @export var min_radius: float = 0.0
 @export var max_radius: float = 0.0  # 0 = out to the edge of the system

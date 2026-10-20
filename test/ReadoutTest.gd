@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## A Readout reads, every row at once, when the ship comes within its reach, and the read
-## holds in the ledger (docs/SWEEP.md §10).
+## holds in the ledger.
 
 var _gs: GameState
 var _ship: Ship
