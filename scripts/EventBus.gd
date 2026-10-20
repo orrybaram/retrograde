@@ -9,7 +9,7 @@ signal harvest_available_changed(can_harvest: bool)
 
 signal action_message_changed(message: String)
 ## Emitted when an action prompt should be displayed or cleared.
-## Empty string clears it. IndicatorManager shows it next to what it's about.
+## Empty string clears it. IndicatorManager shows it under the ship.
 
 signal ship_respawned()
 ## Emitted when the ship respawns after game over or reset.
@@ -50,8 +50,8 @@ signal scrap_swept()
 ## A Sweep's ring reached a live chunk of scrap, found just now or long since: whether the
 ## ship can cut it is another matter (RobotRadio's no-hold call).
 
-signal readout_swept(readout: Node, tier: int, rows: Array)
-## A Sweep's ring read a SweepReadout, `tier` deep, showing `rows` (ReadoutRow): the HUD's
+signal readout_read(readout: Node, rows: Array)
+## The ship came close enough to read a Readout, showing `rows` (ReadoutRow): the HUD's
 ## ContactLog types it out.
 
 signal gem_collected(item_id: String, world_position: Vector2)

@@ -2,7 +2,7 @@ class_name RecordsTab
 extends LogTab
 
 ## The Log's second tab: one Record per Body the player has Visited, per Automaton
-## they have met, and per piece of Hardware a Sweep has read (SweepReadout). Both sections list down the left; one detail column on the right
+## they have met, and per piece of Hardware the ship has read up close (Readout). Both sections list down the left; one detail column on the right
 ## carries whichever Record the cursor is on, whichever section that is. One cursor runs
 ## through both sections, top to bottom, and one rule divides the tab full height.
 ##
@@ -14,8 +14,8 @@ extends LogTab
 ## A Record about an Automaton is the player's own note on it, not the Automaton being
 ## present: nothing speaks from inside the Log (docs/GLOSSARY.md).
 ##
-## A Hardware Record is what the Sweep read, as deep as it has ever read it
-## (SweepReadout.depth_read), and as the thing stands now. Something undecipherable has no
+## A Hardware Record is what the ship read, as the thing stands now; for a kind many things
+## share (every piece of scrap), what the kind reads as. Something undecipherable has no
 ## Record: nothing was learned from it.
 
 ## Shown while the player holds no Records. It says what earns one; it never hints at
@@ -25,7 +25,7 @@ const EMPTY_STATE := [
 	"",
 	"A BODY EARNS ITS RECORD WHEN YOU FLY INTO ITS ORBIT.",
 	"AN AUTOMATON EARNS ONE WHEN YOU MEET IT.",
-	"HARDWARE EARNS ONE WHEN A SWEEP READS IT.",
+	"HARDWARE EARNS ONE WHEN YOU COME CLOSE ENOUGH TO READ IT.",
 ]
 
 ## What a Record reads before the Body has been surveyed. The Body itself is known — the
@@ -68,8 +68,8 @@ var _met: Array[NPCData] = []
 # --- Hardware ----------------------------------------------------------------
 var _hardware: VBoxContainer
 var _hardware_rows: VBoxContainer
-## The readouts the Sweep has read, filed by place (file_hardware).
-var _read: Array[SweepReadout] = []
+## The readouts the ship has read, filed by place (file_hardware).
+var _read: Array[Dictionary] = []
 ## One cursor over every row in the tab, Bodies first, then Automatons, then Hardware, so
 ## UP / DOWN carry from one section into the next with no second level of navigation.
 var _cursor := 0
@@ -357,27 +357,34 @@ func _clear(box: Container) -> void:
 
 # --- Hardware ----------------------------------------------------------------
 
-## Every readout in `tree` the ledger says a Sweep has read, in the order they were read.
-## Undecipherable ones are left out: nothing was learned from them.
-static func read_hardware(tree: SceneTree, state: GameState) -> Array[SweepReadout]:
-	var out: Array[SweepReadout] = []
+## A Record for every key the ledger says the ship has read, in the order read:
+## {key, heading, title, category, rows}. A key many things share (scrap) shows its
+## registered kind (Readout.register_kind); any other shows its thing as it stands now.
+## Undecipherable things are left out: nothing was learned from them.
+static func read_hardware(tree: SceneTree, state: GameState) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	if state == null:
 		return out
 	var by_key := {}
-	for node in tree.get_nodes_in_group("sweep_readouts"):
-		var r := node as SweepReadout
+	for node in tree.get_nodes_in_group("readouts"):
+		var r := node as Readout
 		if r and not r.undecipherable and r.ledger_key() != "":
 			by_key[r.ledger_key()] = r
-	for at in state.progress.list(Progress.SWEPT_READOUTS):
-		if by_key.has(at):
-			out.append(by_key[at])
+	for at in state.progress.list(Progress.READ_READOUTS):
+		var record := Readout.kind(at)
+		if not record.is_empty():
+			out.append(record.merged({"key": at}))
+		elif by_key.has(at):
+			var r: Readout = by_key[at]
+			out.append({"key": at, "heading": r.heading, "title": r.title, "category": r.category,
+					"rows": r.rows_now()})
 	return out
 
 
-## `read` filed by place (SweepReadout.category): each place's things together, the places in
+## `read` filed by place (Readout.category): each place's things together, the places in
 ## the order their first thing was read, and read order kept within a place. The cursor runs
 ## through them in this order, so it moves down the list as drawn.
-static func file_hardware(read: Array[SweepReadout]) -> Array[SweepReadout]:
+static func file_hardware(read: Array[Dictionary]) -> Array[Dictionary]:
 	var places: PackedStringArray = []
 	var by_place := {}
 	for r in read:
@@ -385,7 +392,7 @@ static func file_hardware(read: Array[SweepReadout]) -> Array[SweepReadout]:
 			places.append(r.category)
 			by_place[r.category] = []
 		by_place[r.category].append(r)
-	var out: Array[SweepReadout] = []
+	var out: Array[Dictionary] = []
 	for place in places:
 		out.append_array(by_place[place])
 	return out
@@ -413,7 +420,7 @@ func _draw_hardware_rows() -> void:
 		row.add_child(TerminalWindow.label(r.title if r.title != "" else r.heading, TEXT_SIZE,
 				Colors.PRIMARY if selected else Colors.TEXT))
 		row.add_child(TerminalWindow.spacer())
-		var rows := r.rows_for(1)
+		var rows: Array = r.rows
 		row.add_child(TerminalWindow.label(rows[0].value if not rows.is_empty() else r.heading,
 				TEXT_SIZE, Colors.PRIMARY_DIM))
 		_hardware_rows.add_child(row)
@@ -432,8 +439,7 @@ func _indent() -> Control:
 	return gap
 
 
-## The selected Hardware's Record: what it is, then every row the Sweep has read it to,
-## as the thing stands now. Unread tiers have no row (docs/adr/0003).
+## The selected Hardware's Record: what it is, then its rows as the thing stands now.
 func _draw_hardware_detail(index: int) -> void:
 	if index >= _read.size():
 		return
@@ -450,7 +456,7 @@ func _draw_hardware_detail(index: int) -> void:
 		_detail.add_child(TerminalWindow.label(" / ".join(subtitle), TerminalWindow.SMALL_SIZE,
 				Colors.PRIMARY_DIM))
 	_detail.add_child(_note_gap())
-	for row in r.rows_for(r.depth_read()):
+	for row: ReadoutRow in r.rows:
 		_detail.add_child(TerminalWindow.label(hardware_line(row), TEXT_SIZE, Colors.TEXT))
 
 

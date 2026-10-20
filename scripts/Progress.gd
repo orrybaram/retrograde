@@ -36,14 +36,14 @@ const FITTED_COMPONENTS := "fitted_components"
 ## SR-7's core has been cold-started (docs/OPENING.md §6): the station has power and
 ## UNIT-7 is awake. A single-key kind: `flag` it, and read it with `flagged`.
 const CORE_STARTED := "core_started"
-## Things a Sweep has read, keyed by SweepReadout.key. A Mount marks its Section on the
-## minimap only once it is here.
-const SWEPT_READOUTS := "swept_readouts"
+## Things the ship has read up close, keyed by Readout.key. A Mount marks its Section on the
+## minimap only once it is here. Saved under its old name, from when a Sweep read them.
+const READ_READOUTS := "swept_readouts"
 
 ## Every kind the ledger keeps, in the order a Store reads and writes them.
 const KINDS: Array[String] = [
 	VISITED_BODIES, IDENTIFIED_GATES, IDENTIFIED_WRECKS, MET_AUTOMATONS, POWERED_GATES,
-	SEATED_SECTIONS, FITTED_COMPONENTS, CORE_STARTED, SWEPT_READOUTS,
+	SEATED_SECTIONS, FITTED_COMPONENTS, CORE_STARTED, READ_READOUTS,
 ]
 
 var _store: Store

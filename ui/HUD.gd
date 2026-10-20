@@ -78,7 +78,9 @@ func _ready() -> void:
 	contacts.radio = radio
 	tracking.blockers.append(contacts)
 	add_child(contacts)
-	add_child(ReadoutShimmer.new())
+	var lock := ReadoutLock.new()
+	lock.contact_log = contacts
+	add_child(lock)
 	# Added last so it processes after _update_labels and rots the finished readouts
 	var glitch := HudGlitch.new()
 	glitch.name = "HudGlitch"

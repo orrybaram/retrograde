@@ -166,7 +166,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	EventBus.unregister_resource_node(self)
-	_unregister_indicator()
+	_release_lock()
 	if minimap_target:
 		var minimap = Minimap.get_instance(get_tree())
 		if minimap:

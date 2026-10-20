@@ -1,15 +1,15 @@
 extends Control
 class_name ContactLog
 
-## What the Sweep reads (SweepReadout, docs/SWEEP.md §10), typed into the HUD's bottom-right
+## What the ship reads up close (Readout, docs/SWEEP.md §10), typed into the HUD's bottom-right
 ## corner in the manual diagnostic's grammar: a heading, then dot-leader rows whose values
 ## end in the diagnostic's stamp column. It grows upward from the corner, above UNIT-7's
 ## panel while that is up.
 ##
 ## Each read is an entry that types, holds and fades; the newest is at the bottom, nearest
 ## the corner, and the oldest goes when there are too many. A read of something already
-## showing keeps its entry up: what is typed stays, only what is new types on (a deeper
-## read's rows), and the hold starts over.
+## showing keeps its entry up: what is typed stays, only what has changed types on, and the
+## hold starts over.
 
 const TEXT_SIZE := BootLog.TEXT_SIZE
 const OUTLINE := BootLog.OUTLINE
@@ -40,13 +40,13 @@ func _ready() -> void:
 	_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stack.add_theme_constant_override("separation", TEXT_SIZE)
 	add_child(_stack)
-	EventBus.readout_swept.connect(show_read)
+	EventBus.readout_read.connect(show_read)
 	visible = false
 
 
-## Type out what `readout` read, `tier` deep.
-func show_read(readout: Node, _tier: int, rows: Array) -> void:
-	var r := readout as SweepReadout
+## Type out what `readout` read.
+func show_read(readout: Node, rows: Array) -> void:
+	var r := readout as Readout
 	if r == null:
 		return
 	var lines := entry_lines(r.shown_heading(), r.shown_title(), rows, r.undecipherable)
@@ -80,6 +80,20 @@ static func entry_lines(heading: String, title: String, rows: Array, titan := fa
 			line[0][1] = Colors.TITAN
 		lines.append(line)
 	return lines
+
+
+## Where `readout`'s entry is, for ReadoutLock's tether: {point: the left end of its heading,
+## in this log's canvas, alpha}. Empty when it has none.
+func entry_state(readout: Node) -> Dictionary:
+	var id := readout.get_instance_id()
+	for entry in _entries:
+		if entry.id == id:
+			var label: RichTextLabel = entry.label
+			return {
+				"point": label.global_position + Vector2(0.0, TEXT_SIZE * 0.6),
+				"alpha": label.modulate.a,
+			}
+	return {}
 
 
 ## What the log reads right now, as plain text: what a player sees typed so far.

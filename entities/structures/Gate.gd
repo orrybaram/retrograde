@@ -170,13 +170,16 @@ func _exit_tree() -> void:
 
 # --- State -------------------------------------------------------------------
 
-## What a Sweep reads off it (SweepReadout, undecipherable for now): what it would say once
-## the ship can make it out.
-func readout_rows(tier: int) -> Array[ReadoutRow]:
-	var out: Array[ReadoutRow] = [ReadoutRow.make("STATE", "POWERED" if is_powered() else "DORMANT")]
-	if tier >= 2:
-		out.append(ReadoutRow.make("MODULE", "ONLINE" if is_powered() else "OFFLINE", 2))
-	return out
+## What it reads as up close (Readout, undecipherable for now): what it would say once the
+## ship can make it out.
+func readout_rows() -> Array[ReadoutRow]:
+	return [ReadoutRow.make("STATE", "POWERED" if is_powered() else "DORMANT"),
+		ReadoutRow.make("MODULE", "ONLINE" if is_powered() else "OFFLINE")]
+
+## Where the lock closes when it is read (ReadoutLock): the ring it draws.
+func readout_bounds() -> Rect2:
+	var r := RADIUS * global_scale.x
+	return Rect2(global_position - Vector2(r, r), Vector2(r, r) * 2.0)
 
 ## The planet whose Module this Gate powers; the key both are saved under.
 func save_key() -> String:

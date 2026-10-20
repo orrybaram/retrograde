@@ -8,14 +8,14 @@ var _can_harvest: bool = false
 
 func enter() -> void:
 	super.enter()
-	scrap_node._register_indicator()  # no-op until revealed; reveal() registers it then
+	scrap_node._hold_lock()  # no-op until found; reveal() holds it then
 
 func exit() -> void:
 	if _can_harvest:
 		_can_harvest = false
 		scrap_node.can_harvest_changed.emit(false)
 	EventBus.action_message_changed.emit("")
-	scrap_node._unregister_indicator()
+	scrap_node._release_lock()
 	super.exit()
 
 func process(delta: float) -> void:
