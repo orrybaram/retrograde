@@ -3,7 +3,7 @@ You are implementing GitHub issue #{number}: {title}
 {body}
 
 Before writing code:
-- Read CLAUDE.md and .claude/PATTERNS.md for the project's rules (Colors autoload, monospace, arrow-key UI, state machines, case-sensitive res:// paths).
+- Read CLAUDE.md and docs/PATTERNS.md for the project's rules (Colors autoload, monospace, arrow-key UI, state machines, case-sensitive res:// paths).
 - Read CONTEXT.md for the domain glossary. Use its vocabulary in code, comments and UI text: Titan, Module, Gate, Core, Sun Station, Titan Influence, Automaton, Unidentified, Chart, Charted. Never write "warp gate", "teleport" or "containment".
 - Read docs/adr/0001-titan-is-powered-down-not-contained.md and docs/adr/0002-chart-starts-blank-and-is-filled-by-gates.md. The Titan is powered down, not imprisoned; the player only ever restores.
 

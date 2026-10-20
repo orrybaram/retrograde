@@ -1,36 +1,49 @@
-# Retrograde - Development Guidelines
+# Retrograde
 
-2D space exploration/trading game built in Godot 4.6. Retro terminal / CRT monitor aesthetic.
+2D space exploration game in Godot 4.6 with a retro terminal / CRT look. The design rules and
+vocabulary below come first; name things in code and dialogue the way the glossary does.
 
-## Critical Rules
 
-1. **Use the "Violet Signal" palette via `Colors`** - Every color comes from the `Colors` autoload (`Colors.PRIMARY`, `Colors.SPACE_BG`, `Colors.NAV`, etc.) in `scripts/Colors.gd`. Never hardcode color values; in BBCode use `Colors.hex(Colors.PRIMARY)`. Faded mustard `#E8C170` is the single UI color. Blue (`Colors.NAV`) is navigation only. Purple (`Colors.TITAN`) is reserved for the Titan and Artifacts, never decoration. In `.tscn` files (which can't reference autoloads) copy the exact values from `Colors.gd`.
-2. **Monospace everything** - Font: kongtext (`assets/fonts/kongtext.ttf`, the project theme font; Andale Mono is only in dev labs). All text should feel like terminal output.
-3. **Dark backgrounds** - Space and UI panels use olive-black `Colors.SPACE_BG` (`#14130F`), solid or 80-90% opacity. Not pure black.
-4. **Input goes through `Controls`** - Every action (keys + gamepad) is declared in `scripts/Controls.gd`; project.godot has no `[input]`. Terminal UIs read `Controls.menu_action(event)` (UP/DOWN + ENTER, D-pad + A), never `KEY_*`; prompts use `Controls.label(action)`. No mouse-based UI.
-5. **State machines for complex entities** - Use `StateMachine` + `State` subclasses pattern (see `scripts/StateMachine.gd`). States own their camera zoom, particles, and cleanup.
+## Running and testing
 
-## Architecture Quick Reference
+- `tools/test.sh` runs every gdUnit4 suite headless (exit 0 = pass); one suite with
+  `tools/test.sh -a res://test/GemDataTest.gd`.
+- `tools/smoke.sh [frames]` boots the main scene headless and fails on any ERROR or path-case
+  mismatch. Run it after changing an autoload or an `EventBus` signature: some load-order
+  breaks only show at boot.
+- `godot --headless --path . --import` after adding files or `class_name`s.
+- Playing the real game (`tools/play.sh`, `tools/playctl`) is the `playtest` skill.
+- `F1` (or `` ` ``) in a debug build opens the dev panel (`ui/DevPanel.gd`): fuel, hull, hold,
+  Stores, progress, warps.
+- `res://` paths are case-sensitive on export: the folder is `entities/`.
 
-- State machine pattern: `scripts/StateMachine.gd` -> entity-specific base state -> concrete states
-- UI: `Control` nodes with anchors, `CanvasLayer` for HUD
-- Terminal UI panels: bordered `StyleBoxFlat` (draw_center=false), mustard (`Colors.UI_BORDER`) border, spaced letter headers (`S T A T U S`)
-- Action rows: `>` prefix for selected, dimmed `Colors.PRIMARY_DIM` (`#6B5A34`) for unavailable
+## Engine traps
 
-For detailed patterns and examples, see `@.claude/PATTERNS.md`.
+- One GDScript parse error anywhere makes the radio's `.tres` conversations fail to load, and
+  gdUnit then reports dozens of unrelated failures. Find the real error with
+  `godot --headless --path . --import 2>&1 | grep -A1 "SCRIPT ERROR"`. Rebuild the cache with
+  `rm -rf .godot`; deleting only the class cache leaves a half-built one that invents errors.
+- At least one `EventBus` signal before `radio_message_requested` has to keep naming a gameplay
+  `class_name` (`ScrapNode`, ...). Retyping them all to `Node` closes a load-order cycle
+  through `RobotRadio` and the radio dies at boot.
+- Don't let two classes name each other through `class_name` types (the dev panel reaches the
+  pause menu through `CanvasItem` for this reason): the cycle breaks the script class cache
+  for the whole project.
+- Visual effects get their own `RandomNumberGenerator`. Gameplay rolls (gem scatter, drops)
+  come off the shared `RNG.rng`, so an effect drawing from it changes what the game rolls.
+- All UI sits under the `CanvasLayer/Glow/UI` canvas group. `clip_children` inside it draws as
+  a solid white shape; mask with a shader (`ui/minimap/ScopeDisc.gdshader`). Reach panels by
+  unique name (`%HUD`), never by path.
 
-## Running & Testing
+## Working in this checkout
 
-Godot 4.6 CLI is `godot` (symlink to `/Applications/Godot.app/Contents/MacOS/Godot`).
+Several agent sessions work in this checkout and its worktrees at once, and the Godot editor
+is often open on it. Files you didn't touch can change under you.
 
-- `tools/test.sh` — run all gdUnit4 suites in `test/` headless (exit 0 = pass). Single suite: `tools/test.sh -a res://test/GemDataTest.gd`
-- `tools/smoke.sh [frames]` — boot main scene headless, fails on any ERROR or path case mismatch
-- `tools/play.sh playtests/launch.play` — play the real game from a scenario (key input, asserts, screenshots in `.playtest/`). `tools/play.sh serve` + `tools/playctl <cmd>` to drive it live. See `.claude/skills/playtest/SKILL.md`.
-- `godot --headless --path . --import` — reimport after adding files / `class_name`s
-- New tests: `test/<Name>Test.gd`, `extends GdUnitTestSuite`, `func test_*()`. Use `auto_free()` for nodes.
-- `F1` (or `` ` ``) in a running debug build opens the dev panel (`ui/DevPanel.gd`): set fuel, hull, hold, Stores, Modules online, and warp to any Gate or orbit.
-- `res://` paths are case-sensitive on export — the folder is `entities/`, never `Entities/`.
-
-## Scene Inspection
-
-Prefer grepping `.tscn` files for specific lines over reading them whole — they are large and token-heavy.
+- Don't `git stash`: it sweeps up another session's uncommitted work. To test against a clean
+  tree, `git worktree add <scratch>/head-check HEAD` and work there.
+- Cut new branches and worktrees from `main` by name. The checkout may be sitting on another
+  session's branch, and branching from `HEAD` would carry its commits.
+- If tests fail with parse errors in files you never edited, it is probably someone else's
+  half-finished edit; check before chasing it.
+- `.tscn` files are large: grep them for the lines you need instead of reading them whole.
