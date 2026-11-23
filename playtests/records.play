@@ -17,6 +17,7 @@ assert gs.progress.list("visited_bodies").is_empty() "a new game has reached now
 press i
 wait_until pt.visible_ui().has("LogUI") 2
 press tab
+press tab
 frames 2
 assert pt.node("log_ui").active_tab_title() == "RECORDS" "TAB moves to Records"
 assert str(pt.screen_text()["LogUI"]).contains("NOTHING LOGGED YET.") "staying home logs nothing"
@@ -49,6 +50,7 @@ assert gs.progress.holds("visited_bodies", "Sun/Veld") "Veld earns its own Recor
 press i
 wait_until pt.visible_ui().has("LogUI") 2
 press tab
+press tab
 frames 2
 wait 0.4
 assert str(pt.screen_text()["LogUI"]).contains("B O D I E S") "the Bodies section is up"
@@ -60,21 +62,22 @@ assert not str(pt.screen_text()["LogUI"]).contains("CROM") "nowhere unreached ge
 screenshot records_2_rook
 
 # --- UP / DOWN move the one cursor and the detail pane follows ---
-assert pt.node("log_ui")._tabs[1].selected_key() == "Veld/Rook" "the cursor starts on the first Record"
+assert pt.node("log_ui")._tabs[3].selected_key() == "Veld/Rook" "the cursor starts on the first Record"
 press down
 frames 2
-assert pt.node("log_ui")._tabs[1].selected_key() == "Sun/Veld" "DOWN moves the cursor to Veld"
+assert pt.node("log_ui")._tabs[3].selected_key() == "Sun/Veld" "DOWN moves the cursor to Veld"
 assert str(pt.screen_text()["LogUI"]).contains("VELD") "and the detail pane follows it"
 screenshot records_3_veld
 press up
 frames 2
-assert pt.node("log_ui")._tabs[1].selected_key() == "Veld/Rook" "UP moves it back"
+assert pt.node("log_ui")._tabs[3].selected_key() == "Veld/Rook" "UP moves it back"
 press escape
 wait_until not pt.visible_ui().has("LogUI") 2
 
 # --- A scan landing while the Log is open fills the Record where the player can see it ---
 press i
 wait_until pt.visible_ui().has("LogUI") 2
+press tab
 press tab
 frames 2
 wait 0.4
@@ -100,11 +103,12 @@ eval gs.mark_planet_scanned("Sun")
 press i
 wait_until pt.visible_ui().has("LogUI") 2
 press tab
+press tab
 frames 2
 press down 2
 frames 2
 wait 0.4
-assert pt.node("log_ui")._tabs[1].selected_key() == "Sun" "the cursor reaches the sun's Record"
+assert pt.node("log_ui")._tabs[3].selected_key() == "Sun" "the cursor reaches the sun's Record"
 assert str(pt.screen_text()["LogUI"]).contains("CLASS") "the sun carries a class"
 assert str(pt.screen_text()["LogUI"]).contains("NONE FOUND") "and honestly reports no ore"
 assert str(pt.screen_text()["LogUI"]).contains("0%") "and no habitability"

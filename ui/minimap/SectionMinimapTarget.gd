@@ -3,9 +3,9 @@ class_name SectionMinimapTarget
 
 ## MinimapTarget for a piece of SR-7 not yet back in its Mount: a
 ## ping, so the beam finding it sends a ring out from it, where solid things only echo. Held
-## on the rim when out of range, so it gives the bearing. Not there until the ship has read
-## the piece's Mount up close (Mount.marks_section): the alarm at the cut leads the player to the
-## Mount, and the Mount to the piece. Gone once the piece is seated, and while the ship has
+## on the rim when out of range, so it gives the bearing. Not there until the piece has been
+## found (Mount.marks_section): a Sweep near it, or the piece answering its empty Mount's call -
+## the alarm at the cut leads the player to the Mount, and a Sweep there to the piece. Gone once the piece is seated, and while the ship has
 ## it clamped (it is right there on the nose).
 
 var mount: Mount

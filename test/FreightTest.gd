@@ -113,11 +113,22 @@ func test_freight_answers_a_sweep_at_its_lug() -> void:
 	assert_bool(piece.is_in_group("sonar_listeners")).is_true()
 	assert_vector(piece.sonar_point()).is_equal(piece.lug_global())
 	piece.on_sonar_touched()
-	assert_object(piece._lug_line.default_color).is_equal(Colors.TITAN)
-	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(1)
+	# Only the coupling lights - SR-7's own colour, never the Titan's - and no ring goes back
+	assert_object(piece._lug_line.default_color).is_equal(Colors.PRIMARY)
+	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(0)
 
-func test_freight_pings_back_as_strong_as_it_was_pinged() -> void:
+func test_freight_lights_its_lug_when_in_the_clamps_reach() -> void:
 	var piece: Freight = auto_free(Freight.new())
+	add_child(piece)
+	assert_bool(piece._reach_line.visible).is_false()
+	piece.reach_lit = true
+	assert_bool(piece._reach_line.visible).is_true()
+	piece.reach_lit = false
+	assert_bool(piece._reach_line.visible).is_false()
+
+func test_a_far_answering_piece_pings_back_as_strong_as_it_was_pinged() -> void:
+	var piece: Freight = auto_free(Freight.new())
+	piece.answer_range = 1000.0
 	add_child(piece)
 	piece.on_sonar_touched(1.0)
 	piece.on_sonar_touched(4.0)
@@ -132,10 +143,12 @@ func test_freight_pings_back_as_strong_as_it_was_pinged() -> void:
 
 func test_a_clamped_piece_still_lets_its_echo_fade() -> void:
 	var piece: Freight = auto_free(Freight.new())
+	piece.answer_range = 1000.0  # one that pings back with a ring
 	add_child(piece)
 	piece.on_sonar_touched()
 	piece.process_mode = Node.PROCESS_MODE_DISABLED  # what clamping does
-	await get_tree().create_timer(SonarPulse.LIFETIME + SonarEcho.STAGGER * SonarEcho.RINGS + 0.2).timeout
+	var echo_time := SonarPulse.LIFETIME + SonarEcho.STAGGER * SonarEcho.RINGS
+	await get_tree().create_timer(maxf(echo_time, Freight.LUG_ANSWER_TIME) + 0.2).timeout
 	assert_int(piece._visual.get_children().filter(func(c): return c is SonarEcho).size()).is_equal(0)
 	assert_float(piece._lug_line.width).is_equal_approx(3.0, 0.01)
 
