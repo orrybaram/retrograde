@@ -38,19 +38,22 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="LeftColumn" type="VBoxContainer" parent="DashboardAnchor/HBox" unique_id=755769770]
-custom_minimum_size = Vector2(160, 0)
+custom_minimum_size = Vector2(192, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/separation = 4
 
 [node name="MinimapDial" type="Control" parent="DashboardAnchor/HBox/LeftColumn" unique_id=1504871236]
-custom_minimum_size = Vector2(176, 160)
+custom_minimum_size = Vector2(192, 160)
 layout_mode = 2
 size_flags_horizontal = 0
 mouse_filter = 2
 
 [node name="Minimap" parent="DashboardAnchor/HBox/LeftColumn/MinimapDial" unique_id=2008509394 instance=ExtResource("4_minimap")]
 layout_mode = 0
+offset_left = 16.0
+offset_right = 176.0
+offset_bottom = 160.0
 
 [node name="BoostGauge" type="Control" parent="DashboardAnchor/HBox/LeftColumn/MinimapDial" unique_id=739214658]
 layout_mode = 1
@@ -61,9 +64,21 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2_boost")
+rim_center = Vector2(96, 80)
+
+[node name="HullSegmentBar" type="Control" parent="DashboardAnchor/HBox/LeftColumn/MinimapDial" unique_id=216387399]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_hull")
+rim_center = Vector2(96, 80)
 
 [node name="VelocityLabel" type="Label" parent="DashboardAnchor/HBox/LeftColumn" unique_id=1356911807]
-custom_minimum_size = Vector2(160, 0)
+custom_minimum_size = Vector2(192, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 theme = ExtResource("3_jd13s")
@@ -77,22 +92,6 @@ clip_text = true
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 8
-
-[node name="HullRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=282324887]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="HullLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/HullRow" unique_id=1872784425]
-layout_mode = 2
-theme = ExtResource("3_jd13s")
-theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
-theme_override_font_sizes/font_size = 10
-text = "HP"
-
-[node name="HullSegmentBar" type="Control" parent="DashboardAnchor/HBox/RightColumn/HullRow" unique_id=216387399]
-custom_minimum_size = Vector2(120, 14)
-layout_mode = 2
-script = ExtResource("5_hull")
 
 [node name="CargoRow" type="HBoxContainer" parent="DashboardAnchor/HBox/RightColumn" unique_id=1185582045]
 layout_mode = 2
