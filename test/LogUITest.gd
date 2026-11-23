@@ -33,22 +33,24 @@ func _press_tab(shift := false) -> void:
 	_log._input(ev)
 
 
-func test_opens_on_the_hold() -> void:
+func test_opens_on_the_ship_log() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	assert_bool(log_ui.visible).is_true()
-	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	assert_str(log_ui.active_tab_title()).is_equal("LOG")
 
 
 func test_tab_moves_through_records_and_map_and_back() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
+	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	_press_tab()
 	assert_str(log_ui.active_tab_title()).is_equal("RECORDS")
 	_press_tab()
 	assert_str(log_ui.active_tab_title()).is_equal("MAP")
 	_press_tab()
-	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	assert_str(log_ui.active_tab_title()).is_equal("LOG")
 
 
 func test_shift_tab_reverses() -> void:
@@ -88,22 +90,23 @@ func _assert_notch_lit(log_ui: LogUI, index: int, lit: bool) -> void:
 func test_a_notch_reads_as_a_label_not_a_heading() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
-	assert_str(log_ui._frame._tab_labels[0].text).is_equal("SHIP")
-	assert_str(log_ui._frame._tab_labels[1].text).is_equal("RECORDS")
-	assert_str(log_ui._frame._tab_labels[2].text).is_equal("MAP")
+	assert_str(log_ui._frame._tab_labels[0].text).is_equal("LOG")
+	assert_str(log_ui._frame._tab_labels[1].text).is_equal("SHIP")
+	assert_str(log_ui._frame._tab_labels[2].text).is_equal("RECORDS")
+	assert_str(log_ui._frame._tab_labels[3].text).is_equal("MAP")
 	for notch in log_ui._frame._tab_labels:
 		assert_int(notch.horizontal_alignment).is_equal(HORIZONTAL_ALIGNMENT_LEFT)
 
 
-## Closing on Records and reopening puts the player back on the Hold.
-func test_reopens_on_the_hold() -> void:
+## Closing on another tab and reopening puts the player back on the ship's log.
+func test_reopens_on_the_ship_log() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
 	log_ui.close_log()
 	assert_bool(log_ui.visible).is_false()
 	log_ui.open_log()
-	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	assert_str(log_ui.active_tab_title()).is_equal("LOG")
 
 
 ## The bottom border is the active tab's hint(), not a constant on the frame.
@@ -194,7 +197,8 @@ func test_a_scan_fills_the_record_while_the_log_is_open() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
-	var records := log_ui._tabs[1] as RecordsTab
+	_press_tab()
+	var records := log_ui._tabs[2] as RecordsTab
 	assert_str(_text(records)).contains(RecordsTab.NO_SURVEY)
 
 	_gs.mark_planet_scanned(planet.save_key())

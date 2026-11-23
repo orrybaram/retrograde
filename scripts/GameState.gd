@@ -37,12 +37,58 @@ var cradled := PackedStringArray()
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
 
+## The ship's log (ShipLog), and the mission time it is stamped with: seconds of play since
+## the new game, counted only while the tree runs. Both are saved.
+var ship_log := ShipLog.new()
+var mission_time := 0.0
+
+## The Sections that count as SR-7's missing parts in the log: the ones that come home as
+## Freight. The right wing is pushed home (ArrayNudge) and never counted missing.
+const MISSING_SECTIONS: Array[String] = [Sections.FUEL_TANK, Sections.SOLAR_ARRAY, Sections.DORSAL_ARM]
+
 func _ready() -> void:
 	add_to_group("game_state")
+	EventBus.section_seated.connect(_log_seated)
 
 func _process(delta: float) -> void:
 	# Seams refill on play time: the tree is paused in menus
 	tick_ore_regrowth(delta)
+	mission_time += delta
+
+## Write one line to the ship's log, stamped now, and say so (EventBus.ship_log_written).
+func write_log(source: String, name: String, value: String, status := ShipLog.INFO) -> void:
+	var entry := ship_log.add(mission_time, source, name, value, status)
+	EventBus.ship_log_written.emit(entry)
+
+## A new game's first lines: the station is critical and its Sections are missing.
+func open_ship_log() -> void:
+	write_log(ShipLog.SYS, "SR-7 STATUS", "CRITICAL", ShipLog.ERR)
+	_log_missing()
+
+## How many of MISSING_SECTIONS are not seated yet.
+func sections_missing() -> int:
+	return MISSING_SECTIONS.filter(func(id: String) -> bool:
+		return not progress.holds(Progress.SEATED_SECTIONS, id)).size()
+
+## Section `id` has been found: up close (`how` CONTACT, its Lug answering a Sweep) or from
+## its Mount (LOCATED). The first time only, and never once it is home: it goes in the
+## ledger, which puts it on the minimap, and in the log. Returns whether it was news.
+func find_section(id: String, how: String) -> bool:
+	if not id in MISSING_SECTIONS or progress.holds(Progress.FOUND_SECTIONS, id) \
+			or progress.holds(Progress.SEATED_SECTIONS, id):
+		return false
+	progress.mark(Progress.FOUND_SECTIONS, id)
+	write_log(ShipLog.SONAR, Sections.label(id), how)
+	return true
+
+func _log_seated(id: String) -> void:
+	write_log(ShipLog.MOUNT, Sections.label(id), "SEATED")
+	if id in MISSING_SECTIONS:
+		_log_missing()
+
+func _log_missing() -> void:
+	var n := sections_missing()
+	write_log(ShipLog.SYS, "SECTIONS MISSING", str(n), ShipLog.WARN if n > 0 else ShipLog.INFO)
 
 func is_planet_scanned(key: String) -> bool:
 	return scanned_planets.has(key)
@@ -121,6 +167,8 @@ func reset_all_state() -> void:
 	progress = progress.fresh()
 	cradled.clear()
 	death_count = 0
+	ship_log = ShipLog.new()
+	mission_time = 0.0
 	InventoryManager.clear_inventory()
 
 	# Emit signals for any listeners

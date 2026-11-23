@@ -1,0 +1,72 @@
+# The ship's log (ShipLog): a new game's first lines - SR-7 CRITICAL, 3 SECTIONS MISSING -
+# with the only cue on screen a line in the bottom-right corner, `> LOG UPDATED [I]`, typed
+# then faded. A Sweep at an empty Mount makes it call its Section with a hull-grey ring of its
+# own, the Section answers with a bigger one back past the Mount, and as that lands the log
+# says SOLAR ARRAY ... LOCATED and the minimap marks it. All of it survives a reload, and the
+# Log opens on the LOG tab with every line.
+# Run: PLAYTEST_PORT=7851 tools/play.sh --headless playtests/ship_log.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+
+# --- A new game opens the log ---
+assert gs.ship_log.entries.size() == 2 "two lines on a new game"
+assert gs.ship_log.entries[0]["name"] == "SR-7 STATUS" and gs.ship_log.entries[0]["value"] == "CRITICAL" "the station is critical"
+assert gs.ship_log.entries[0]["status"] == "err" "and that is an error"
+assert gs.ship_log.entries[1]["name"] == "SECTIONS MISSING" and gs.ship_log.entries[1]["value"] == "3" "three Sections missing"
+assert gs.ship_log.entries[1]["status"] == "warn" "a warning"
+wait_until pt.node("log_cue").is_showing() 5
+wait 1.0
+assert pt.node("log_cue").text().begins_with("> LOG UPDATED") "the cue says so"
+assert pt.node("log_cue").get_global_rect().position.x > get_viewport().get_visible_rect().size.x / 2.0 "on the right"
+assert pt.node("log_cue").get_global_rect().position.y > get_viewport().get_visible_rect().size.y / 2.0 "at the bottom"
+screenshot ship_log_0_cue
+wait_until not pt.node("log_cue").is_showing() 8
+assert not pt.node("log_cue").visible "then it fades"
+
+# --- Past the diagnostic: a Sweep at the solar array's empty Mount ---
+eval get_tree().call_group("boot_log", "forget")
+eval pt.remember("m", pt.mount("solar_array"))
+eval pt.remember("station", pt.recall("m").get_parent())
+assert not pt.recall("m").marks_section() "not found yet"
+assert not pt.recall("m")._minimap_target.is_minimap_visible() "so not on the minimap"
+eval pt.warp_to(pt.recall("m").global_position + (pt.recall("m").global_position - pt.recall("station").global_position).normalized() * 150.0)
+eval ship.set("linear_velocity", pt.recall("station").linear_velocity)
+wait 0.5
+hold action 0.1
+wait_until pt.recall("m").is_calling() 3
+wait 0.4
+screenshot ship_log_1_call
+wait_until gs.progress.holds("found_sections", "solar_array") 30
+assert gs.ship_log.entries[-1]["source"] == "SONR" "sonar wrote it"
+assert gs.ship_log.entries[-1]["name"] == "SOLAR ARRAY" and gs.ship_log.entries[-1]["value"] == "LOCATED" "the array is located"
+assert gs.ship_log.entries[-1]["status"] == "info" "as info"
+assert pt.recall("m")._minimap_target.is_minimap_visible() "and on the minimap"
+assert not pt.recall("m").is_calling() "the call is over"
+wait_until pt.node("log_cue").is_showing() 3
+wait 1.0
+screenshot ship_log_2_located
+eval pt.remember("lines", gs.ship_log.entries.size())
+hold action 0.1
+wait 2.0
+assert not pt.recall("m").is_calling() "a found Section is not called again"
+
+# --- Kept ---
+eval pt.save_now()
+reload
+assert gs.progress.holds("found_sections", "solar_array") "still found after a reload"
+assert gs.ship_log.entries.size() == pt.recall("lines") "every line kept"
+assert not pt.node("log_cue").is_pending() "a load has nothing new to say"
+
+# --- The Log opens on it ---
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+assert pt.node("log_ui").active_tab_title() == "LOG" "the Log opens on the ship's log"
+assert str(pt.screen_text()["LogUI"]).contains("LOCATED") "the find is listed"
+assert str(pt.screen_text()["LogUI"]).contains("CRITICAL") "and the first line"
+screenshot ship_log_3_tab
+press i
+wait_until pt.visible_ui().is_empty() 2
+quit

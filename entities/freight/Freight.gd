@@ -175,6 +175,10 @@ func on_sonar_touched(strength := 1.0, clarity := 1.0) -> void:
 	if not _lug_line:
 		return
 	EventBus.freight_answered.emit()
+	if section != "":
+		var gs := get_tree().get_first_node_in_group("game_state") as GameState
+		if gs:
+			gs.find_section(section, "CONTACT")
 	if answer_range > 0.0:
 		SonarEcho.answer_ping(_visual, lug_position, strength, Colors.PRIMARY, clarity)
 	if _lug_glow:

@@ -1,7 +1,7 @@
 extends Control
 
 ## In-game HUD: boost gauge (around the minimap), hull segment bar, cargo weight, Stores, velocity readout,
-## the robot's radio panel and the current goal (GoalLine).
+## the robot's radio panel and the cue that the ship's log has a new line (LogCue).
 ## Subscribes to ship signals. (Action prompts live in IndicatorManager.)
 ## The ship's manual diagnostic (BootLog) takes the dashboard's corner while a new game owes
 ## it; the dashboard is dark until then, and glitches back on a piece at a time once the
@@ -72,19 +72,15 @@ func _ready() -> void:
 	boot_log.dashboard = dashboard
 	tracking.blockers = [dashboard, radio, boot_log]
 	add_child(tracking)
-	var goal := GoalLine.new()
-	goal.boot_log = boot_log
-	add_child(goal)
 	add_child(radio)
 	add_child(HullWarning.new())
 	add_child(boot_log)
-	var contacts := ContactLog.new()
-	contacts.radio = radio
-	tracking.blockers.append(contacts)
-	add_child(contacts)
-	var lock := ReadoutLock.new()
-	lock.contact_log = contacts
-	add_child(lock)
+	var cue := LogCue.new()
+	cue.radio = radio
+	tracking.blockers.append(cue)
+	add_child(cue)
+	# Only the scrap a harvest press will cut is locked now: reads show nothing on screen
+	add_child(ReadoutLock.new())
 	# Added last so it processes after _update_labels and rots the finished readouts
 	var glitch := HudGlitch.new()
 	glitch.name = "HudGlitch"

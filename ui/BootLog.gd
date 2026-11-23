@@ -55,6 +55,8 @@ var _label: RichTextLabel
 var _delay := 0.0
 var _fade: Tween = null
 var _carried := 0.0
+## This run's PASS has gone in the ship's log.
+var _logged_pass := false
 ## This game still owes the diagnostic (a new game, until it completes), and the sections
 ## it has passed so far, which survive the ship being lost.
 var _owed := false
@@ -126,6 +128,7 @@ func begin() -> void:
 	checklist.restore(_passed)
 	_delay = START_DELAY
 	_carried = 0.0
+	_logged_pass = false
 	_label.text = ""
 	arm()
 	if _fade:
@@ -234,6 +237,11 @@ func _process(dt: float) -> void:
 			ControlLock.unlock(UNLOCKS[section])
 	if checklist.is_complete():
 		ControlLock.clear()
+		if not _logged_pass:
+			_logged_pass = true
+			var gs := get_tree().get_first_node_in_group("game_state") as GameState
+			if gs:
+				gs.write_log(ShipLog.DIAG, "MANUAL DIAGNOSTIC", "PASS")
 	_label.text = checklist.render()
 	if checklist.is_finished() and (_fade == null or not _fade.is_valid()):
 		_fade = create_tween()

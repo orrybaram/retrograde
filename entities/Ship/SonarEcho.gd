@@ -37,7 +37,23 @@ var max_alpha := MAX_ALPHA
 var width := WIDTH
 ## Which of BROKEN_ARCS are drawn; empty draws the whole ring.
 var arcs: Array[bool] = []
+## Grows at one speed and stays bright most of the way, rather than easing out and fading:
+## a ring that has to be seen arriving somewhere far off (travel).
+var steady := false
 var _age := 0.0
+
+## A steady ring from `at` (local to `parent`) out to `reach` px at `speed` px/s, one ring:
+## a Mount calling its Section, and the Section's answer (Mount.call_section). It is at
+## distance d after d / speed seconds.
+static func travel(parent: Node2D, at: Vector2, tint: Color, reach: float, speed: float,
+		ring_width: float, alpha: float) -> SonarEcho:
+	var echo := answer(parent, at, tint, 1)
+	echo.steady = true
+	echo.end_radius = reach
+	echo.lifetime = reach / maxf(speed, 1.0)
+	echo.width = ring_width
+	echo.max_alpha = alpha
+	return echo
 
 ## Answer a ping of `strength` (SonarPulse.strength_for) from `at` (local to `parent`):
 ## one ring, fading as slowly as the one that arrived and reaching ANSWER_REACH of it.
@@ -93,8 +109,8 @@ func _draw() -> void:
 		if t <= 0.0 or t >= 1.0:
 			continue
 		var c := color
-		c.a = max_alpha * (1.0 - t)
-		var r := lerpf(START_RADIUS, end_radius, 1.0 - pow(1.0 - t, 2.0))
+		c.a = max_alpha * ((1.0 - t * t) if steady else (1.0 - t))
+		var r := lerpf(START_RADIUS, end_radius, t if steady else 1.0 - pow(1.0 - t, 2.0))
 		if arcs.is_empty():
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, clampi(int(r / 4.0), 48, 512), c, width, true)
 			continue

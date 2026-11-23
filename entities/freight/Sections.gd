@@ -55,6 +55,13 @@ const DATA := {
 	},
 }
 
+## What Section `id` is called, as the ship's log prints it. The nudged wing has no Freight
+## of its own, and so no DATA entry.
+static func label(id: String) -> String:
+	if id == SOLAR_ARRAY_2:
+		return "RIGHT WING"
+	return DATA[id]["label"] if DATA.has(id) else id.to_upper()
+
 static func exists(id: String) -> bool:
 	return DATA.has(id)
 

@@ -2,7 +2,7 @@ class_name LogUI
 extends Control
 
 ## The Log: the player's own screen, kept by the ship, not by the Titan. A tabbed
-## terminal window that opens on the Hold; the Records tab holds one entry per thing
+## terminal window that opens on the ship's log (ShipLogTab), then the Hold; the Records tab holds one entry per thing
 ## the player has reached, and the Map tab carries the star chart. Opens and closes
 ## with "I", or with "M" straight onto the chart (ESC also closes; see Main).
 ##
@@ -18,12 +18,13 @@ signal dialogue_closed
 const WINDOW_SIZE := Vector2(1160, 640)
 ## The tabs, in notch order. The first one is what the Log opens on.
 const TABS := [
+	preload("res://ui/log/ShipLogTab.gd"),
 	preload("res://ui/log/ShipTab.gd"),
 	preload("res://ui/log/RecordsTab.gd"),
 	preload("res://ui/log/MapTab.gd"),
 ]
 ## Where the star chart sits in TABS, for "M" to open straight onto it.
-const MAP_TAB := 2
+const MAP_TAB := 3
 
 var gs: GameState = null
 var inventory_manager: InventoryManager = null
