@@ -109,6 +109,32 @@ func test_a_station_charts_as_a_merged_outline() -> void:
 	var station: SpaceStation = auto_free(load("res://entities/structures/SpaceStation.tscn").instantiate())
 	add_child(station)
 	var outline := SpaceStationMinimapTarget.new(station).chart_outline()
-	assert_int(outline.size()).is_between(1, 4)
+	assert_int(outline.size()).is_equal(1)
 	for contour in outline:
 		assert_int(contour.size()).is_greater_equal(3)
+	# A schematic of SR-7: from the deck down, wings across, the dorsal arm left off
+	var to_station := station.global_transform.affine_inverse()
+	var bounds := Rect2(to_station * outline[0][0], Vector2.ZERO)
+	for p in outline[0]:
+		bounds = bounds.expand(to_station * p)
+	assert_float(bounds.position.y).is_equal_approx(-422.0, 0.5)  # the deck, not the arm above it
+	assert_float(bounds.position.x).is_equal_approx(-330.0, 0.5)  # the deck is the widest part
+	assert_float(bounds.end.y).is_equal_approx(290.0, 0.5)  # the keel's foot
+	Freight.clear_all(get_tree())
+
+
+## The scope's station is a schematic of the whole station: a wing hanging off true charts
+## the same as one pushed home, so fixing it never leaves a stale crooked wing on the scope.
+func test_a_station_charts_the_same_whether_its_wing_hangs_or_not() -> void:
+	var station: SpaceStation = auto_free(load("res://entities/structures/SpaceStation.tscn").instantiate())
+	add_child(station)
+	var nudge := station.get_node("ArrayNudge") as ArrayNudge
+	nudge._show_seated(false)
+	var hanging := SpaceStationMinimapTarget.new(station).chart_outline()
+	nudge._show_seated(true)
+	var seated := SpaceStationMinimapTarget.new(station).chart_outline()
+	assert_float(absf(nudge.off_true())).is_less(0.001)
+	assert_int(hanging.size()).is_equal(seated.size())
+	for i in seated.size():
+		assert_array(hanging[i]).is_equal(seated[i])
+	Freight.clear_all(get_tree())
