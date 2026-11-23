@@ -2,9 +2,9 @@ extends Control
 class_name LogCue
 
 ## The only thing on screen that says the ship's log (ShipLog) has a new line: one line in
-## the bottom-right corner, `> LOG UPDATED  [I]`, typed in, held, then faded. Lines written
-## while it can't be seen (a new game's first lines, written before play starts; the Log or a
-## menu up) wait, and it types once it can. Opening the Log cancels it: the player is reading.
+## the bottom-right corner, `> LOG UPDATED  [I]`, typed in, held, then faded. Silent lines
+## (a new game's first ones, the diagnostic's PASS) never raise it. Lines written while it
+## can't be seen (the Log or a menu up) wait, and it types once it can. Opening the Log cancels it: the player is reading.
 
 const TEXT_SIZE := BootLog.TEXT_SIZE
 const OUTLINE := BootLog.OUTLINE
@@ -38,7 +38,9 @@ func _ready() -> void:
 	_label.add_theme_color_override("font_outline_color", Colors.SPACE_BG)
 	_label.add_theme_constant_override("outline_size", OUTLINE)
 	add_child(_label)
-	EventBus.ship_log_written.connect(func(_entry: Dictionary) -> void: _pending = true)
+	EventBus.ship_log_written.connect(func(_entry: Dictionary, cue: bool) -> void:
+		if cue:
+			_pending = true)
 	visible = false
 
 

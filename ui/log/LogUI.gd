@@ -2,8 +2,9 @@ class_name LogUI
 extends Control
 
 ## The Log: the player's own screen, kept by the ship, not by the Titan. A tabbed
-## terminal window that opens on the ship's log (ShipLogTab), then the Hold; the Records tab holds one entry per thing
-## the player has reached, and the Map tab carries the star chart. Opens and closes
+## terminal window: the Map tab carries the star chart, then the ship's log (ShipLogTab),
+## which "I" opens on, then the Hold; the Records tab holds one entry per thing the player
+## has reached. Opens and closes
 ## with "I", or with "M" straight onto the chart (ESC also closes; see Main).
 ##
 ## No Automaton speaks from inside the Log — it is the player's own instrument, read
@@ -16,15 +17,19 @@ signal dialogue_closed
 
 ## Sized for the star chart, which used to fill the screen inside a margin.
 const WINDOW_SIZE := Vector2(1160, 640)
-## The tabs, in notch order. The first one is what the Log opens on.
+## The tabs, in notch order.
 const TABS := [
+	preload("res://ui/log/MapTab.gd"),
 	preload("res://ui/log/ShipLogTab.gd"),
 	preload("res://ui/log/ShipTab.gd"),
 	preload("res://ui/log/RecordsTab.gd"),
-	preload("res://ui/log/MapTab.gd"),
 ]
 ## Where the star chart sits in TABS, for "M" to open straight onto it.
-const MAP_TAB := 3
+const MAP_TAB := 0
+## The ship's log: what "I" opens on.
+const LOG_TAB := 1
+const SHIP_TAB := 2
+const RECORDS_TAB := 3
 
 var gs: GameState = null
 var inventory_manager: InventoryManager = null
@@ -60,7 +65,7 @@ func _ready() -> void:
 	add_child(VoidGlitch.new())
 
 
-func open_log(tab := 0) -> void:
+func open_log(tab := LOG_TAB) -> void:
 	_connect_ship()
 	visible = true
 	_show_tab(tab)

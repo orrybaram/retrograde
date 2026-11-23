@@ -83,8 +83,9 @@ signal ship_damaged(amount: float, hull_ratio: float)
 signal ship_hull_changed(current: float, max_hull: float)
 ## The hull reading moved, for any reason: a hit, a repair, an upgrade, a respawn.
 
-signal ship_log_written(entry: Dictionary)
-## A line was written to the ship's log (GameState.write_log): the HUD says so (LogCue).
+signal ship_log_written(entry: Dictionary, cue: bool)
+## A line was written to the ship's log (GameState.write_log). The HUD says so (LogCue)
+## unless `cue` is false: a silent line is there for whoever opens the Log.
 
 var _harvestable_nodes: Dictionary = {}  # Track ScrapNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ScrapNodes and their callables

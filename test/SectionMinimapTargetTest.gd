@@ -101,3 +101,20 @@ func test_a_mount_does_not_call_for_a_found_or_missing_section() -> void:
 	_piece(Sections.DORSAL_ARM)
 	_gs.find_section(Sections.DORSAL_ARM, "CONTACT")
 	assert_bool(m.call_section()).override_failure_message("already found").is_false()
+
+
+# --- the station's broken parts, in red on its outline ---
+
+func test_the_station_marks_each_empty_mount_and_the_hanging_wing() -> void:
+	var t := SpaceStationMinimapTarget.new(_station)
+	var mounts := get_tree().get_nodes_in_group("mounts")
+	assert_int(t.broken_points().size()) \
+		.override_failure_message("every Mount empty, and the wing off true") \
+		.is_equal(mounts.size() + 1)
+	assert_bool(t.broken_points().has(Mount.for_section(get_tree(), Sections.FUEL_TANK).global_position)).is_true()
+	for m in mounts:
+		m.seated = true
+	assert_int(t.broken_points().size()).override_failure_message("only the wing").is_equal(1)
+	for n in get_tree().get_nodes_in_group("nudges"):
+		n.seated = true
+	assert_bool(t.broken_points().is_empty()).override_failure_message("whole, nothing red").is_true()

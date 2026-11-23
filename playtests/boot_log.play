@@ -170,8 +170,8 @@ assert pt.recall("log").text().contains("[██") "the stamp fills with the hol
 wait 0.6
 up action
 assert pt.mount("fuel_tank").seated "the tank is seated"
-wait_until gs.ship_log.entries.size() == 3 2
-assert gs.ship_log.entries[1]["value"] == "CRITICAL" and gs.ship_log.entries[2]["value"] == "2" "the station's log lines come with the tank"
+wait_until gs.ship_log.entries[-1]["value"] == "2" 2
+assert gs.ship_log.entries[-2]["name"] == "FUEL TANK" "the tank's seating is logged"
 wait 0.3
 assert pt.recall("log").checklist.is_done("release") "letting go stamps it"
 wait_until pt.recall("log").text().contains("PILOT") 10

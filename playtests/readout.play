@@ -40,7 +40,7 @@ wait_until pt.visible_ui().has("LogUI") 2
 press tab
 press tab
 assert pt.node("log_ui").active_tab_title() == "RECORDS" "on Records"
-assert pt.node("log_ui")._tabs[2]._read.size() == 1 "one Mount read"
+assert pt.node("log_ui")._tabs[3]._read.size() == 1 "one Mount read"
 assert str(pt.screen_text()).contains("H A R D W A R E") "the Hardware section"
 assert str(pt.screen_text()).contains("SR-7") "filed under the station"
 assert str(pt.screen_text()).contains("TORCH CUT") "the tank's Record holds every row"
@@ -53,7 +53,7 @@ eval pt.park_at_gate("Veld", 120.0)
 wait_until pt.gate("Veld").get_node("Readout").is_read() 3
 press i
 wait_until pt.visible_ui().has("LogUI") 2
-assert pt.node("log_ui")._tabs[2]._read.size() == 1 "nothing learned from it for the Log"
+assert pt.node("log_ui")._tabs[3]._read.size() == 1 "nothing learned from it for the Log"
 press i
 wait_until pt.visible_ui().is_empty() 2
 
@@ -75,7 +75,7 @@ wait_until pt.visible_ui().has("LogUI") 2
 press tab
 press tab
 assert pt.node("log_ui").active_tab_title() == "RECORDS" "on Records"
-assert pt.node("log_ui")._tabs[2]._read.size() == 2 "the Mount and one Record for scrap"
+assert pt.node("log_ui")._tabs[3]._read.size() == 2 "the Mount and one Record for scrap"
 assert str(pt.screen_text()).contains("SALVAGE") "filed under salvage"
 screenshot readout_6_records
 press i

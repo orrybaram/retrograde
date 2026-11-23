@@ -57,25 +57,41 @@ func _seat(id: String) -> void:
 	EventBus.section_seated.emit(id)
 
 
-func test_the_station_is_silent_until_the_fuel_tank_is_seated() -> void:
+func _record_writes(written: Array) -> Callable:
+	var on_write := func(e: Dictionary, cue: bool) -> void: written.append([e, cue])
+	EventBus.ship_log_written.connect(on_write)
+	return on_write
+
+
+func test_a_new_game_opens_critical_with_three_missing_silently() -> void:
+	var written: Array = []
+	var on_write := _record_writes(written)
+	_gs.open_ship_log()
+	EventBus.ship_log_written.disconnect(on_write)
+	assert_int(written.size()).is_equal(2)
+	assert_str(ShipLogTab.line_text(written[0][0])).starts_with("SR-7 STATUS ").ends_with(" CRITICAL")
+	assert_str(written[0][0]["status"]).is_equal(ShipLog.ERR)
+	assert_str(written[1][0]["value"]).is_equal("3")
+	assert_str(written[1][0]["status"]).is_equal(ShipLog.WARN)
+	assert_bool(written[0][1] or written[1][1]).override_failure_message("no cue").is_false()
+
+
+func test_parts_are_not_logged_until_the_fuel_tank_is_seated() -> void:
 	assert_bool(_gs.find_section(Sections.FUEL_TANK, "CONTACT")).is_true()
 	assert_bool(_gs.find_section(Sections.SOLAR_ARRAY, "LOCATED")) \
 		.override_failure_message("still found, for the minimap").is_true()
 	assert_int(_gs.ship_log.entries.size()) \
 		.override_failure_message("but nothing logged before the fuel tank").is_equal(0)
 	var written: Array = []
-	var on_write := func(e: Dictionary) -> void: written.append(e)
-	EventBus.ship_log_written.connect(on_write)
+	var on_write := _record_writes(written)
 	_seat(Sections.FUEL_TANK)
 	EventBus.ship_log_written.disconnect(on_write)
-	assert_int(written.size()).is_equal(3)
-	assert_str(written[0]["name"]).is_equal("FUEL TANK")
-	assert_str(written[0]["value"]).is_equal("SEATED")
-	assert_str(ShipLogTab.line_text(written[1])).starts_with("SR-7 STATUS ").ends_with(" CRITICAL")
-	assert_str(written[1]["status"]).is_equal(ShipLog.ERR)
-	assert_str(written[2]["name"]).is_equal("SECTIONS MISSING")
-	assert_str(written[2]["value"]).is_equal("2")
-	assert_str(written[2]["status"]).is_equal(ShipLog.WARN)
+	assert_int(written.size()).is_equal(2)
+	assert_str(written[0][0]["name"]).is_equal("FUEL TANK")
+	assert_str(written[0][0]["value"]).is_equal("SEATED")
+	assert_str(written[1][0]["name"]).is_equal("SECTIONS MISSING")
+	assert_str(written[1][0]["value"]).is_equal("2")
+	assert_bool(written[0][1] and written[1][1]).override_failure_message("with the cue").is_true()
 
 
 func test_a_section_is_found_once_and_never_once_home() -> void:
@@ -126,6 +142,8 @@ func test_the_cue_waits_until_it_can_show() -> void:
 	var cue := auto_free(LogCue.new()) as LogCue
 	add_child(cue)
 	assert_bool(cue.is_pending()).is_false()
+	_gs.write_log(ShipLog.SYS, "X", "Y", ShipLog.INFO, false)
+	assert_bool(cue.is_pending()).override_failure_message("a silent line").is_false()
 	_gs.write_log(ShipLog.SYS, "X", "Y")
 	assert_bool(cue.is_pending()).is_true()
 	cue.clear_now()

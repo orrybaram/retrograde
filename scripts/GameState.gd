@@ -55,13 +55,20 @@ func _process(delta: float) -> void:
 	tick_ore_regrowth(delta)
 	mission_time += delta
 
-## Write one line to the ship's log, stamped now, and say so (EventBus.ship_log_written).
-func write_log(source: String, name: String, value: String, status := ShipLog.INFO) -> void:
+## Write one line to the ship's log, stamped now (EventBus.ship_log_written). `cue` false
+## writes it silently: no LOG UPDATED on the HUD.
+func write_log(source: String, name: String, value: String, status := ShipLog.INFO, cue := true) -> void:
 	var entry := ship_log.add(mission_time, source, name, value, status)
-	EventBus.ship_log_written.emit(entry)
+	EventBus.ship_log_written.emit(entry, cue)
 
-## Whether the log speaks of the station and its parts yet: only once the fuel tank is
-## seated, which writes FUEL TANK SEATED, SR-7 STATUS CRITICAL and SECTIONS MISSING 2.
+## A new game's first lines, written silently: the station is critical and its Sections are
+## missing. They are there when the player first opens the Log, with nothing on the HUD.
+func open_ship_log() -> void:
+	write_log(ShipLog.SYS, "SR-7 STATUS", "CRITICAL", ShipLog.ERR, false)
+	_log_missing(false)
+
+## Whether the log tells of the station's parts yet - finds and seatings: only once the fuel
+## tank is seated, which writes FUEL TANK SEATED and SECTIONS MISSING 2.
 func station_logged() -> bool:
 	return progress.holds(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)
 
@@ -83,20 +90,18 @@ func find_section(id: String, how: String) -> bool:
 		write_log(ShipLog.SONAR, Sections.label(id), how)
 	return true
 
-## Seating the fuel tank opens the station's lines (station_logged); every seating logs
-## itself and the new count.
+## Seating the fuel tank opens the log to the station's parts (station_logged); every
+## seating logs itself and the new count.
 func _log_seated(id: String) -> void:
 	if not station_logged():
 		return
 	write_log(ShipLog.MOUNT, Sections.label(id), "SEATED")
-	if id == Sections.FUEL_TANK:
-		write_log(ShipLog.SYS, "SR-7 STATUS", "CRITICAL", ShipLog.ERR)
 	if id in MISSING_SECTIONS:
 		_log_missing()
 
-func _log_missing() -> void:
+func _log_missing(cue := true) -> void:
 	var n := sections_missing()
-	write_log(ShipLog.SYS, "SECTIONS MISSING", str(n), ShipLog.WARN if n > 0 else ShipLog.INFO)
+	write_log(ShipLog.SYS, "SECTIONS MISSING", str(n), ShipLog.WARN if n > 0 else ShipLog.INFO, cue)
 
 func is_planet_scanned(key: String) -> bool:
 	return scanned_planets.has(key)

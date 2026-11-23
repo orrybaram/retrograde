@@ -54,6 +54,11 @@ const CHART_FILL_ALPHA := 0.1
 const CHART_LINE_ALPHA := 0.4
 const CHART_HOME_ALPHA := 0.75
 const STATION_LINE_PX := 1.0
+## A broken part of the station (SpaceStationMinimapTarget.broken_points): a red square
+## this many px across on its outline, slowly pulsing between these alphas.
+const BROKEN_PX := 3.0
+const BROKEN_ALPHA_MIN := 0.55
+const BROKEN_PULSE_PERIOD := 1.6
 ## A planet's return: how much of its outline the beam lights, centred on the ship, and
 ## how faint. A hairline whatever the planet's size - at close range a planet fills the
 ## scope, and a return scaled to it would drown everything else.
@@ -341,6 +346,11 @@ func _draw_station(center: Vector2, target: SpaceStationMinimapTarget, ship_rota
 		if points.size() > 2:
 			points.append(points[0])
 			draw_polyline(points, line, STATION_LINE_PX, true)
+	var pulse := 0.5 + 0.5 * sin(now() * TAU / BROKEN_PULSE_PERIOD)
+	var red := Color(Colors.DANGER, lerpf(BROKEN_ALPHA_MIN, 1.0, pulse))
+	for p in target.broken_points():
+		var at := _to_minimap_unclamped(center, p, ship_rotation)
+		draw_rect(Rect2(at - Vector2.ONE * BROKEN_PX / 2.0, Vector2.ONE * BROKEN_PX), red)
 
 ## A ping: hollow rings going out from where the beam found it, and a dot left behind.
 func _draw_ping(pos: Vector2, age: float, a: float) -> void:

@@ -241,7 +241,7 @@ func _process(dt: float) -> void:
 			_logged_pass = true
 			var gs := get_tree().get_first_node_in_group("game_state") as GameState
 			if gs:
-				gs.write_log(ShipLog.DIAG, "MANUAL DIAGNOSTIC", "PASS")
+				gs.write_log(ShipLog.DIAG, "MANUAL DIAGNOSTIC", "PASS", ShipLog.INFO, false)
 	_label.text = checklist.render()
 	if checklist.is_finished() and (_fade == null or not _fade.is_valid()):
 		_fade = create_tween()
