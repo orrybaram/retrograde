@@ -52,24 +52,39 @@ func test_keeps_only_the_newest() -> void:
 	assert_str(log.entries[0]["value"]).is_equal("5")
 
 
-func test_a_new_game_opens_critical_with_three_missing() -> void:
+func _seat(id: String) -> void:
+	_gs.progress.mark(Progress.SEATED_SECTIONS, id)
+	EventBus.section_seated.emit(id)
+
+
+func test_the_station_is_silent_until_the_fuel_tank_is_seated() -> void:
+	assert_bool(_gs.find_section(Sections.FUEL_TANK, "CONTACT")).is_true()
+	assert_bool(_gs.find_section(Sections.SOLAR_ARRAY, "LOCATED")) \
+		.override_failure_message("still found, for the minimap").is_true()
+	assert_int(_gs.ship_log.entries.size()) \
+		.override_failure_message("but nothing logged before the fuel tank").is_equal(0)
 	var written: Array = []
 	var on_write := func(e: Dictionary) -> void: written.append(e)
 	EventBus.ship_log_written.connect(on_write)
-	_gs.open_ship_log()
+	_seat(Sections.FUEL_TANK)
 	EventBus.ship_log_written.disconnect(on_write)
-	assert_int(written.size()).is_equal(2)
-	assert_str(ShipLogTab.line_text(written[0])).starts_with("SR-7 STATUS ").ends_with(" CRITICAL")
-	assert_str(written[0]["status"]).is_equal(ShipLog.ERR)
-	assert_str(written[1]["value"]).is_equal("3")
-	assert_str(written[1]["status"]).is_equal(ShipLog.WARN)
+	assert_int(written.size()).is_equal(3)
+	assert_str(written[0]["name"]).is_equal("FUEL TANK")
+	assert_str(written[0]["value"]).is_equal("SEATED")
+	assert_str(ShipLogTab.line_text(written[1])).starts_with("SR-7 STATUS ").ends_with(" CRITICAL")
+	assert_str(written[1]["status"]).is_equal(ShipLog.ERR)
+	assert_str(written[2]["name"]).is_equal("SECTIONS MISSING")
+	assert_str(written[2]["value"]).is_equal("2")
+	assert_str(written[2]["status"]).is_equal(ShipLog.WARN)
 
 
 func test_a_section_is_found_once_and_never_once_home() -> void:
-	assert_bool(_gs.find_section(Sections.FUEL_TANK, "CONTACT")).is_true()
-	assert_bool(_gs.find_section(Sections.FUEL_TANK, "LOCATED")).is_false()
-	assert_int(_gs.ship_log.entries.size()).is_equal(1)
-	assert_str(_gs.ship_log.entries[0]["source"]).is_equal(ShipLog.SONAR)
+	_seat(Sections.FUEL_TANK)
+	var before := _gs.ship_log.entries.size()
+	assert_bool(_gs.find_section(Sections.SOLAR_ARRAY, "CONTACT")).is_true()
+	assert_bool(_gs.find_section(Sections.SOLAR_ARRAY, "LOCATED")).is_false()
+	assert_int(_gs.ship_log.entries.size()).is_equal(before + 1)
+	assert_str(_gs.ship_log.entries[-1]["source"]).is_equal(ShipLog.SONAR)
 	_gs.progress.mark(Progress.SEATED_SECTIONS, Sections.DORSAL_ARM)
 	assert_bool(_gs.find_section(Sections.DORSAL_ARM, "CONTACT")).is_false()
 	assert_bool(_gs.find_section(Sections.SOLAR_ARRAY_2, "CONTACT")) \
@@ -77,12 +92,13 @@ func test_a_section_is_found_once_and_never_once_home() -> void:
 
 
 func test_seating_logs_it_and_the_count() -> void:
-	_gs.progress.mark(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)
-	EventBus.section_seated.emit(Sections.FUEL_TANK)
+	_seat(Sections.FUEL_TANK)
+	_seat(Sections.SOLAR_ARRAY)
 	var e := _gs.ship_log.entries
 	assert_str(e[-2]["source"]).is_equal(ShipLog.MOUNT)
+	assert_str(e[-2]["name"]).is_equal("SOLAR ARRAY")
 	assert_str(e[-2]["value"]).is_equal("SEATED")
-	assert_str(e[-1]["value"]).is_equal("2")
+	assert_str(e[-1]["value"]).is_equal("1")
 	assert_str(e[-1]["status"]).is_equal(ShipLog.WARN)
 	for id in [Sections.SOLAR_ARRAY, Sections.DORSAL_ARM]:
 		_gs.progress.mark(Progress.SEATED_SECTIONS, id)

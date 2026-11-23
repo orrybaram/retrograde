@@ -116,8 +116,6 @@ func new_game() -> Launch:
 			_ship.reset_to_initial_state()
 	launch.restore_world = func() -> void:
 		EventBus.planets_restored.emit()
-		if _gs:
-			_gs.open_ship_log()
 	launch.place_ship = func() -> void:
 		if not _spawner:
 			return

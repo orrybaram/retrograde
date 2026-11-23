@@ -60,10 +60,10 @@ func write_log(source: String, name: String, value: String, status := ShipLog.IN
 	var entry := ship_log.add(mission_time, source, name, value, status)
 	EventBus.ship_log_written.emit(entry)
 
-## A new game's first lines: the station is critical and its Sections are missing.
-func open_ship_log() -> void:
-	write_log(ShipLog.SYS, "SR-7 STATUS", "CRITICAL", ShipLog.ERR)
-	_log_missing()
+## Whether the log speaks of the station and its parts yet: only once the fuel tank is
+## seated, which writes FUEL TANK SEATED, SR-7 STATUS CRITICAL and SECTIONS MISSING 2.
+func station_logged() -> bool:
+	return progress.holds(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)
 
 ## How many of MISSING_SECTIONS are not seated yet.
 func sections_missing() -> int:
@@ -72,17 +72,25 @@ func sections_missing() -> int:
 
 ## Section `id` has been found: up close (`how` CONTACT, its Lug answering a Sweep) or from
 ## its Mount (LOCATED). The first time only, and never once it is home: it goes in the
-## ledger, which puts it on the minimap, and in the log. Returns whether it was news.
+## ledger, which puts it on the minimap, and in the log once the station is (station_logged).
+## Returns whether it was news.
 func find_section(id: String, how: String) -> bool:
 	if not id in MISSING_SECTIONS or progress.holds(Progress.FOUND_SECTIONS, id) \
 			or progress.holds(Progress.SEATED_SECTIONS, id):
 		return false
 	progress.mark(Progress.FOUND_SECTIONS, id)
-	write_log(ShipLog.SONAR, Sections.label(id), how)
+	if station_logged():
+		write_log(ShipLog.SONAR, Sections.label(id), how)
 	return true
 
+## Seating the fuel tank opens the station's lines (station_logged); every seating logs
+## itself and the new count.
 func _log_seated(id: String) -> void:
+	if not station_logged():
+		return
 	write_log(ShipLog.MOUNT, Sections.label(id), "SEATED")
+	if id == Sections.FUEL_TANK:
+		write_log(ShipLog.SYS, "SR-7 STATUS", "CRITICAL", ShipLog.ERR)
 	if id in MISSING_SECTIONS:
 		_log_missing()
 

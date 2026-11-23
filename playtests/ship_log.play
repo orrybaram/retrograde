@@ -1,5 +1,5 @@
-# The ship's log (ShipLog): a new game's first lines - SR-7 CRITICAL, 3 SECTIONS MISSING -
-# with the only cue on screen a line in the bottom-right corner, `> LOG UPDATED [I]`, typed
+# The ship's log (ShipLog): nothing about the station until the fuel tank is seated; then
+# FUEL TANK SEATED, SR-7 CRITICAL, 2 SECTIONS MISSING - with the only cue on screen a line in the bottom-right corner, `> LOG UPDATED [I]`, typed
 # then faded. A Sweep at an empty Mount makes it call its Section with a hull-grey ring of its
 # own, the Section answers with a bigger one back past the Mount, and as that lands the log
 # says SOLAR ARRAY ... LOCATED and the minimap marks it. All of it survives a reload, and the
@@ -11,12 +11,18 @@ wait_until main.current_game_state == 1 and not get_tree().paused 15
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
 eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
 
-# --- A new game opens the log ---
-assert gs.ship_log.entries.size() == 2 "two lines on a new game"
-assert gs.ship_log.entries[0]["name"] == "SR-7 STATUS" and gs.ship_log.entries[0]["value"] == "CRITICAL" "the station is critical"
-assert gs.ship_log.entries[0]["status"] == "err" "and that is an error"
-assert gs.ship_log.entries[1]["name"] == "SECTIONS MISSING" and gs.ship_log.entries[1]["value"] == "3" "three Sections missing"
-assert gs.ship_log.entries[1]["status"] == "warn" "a warning"
+# --- Silent on the station until the fuel tank is home ---
+assert gs.ship_log.entries.is_empty() "a new game's log is empty"
+eval gs.progress.mark("seated_sections", "fuel_tank")
+eval pt.section("fuel_tank").queue_free()
+eval pt.mount("fuel_tank").refresh()
+eval get_tree().root.get_node("EventBus").section_seated.emit("fuel_tank")
+assert gs.ship_log.entries.size() == 3 "seating the tank writes three lines"
+assert gs.ship_log.entries[-3]["name"] == "FUEL TANK" and gs.ship_log.entries[-3]["value"] == "SEATED" "the tank is seated"
+assert gs.ship_log.entries[-2]["name"] == "SR-7 STATUS" and gs.ship_log.entries[-2]["value"] == "CRITICAL" "the station is critical"
+assert gs.ship_log.entries[-2]["status"] == "err" "and that is an error"
+assert gs.ship_log.entries[-1]["name"] == "SECTIONS MISSING" and gs.ship_log.entries[-1]["value"] == "2" "two Sections missing"
+assert gs.ship_log.entries[-1]["status"] == "warn" "a warning"
 wait_until pt.node("log_cue").is_showing() 5
 wait 1.0
 assert pt.node("log_cue").text().begins_with("> LOG UPDATED") "the cue says so"

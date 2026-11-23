@@ -73,6 +73,7 @@ func test_a_seated_piece_stops_pulsing() -> void:
 
 func test_a_sweep_makes_an_empty_mount_call_and_its_section_answer() -> void:
 	var f := _piece(Sections.SOLAR_ARRAY, Vector2(1100, 0))
+	_gs.progress.mark(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)  # so the log speaks of it
 	var m := Mount.for_section(get_tree(), Sections.SOLAR_ARRAY)
 	m.on_swept()
 	assert_bool(m.is_calling()).is_true()
