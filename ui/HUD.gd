@@ -1,8 +1,9 @@
 extends Control
 
-## In-game HUD: boost gauge (around the minimap), hull segment bar, cargo weight, Stores, velocity readout,
-## the robot's radio panel and the cue that the ship's log has a new line (LogCue).
-## Subscribes to ship signals. (Action prompts live in IndicatorManager.)
+## In-game HUD: boost gauge and hull segment bar (around the minimap), speed (inside it),
+## cargo weight with Stores under it, the robot's radio panel and the cue that the ship's
+## log has a new line (LogCue). Subscribes to ship signals. (Action prompts live in
+## IndicatorManager.)
 ## The ship's manual diagnostic (BootLog) takes the dashboard's corner while a new game owes
 ## it; the dashboard is dark until then, and glitches back on a piece at a time once the
 ## pilot has the controls.
@@ -19,20 +20,19 @@ const POWER_FLARE_GAIN := 1.6
 
 @onready var dashboard: MarginContainer = $"DashboardAnchor"
 @onready var boost_gauge: BoostGauge = $"DashboardAnchor/HBox/LeftColumn/MinimapDial/BoostGauge"
-@onready var hull_segment_bar: HullSegmentBar = $"DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar"
-@onready var hull_label: Label = $"DashboardAnchor/HBox/RightColumn/HullRow/HullLabel"
+@onready var hull_segment_bar: HullSegmentBar = $"DashboardAnchor/HBox/LeftColumn/MinimapDial/HullSegmentBar"
 @onready var current_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/CurrentCargoLabel"
 @onready var max_cargo_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/MaxCargoLabel"
 @onready var cargo_icon: TextureRect = $"DashboardAnchor/HBox/RightColumn/CargoRow/TrolleyIcon"
-@onready var stores_label: Label = $"DashboardAnchor/HBox/RightColumn/CargoRow/StoresLabel"
-@onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/VelocityLabel"
+@onready var stores_label: Label = $"DashboardAnchor/HBox/RightColumn/StoresLabel"
+@onready var velocity_label: Label = $"DashboardAnchor/HBox/LeftColumn/MinimapDial/VelocityLabel"
 @onready var save_indicator_label: Label = $"SaveIndicatorLabel"
-## Powered up in this order: the minimap's dial, then the readouts top to bottom.
+## Powered up in this order: the minimap's dial (its rim gauges and speed with it), then
+## the readouts top to bottom.
 @onready var dashboard_pieces: Array[Control] = [
 	$"DashboardAnchor/HBox/LeftColumn/MinimapDial",
-	$"DashboardAnchor/HBox/LeftColumn/VelocityLabel",
-	$"DashboardAnchor/HBox/RightColumn/HullRow",
 	$"DashboardAnchor/HBox/RightColumn/CargoRow",
+	$"DashboardAnchor/HBox/RightColumn/StoresLabel",
 ]
 var boot_log: BootLog = null
 const DEFAULT_DASHBOARD_SCALE := 1.35
@@ -133,8 +133,8 @@ func _punch_cargo_label() -> void:
 	_cargo_punch_tween.parallel().tween_property(current_cargo_label, "modulate", Color.WHITE, 0.3)
 
 func _fit_dashboard() -> void:
-	# The panel breathes with the cargo and Stores digit counts, so the meters are
-	# fixed-width (no expand flag in HUD.tscn) — a Deposit must not stretch the hull bar.
+	# The panel breathes with the cargo and Stores digit counts; the meters live on the
+	# minimap's rim, so a Deposit can't stretch them.
 	if not dashboard:
 		return
 	var min_size = dashboard.get_combined_minimum_size()
@@ -270,7 +270,7 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 	current_cargo_label.text = "%d" % int(cargo_weight)
 	var cargo_full: bool = cargo_weight >= max_cargo
 	max_cargo_label.text = "/%d FULL" % max_cargo if cargo_full else "/%d" % max_cargo
-	stores_label.text = "  %d ST" % int(_shown_stores)
+	stores_label.text = "%d ST" % int(_shown_stores)
 	var cargo_color := Colors.DANGER if cargo_full else Colors.PRIMARY
 	current_cargo_label.add_theme_color_override("font_color", cargo_color)
 	max_cargo_label.add_theme_color_override("font_color", Colors.DANGER if cargo_full else Colors.PRIMARY_DIM)
@@ -290,11 +290,6 @@ func _update_labels(_item_id: String = "", _new_quantity: int = 0) -> void:
 		var max_hull = ship.max_hull if "max_hull" in ship else 100.0
 		if hull_segment_bar:
 			hull_segment_bar.set_value(hull, max_hull)
-		# The row's own label goes red with it, so the warning starts at the readout.
-		if hull_label:
-			var hull_level := LowHullEffect.level_for(hull, max_hull)
-			hull_label.add_theme_color_override("font_color",
-					Colors.PRIMARY if hull_level == LowHullEffect.Level.OK else Colors.DANGER)
 	else:
 		velocity_label.text = "0.0 m/s"
 		if boost_gauge:
