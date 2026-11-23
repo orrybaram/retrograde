@@ -5,7 +5,7 @@ class_name Save
 ## Serializes GameState (Stores, death count), Ship stats (fuel, hull, cargo),
 ## InventoryManager contents, planet orbital angles, dug-out ore seams (seconds until they
 ## refill), the Progress ledger (every Record, see Progress.FileStore for where each kind
-## goes), which radio tips were seen, what waits in SR-7's Cradle, and every piece of
+## goes), which radio tips were seen, what waits in SR-7's Cradle, the ship's log, and every piece of
 ## Freight, where it is (a load clamped to the ship puts the ship back in flight with it on
 ## the nose, see Session.resume).
 
@@ -22,6 +22,9 @@ const SECTION_CRADLE_KEY := "cradled"
 const OPENING_SECTION := "opening"
 ## The manual diagnostic (BootLog) hasn't passed yet: a continue runs it again from the top.
 const DIAGNOSTIC_OWED_KEY := "diagnostic_owed"
+const SHIP_LOG_SECTION := "ship_log"
+const SHIP_LOG_ENTRIES_KEY := "entries"
+const SHIP_LOG_TIME_KEY := "mission_time"
 
 ## `path` defaults to the game save.
 static func save(gs: GameState, ship: Ship, path: String = "") -> void:
@@ -76,6 +79,8 @@ static func save(gs: GameState, ship: Ship, path: String = "") -> void:
 	for kind in Progress.KINDS:
 		Progress.FileStore.put(cfg, kind, gs.progress.list(kind))
 	cfg.set_value(SECTION_SECTION, SECTION_CRADLE_KEY, gs.cradled)
+	cfg.set_value(SHIP_LOG_SECTION, SHIP_LOG_ENTRIES_KEY, gs.ship_log.to_array())
+	cfg.set_value(SHIP_LOG_SECTION, SHIP_LOG_TIME_KEY, gs.mission_time)
 	if ship and ship.is_inside_tree():
 		var boot_log := ship.get_tree().get_first_node_in_group("boot_log") as BootLog
 		cfg.set_value(OPENING_SECTION, DIAGNOSTIC_OWED_KEY, boot_log != null and boot_log.is_owed())
@@ -226,6 +231,8 @@ static func load_into(gs: GameState, ship: Ship, path: String = "") -> void:
 	gs.progress = gs.progress.resumed()
 	gs.repair_station()
 	gs.cradled = load_cradled(path)
+	gs.ship_log = ShipLog.from_array(cfg.get_value(SHIP_LOG_SECTION, SHIP_LOG_ENTRIES_KEY, []))
+	gs.mission_time = float(cfg.get_value(SHIP_LOG_SECTION, SHIP_LOG_TIME_KEY, 0.0))
 	RobotRadio.guide_awake = gs.progress.flagged(Progress.CORE_STARTED)
 	
 	# Load inventory into InventoryManager

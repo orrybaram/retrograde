@@ -78,9 +78,24 @@ var _seating: Tween
 var alarm: CutAlarm
 ## What this Mount tells a ship that comes close (SpaceStation.tscn puts one under each).
 var _readout: Readout
+## Calling its Section (call_section): the ring is out, or the answer is on its way back.
+var _calling := false
+
+## A Sweep that reaches an empty Mount makes it call its Section: a hull-grey ring of its own
+## at CALL_SPEED, out past the Section, far beyond the screen. The Section answers with a
+## bigger ring of its own, ANSWER_REACH times the gap, back over the Mount and on past it;
+## as that reaches the Mount the Section is found (GameState.find_section, LOCATED).
+const CALL_SPEED := 1100.0
+const CALL_PAST := 600.0
+const CALL_WIDTH := 3.0
+const CALL_ALPHA := 0.6
+const ANSWER_REACH := 1.6
+const ANSWER_WIDTH := 5.0
+const ANSWER_ALPHA := 0.8
 
 func _ready() -> void:
 	add_to_group("mounts")
+	add_to_group("sonar_listeners")
 	z_index = 1
 	_readout = Readout.on(self)
 	_part = get_node_or_null(part) as Polygon2D
@@ -155,13 +170,13 @@ static func in_tolerance(piece: Transform2D, mount: Transform2D) -> bool:
 	return piece.origin.distance_to(mount.origin) <= SEAT_RANGE \
 		and absf(angle_difference(piece.get_rotation(), mount.get_rotation())) <= SEAT_ANGLE
 
-## What this Mount reads as (Readout): whether its Section is home, and while it is not,
-## that the Section is now marked on the minimap - reading the Mount is what marks it
-## (marks_section). The cut is clean and nothing tore: the clue, never the story.
+## What this Mount reads as (Readout, filed in the Log's Records): whether its Section is
+## home, and while it is not, whether it has been located (marks_section). The cut is clean
+## and nothing tore: the clue, never the story.
 func readout_rows() -> Array[ReadoutRow]:
 	var out: Array[ReadoutRow] = [ReadoutRow.make("STATE", "SEATED" if seated else "EMPTY")]
 	if not seated:
-		out.append(ReadoutRow.make("SECTION", "MARKED"))
+		out.append(ReadoutRow.make("SECTION", "LOCATED" if marks_section() else "MISSING"))
 	out.append(ReadoutRow.make("EDGE", "TORCH CUT"))
 	out.append(ReadoutRow.make("FRACTURE", "NONE"))
 	return out
@@ -184,9 +199,55 @@ func readout_bounds() -> Rect2:
 	return out
 
 ## Whether the minimap shows where this Mount's Section is (SectionMinimapTarget): once the
-## ship has read the Mount up close. A Mount with nothing to read marks it from the start.
+## Section has been found (Progress.FOUND_SECTIONS) - by a Sweep up close, or answering this
+## Mount's call.
 func marks_section() -> bool:
-	return _readout == null or _readout.is_read()
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	return gs != null and gs.progress.holds(Progress.FOUND_SECTIONS, section)
+
+## A ring reaches the middle of the Mount.
+func sonar_point() -> Vector2:
+	return global_position
+
+func on_sonar_touched(_strength := 1.0) -> void:
+	pass
+
+## Only the ship's own Sweep makes it call (SR-7's dish pings are not Sweeps).
+func on_swept() -> void:
+	call_section()
+
+## Call this Mount's Section, if it is empty, not calling already, and its Section is out
+## there unfound. Returns whether it called.
+func call_section() -> bool:
+	if seated or _calling:
+		return false
+	var gs := get_tree().get_first_node_in_group("game_state") as GameState
+	if gs == null or gs.progress.holds(Progress.FOUND_SECTIONS, section):
+		return false
+	var f := _find_section()
+	if f == null or not f.is_loose():
+		return false
+	_calling = true
+	var gap := global_position.distance_to(f.global_position)
+	SonarEcho.travel(self, Vector2.ZERO, Colors.HULL_LIGHT, gap + CALL_PAST, CALL_SPEED, CALL_WIDTH, CALL_ALPHA)
+	get_tree().create_timer(gap / CALL_SPEED, false).timeout.connect(_section_answers.bind(f))
+	return true
+
+func is_calling() -> bool:
+	return _calling
+
+func _section_answers(f: Freight) -> void:
+	if not is_instance_valid(f) or not is_inside_tree():
+		_calling = false
+		return
+	var gap := global_position.distance_to(f.global_position)
+	SonarEcho.travel(f, Vector2.ZERO, Colors.HULL_LIGHT, gap * ANSWER_REACH, CALL_SPEED, ANSWER_WIDTH, ANSWER_ALPHA)
+	f.flash_released()  # the Lug glints as it answers
+	get_tree().create_timer(gap / CALL_SPEED, false).timeout.connect(func() -> void:
+		_calling = false
+		var gs := get_tree().get_first_node_in_group("game_state") as GameState
+		if gs:
+			gs.find_section(section, "LOCATED"))
 
 func tracking_target() -> NodeTrackingTarget:
 	if _tracking == null:

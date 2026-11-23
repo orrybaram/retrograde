@@ -33,22 +33,24 @@ func _press_tab(shift := false) -> void:
 	_log._input(ev)
 
 
-func test_opens_on_the_hold() -> void:
+func test_opens_on_the_ship_log() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	assert_bool(log_ui.visible).is_true()
-	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	assert_str(log_ui.active_tab_title()).is_equal("LOG")
 
 
 func test_tab_moves_through_records_and_map_and_back() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
+	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	_press_tab()
 	assert_str(log_ui.active_tab_title()).is_equal("RECORDS")
 	_press_tab()
 	assert_str(log_ui.active_tab_title()).is_equal("MAP")
 	_press_tab()
-	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	assert_str(log_ui.active_tab_title()).is_equal("LOG")
 
 
 func test_shift_tab_reverses() -> void:
@@ -56,6 +58,8 @@ func test_shift_tab_reverses() -> void:
 	log_ui.open_log()
 	_press_tab(true)
 	assert_str(log_ui.active_tab_title()).is_equal("MAP")
+	_press_tab(true)
+	assert_str(log_ui.active_tab_title()).is_equal("RECORDS")
 
 
 ## Only the tab that is up is lit; the rest of the notches stay dim. Which one the
@@ -64,11 +68,11 @@ func test_shift_tab_reverses() -> void:
 func test_only_the_selected_notch_is_lit() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
-	_assert_notch_lit(log_ui, 0, true)
-	_assert_notch_lit(log_ui, 1, false)
+	_assert_notch_lit(log_ui, LogUI.LOG_TAB, true)
+	_assert_notch_lit(log_ui, LogUI.MAP_TAB, false)
 	_press_tab()
-	_assert_notch_lit(log_ui, 0, false)
-	_assert_notch_lit(log_ui, 1, true)
+	_assert_notch_lit(log_ui, LogUI.LOG_TAB, false)
+	_assert_notch_lit(log_ui, LogUI.SHIP_TAB, true)
 
 
 ## A selected tab is the brighter one and its notch is open at the bottom into the
@@ -88,31 +92,32 @@ func _assert_notch_lit(log_ui: LogUI, index: int, lit: bool) -> void:
 func test_a_notch_reads_as_a_label_not_a_heading() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
-	assert_str(log_ui._frame._tab_labels[0].text).is_equal("SHIP")
-	assert_str(log_ui._frame._tab_labels[1].text).is_equal("RECORDS")
-	assert_str(log_ui._frame._tab_labels[2].text).is_equal("MAP")
+	assert_str(log_ui._frame._tab_labels[0].text).is_equal("MAP")
+	assert_str(log_ui._frame._tab_labels[1].text).is_equal("LOG")
+	assert_str(log_ui._frame._tab_labels[2].text).is_equal("SHIP")
+	assert_str(log_ui._frame._tab_labels[3].text).is_equal("RECORDS")
 	for notch in log_ui._frame._tab_labels:
 		assert_int(notch.horizontal_alignment).is_equal(HORIZONTAL_ALIGNMENT_LEFT)
 
 
-## Closing on Records and reopening puts the player back on the Hold.
-func test_reopens_on_the_hold() -> void:
+## Closing on another tab and reopening puts the player back on the ship's log.
+func test_reopens_on_the_ship_log() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
 	log_ui.close_log()
 	assert_bool(log_ui.visible).is_false()
 	log_ui.open_log()
-	assert_str(log_ui.active_tab_title()).is_equal("SHIP")
+	assert_str(log_ui.active_tab_title()).is_equal("LOG")
 
 
 ## The bottom border is the active tab's hint(), not a constant on the frame.
 func test_hint_comes_from_the_active_tab() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
-	assert_str(log_ui._frame._hint.text).is_equal(log_ui._tabs[0].hint())
+	assert_str(log_ui._frame._hint.text).is_equal(log_ui._tabs[LogUI.LOG_TAB].hint())
 	_press_tab()
-	assert_str(log_ui._frame._hint.text).is_equal(log_ui._tabs[1].hint())
+	assert_str(log_ui._frame._hint.text).is_equal(log_ui._tabs[LogUI.SHIP_TAB].hint())
 
 
 ## The Log is the player's own instrument, read alone — no robot on this screen.
@@ -194,7 +199,8 @@ func test_a_scan_fills_the_record_while_the_log_is_open() -> void:
 	var log_ui := _log_in_tree()
 	log_ui.open_log()
 	_press_tab()
-	var records := log_ui._tabs[1] as RecordsTab
+	_press_tab()
+	var records := log_ui._tabs[LogUI.RECORDS_TAB] as RecordsTab
 	assert_str(_text(records)).contains(RecordsTab.NO_SURVEY)
 
 	_gs.mark_planet_scanned(planet.save_key())

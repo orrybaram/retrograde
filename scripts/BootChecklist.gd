@@ -8,8 +8,9 @@ class_name BootChecklist
 ## ship and draws it on the HUD.
 ##
 ## Sections unfold: FLIGHT from the start, the rest typed in under it when their moment
-## comes (SONAR just outside a Sweep's reach of Freight, MAGNET at the Lug, LATERAL a beat
-## after a pickup, RELEASE carrying a Section close to its Mount). A check already done by then types in and stamps straight away. A
+## comes, and never before the one above it has cleared (BootLog: SONAR just outside a
+## Sweep's reach of Freight, CLAMP as soon as SONAR clears, RCS a beat after a pickup, MOUNT
+## as soon as RCS clears). A check already done by then types in and stamps straight away. A
 ## section whose rows are all OK clears a moment later, so the log only ever holds what is
 ## still to do; its system name joins the running list of passes under the header. Once
 ## every section has cleared it prints DIAGNOSTIC ... PASS, holds, and
@@ -49,16 +50,24 @@ const SECTIONS := {
 	SONAR: {"head": "SONAR", "checks": [
 		{"id": "sweep", "label": "SWEEP", "keys": [&"action"], "all": [SWEEP]},
 	]},
-	MAGNET: {"head": "CLAMP", "checks": [
+	MAGNET: {"head": "CLAMP", "range": "LUG", "checks": [
 		{"id": "clamp", "label": "ENGAGE", "keys": [&"action"], "all": [CLAMP], "hold": true},
 	]},
 	LATERAL: {"head": "RCS", "checks": [
 		{"id": "strafe", "label": "STRAFE", "keys": [&"strafe_left", &"strafe_right"], "all": [STRAFE_LEFT, STRAFE_RIGHT]},
 	]},
-	LET_GO: {"head": "CLAMP RELEASE", "checks": [
-		{"id": "release", "label": "RELEASE", "keys": [&"action"], "any": [RELEASE, SEATED], "hold": true},
+	LET_GO: {"head": "MOUNT", "range": "SEAT", "checks": [
+		{"id": "release", "label": "INSTALL", "keys": [&"action"], "any": [SEATED], "hold": true},
 	]},
 }
+
+## A section with a "range" lists, under its checks, a field saying how far off what it
+## works on is (set_range): the Lug for CLAMP, the Mount's seat for MOUNT.
+const RANGE_UNKNOWN := "--"
+const IN_RANGE := "IN RANGE"
+## Typed under who holds the controls once PROPULSION clears: the ship starts tracking the
+## nearest loose Section of SR-7 (BootLog).
+const NAV := ["NAV", "ONLINE"]
 
 ## Status lines are fields - a name, dots, and a value right-aligned under the stamps.
 const CONTACT := ["CONTACT", "FREIGHT"]
@@ -110,6 +119,7 @@ var _open := {}
 var _done := {}  # check id -> when it stamped
 var _cleared := {}
 var _contact := false
+var _nav := false
 var _contact_at := -1.0
 var _complete_at := -1.0
 var _label_of: Callable
@@ -132,8 +142,45 @@ func open(section: String) -> void:
 	for c in SECTIONS[section]["checks"]:
 		var row := _add(Kind.CHECK, section)
 		row["check"] = c
+	if SECTIONS[section].has("range"):
+		_add_field(section, SECTIONS[section]["range"], RANGE_UNKNOWN, Colors.PRIMARY_DIM)["range"] = true
 	if section == SONAR and _contact:
 		_add_contact()
+
+
+## What a section's range field reads: a distance, "--", or IN_RANGE in SUCCESS. The
+## dots take up the slack, so the row stays one width and never retypes.
+func set_range(section: String, value: String, ink: Color) -> void:
+	for row in _rows:
+		if row["section"] == section and row.get("range", false):
+			row["value"] = value
+			row["ink"] = ink
+
+
+## The range field's value, or "" when the section has none up.
+func range_value(section: String) -> String:
+	for row in _rows:
+		if row["section"] == section and row.get("range", false):
+			return row["value"]
+	return ""
+
+
+## Navigation comes up: a small NAV ... ONLINE line under who holds the controls. Once.
+func nav_online() -> void:
+	if _nav:
+		return
+	_nav = true
+	var at := 0
+	for i in _rows.size():
+		if _rows[i]["section"] == INTRO:
+			at = i + 1
+	var row := _add_field(INTRO, NAV[0], NAV[1], Colors.NAV, true)
+	_rows.erase(row)
+	_rows.insert(at, row)
+
+
+func is_nav_online() -> bool:
+	return _nav
 
 
 ## Sections a lost clone already passed: open, stamped and cleared, and listed as passes
@@ -337,8 +384,9 @@ func _segments(row: Dictionary) -> Array:
 		Kind.FIELD:
 			var runs := field(row["text"], row["value"], row["ink"])
 			if row.get("small", false):
-				for run in runs:
-					run[1] = Colors.PRIMARY_DIM
+				# An aside: name and dots dim, the value keeps its own ink
+				runs[0][1] = Colors.PRIMARY_DIM
+				runs[1][1] = Colors.PRIMARY_DIM
 			return runs
 	var c: Dictionary = row["check"]
 	var done := _done.has(c["id"])

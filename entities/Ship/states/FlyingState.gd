@@ -22,6 +22,8 @@ var _ground_grace := 0.0
 ## `action` must be seen up once in this state before a press counts, so the press that
 ## brought the ship here (a release, a clamp) is never read twice.
 var _action_armed := false
+## The piece marked in reach of the clamp (_update_reach), if any.
+var _reach: Freight = null
 
 func enter() -> void:
 	super.enter()
@@ -73,6 +75,7 @@ func physics_process(delta: float) -> void:
 	if not Input.is_action_pressed("action"):
 		_action_armed = true
 	_update_action()
+	_update_reach()
 
 ## Sample the flight keys into `ship`'s wants.
 static func read_stick(ship: Ship) -> void:
@@ -540,7 +543,25 @@ func freight_in_reach() -> Freight:
 			best_d = d
 	return best
 
+## Mark the piece the clamp would take now (Freight.reach_lit) - only while the clamp is the
+## pilot's to use and nothing is already in its pull.
+func _update_reach() -> void:
+	var f: Freight = null
+	if _magnet_target == null and _coupled == null and ControlLock.allows(ControlLock.CLAMP):
+		f = freight_in_reach()
+	_show_reach(f)
+
+func _show_reach(f: Freight) -> void:
+	if f == _reach:
+		return
+	if is_instance_valid(_reach):
+		_reach.reach_lit = false
+	_reach = f
+	if f:
+		f.reach_lit = true
+
 func exit() -> void:
+	_show_reach(null)
 	if _magnet_target:
 		_drop_magnet()
 	if _coupled:

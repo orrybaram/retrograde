@@ -11,7 +11,7 @@ class_name BootLog
 ##
 ## While it runs the ship's controls are locked (ControlLock) and come back a section at a
 ## time, as each section's heading types: FLIGHT's stick, SONAR's Sweep, MAGNET's clamp,
-## LATERAL's strafe, RELEASE's let-go. Until it completes, thrust is held to
+## LATERAL's strafe, MOUNT's let-go. Until it completes, thrust is held to
 ## ControlLock.SYSTEM_SPEED in SR-7's frame and the boost is held off. A new game locks from
 ## its first frame (prepare); a ship lost mid-diagnostic relaunches locked where it left
 ## off, its passes on file (arm, begin). Anything else that stops the log clears every lock.
@@ -34,12 +34,10 @@ const FADE_TIME := 1.2
 ## A loose piece's Lug this close to the ship opens SONAR: just past a tapped Sweep's reach,
 ## so the row has typed by the time a ring would get there.
 const SWEEP_NEAR := SonarPulse.END_RADIUS + 80.0
-## The nose this close to a loose piece's Lug opens MAGNET (the magnet itself takes at 25).
-const MAGNET_NEAR := 50.0
 ## Seconds carrying before LATERAL opens: a beat after the pickup, once MAGNET has cleared.
 const LATERAL_BEAT := 2.4
-## A carried Section this close to one of its Mount's seats opens RELEASE (it seats at 40).
-const RELEASE_NEAR := 150.0
+## MOUNT's SEAT field with the Section close enough but turned wrong.
+const SEAT_TURN := "TURN"
 
 ## What each section gives back.
 const UNLOCKS := {
@@ -57,6 +55,8 @@ var _label: RichTextLabel
 var _delay := 0.0
 var _fade: Tween = null
 var _carried := 0.0
+## This run's PASS has gone in the ship's log.
+var _logged_pass := false
 ## This game still owes the diagnostic (a new game, until it completes), and the sections
 ## it has passed so far, which survive the ship being lost.
 var _owed := false
@@ -128,6 +128,7 @@ func begin() -> void:
 	checklist.restore(_passed)
 	_delay = START_DELAY
 	_carried = 0.0
+	_logged_pass = false
 	_label.text = ""
 	arm()
 	if _fade:
@@ -184,13 +185,10 @@ func holds_corner() -> bool:
 	return _owed or checklist != null
 
 
-## The piece of SR-7 the pilot should fly to, from when PROPULSION clears until SONAR does:
-## the loose Section nearest the ship. Otherwise null. Nothing else on screen says where to go
-## in that stretch, so SeekBeacon blinks a light on it and points to it from the screen's edge.
+## The piece of SR-7 the pilot should fly to once PROPULSION clears: the loose, unburied
+## Section nearest the ship, or null. Navigation tracks it then (_bring_nav_online), so the
+## tracking indicator points to it until it is clamped and the Mount takes over.
 func seek_target() -> Freight:
-	if checklist == null or not checklist.is_cleared(BootChecklist.FLIGHT) \
-			or checklist.is_cleared(BootChecklist.SONAR):
-		return null
 	var ship := get_tree().get_first_node_in_group("ship") as Ship
 	if ship == null:
 		return null
@@ -239,6 +237,11 @@ func _process(dt: float) -> void:
 			ControlLock.unlock(UNLOCKS[section])
 	if checklist.is_complete():
 		ControlLock.clear()
+		if not _logged_pass:
+			_logged_pass = true
+			var gs := get_tree().get_first_node_in_group("game_state") as GameState
+			if gs:
+				gs.write_log(ShipLog.DIAG, "MANUAL DIAGNOSTIC", "PASS", ShipLog.INFO, false)
 	_label.text = checklist.render()
 	if checklist.is_finished() and (_fade == null or not _fade.is_valid()):
 		_fade = create_tween()
@@ -303,29 +306,91 @@ func _read_ship(ship: Ship) -> void:
 
 
 func _open_sections(ship: Ship, dt: float) -> void:
-	var nose := ship.to_global(Ship.NOSE)
-	for node in get_tree().get_nodes_in_group("freight"):
-		var f := node as Freight
-		if f == null or not f.is_loose() or f.is_buried():
-			continue
-		if ship.global_position.distance_to(f.lug_global()) < SWEEP_NEAR:
-			checklist.open(BootChecklist.SONAR)
-		if nose.distance_to(f.lug_global()) < MAGNET_NEAR:
-			checklist.open(BootChecklist.MAGNET)
+	if checklist.is_cleared(BootChecklist.FLIGHT):
+		_bring_nav_online()
+	if _after(BootChecklist.SONAR):
+		for node in get_tree().get_nodes_in_group("freight"):
+			var f := node as Freight
+			if f and f.is_loose() and not f.is_buried() \
+					and ship.global_position.distance_to(f.lug_global()) < SWEEP_NEAR:
+				checklist.open(BootChecklist.SONAR)
+				break
+	if _after(BootChecklist.MAGNET):
+		checklist.open(BootChecklist.MAGNET)
+	_show_lug_range(ship)
+	_show_seat_range(ship)
 	if not ship.is_carrying():
 		_carried = 0.0
+	else:
+		_carried += dt
+		if _after(BootChecklist.LATERAL) and _carried >= LATERAL_BEAT:
+			checklist.open(BootChecklist.LATERAL)
+	if _after(BootChecklist.LET_GO):
+		checklist.open(BootChecklist.LET_GO)
+
+
+## A section opens only once the one above it in the run has cleared, so the log never
+## asks for two things at once (SONAR before PROPULSION is through, say).
+func _after(section: String) -> bool:
+	var i := BootChecklist.ORDER.find(section)
+	return i <= 0 or checklist.is_cleared(BootChecklist.ORDER[i - 1])
+
+
+## PROPULSION through: navigation comes up, a line says so, and the ship tracks the
+## nearest loose Section of SR-7 - unless something is tracked already (the piece a lost
+## clone let go of).
+func _bring_nav_online() -> void:
+	if checklist.is_nav_online():
 		return
-	checklist.open(BootChecklist.MAGNET)
-	_carried += dt
-	if _carried >= LATERAL_BEAT:
-		checklist.open(BootChecklist.LATERAL)
-	var f := ship.freight
-	if f == null or f.section == "":
+	checklist.nav_online()
+	var target := seek_target()
+	if target and NavSystem.get_target() == null:
+		NavSystem.track(target.tracking_target())
+
+
+## CLAMP's LUG field: how far the nose is from the nearest loose Lug, IN RANGE once the
+## magnet would take it (Freight.MAGNET_RANGE).
+func _show_lug_range(ship: Ship) -> void:
+	if not checklist.is_open(BootChecklist.MAGNET) or checklist.is_cleared(BootChecklist.MAGNET):
 		return
-	var mount := Mount.for_section(get_tree(), f.section)
+	if ship.is_carrying():
+		_show_range(BootChecklist.MAGNET, 0.0, true)
+		return
+	var nose := ship.to_global(Ship.NOSE)
+	var best := INF
+	for node in get_tree().get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f and f.is_loose():
+			best = minf(best, nose.distance_to(f.lug_global()))
+	_show_range(BootChecklist.MAGNET, best, best <= Freight.MAGNET_RANGE)
+
+
+## MOUNT's SEAT field: how far the carried Section is from its Mount's nearest seat, TURN
+## when it is close but not lined up, IN RANGE once letting go would seat it (Mount.fits).
+func _show_seat_range(ship: Ship) -> void:
+	if not checklist.is_open(BootChecklist.LET_GO) or checklist.is_cleared(BootChecklist.LET_GO):
+		return
+	var f := ship.freight if ship.is_carrying() else null
+	var mount := Mount.for_section(get_tree(), f.section) if f and f.section != "" else null
 	if mount == null or mount.seated:
+		_show_range(BootChecklist.LET_GO, INF, false)
 		return
+	if mount.fits(f):
+		_show_range(BootChecklist.LET_GO, 0.0, true)
+		return
+	var best := INF
 	for seat in mount.seats():
-		if seat.origin.distance_to(f.global_position) < RELEASE_NEAR:
-			checklist.open(BootChecklist.LET_GO)
-			return
+		best = minf(best, seat.origin.distance_to(f.global_position))
+	if best <= Mount.SEAT_RANGE:
+		checklist.set_range(BootChecklist.LET_GO, SEAT_TURN, Colors.PRIMARY)
+	else:
+		_show_range(BootChecklist.LET_GO, best, false)
+
+
+func _show_range(section: String, distance: float, in_range: bool) -> void:
+	if in_range:
+		checklist.set_range(section, BootChecklist.IN_RANGE, Colors.SUCCESS)
+	elif is_inf(distance):
+		checklist.set_range(section, BootChecklist.RANGE_UNKNOWN, Colors.PRIMARY_DIM)
+	else:
+		checklist.set_range(section, TrackingSolution.format_distance(distance).to_upper(), Colors.TEXT)

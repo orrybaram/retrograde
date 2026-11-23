@@ -2,9 +2,11 @@
 # saying the controls are locked into the dashboard's bottom-left corner, the dashboard dark
 # under it, then FLIGHT, whose controls
 # come back as its heading types; each control stamps [ OK ] as it is used, and a finished
-# section clears. SONAR types in just outside a Sweep's reach of the FUEL TANK, MAGNET close
-# to its Lug, LATERAL a beat after the pickup, RELEASE close to its Mount - each unlocking
-# its own control. Once all five have cleared it reports DIAGNOSTIC ... PASS and fades, and
+# section clears. No section opens before the one above it has cleared. PROPULSION clearing
+# brings NAV online and tracks the nearest loose Section. SONAR types in just outside a
+# Sweep's reach of the FUEL TANK, CLAMP as soon as SONAR clears (its LUG field reading the
+# range, IN RANGE with the Lug lit), RCS a beat after the pickup, MOUNT as soon as RCS clears
+# (its SEAT field reading the range to the Mount) - each unlocking its own control. Once all five have cleared it reports DIAGNOSTIC ... PASS and fades, and
 # nothing is locked, and the dashboard glitches back on a piece at a time. A ship lost mid-diagnostic comes back locked where it left off, its
 # passes on file; one lost after it, or a continue, never shows it.
 # Run: PLAYTEST_PORT=7831 tools/play.sh --headless playtests/boot_log.play
@@ -36,6 +38,13 @@ screenshot boot_log_1_flight
 eval pt.remember("v", ship.linear_velocity)
 hold thrust 0.3
 assert (ship.linear_velocity - pt.recall("v")).length() > 1.0 "thrust is back"
+eval pt.remember("start", ship.global_position)
+eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 340.0)
+eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
+wait 0.3
+assert not pt.recall("log").checklist.is_open("sonar") "SONAR waits for PROPULSION, even beside the tank"
+assert get_tree().root.get_node("NavSystem").get_target() == null "and nothing is tracked yet"
+eval pt.warp_to(pt.recall("start"))
 # The drills below wander; start them well clear of the tank so they don't open SONAR
 eval pt.warp_to(ship.global_position + (ship.global_position - pt.section("fuel_tank").global_position).normalized() * 300.0)
 eval ship.set("linear_velocity", pt.node("space_stations").linear_velocity)
@@ -56,6 +65,10 @@ assert pt.recall("log").checklist.is_cleared("flight") and not pt.recall("log").
 wait 1.0
 assert pt.recall("log").text().contains("PROPULSION ") and pt.recall("log").text().contains("[ OK ]") "and joins the list of passes"
 assert pt.recall("log").text().begins_with("MANUAL DIAGNOSTIC") "the header stays"
+assert pt.recall("log").checklist.is_nav_online() and pt.recall("log").text().contains("NAV ") "NAV comes online"
+assert get_tree().root.get_node("NavSystem").get_target().node.section != "" "tracking a loose Section of SR-7"
+assert pt.node("hud").get_node("TrackingIndicator").solution != null "and the tracking indicator is up"
+screenshot boot_log_1b_nav
 
 # --- SONAR: just outside a Sweep's reach of the tank ---
 eval ship.set("rotation", (-pt.section("fuel_tank").lug_facing_global()).angle())
@@ -80,13 +93,15 @@ assert pt.recall("log").checklist.is_done("sweep") "a Sweep stamps it"
 assert pt.recall("log").text().contains("FREIGHT") "and the tank answering logs the contact"
 wait 2.5
 assert pt.recall("log").checklist.is_cleared("sonar") "then SONAR clears"
+wait 0.3
+assert pt.recall("log").checklist.is_open("magnet") "and CLAMP opens straight away"
 
 # --- Lost mid-diagnostic: the next clone comes up locked where this one left off ---
 eval main.call_deferred("show_game_over", "destroyed")
 wait 0.5
 wait_until main.current_game_state == 1 and pt.recall("log").is_running() 15
 assert pt.recall("log").checklist.is_cleared("flight") and pt.recall("log").checklist.is_cleared("sonar") "what passed stays passed"
-assert not pt.recall("log").checklist.is_open("magnet") "the rest runs again"
+assert not pt.recall("log").checklist.is_cleared("magnet") "the rest runs again"
 assert pt.recall("log").has_locks() "still locked where it left off"
 assert not pt.node("hud").dashboard.visible "and the dashboard still dark"
 wait 1.5
@@ -95,19 +110,22 @@ eval pt.remember("v", ship.linear_velocity)
 hold thrust 0.3
 assert (ship.linear_velocity - pt.recall("v")).length() > 1.0 "but the stick is back"
 
-# --- MAGNET: close to the Lug ---
+# --- MAGNET: open from the start, its LUG field reading the range ---
+wait_until pt.recall("log").checklist.is_open("magnet") 4
+eval ship.set("rotation", (-pt.section("fuel_tank").lug_facing_global()).angle())
 eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 80.0)
 eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
-wait 0.3
-assert not pt.recall("log").checklist.is_open("magnet") "not from across the way"
-eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 40.0)
-eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
-wait 0.3
-assert pt.recall("log").checklist.is_open("magnet") "close to the Lug opens MAGNET"
-wait 1.0
+wait 1.5
+assert pt.recall("log").checklist.range_value("magnet").ends_with(" M") "LUG reads how far off the Lug is"
+assert not pt.section("fuel_tank").reach_lit "out of reach, the Lug is unlit"
+eval ship.set("rotation", (-pt.section("fuel_tank").lug_facing_global()).angle())
+eval ship.set("angular_velocity", 0.0)
 eval pt.warp_to(pt.section("fuel_tank").lug_global() + pt.section("fuel_tank").lug_facing_global() * 26.0)
 eval ship.set("linear_velocity", pt.section("fuel_tank").linear_velocity)
-wait 0.1
+wait 0.2
+assert pt.recall("log").checklist.range_value("magnet") == "IN RANGE" "in the magnet's reach, LUG reads IN RANGE"
+assert pt.section("fuel_tank").reach_lit "and the Lug lights"
+screenshot boot_log_1c_in_range
 hold action 0.8
 assert pt.state_name() == "CarryingState" "the tank is clamped"
 wait 0.3
@@ -129,26 +147,36 @@ assert not pt.recall("log").checklist.is_done("strafe") "one side isn't STRAFE"
 hold strafe_right 0.2
 wait 0.5
 assert pt.recall("log").checklist.is_done("strafe") "both sides is"
-assert not pt.recall("log").checklist.is_open("let_go") "far from the Mount, no RELEASE"
+assert not pt.recall("log").checklist.is_open("let_go") "MOUNT waits for RCS"
 wait 2.3
 assert pt.recall("log").checklist.is_cleared("lateral") "LATERAL clears"
 
-# --- RELEASE: close to the Mount ---
+# --- MOUNT: open as soon as RCS clears, wherever the ship is ---
+wait 0.3
+assert pt.recall("log").checklist.is_open("let_go") "then MOUNT opens"
+wait 1.5
+assert pt.recall("log").checklist.range_value("let_go").ends_with("M") "SEAT reads how far off the Mount is"
+eval pt.stage_at_mount("fuel_tank", Vector2(0, 0), 90.0)
+wait 0.2
+assert pt.recall("log").checklist.range_value("let_go") == "TURN" "at the Mount but turned wrong, TURN"
 eval pt.stage_at_mount("fuel_tank", Vector2(15, -6), 8.0)
 wait 0.2
-assert pt.recall("log").checklist.is_open("let_go") "close to the Mount opens RELEASE"
-wait 1.2
+assert pt.recall("log").checklist.range_value("let_go") == "IN RANGE" "lined up, IN RANGE"
+screenshot boot_log_1d_mount
+wait 0.5
 down action
 wait 0.4
 assert pt.recall("log").text().contains("[██") "the stamp fills with the hold"
 wait 0.6
 up action
 assert pt.mount("fuel_tank").seated "the tank is seated"
+wait_until gs.ship_log.entries[-1]["value"] == "2" 2
+assert gs.ship_log.entries[-2]["name"] == "FUEL TANK" "the tank's seating is logged"
 wait 0.3
 assert pt.recall("log").checklist.is_done("release") "letting go stamps it"
-wait_until pt.recall("log").text().contains("PILOT") 6
+wait_until pt.recall("log").text().contains("PILOT") 10
 assert pt.recall("log").text().contains("PASS") "every section cleared: PASS, and the pilot has the controls"
-assert pt.recall("log").text().contains("PROPULSION") and pt.recall("log").text().contains("CLAMP RELEASE") "the list of passes stays up to the end"
+assert pt.recall("log").text().contains("PROPULSION") and pt.recall("log").text().contains("MOUNT") "the list of passes stays up to the end"
 assert not pt.recall("log").has_locks() "nothing is locked after"
 eval pt.warp_to(ship.global_position + Vector2(0, -4000))
 eval ship.set("linear_velocity", pt.node("space_stations").linear_velocity)

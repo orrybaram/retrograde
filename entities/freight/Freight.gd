@@ -49,6 +49,12 @@ const TEST_OUTLINE := [
 
 ## How long the Lug stays lit after a Sweep ring passes over it.
 const LUG_GLOW_TIME := 0.6
+## A Sweep's answer holds longer: with no ring back, the lit Lug is the whole answer.
+const LUG_ANSWER_TIME := 1.6
+## The nose within the magnet's reach (FlyingState marks `reach_lit`): the Lug wears a
+## pulsing SUCCESS bar over its own, so the pilot sees the clamp would take it now.
+const REACH_PULSE_HZ := 2.5
+const REACH_WIDTH := 5.0
 ## How long the whole piece takes to fade from lit back to its own colours once clamped.
 const CLAMP_FLASH_TIME := 0.35
 
@@ -121,6 +127,7 @@ var _body: Polygon2D
 var _edge: Line2D
 var _clamp_flash: Tween
 var _lug_glow: Tween
+var _reach_line: Line2D
 
 func _init() -> void:
 	mass = 3.0  # the ship's own mass, so a clamped test piece halves its acceleration
@@ -149,6 +156,9 @@ func _ready() -> void:
 ## planet's orbit, so while time is slowed it is put straight on its spot rather than left
 ## trailing behind (the ship keeps pace the same way - Ship._process).
 func _process(_delta: float) -> void:
+	if _reach_line and _reach_line.visible:
+		var t := Time.get_ticks_msec() / 1000.0
+		_reach_line.modulate.a = 0.55 + 0.45 * absf(sin(t * PI * REACH_PULSE_HZ))
 	if lodged and is_instance_valid(lodged_in) and HarvestJuice.is_hitstopped():
 		global_position = lodged_in.to_global(lodged_offset)
 
@@ -156,21 +166,35 @@ func _process(_delta: float) -> void:
 func sonar_point() -> Vector2:
 	return lug_global()
 
-## The Lug answers as the ring passes: it lights up in the Titan's purple, pings back with
-## a ring as strong as the one that reached it, and fades. A `clarity` under 1 is an answer
-## from past the ring's reach (answer_clarity): fainter, and broken up.
+## The Lug answers as the ring passes: the coupling alone lights up and fades - no ring back,
+## and nothing purple (that is the Titan's). The one exception is a piece that answers from
+## far off (`answer_range`, the Cargo Bay answering the dish): it pings back with a ring as
+## strong as the one that reached it, or the answer would never be seen. A `clarity` under 1
+## is an answer from past the ring's reach (answer_clarity): fainter, and broken up.
 func on_sonar_touched(strength := 1.0, clarity := 1.0) -> void:
 	if not _lug_line:
 		return
 	EventBus.freight_answered.emit()
-	SonarEcho.answer_ping(_visual, lug_position, strength, Colors.TITAN, clarity)
+	if section != "":
+		var gs := get_tree().get_first_node_in_group("game_state") as GameState
+		if gs:
+			gs.find_section(section, "CONTACT")
+	if answer_range > 0.0:
+		SonarEcho.answer_ping(_visual, lug_position, strength, Colors.PRIMARY, clarity)
 	if _lug_glow:
 		_lug_glow.kill()
-	_lug_line.default_color = Color(Colors.HULL_LIGHT.lerp(Colors.TITAN, clarity), 1.0)
+	_lug_line.default_color = Color(Colors.HULL_LIGHT.lerp(Colors.PRIMARY, clarity), 1.0)
 	_lug_line.width = 3.0 + 2.0 * clarity
-	_lug_glow = _visual.create_tween().set_parallel()
-	_lug_glow.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, LUG_GLOW_TIME)
-	_lug_glow.tween_property(_lug_line, "width", 3.0, LUG_GLOW_TIME)
+	_lug_glow = _visual.create_tween().set_parallel().set_ease(Tween.EASE_IN)
+	_lug_glow.tween_property(_lug_line, "default_color", Colors.HULL_LIGHT, LUG_ANSWER_TIME)
+	_lug_glow.tween_property(_lug_line, "width", 3.0, LUG_ANSWER_TIME)
+
+## Whether the clamp would take this piece now (FlyingState.freight_in_reach): the Lug shows it.
+var reach_lit := false:
+	set(value):
+		reach_lit = value
+		if _reach_line:
+			_reach_line.visible = value
 
 ## Whether a Sweep can get an answer from it at all: a piece that needs SR-7's power is
 ## dead to it until the core's cold start.
@@ -618,4 +642,11 @@ func _build_visual() -> Node2D:
 	lug.default_color = Colors.HULL_LIGHT
 	root.add_child(lug)
 	_lug_line = lug
+	var reach := Line2D.new()
+	reach.points = lug.points
+	reach.width = REACH_WIDTH
+	reach.default_color = Colors.SUCCESS
+	reach.visible = reach_lit
+	root.add_child(reach)
+	_reach_line = reach
 	return root

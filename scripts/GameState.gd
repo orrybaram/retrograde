@@ -37,12 +37,71 @@ var cradled := PackedStringArray()
 ## Death counter - tracks total number of deaths (not displayed to player)
 var death_count: int = 0
 
+## The ship's log (ShipLog), and the mission time it is stamped with: seconds of play since
+## the new game, counted only while the tree runs. Both are saved.
+var ship_log := ShipLog.new()
+var mission_time := 0.0
+
+## The Sections that count as SR-7's missing parts in the log: the ones that come home as
+## Freight. The right wing is pushed home (ArrayNudge) and never counted missing.
+const MISSING_SECTIONS: Array[String] = [Sections.FUEL_TANK, Sections.SOLAR_ARRAY, Sections.DORSAL_ARM]
+
 func _ready() -> void:
 	add_to_group("game_state")
+	EventBus.section_seated.connect(_log_seated)
 
 func _process(delta: float) -> void:
 	# Seams refill on play time: the tree is paused in menus
 	tick_ore_regrowth(delta)
+	mission_time += delta
+
+## Write one line to the ship's log, stamped now (EventBus.ship_log_written). `cue` false
+## writes it silently: no LOG UPDATED on the HUD.
+func write_log(source: String, name: String, value: String, status := ShipLog.INFO, cue := true) -> void:
+	var entry := ship_log.add(mission_time, source, name, value, status)
+	EventBus.ship_log_written.emit(entry, cue)
+
+## A new game's first lines, written silently: the station is critical and its Sections are
+## missing. They are there when the player first opens the Log, with nothing on the HUD.
+func open_ship_log() -> void:
+	write_log(ShipLog.SYS, "SR-7 STATUS", "CRITICAL", ShipLog.ERR, false)
+	_log_missing(false)
+
+## Whether the log tells of the station's parts yet - finds and seatings: only once the fuel
+## tank is seated, which writes FUEL TANK SEATED and SECTIONS MISSING 2.
+func station_logged() -> bool:
+	return progress.holds(Progress.SEATED_SECTIONS, Sections.FUEL_TANK)
+
+## How many of MISSING_SECTIONS are not seated yet.
+func sections_missing() -> int:
+	return MISSING_SECTIONS.filter(func(id: String) -> bool:
+		return not progress.holds(Progress.SEATED_SECTIONS, id)).size()
+
+## Section `id` has been found: up close (`how` CONTACT, its Lug answering a Sweep) or from
+## its Mount (LOCATED). The first time only, and never once it is home: it goes in the
+## ledger, which puts it on the minimap, and in the log once the station is (station_logged).
+## Returns whether it was news.
+func find_section(id: String, how: String) -> bool:
+	if not id in MISSING_SECTIONS or progress.holds(Progress.FOUND_SECTIONS, id) \
+			or progress.holds(Progress.SEATED_SECTIONS, id):
+		return false
+	progress.mark(Progress.FOUND_SECTIONS, id)
+	if station_logged():
+		write_log(ShipLog.SONAR, Sections.label(id), how)
+	return true
+
+## Seating the fuel tank opens the log to the station's parts (station_logged); every
+## seating logs itself and the new count.
+func _log_seated(id: String) -> void:
+	if not station_logged():
+		return
+	write_log(ShipLog.MOUNT, Sections.label(id), "SEATED")
+	if id in MISSING_SECTIONS:
+		_log_missing()
+
+func _log_missing(cue := true) -> void:
+	var n := sections_missing()
+	write_log(ShipLog.SYS, "SECTIONS MISSING", str(n), ShipLog.WARN if n > 0 else ShipLog.INFO, cue)
 
 func is_planet_scanned(key: String) -> bool:
 	return scanned_planets.has(key)
@@ -121,6 +180,8 @@ func reset_all_state() -> void:
 	progress = progress.fresh()
 	cradled.clear()
 	death_count = 0
+	ship_log = ShipLog.new()
+	mission_time = 0.0
 	InventoryManager.clear_inventory()
 
 	# Emit signals for any listeners

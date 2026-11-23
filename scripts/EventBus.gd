@@ -51,8 +51,8 @@ signal scrap_swept()
 ## ship can cut it is another matter (RobotRadio's no-hold call).
 
 signal readout_read(readout: Node, rows: Array)
-## The ship came close enough to read a Readout, showing `rows` (ReadoutRow): the HUD's
-## ContactLog types it out.
+## The ship came close enough to read a Readout, showing `rows` (ReadoutRow). Nothing shows
+## on screen: the read files its Record in the Log.
 
 signal gem_collected(item_id: String, world_position: Vector2)
 ## Emitted when the ship picks up a loose gem (after it is added to the hold).
@@ -82,6 +82,10 @@ signal ship_damaged(amount: float, hull_ratio: float)
 
 signal ship_hull_changed(current: float, max_hull: float)
 ## The hull reading moved, for any reason: a hit, a repair, an upgrade, a respawn.
+
+signal ship_log_written(entry: Dictionary, cue: bool)
+## A line was written to the ship's log (GameState.write_log). The HUD says so (LogCue)
+## unless `cue` is false: a silent line is there for whoever opens the Log.
 
 var _harvestable_nodes: Dictionary = {}  # Track ScrapNodes that can be harvested
 var _registered_nodes: Dictionary = {}  # Track registered ScrapNodes and their callables

@@ -166,7 +166,7 @@ func test_a_section_carries_its_own_detail_and_plain_freight_none() -> void:
 	var lines := func(f: Freight) -> int:
 		return f.get_node("Visual").get_children().filter(func(n): return n is Line2D).size()
 	assert_int(lines.call(array)).is_greater(3)  # the cell grid, beside its edge and Lug
-	assert_int(lines.call(plain)).is_equal(2)    # just its edge and its Lug
+	assert_int(lines.call(plain)).is_equal(3)    # just its edge, its Lug and the Lug's in-reach light
 	assert_str(array.art).is_equal("array")
 
 # --- seating ---

@@ -8,7 +8,8 @@ class_name SpaceStationMinimapTarget
 ## hull piece as a box, closed up into one blocky silhouette. Either way it is made once and
 ## never follows the station's state: a wing hanging off true, or pushed home, is the same
 ## station on the scope. Too small on the scope to read as a shape, it falls back to a
-## diamond.
+## diamond. What is broken on it - an empty Mount, a wing hanging off true - is marked on
+## the outline in red (broken_points).
 
 ## Roughly a station's reach, world px.
 const ECHO_RADIUS := 450.0
@@ -75,6 +76,25 @@ func chart_outline() -> Array[PackedVector2Array]:
 	var xf := station.global_transform
 	for contour in _outline:
 		out.append(xf * contour)
+	return out
+
+## Where the station is broken, world space: each empty Mount, and the middle of a wing
+## hanging off true at its seated place. Empty once SR-7 is whole, and always for a station
+## with neither (the Sun Station).
+func broken_points() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if station == null or not is_instance_valid(station):
+		return out
+	var tree := station.get_tree()
+	for m in tree.get_nodes_in_group("mounts"):
+		if not m.seated and station.is_ancestor_of(m):
+			out.append((m as Node2D).global_position)
+	for n in tree.get_nodes_in_group("nudges"):
+		if n.seated or not station.is_ancestor_of(n):
+			continue
+		var visual := n.get_node_or_null("Visual") as Polygon2D
+		var at := _seated_box(visual).get_center() if visual else _seated_transform(n).origin
+		out.append(station.global_transform * at)
 	return out
 
 ## SR-7's schematic (SCHEMATIC), station space: its boxes and the spine through them, as

@@ -4,8 +4,8 @@ class_name Readout
 ## What a thing tells the player about itself once the ship is close. Put
 ## one under anything that should: when the ship comes within `reach` of this node's position,
 ## the thing is read, every row at once. Only what carries one is read - it is deliberate,
-## never everything. It draws nothing: it says what it read on EventBus.readout_read, and the
-## HUD's ContactLog types it out.
+## never everything. Nothing shows on screen: it says what it read on EventBus.readout_read,
+## and the read files a Record in the Log.
 ##
 ## Something `discoverable` (scrap) passes unread until it has been found - the owner's
 ## `is_found()`, a Sweep's doing - and reads up close like anything else after. Finding is
@@ -21,7 +21,7 @@ class_name Readout
 ## The rows come from the owner (the parent) when it has `readout_rows()` - live state, like a
 ## Mount's EMPTY or SEATED - otherwise from `rows`. A read is a fact in the ledger
 ## (Progress.READ_READOUTS, by `key`), so whatever reading unlocks holds for the rest of the
-## save: a Mount marks its Section on the minimap once it has been read.
+## save.
 ##
 ## Something that is part of the Titan is `undecipherable`, for now: it is read like anything
 ## else, but its heading, title and rows come back as glyph noise in the Titan's purple, the
