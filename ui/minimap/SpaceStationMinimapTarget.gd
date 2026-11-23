@@ -1,10 +1,12 @@
 extends MinimapTarget
 class_name SpaceStationMinimapTarget
 
-## MinimapTarget for a SpaceStation: charted, and drawn as its own outline - its major hull
-## pieces, simplified and merged into one silhouette, traced at the station's live position
-## and turn - so home can always be picked out. Too small on the scope to read as a shape,
-## it falls back to a diamond.
+## MinimapTarget for a SpaceStation: charted, and drawn as its own outline - a schematic,
+## not a tracing. Each major hull piece stands in as its bounding box at its seated place,
+## and the boxes are closed up into one blocky silhouette. It is made once and never
+## follows the station's state: a wing hanging off true, or pushed home, is the same
+## station on the scope. Too small on the scope to read as a shape, it falls back to a
+## diamond.
 
 ## Roughly a station's reach, world px.
 const ECHO_RADIUS := 450.0
@@ -13,18 +15,13 @@ const NOT_HULL := [&"HullDamage", &"Lights"]
 ## Pieces smaller than this, px², are left off: crates, radiators, struts and masts are
 ## detail at scope scale, and only the modules make the silhouette.
 const MIN_PIECE_AREA := 5000.0
-## Each piece is grown this much, world px, before they are merged, so modules that nearly
-## touch close up into one contour instead of tracing every seam between them.
-const MERGE_GROW := 12.0
+## Gaps between modules narrower than twice this, world px, are closed: every box is grown
+## this much, merged, then shrunk back, so the station reads as one shape.
+const CLOSE_GAP := 40.0
 
 var station: SpaceStation
-## Its hull pieces: every Polygon2D not inside another (those are surface detail). Found
-## once; a Section that is not seated is a hidden piece, so visibility is checked per frame.
-var _hull: Array[Polygon2D] = []
-var _hull_found := false
-## The merged silhouette in station space, and which pieces were showing when it was made.
+## The silhouette in station space, made the first time it is asked for.
 var _outline: Array[PackedVector2Array] = []
-var _outline_key := ""
 
 func _init(s: SpaceStation) -> void:
 	station = s
@@ -49,41 +46,33 @@ func get_minimap_node() -> Node2D:
 func is_charted() -> bool:
 	return true
 
-## The station's silhouette, world space: closed contours for the chart to trace. Merged
-## again only when a piece shows or hides (a Section seated or lost).
+## The station's silhouette, world space: closed contours for the chart to trace.
 func chart_outline() -> Array[PackedVector2Array]:
 	var out: Array[PackedVector2Array] = []
 	if station == null or not is_instance_valid(station):
 		return out
-	if not _hull_found:
-		_hull_found = true
-		_collect_hull(station)
-	var shown: Array[Polygon2D] = []
-	var key := ""
-	for poly in _hull:
-		var on := is_instance_valid(poly) and poly.is_visible_in_tree()
-		key += "1" if on else "0"
-		if on:
-			shown.append(poly)
-	if key != _outline_key:
-		_outline_key = key
-		_outline = _merge(shown)
+	if _outline.is_empty():
+		var hull: Array[Polygon2D] = []
+		_collect_hull(station, hull)
+		_outline = _silhouette(hull)
 	var xf := station.global_transform
 	for contour in _outline:
 		out.append(xf * contour)
 	return out
 
-## The shown pieces as one silhouette in station space: each piece's convex shape, grown
-## a little, unioned with every other it overlaps.
-func _merge(pieces: Array[Polygon2D]) -> Array[PackedVector2Array]:
-	var to_station := station.global_transform.affine_inverse()
+## Every piece's bounding box at its seated place, station space, closed up into as few
+## contours as will go: grown, unioned with every box it overlaps, shrunk back.
+func _silhouette(pieces: Array[Polygon2D]) -> Array[PackedVector2Array]:
 	var shapes: Array[PackedVector2Array] = []
 	for poly in pieces:
-		var local := PackedVector2Array()
-		for p in _shape(poly):
-			local.append(to_station * poly.global_transform * (p + poly.offset))
-		var grown := Geometry2D.offset_polygon(local, MERGE_GROW, Geometry2D.JOIN_MITER)
-		var cur: PackedVector2Array = grown[0] if not grown.is_empty() else local
+		var xf := _seated_transform(poly)
+		var box := Rect2()
+		for k in poly.polygon.size():
+			var p := xf * (poly.polygon[k] + poly.offset)
+			box = Rect2(p, Vector2.ZERO) if k == 0 else box.expand(p)
+		box = box.grow(CLOSE_GAP)
+		var cur := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y),
+			box.end, Vector2(box.position.x, box.end.y)])
 		var i := 0
 		while i < shapes.size():
 			var outer := _single_outer(Geometry2D.merge_polygons(cur, shapes[i]))
@@ -94,11 +83,30 @@ func _merge(pieces: Array[Polygon2D]) -> Array[PackedVector2Array]:
 			shapes.remove_at(i)
 			i = 0
 		shapes.append(cur)
-	return shapes
+	var out: Array[PackedVector2Array] = []
+	for shape in shapes:
+		var wound := Geometry2D.is_polygon_clockwise(shape)
+		for contour in Geometry2D.offset_polygon(shape, -CLOSE_GAP, Geometry2D.JOIN_MITER):
+			# A hole is wound the other way: an outline only needs the edge
+			if Geometry2D.is_polygon_clockwise(contour) == wound:
+				out.append(contour)
+	return out
+
+## `node`'s transform in station space as it sits when the station is whole: a wing
+## hanging off true (ArrayNudge) counts as home.
+func _seated_transform(node: Node) -> Transform2D:
+	var xf := Transform2D.IDENTITY
+	var n := node
+	while n != null and n != station:
+		if n is ArrayNudge:
+			xf = (n as ArrayNudge).home_transform() * xf
+		elif n is Node2D:
+			xf = (n as Node2D).transform * xf
+		n = n.get_parent()
+	return xf
 
 ## The one contour two pieces merge into when they overlap, or empty when they don't (two
-## outer contours come back). Holes - wound the other way - are dropped: an outline only
-## needs the edge.
+## outer contours come back). Holes - wound the other way - are dropped.
 static func _single_outer(merged: Array[PackedVector2Array]) -> PackedVector2Array:
 	if merged.is_empty():
 		return PackedVector2Array()
@@ -110,13 +118,15 @@ static func _single_outer(merged: Array[PackedVector2Array]) -> PackedVector2Arr
 		return Geometry2D.is_polygon_clockwise(poly) == Geometry2D.is_polygon_clockwise(biggest))
 	return biggest if outers.size() == 1 else PackedVector2Array()
 
-func _collect_hull(node: Node) -> void:
+## Its hull pieces: every Polygon2D big enough to be a module and not inside another
+## (those are surface detail).
+func _collect_hull(node: Node, hull: Array[Polygon2D]) -> void:
 	for child in node.get_children():
 		if NOT_HULL.has(child.name):
 			continue
 		var poly := child as Polygon2D
 		if poly == null:
-			_collect_hull(child)
+			_collect_hull(child, hull)
 		elif absf(_area(poly.polygon)) < MIN_PIECE_AREA:
 			continue
 		# A clip mask (the dorsal claw's Well) is a window to draw through, not plating
@@ -124,14 +134,7 @@ func _collect_hull(node: Node) -> void:
 			continue
 		# Only shapes that will fill: a degenerate one would fail to draw
 		elif poly.polygon.size() >= 3 and not Geometry2D.triangulate_polygon(poly.polygon).is_empty():
-			_hull.append(poly)
-
-## A piece's outline with its notches filled: the convex hull, closing point dropped.
-func _shape(poly: Polygon2D) -> PackedVector2Array:
-	var hull := Geometry2D.convex_hull(poly.polygon)
-	if hull.size() > 1:
-		hull.remove_at(hull.size() - 1)
-	return hull
+			hull.append(poly)
 
 static func _area(poly: PackedVector2Array) -> float:
 	var a := 0.0

@@ -53,6 +53,10 @@ func _ready() -> void:
 	EventBus.planets_restored.connect(refresh)
 	refresh()
 
+## Where the wing sits seated, in its parent's space: its transform once it is locked true.
+func home_transform() -> Transform2D:
+	return _home
+
 ## Match the saved or new game: locked true, or hanging off it.
 func refresh() -> void:
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState

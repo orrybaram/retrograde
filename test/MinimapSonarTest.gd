@@ -109,6 +109,24 @@ func test_a_station_charts_as_a_merged_outline() -> void:
 	var station: SpaceStation = auto_free(load("res://entities/structures/SpaceStation.tscn").instantiate())
 	add_child(station)
 	var outline := SpaceStationMinimapTarget.new(station).chart_outline()
-	assert_int(outline.size()).is_between(1, 4)
+	assert_int(outline.size()).is_equal(1)
 	for contour in outline:
 		assert_int(contour.size()).is_greater_equal(3)
+	Freight.clear_all(get_tree())
+
+
+## The scope's station is a schematic of the whole station: a wing hanging off true charts
+## the same as one pushed home, so fixing it never leaves a stale crooked wing on the scope.
+func test_a_station_charts_the_same_whether_its_wing_hangs_or_not() -> void:
+	var station: SpaceStation = auto_free(load("res://entities/structures/SpaceStation.tscn").instantiate())
+	add_child(station)
+	var nudge := station.get_node("ArrayNudge") as ArrayNudge
+	nudge._show_seated(false)
+	var hanging := SpaceStationMinimapTarget.new(station).chart_outline()
+	nudge._show_seated(true)
+	var seated := SpaceStationMinimapTarget.new(station).chart_outline()
+	assert_float(absf(nudge.off_true())).is_less(0.001)
+	assert_int(hanging.size()).is_equal(seated.size())
+	for i in seated.size():
+		assert_array(hanging[i]).is_equal(seated[i])
+	Freight.clear_all(get_tree())
