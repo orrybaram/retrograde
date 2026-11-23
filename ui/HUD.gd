@@ -1,7 +1,9 @@
 extends Control
 
 ## In-game HUD: boost gauge and hull segment bar (around the minimap), speed (inside it),
-## cargo weight with Stores under it, and the robot's radio panel. Subscribes to ship signals. (Action prompts live in IndicatorManager.)
+## cargo weight with Stores under it, the robot's radio panel, the current goal (GoalLine)
+## and the opening's beacon (SeekBeacon). Subscribes to ship signals. (Action prompts live
+## in IndicatorManager.)
 ## The ship's manual diagnostic (BootLog) takes the dashboard's corner while a new game owes
 ## it; the dashboard is dark until then, and glitches back on a piece at a time once the
 ## pilot has the controls.
@@ -70,6 +72,13 @@ func _ready() -> void:
 	boot_log.dashboard = dashboard
 	tracking.blockers = [dashboard, radio, boot_log]
 	add_child(tracking)
+	var beacon := SeekBeacon.new()
+	beacon.boot_log = boot_log
+	beacon.blockers = [boot_log, radio]
+	add_child(beacon)
+	var goal := GoalLine.new()
+	goal.boot_log = boot_log
+	add_child(goal)
 	add_child(radio)
 	add_child(HullWarning.new())
 	add_child(boot_log)

@@ -1,0 +1,43 @@
+# The current goal (GoalLine, top left): dark through the diagnostic, then one rung per thing
+# done, read off the ledger - stamping the old line, typing the new one with NEW - and the same
+# rung after a reload, without NEW.
+# Run: PLAYTEST_PORT=7842 tools/play.sh --headless playtests/goal_line.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval pt.remember("goal", pt.node("hud").get_node("GoalLine"))
+wait 0.5
+assert pt.recall("goal").goal_text() == "RETURN SR-7'S SECTIONS" "a new game: bring SR-7's pieces home"
+assert pt.recall("goal").goal_detail() == "0/3" "none seated yet"
+assert not pt.recall("goal").is_new() "the first goal just types on"
+screenshot goal_line_0_sections
+
+eval pt.seat_sr7()
+wait 0.5
+assert pt.recall("goal").goal_text() == "WAKE SR-7'S CORE" "the station whole: the core is next"
+wait 2.0
+assert pt.recall("goal").is_new() "a new goal is flagged NEW"
+screenshot goal_line_1_core
+
+eval pt.skip_opening(false)
+wait 3.0
+assert pt.recall("goal").goal_text() == "FIND WHAT ANSWERS THE DISH" "the core running: go to Veld"
+assert pt.recall("goal").goal_detail() == "VELD" "and it says where"
+
+eval pt.skip_opening(true)
+wait 0.5
+assert pt.recall("goal").goal_text() == "POWER A GATE" "the hold on: the first Gate, unnamed"
+eval gs.set("stores", 320)
+wait 0.5
+assert pt.recall("goal").goal_detail() == "320/600 ST" "Stores toward the cheapest Gate"
+eval gs.progress.mark("identified_gates", pt.gate("Veld").save_key())
+wait 3.0
+assert pt.recall("goal").goal_text() == "POWER VELD'S GATE" "named once the Gate is identified"
+screenshot goal_line_2_gate
+
+eval pt.save_now()
+reload
+wait 0.5
+assert pt.recall("goal").goal_text() == "POWER VELD'S GATE" "a continue lands on the same rung"
+assert not pt.recall("goal").is_new() "without NEW"
+quit

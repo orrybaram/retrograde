@@ -32,7 +32,7 @@ eval ship.set("hull_strength", 40.0)
 assert gs.stores == 0 "no Stores yet"
 # The hold emptying and the Stores rolling up both change how many digits the cargo row
 # carries; the meters must not stretch with it
-eval pt.remember("hull_bar_w", pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar").size.x)
+eval pt.remember("hull_bar_w", pt.node("hud").get_node("DashboardAnchor/HBox/LeftColumn/MinimapDial/HullSegmentBar").size.x)
 eval ship.dock_at(pt.node("space_ports"))
 wait 0.9
 burst dock_1_deposit 6 0.05
@@ -58,7 +58,7 @@ screenshot dock_4_topup
 wait_until ship.drive.fuel == ship.drive.max_fuel 5
 # 60 hull at 3 ST, 75 fuel at 2 ST
 assert gs.stores == 456 - 180 - 150 "hull and tank bought out of the Deposit"
-assert pt.node("hud").get_node("DashboardAnchor/HBox/RightColumn/HullRow/HullSegmentBar").size.x == pt.recall("hull_bar_w") "hull meter keeps its width through the spend"
+assert pt.node("hud").get_node("DashboardAnchor/HBox/LeftColumn/MinimapDial/HullSegmentBar").size.x == pt.recall("hull_bar_w") "hull meter keeps its width through the spend"
 screenshot dock_5_serviced
 
 # Too few Stores: part of the hull, nothing past half, and the Stores run dry

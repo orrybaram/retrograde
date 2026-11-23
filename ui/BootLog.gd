@@ -184,6 +184,29 @@ func holds_corner() -> bool:
 	return _owed or checklist != null
 
 
+## The piece of SR-7 the pilot should fly to, from when PROPULSION clears until SONAR does:
+## the loose Section nearest the ship. Otherwise null. Nothing else on screen says where to go
+## in that stretch, so SeekBeacon blinks a light on it and points to it from the screen's edge.
+func seek_target() -> Freight:
+	if checklist == null or not checklist.is_cleared(BootChecklist.FLIGHT) \
+			or checklist.is_cleared(BootChecklist.SONAR):
+		return null
+	var ship := get_tree().get_first_node_in_group("ship") as Ship
+	if ship == null:
+		return null
+	var nearest: Freight = null
+	var best := INF
+	for node in get_tree().get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f == null or f.section == "" or not f.is_loose() or f.is_buried():
+			continue
+		var d := ship.global_position.distance_squared_to(f.global_position)
+		if d < best:
+			best = d
+			nearest = f
+	return nearest
+
+
 ## What the log reads right now, as plain text.
 func text() -> String:
 	return checklist.plain() if checklist else ""
