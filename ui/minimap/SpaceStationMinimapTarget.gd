@@ -2,9 +2,11 @@ extends MinimapTarget
 class_name SpaceStationMinimapTarget
 
 ## MinimapTarget for a SpaceStation: charted, and drawn as its own outline - a schematic,
-## not a tracing. Each major hull piece stands in as its bounding box at its seated place,
-## and the boxes are closed up into one blocky silhouette. It is made once and never
-## follows the station's state: a wing hanging off true, or pushed home, is the same
+## not a tracing. SR-7 is a stack of boxes on one spine (SCHEMATIC): deck, module block,
+## hub, core, keel, and the solar wings across it. Each box is the bounds of its parts at
+## their seated place. A station without those parts (the Sun Station) gets every major
+## hull piece as a box, closed up into one blocky silhouette. Either way it is made once and
+## never follows the station's state: a wing hanging off true, or pushed home, is the same
 ## station on the scope. Too small on the scope to read as a shape, it falls back to a
 ## diamond.
 
@@ -18,6 +20,19 @@ const MIN_PIECE_AREA := 5000.0
 ## Gaps between modules narrower than twice this, world px, are closed: every box is grown
 ## this much, merged, then shrunk back, so the station reads as one shape.
 const CLOSE_GAP := 40.0
+## SR-7 on the scope, top to bottom: each entry is one box, the bounds of those parts
+## (paths from the station). The dorsal arm is left off: it is the Cradle, not the hull.
+const SCHEMATIC := [
+	["Visuals/Deck"],
+	["Visuals/ModuleL", "Visuals/ModuleC", "Visuals/ModuleR", "Visuals/BlockPlate"],
+	["Visuals/CentralHub"],
+	["Visuals/CentralCore"],
+	["Visuals/KeelLower"],
+	["Visuals/SolarArray", "ArrayNudge/Visual"],
+]
+## The spine that joins the schematic's boxes: as wide as the keel, from the top box to the
+## bottom one.
+const SCHEMATIC_SPINE := "Visuals/KeelLower"
 
 var station: SpaceStation
 ## The silhouette in station space, made the first time it is asked for.
@@ -52,6 +67,8 @@ func chart_outline() -> Array[PackedVector2Array]:
 	if station == null or not is_instance_valid(station):
 		return out
 	if _outline.is_empty():
+		_outline = _schematic()
+	if _outline.is_empty():
 		var hull: Array[Polygon2D] = []
 		_collect_hull(station, hull)
 		_outline = _silhouette(hull)
@@ -60,19 +77,40 @@ func chart_outline() -> Array[PackedVector2Array]:
 		out.append(xf * contour)
 	return out
 
+## SR-7's schematic (SCHEMATIC), station space: its boxes and the spine through them, as
+## one contour. Empty if the station is missing any of the parts.
+func _schematic() -> Array[PackedVector2Array]:
+	var boxes: Array[Rect2] = []
+	for parts in SCHEMATIC:
+		var group := Rect2()
+		for k in parts.size():
+			var poly := station.get_node_or_null(parts[k]) as Polygon2D
+			if poly == null:
+				return []
+			var box := _seated_box(poly)
+			group = box if k == 0 else group.merge(box)
+		boxes.append(group)
+	var spine := _seated_box(station.get_node(SCHEMATIC_SPINE) as Polygon2D)
+	var top := boxes[0].position.y
+	var bottom := top
+	for box in boxes:
+		top = minf(top, box.position.y)
+		bottom = maxf(bottom, box.end.y)
+	var shape := _rect_points(Rect2(spine.position.x, top, spine.size.x, bottom - top))
+	for box in boxes:
+		var merged := _single_outer(Geometry2D.merge_polygons(shape, _rect_points(box)))
+		if merged.is_empty():
+			return []
+		shape = merged
+	var out: Array[PackedVector2Array] = [shape]
+	return out
+
 ## Every piece's bounding box at its seated place, station space, closed up into as few
 ## contours as will go: grown, unioned with every box it overlaps, shrunk back.
 func _silhouette(pieces: Array[Polygon2D]) -> Array[PackedVector2Array]:
 	var shapes: Array[PackedVector2Array] = []
 	for poly in pieces:
-		var xf := _seated_transform(poly)
-		var box := Rect2()
-		for k in poly.polygon.size():
-			var p := xf * (poly.polygon[k] + poly.offset)
-			box = Rect2(p, Vector2.ZERO) if k == 0 else box.expand(p)
-		box = box.grow(CLOSE_GAP)
-		var cur := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y),
-			box.end, Vector2(box.position.x, box.end.y)])
+		var cur := _rect_points(_seated_box(poly).grow(CLOSE_GAP))
 		var i := 0
 		while i < shapes.size():
 			var outer := _single_outer(Geometry2D.merge_polygons(cur, shapes[i]))
@@ -91,6 +129,18 @@ func _silhouette(pieces: Array[Polygon2D]) -> Array[PackedVector2Array]:
 			if Geometry2D.is_polygon_clockwise(contour) == wound:
 				out.append(contour)
 	return out
+
+## `poly`'s bounding box in station space, at its seated place.
+func _seated_box(poly: Polygon2D) -> Rect2:
+	var xf := _seated_transform(poly)
+	var box := Rect2()
+	for k in poly.polygon.size():
+		var p := xf * (poly.polygon[k] + poly.offset)
+		box = Rect2(p, Vector2.ZERO) if k == 0 else box.expand(p)
+	return box
+
+static func _rect_points(r: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
 
 ## `node`'s transform in station space as it sits when the station is whole: a wing
 ## hanging off true (ArrayNudge) counts as home.
