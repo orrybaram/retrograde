@@ -77,13 +77,16 @@ mouse_filter = 2
 script = ExtResource("5_hull")
 rim_center = Vector2(96, 80)
 
-[node name="VelocityLabel" type="Label" parent="DashboardAnchor/HBox/LeftColumn" unique_id=1356911807]
-custom_minimum_size = Vector2(192, 0)
-layout_mode = 2
-size_flags_horizontal = 0
+[node name="VelocityLabel" type="Label" parent="DashboardAnchor/HBox/LeftColumn/MinimapDial" unique_id=1356911807]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 118.0
+offset_right = 176.0
+offset_bottom = 132.0
+mouse_filter = 2
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 8
 text = "0.0 m/s"
 horizontal_alignment = 1
 clip_text = true
@@ -122,9 +125,9 @@ theme_override_colors/font_color = Color(0.42, 0.353, 0.204, 1)
 theme_override_font_sizes/font_size = 14
 text = "/160"
 
-[node name="StoresLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn/CargoRow" unique_id=1377215094]
+[node name="StoresLabel" type="Label" parent="DashboardAnchor/HBox/RightColumn" unique_id=1377215094]
 layout_mode = 2
-size_flags_vertical = 8
+size_flags_horizontal = 0
 theme = ExtResource("3_jd13s")
 theme_override_colors/font_color = Color(0.91, 0.757, 0.439, 1)
 theme_override_font_sizes/font_size = 14
