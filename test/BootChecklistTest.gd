@@ -160,7 +160,7 @@ func test_complete_once_every_section_is_open_and_done() -> void:
 	for mark in [BootChecklist.THRUST, BootChecklist.REVERSE, BootChecklist.TURN_LEFT,
 			BootChecklist.TURN_RIGHT, BootChecklist.SWEEP, BootChecklist.CLAMP, BootChecklist.STRAFE_LEFT,
 			BootChecklist.STRAFE_RIGHT,
-			BootChecklist.RELEASE]:
+			BootChecklist.SEATED]:
 		c.use(mark)
 	c.open(BootChecklist.FLIGHT)
 	c.open(BootChecklist.SONAR)
@@ -201,16 +201,59 @@ func test_a_finished_section_clears_and_the_rest_close_up() -> void:
 	assert_bool(c.is_complete()).is_false()
 
 
-func test_release_is_a_hold_passed_by_letting_go_or_seating() -> void:
+func test_install_is_a_hold_passed_only_by_seating() -> void:
 	var c := _checklist()
 	c.open(BootChecklist.LET_GO)
 	_settle(c)
+	assert_str(c.plain()).contains("MOUNT")
 	c.hold_progress = 0.25
-	assert_str(_line(c, "RELEASE ")).contains("HOLD [SPACE]")
-	assert_str(_line(c, "RELEASE ")).ends_with("[█···]")
+	assert_str(_line(c, "INSTALL ")).contains("HOLD [SPACE]")
+	assert_str(_line(c, "INSTALL ")).ends_with("[█···]")
+	c.use(BootChecklist.RELEASE)
+	c.tick(0.05)
+	assert_bool(c.is_done("release")).is_false()  # let go anywhere else: not installed
 	c.use(BootChecklist.SEATED)
 	c.tick(0.05)
 	assert_bool(c.is_done("release")).is_true()
+
+
+func test_clamp_and_mount_say_how_far_off_their_target_is() -> void:
+	var c := _checklist()
+	c.open(BootChecklist.MAGNET)
+	_settle(c)
+	assert_str(_line(c, "LUG ")).is_equal(_field("LUG", BootChecklist.RANGE_UNKNOWN))
+	c.set_range(BootChecklist.MAGNET, "84 M", Color.WHITE)
+	assert_str(_line(c, "LUG ")).is_equal(_field("LUG", "84 M"))
+	c.set_range(BootChecklist.MAGNET, BootChecklist.IN_RANGE, Color.WHITE)
+	assert_str(c.range_value(BootChecklist.MAGNET)).is_equal(BootChecklist.IN_RANGE)
+	assert_str(_line(c, "LUG ")).is_equal(_field("LUG", BootChecklist.IN_RANGE))
+	c.open(BootChecklist.LET_GO)
+	_settle(c)
+	assert_str(_line(c, "SEAT ")).is_equal(_field("SEAT", BootChecklist.RANGE_UNKNOWN))
+	assert_str(c.range_value(BootChecklist.SONAR)).is_empty()
+
+
+func test_the_range_field_keeps_its_width_whatever_it_reads() -> void:
+	var c := _checklist()
+	c.open(BootChecklist.MAGNET)
+	_settle(c)
+	var width := _line(c, "LUG ").length()
+	c.set_range(BootChecklist.MAGNET, "1.2 KM", Color.WHITE)
+	assert_int(_line(c, "LUG ").length()).is_equal(width)
+
+
+func test_nav_comes_online_once_under_who_holds_the_controls() -> void:
+	var c := _checklist()
+	c.open(BootChecklist.FLIGHT)
+	_settle(c)
+	assert_bool(c.is_nav_online()).is_false()
+	c.nav_online()
+	c.nav_online()
+	_settle(c, 1.0)
+	var lines := c.plain().split("\n")
+	assert_str(lines[1]).is_equal(_field(BootChecklist.AUTHORITY, BootChecklist.HELD_BY))
+	assert_str(lines[2]).is_equal(_field(BootChecklist.NAV[0], BootChecklist.NAV[1]))
+	assert_int(c.plain().count(BootChecklist.NAV[1])).is_equal(1)
 
 
 func test_passes_list_in_the_order_they_clear() -> void:
