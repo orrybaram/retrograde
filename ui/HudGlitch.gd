@@ -46,7 +46,10 @@ var dashboard: Control = null
 var _labels: Array[Label] = []
 var _clean: Array[String] = []   ## what the HUD last wrote, before we got to it
 var _written: Array[String] = [] ## what we last wrote, to tell ours from theirs
-var _anchor := Vector2.ZERO
+## Where the layout puts the dashboard, as its four offsets from its anchors. Offsets, not
+## a position: the anchors follow the screen, so a resize mid-glitch still restores to
+## the bottom corner instead of pinning the panel where the old screen size had it.
+var _home := Rect2()
 var _cut_left := 0.0  ## seconds remaining in the current dropout
 var _next_cut := 0.0  ## seconds until the next one
 var _blink_left := 0.0  ## seconds remaining in the Titan's own interruption
@@ -109,7 +112,7 @@ func _process(delta: float) -> void:
 		# anchor honest through layout passes and resolution changes - except while the
 		# Titan has it torn sideways.
 		if not _blinking:
-			_anchor = dashboard.position
+			_home = _offsets()
 	_acute = acute
 
 	if sev <= 0.001:
@@ -120,7 +123,7 @@ func _process(delta: float) -> void:
 	# blinking them, because a HUD that never stopped shaking couldn't be lived with.
 	if acute:
 		_advance_cuts(delta, sev)
-		dashboard.position = _anchor + Vector2(_rng.randfn(0.0, 1.0), _rng.randfn(0.0, 1.0)) * MAX_JITTER * sev * sev
+		_place(Vector2(_rng.randfn(0.0, 1.0), _rng.randfn(0.0, 1.0)) * MAX_JITTER * sev * sev)
 	_advance_blink(delta)
 	var titan := _blink_left > 0.0
 	if _blinking and not titan and not acute:
@@ -133,8 +136,23 @@ func _process(delta: float) -> void:
 	else:
 		dashboard.modulate.a = lerpf(1.0, 0.55, sev)
 	if titan and not acute:
-		dashboard.position = _anchor + Vector2(_rng.randf_range(-1.0, 1.0) * TitanInfluence.BLINK_TEAR_PX, 0.0)
+		_place(Vector2(_rng.randf_range(-1.0, 1.0) * TitanInfluence.BLINK_TEAR_PX, 0.0))
 	_rot_labels(sev, titan)
+
+## All four, because they needn't agree with the size: HUD._fit_dashboard sets the top for
+## an unscaled panel, and the minimum size grows it past that. Moving `position` would
+## rewrite the bottom to match the size and drop the panel off its margin.
+func _offsets() -> Rect2:
+	return Rect2(dashboard.offset_left, dashboard.offset_top,
+			dashboard.offset_right - dashboard.offset_left, dashboard.offset_bottom - dashboard.offset_top)
+
+## The dashboard `shift` pixels off home.
+func _place(shift: Vector2) -> void:
+	var at := Rect2(_home.position + shift, _home.size)
+	dashboard.offset_left = at.position.x
+	dashboard.offset_top = at.position.y
+	dashboard.offset_right = at.end.x
+	dashboard.offset_bottom = at.end.y
 
 ## True while the Titan is breaking in on the dashboard.
 func is_titan_glitching() -> bool:
@@ -146,7 +164,7 @@ func is_titan_glitching() -> bool:
 func _pristine() -> bool:
 	return _cut_left <= 0.0 and _blink_left <= 0.0 \
 			and is_equal_approx(dashboard.modulate.a, 1.0) \
-			and dashboard.position == _anchor
+			and _offsets() == _home
 
 ## Deferred until the dashboard has been laid out, so the anchor we snap back to
 ## is the one HUD._fit_dashboard settled on.
@@ -156,7 +174,7 @@ func _bind() -> void:
 	dashboard = hud.get_node_or_null("DashboardAnchor") as Control if hud else null
 	if dashboard == null:
 		return
-	_anchor = dashboard.position
+	_home = _offsets()
 	for node in dashboard.find_children("*", "Label", true, false):
 		_labels.append(node as Label)
 		_clean.append((node as Label).text)
@@ -244,7 +262,7 @@ func restore() -> void:
 	_blink_left = 0.0
 	_blinking = false
 	if dashboard:
-		dashboard.position = _anchor
+		_place(Vector2.ZERO)
 		dashboard.modulate.a = 1.0
 	for i in _labels.size():
 		var label := _labels[i]
