@@ -9,6 +9,10 @@ func _ready() -> void:
 	super._ready()
 
 	add_to_group("debris_nodes")
+	# Rock drains a Sweep ring's reach: a tap is lost in it, a long hold gets through
+	var outline := get_node_or_null("CollisionArea/CollisionPolygon2D") as CollisionPolygon2D
+	if outline and get_node_or_null("SonarSurface") == null:
+		SonarSurface.attach(self, outline, SonarSurface.Preset.ROCK)
 
 	# No harvest detection — disable root Area2D monitoring
 	monitoring = false

@@ -213,7 +213,7 @@ func _powered_dish() -> CommDish:
 
 func test_the_power_on_ping_is_mustard() -> void:
 	var dish := _powered_dish()
-	var ring: Dictionary = dish.get_node("Ping")._rings[0]
+	var ring: SonarRing = dish.get_node("Ping")._rings[0]
 	assert_that(ring["color"]).is_equal(Colors.PRIMARY)
 
 

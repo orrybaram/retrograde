@@ -12,16 +12,25 @@ class_name SonarPulse
 ## puzzles that listen for a ping hook `pulsed` (or EventBus.sonar_pulsed). Rings already
 ## in flight finish on their own.
 ##
+## The ring is a set of rays (SonarRing) stepped every frame against whatever carries a
+## SonarSurface - the station's hull, wrecks, planets, debris - so it is cut, drained and
+## shadowed by what is really there. A ring ignores its emitter's own body: a surface it starts
+## inside, or the one on whatever the pulse is mounted on (the dish's station).
+##
 ## Things that answer a Sweep join the `sonar_listeners` group with `sonar_point()` (where
 ## the ring has to reach, global) and `on_sonar_touched(strength)`, which is called the
 ## moment a ring's edge actually gets there - not when it leaves the ship - with the
-## ring's strength, so an answer can match it (SonarEcho.answer_ping). Scrap listens but does not
+## ring's strength, so an answer can match it (SonarEcho.answer_ping). It is only heard
+## where the ring still has amplitude there (SonarRing.FIND): something behind a planet or
+## the station hears nothing. A listener whose point is inside a solid (a dish or housing
+## on the station) hears the ring as it reaches that solid's face. Scrap listens but does not
 ## answer: a ring only lights it up out of the debris, with one cream echo (ScrapNode.reveal).
 ##
 ## A listener with `answer_clarity(distance, ring_reach)` decides for itself whether it
 ## answers and how clearly (Freight): 0 is silence, even inside the ring. One that answers
-## from past the ring's reach hears it as the ring dies, and gets
-## `on_sonar_touched(strength, clarity)` with a strength that carries its answer back to the ship.
+## from past the ring's reach hears it as the ring dies - if the ray toward it still carries
+## the ring then - and gets `on_sonar_touched(strength, clarity)` with a strength that
+## carries its answer back to the ship.
 ##
 ## A Commit (Resonance) is a ring that carries Marks. Listeners with `on_procedure(marks)`
 ## get those instead of `on_sonar_touched` when it reaches them; the rest hear an ordinary ring.
@@ -52,8 +61,8 @@ var charging := false:
 		if not charging:
 			_held = 0.0  # fire() reads it first; anything else is a cancel
 var _held := 0.0
-## Live rings: {age, lifetime, radius}.
-var _rings: Array[Dictionary] = []
+## Live rings (SonarRing: age, lifetime, radius, color, ...).
+var _rings: Array[SonarRing] = []
 
 func _ready() -> void:
 	z_index = -1
@@ -64,10 +73,29 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	if _rings.is_empty():
 		return
+	var surfaces := active_surfaces(get_tree())
+	var heard: Array = []
 	for ring in _rings:
 		ring.age += delta
-	_rings = _rings.filter(func(ring: Dictionary): return ring.age < ring.lifetime)
+		ring.advance(surfaces)
+		for entry in ring.hear(surfaces):
+			heard.append([ring, entry])
+	_rings = _rings.filter(func(ring: SonarRing): return not ring.is_done())
+	for pair in heard:
+		_deliver(pair[0], pair[1])
 	queue_redraw()
+
+## Every SonarSurface taking part, brought up to date with where things are now.
+static func active_surfaces(tree: SceneTree) -> Array[SonarSurface]:
+	var out: Array[SonarSurface] = []
+	if tree == null:
+		return out
+	for node in tree.get_nodes_in_group(SonarSurface.GROUP):
+		var s := node as SonarSurface
+		if s and s.is_active():
+			s.refresh()
+			out.append(s)
+	return out
 
 ## How long `action` has been held on this charge, in seconds.
 func held() -> float:
@@ -83,13 +111,20 @@ func fire(marks: Array[int] = []) -> void:
 ## own ring by default; SR-7's dish sends a far bigger, brighter, Titan-purple one
 ## (CommDish.ping).
 func send(strength: float, alpha := MAX_ALPHA, width := WIDTH, color := Colors.PRIMARY, marks: Array[int] = []) -> void:
-	_rings.append({"age": 0.0, "lifetime": LIFETIME * strength, "radius": END_RADIUS * strength,
-		"alpha": alpha, "width": width, "color": color})
+	var ring := SonarRing.new(global_position, strength, END_RADIUS * strength, LIFETIME * strength, START_RADIUS)
+	ring.alpha = alpha
+	ring.width = width
+	ring.color = color
+	ring.marks = marks
+	ring.sweep = sweep
+	if is_inside_tree():
+		ring.ignore_own_body(active_surfaces(get_tree()), self)
+		ring.listen(get_tree().get_nodes_in_group("sonar_listeners"))
+	_rings.append(ring)
 	pulsed.emit(global_position)
 	if not marks.is_empty():
 		committed.emit(marks)
 	EventBus.sonar_pulsed.emit(global_position)
-	_reach_listeners(global_position, strength, marks)
 	queue_redraw()
 
 ## Drop the charge without a ring: the key was taken for something else.
@@ -101,38 +136,22 @@ func cancel() -> void:
 static func strength_for(held_seconds: float) -> float:
 	return 1.0 + maxf(held_seconds, 0.0) / CHARGE_TIME
 
-## Tell every listener within reach when this ring's edge arrives at it. The timers hold
-## instance ids, not nodes, so a listener freed meanwhile is simply skipped. A ring carrying
-## `marks` hands them to listeners that take a Procedure.
-func _reach_listeners(origin: Vector2, strength: float, marks: Array[int] = []) -> void:
-	for node in get_tree().get_nodes_in_group("sonar_listeners"):
-		if not node.has_method("sonar_point") or not node.has_method("on_sonar_touched"):
-			continue
-		var distance := origin.distance_to(node.sonar_point())
-		var delay := time_to_reach(distance, strength)
-		var clarity := -1.0
-		var answer_strength := strength
-		if node.has_method("answer_clarity"):
-			clarity = node.answer_clarity(distance, END_RADIUS * strength)
-			if clarity <= 0.0:
-				continue
-			if delay < 0.0:
-				delay = LIFETIME * strength
-				answer_strength = long_answer_strength(distance, strength)
-		if delay < 0.0:
-			continue
-		var id := node.get_instance_id()
-		get_tree().create_timer(delay, false).timeout.connect(func() -> void:
-			var listener := instance_from_id(id)
-			if listener and is_instance_valid(listener):
-				if not marks.is_empty() and listener.has_method("on_procedure"):
-					listener.on_procedure(marks)
-				elif clarity >= 0.0:
-					listener.on_sonar_touched(answer_strength, clarity)
-				else:
-					listener.on_sonar_touched(strength)
-				if sweep and listener.has_method("on_swept"):
-					listener.on_swept())
+## A ring reached a listener (SonarRing.hear): it hears it now. A listener freed meanwhile
+## is simply skipped. A ring carrying Marks hands them to listeners that take a Procedure.
+func _deliver(ring: SonarRing, entry: Dictionary) -> void:
+	var listener := instance_from_id(entry.id)
+	if listener == null or not is_instance_valid(listener):
+		return
+	var clarity: float = entry.clarity
+	if not ring.marks.is_empty() and listener.has_method("on_procedure"):
+		listener.on_procedure(ring.marks)
+	elif clarity >= 0.0:
+		var answer_strength := long_answer_strength(entry.d0, ring.strength) if entry.far else ring.strength
+		listener.on_sonar_touched(answer_strength, clarity)
+	else:
+		listener.on_sonar_touched(ring.strength)
+	if ring.sweep and listener.has_method("on_swept"):
+		listener.on_swept()
 
 ## The strength an answer from `distance` px off, past the reach of a ring of `strength`,
 ## is sent back with: enough that its ring (SonarEcho.answer_ping) comes back to the ship.
@@ -165,9 +184,10 @@ func _draw() -> void:
 		var glow := Colors.PRIMARY
 		glow.a = CHARGE_GLOW_ALPHA * (1.0 - 1.0 / strength_for(_held))
 		draw_arc(Vector2.ZERO, CHARGE_GLOW_RADIUS, 0.0, TAU, 24, glow, WIDTH, true)
+	if _rings.is_empty():
+		return
+	# Rings stay where they were sent, in the world, whatever the ship does since
+	draw_set_transform_matrix(get_global_transform().affine_inverse())
 	for ring in _rings:
-		var t: float = ring.age / ring.lifetime
-		var radius := lerpf(START_RADIUS, ring.radius, 1.0 - pow(1.0 - t, 2.0))
-		var color: Color = ring.get("color", Colors.PRIMARY)
-		color.a = ring.get("alpha", MAX_ALPHA) * (1.0 - t)
-		draw_arc(Vector2.ZERO, radius, 0.0, TAU, clampi(int(radius / 4.0), 48, 512), color, ring.get("width", WIDTH), true)
+		ring.draw(self)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
