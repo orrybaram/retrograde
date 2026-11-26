@@ -457,11 +457,16 @@ func _ray_amp_at(i: int, d: float, tol: float) -> float:
 	return best
 
 ## The amplitude the ray(s) toward `p` carry now (at the ring's end: what is left of it).
+## A ray that ran out inside rock never came out the far side, so it carries nothing: a far
+## listener behind thick rock goes quiet as it would behind a solid.
 func amp_toward(p: Vector2) -> float:
 	var f := posmod((p - origin).angle(), TAU) / TAU * RAYS
 	var i0 := int(f) % RAYS
 	var i1 := (i0 + 1) % RAYS
-	return lerpf(_amp[i0], _amp[i1], f - floorf(f))
+	return lerpf(_carried(i0), _carried(i1), f - floorf(f))
+
+func _carried(i: int) -> float:
+	return 0.0 if _inside[i] == 1 else _amp[i]
 
 ## Listeners the ring has just passed with amplitude to spare: their entries, to deliver.
 ## Reactive outlines it reached are told (SonarSurface.touch).
@@ -517,10 +522,14 @@ func _touch_reactive(surfaces: Array[SonarSurface]) -> void:
 			continue
 		var sid := s.get_instance_id()
 		var lit: PackedByteArray = _lit.get(sid, PackedByteArray())
-		if lit.size() != s.sample_count():
-			lit.resize(s.sample_count())
-			lit.fill(0)
 		var pts := s.global_samples()
+		if lit.size() != s.sample_count():
+			# New outline (e.g. a Mount re-cut the hull mid-ring): what the ring has already
+			# passed counts as decided, so nothing it touched is touched twice.
+			var fresh := lit.is_empty()
+			lit.resize(s.sample_count())
+			for i in pts.size():
+				lit[i] = 0 if fresh or origin.distance_to(pts[i]) > _min_dist - TOL else 1
 		for i in pts.size():
 			if lit[i] == 1:
 				continue

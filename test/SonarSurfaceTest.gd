@@ -257,6 +257,16 @@ func test_a_planet_in_the_way_silences_a_far_answer() -> void:
 	_run(pulse, SonarPulse.LIFETIME * strength)
 	assert_int(_echoes(bay)).is_equal(0)
 
+func test_a_far_answer_is_lost_in_thick_rock() -> void:
+	var bay := _cargo_bay(Vector2(2000, 0))
+	_rock(Vector2(600, 0), 400.0)
+	await get_tree().process_frame
+	var strength := 3.0
+	var pulse := _pulse(Vector2.ZERO)
+	pulse.send(strength)
+	_run(pulse, SonarPulse.LIFETIME * strength)
+	assert_int(_echoes(bay)).is_equal(0)
+
 # --- buried Freight ---
 
 func test_a_buried_lug_sticks_out_of_the_ground_and_answers() -> void:
