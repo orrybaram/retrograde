@@ -98,7 +98,6 @@ func ping() -> void:
 			part.modulate = Colors.PRIMARY.lerp(Colors.CREAM, 0.25)
 			_glow.tween_property(part, "modulate", Color.WHITE, PING_GLOW_TIME)
 	EventBus.sonar_pulsed.emit(global_position)
-	_pulse._reach_listeners(global_position, PING_STRENGTH)
 	_reach_dish_listeners()
 
 ## Whatever listens for the dish itself (HaulerWreck) hears it this long after it leaves,

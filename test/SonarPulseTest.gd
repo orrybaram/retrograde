@@ -112,3 +112,52 @@ func test_a_hold_that_was_refused_stays_ignored_until_let_go() -> void:
 	assert_int(_ship.sonar.ring_count()).is_equal(0)
 	await _hold_action(true)
 	assert_bool(_ship.sonar.charging).is_true()
+
+# --- the recharge ---
+
+## A listening Procedure device, right where the ship is.
+class Device extends Node2D:
+	func _ready() -> void:
+		add_to_group("procedure_listeners")
+	func procedure_point() -> Vector2:
+		return global_position
+	func listens() -> bool:
+		return true
+
+func _tap() -> void:
+	await _hold_action(true)
+	await _hold_action(false)
+
+func test_a_press_straight_after_a_ping_does_not_charge() -> void:
+	await _tap()
+	assert_int(_ship.sonar.ring_count()).is_equal(1)
+	assert_bool(_ship.sonar.is_recharging()).is_true()
+	await _hold_action(true)
+	assert_bool(_ship.sonar.charging).is_false()
+	await _hold_action(false)
+	assert_int(_ship.sonar.ring_count()).is_equal(1)
+
+func test_a_key_held_through_the_recharge_starts_charging_when_it_ends() -> void:
+	await _tap()
+	await _hold_action(true)
+	assert_bool(_ship.sonar.charging).is_false()
+	await await_millis(int(SonarPulse.RECHARGE_TIME * 1000.0) + 100)
+	assert_bool(_ship.sonar.is_recharging()).is_false()
+	assert_bool(_ship.sonar.charging).is_true()
+	await _hold_action(false)
+	assert_int(_ship.sonar.ring_count()).is_equal(2)
+
+func test_marks_tap_out_quickly_by_a_procedure_device() -> void:
+	var device: Device = auto_free(Device.new())
+	add_child(device)
+	device.global_position = _ship.global_position
+	assert_bool(Resonance.available_for(_ship)).is_true()
+	for i in 4:
+		await _tap()
+	assert_bool(_ship.sonar.is_recharging()).is_false()
+	assert_array(_ship.resonance.marks).is_equal([1, 1, 1, 1])
+	assert_int(_ship.sonar.ring_count()).is_equal(4)
+
+func test_a_dish_ping_has_no_recharge() -> void:
+	_ship.sonar.send(SonarPulse.strength_for(0.0))
+	assert_bool(_ship.sonar.is_recharging()).is_false()

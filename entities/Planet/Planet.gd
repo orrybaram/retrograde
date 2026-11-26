@@ -237,6 +237,10 @@ func _ready() -> void:
 			orbit_visual.show_orbit = show_orbit_path
 	
 	_spawn_ore()
+	# A Sweep ring is stopped by the ground (the collision core: a gas giant's is smaller)
+	var core := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if core:
+		SonarSurface.attach(self, core, SonarSurface.Preset.PLANET)
 
 	# Register with minimap
 	_register_with_minimap.call_deferred()
