@@ -3,11 +3,12 @@ class_name SonarSurface
 
 ## Something a Sweep ring meets on its way (SonarRing): an outline - taken from a collision
 ## shape it sits beside, or set by hand (set_polygons) - and a SonarMaterial that says what
-## the ring does inside it. Opt-in: only what carries one of these blocks a ring; the rest of
-## the world (scrap, freight, the ship) lets it through.
+## the ring does inside it. Opt-in: only what carries one of these blocks a ring, and only
+## big things carry one (the station, planets); the rest of the world (debris, scrap,
+## freight, ship-sized wrecks, the ship) lets it through.
 ##
-## Lives in group `sonar_surfaces` while it is in the tree and visible, so a pooled or
-## sleeping rock (ResourceNodePool, OrbitalNode) drops out of every ring until it is back.
+## Lives in group `sonar_surfaces` while it is in the tree and visible, so anything hidden
+## drops out of every ring until it is back.
 ##
 ## Outlines stay in the target's local space; a ring asks in global space and the surface
 ## turns the point round with a cached inverse transform, so a moving station or a drifting
