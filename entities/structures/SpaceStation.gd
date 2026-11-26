@@ -76,14 +76,28 @@ func _rebuild_sonar_art() -> void:
 	var visuals := get_node_or_null("Visuals") as Node2D
 	if visuals == null or _sonar_art == null:
 		return
+	# Art wholly inside the hull's own collision adds nothing the hull outline doesn't already
+	# stop (Mount.recut keeps other polygons' area when it cuts a gap), so only what stands
+	# out past it is kept: far fewer polygons for every ray to test.
+	var hull := get_node_or_null("CollisionShape2D") as CollisionPolygon2D
+	var hull_poly := hull.transform * hull.polygon if hull else PackedVector2Array()
 	var polys: Array[PackedVector2Array] = []
 	for child in visuals.get_children():
 		var poly := child as Polygon2D
 		if poly == null or not poly.visible or poly.polygon.size() < 3:
 			continue
 		var xf := visuals.transform * poly.transform * Transform2D(0.0, poly.offset)
-		polys.append(xf * poly.polygon)
+		var pts := xf * poly.polygon
+		if not hull_poly.is_empty() and _all_inside(pts, hull_poly):
+			continue
+		polys.append(pts)
 	_sonar_art.set_polygons(polys)
+
+static func _all_inside(pts: PackedVector2Array, outline: PackedVector2Array) -> bool:
+	for p in pts:
+		if not Geometry2D.is_point_in_polygon(p, outline):
+			return false
+	return true
 
 func _setup_orbital_motion(body: Node2D) -> void:
 	_orbital_motion = OrbitalMotionClass.new()
