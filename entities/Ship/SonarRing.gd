@@ -515,6 +515,9 @@ func _depth_inside(p: Vector2, surfaces: Array[SonarSurface]) -> float:
 	return 0.0
 
 func _touch_reactive(surfaces: Array[SonarSurface]) -> void:
+	# Only the ship's own Sweep finds things: SR-7's dish pings light nothing up
+	if not sweep:
+		return
 	for s in surfaces:
 		if not s.get_sonar_material().reactive or s.sample_count() == 0:
 			continue

@@ -111,6 +111,24 @@ func test_a_ring_lights_the_mount_and_starts_one_trace() -> void:
 	_run(pulse, SonarPulse.LIFETIME)
 	assert_int(m._glow.traces).is_equal(2)
 
+func test_a_dish_ring_does_not_light_the_mount() -> void:
+	var m := _mount(Sections.FUEL_TANK)
+	var hits: Array[int] = []
+	m._sonar.touched.connect(func(i: int, _a: float, _o: Vector2, _r: int) -> void: hits.append(i))
+	var pulse := _pulse(m.to_global(Vector2(0, -150)))
+	pulse.sweep = false
+	pulse.send(1.0)
+	_run(pulse, SonarPulse.LIFETIME)
+	assert_int(hits.size()).is_equal(0)
+	assert_int(m._glow.traces).is_equal(0)
+
+func test_a_refresh_that_changes_nothing_keeps_the_glow() -> void:
+	var m := _mount(Sections.FUEL_TANK)
+	_touched_from(m, Vector2(0, -150))
+	assert_bool(m._glow.is_lit()).is_true()
+	m.refresh()
+	assert_bool(m._glow.is_lit()).is_true()
+
 func test_the_trace_begins_where_the_ring_touched_first() -> void:
 	# From out past one end of the cut: the trace starts at the sample nearest the ship
 	var m := _mount(Sections.FUEL_TANK)

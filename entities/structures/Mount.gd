@@ -357,6 +357,7 @@ func is_seating() -> bool:
 	return _seating != null and _seating.is_running()
 
 func _show_seated(on: bool) -> void:
+	var changed := on != seated
 	seated = on
 	if _part:
 		_part.visible = on
@@ -364,7 +365,8 @@ func _show_seated(on: bool) -> void:
 		alarm.active = not on
 	if _sonar:
 		_sonar.visible = not on
-		_glow.clear()
+		if changed:
+			_glow.clear()  # a refresh that changes nothing leaves a glow mid-trace alone
 	Mount.recut.call_deferred(_collision, get_tree())
 	queue_redraw()
 
