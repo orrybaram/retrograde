@@ -1,0 +1,512 @@
+extends OrbitalNode
+class_name ScrapNode
+
+## Harvestable scrap. Extends OrbitalNode with hits, trophy status, kind, and amount.
+## Four-state machine: ScrapIdleState → ScrapInRangeState → ScrapHarvestingState → ScrapDepletedState.
+## Each hit is a hold-and-release timing check (see HarvestTiming) that knocks gems loose;
+## the last hit breaks the scrap into a bigger burst. HP mirrors hits left for visuals.
+## Returns to pool via ResourceNodePool after the depletion animation completes.
+##
+## Scrap passes for debris until a Sweep finds it: dark, no sparkles, a plain debris echo on
+## the minimap, and it takes no cut. A ring reaching it lights it up for the rest of its spawn and sends one
+## cream ring back. It is not an answer - nothing purple - scrap is not part of the Titan,
+## it only shows itself.
+##
+## Found, it can be read up close like a Mount (a discoverable Readout):
+## every piece shares the key `scrap` (`scrap_trophy` for a trophy), so the first one read
+## files the Log's Record for scrap and the rest only show their rows.
+
+signal harvest_started
+signal harvest_stopped
+signal resource_depleted
+signal can_harvest_changed(can_harvest: bool)
+
+@export var kind: String = "Scrap"
+@export var amount: int = 1
+@export var max_amount: int = 1
+@export var base_hp: float = 30.0
+
+const NORMAL_HITS := 3
+const TROPHY_HITS := 5
+## How close the ship comes to read found scrap: tighter than a Mount's, since scrap sits
+## among debris and only the nearest thing in reach reads.
+const READOUT_REACH := 140.0
+
+## What unfound scrap is tinted down to: the colour of the ring's debris.
+const DORMANT_COLOR := Colors.HULL_MID
+## The flash as a ring finds it (a brightness multiplier), and how long it takes to settle.
+const REVEAL_FLASH := 1.8
+const REVEAL_TIME := 0.6
+## The ring it sends back when found: how far it reaches, how long it takes, how bright.
+const REVEAL_ECHO_RADIUS := 90.0
+const REVEAL_ECHO_TIME := 1.0
+const REVEAL_ECHO_ALPHA := 0.9
+const REVEAL_ECHO_WIDTH := 2.0
+
+@export var is_trophy: bool = false:
+	set(value):
+		is_trophy = value
+		_sync_readout()
+		if is_node_ready() and is_trophy:
+			_activate_trophy()
+
+var _ship_in_range: Ship = null
+var _is_depleted: bool = false
+var sparkle_particles: SparkleParticles = null
+var _trophy_pulse_tween: Tween = null
+var _state_machine: StateMachine
+var health_component: HealthComponent
+var _shape_instance: Node2D = null
+var timing: HarvestTiming = null  # created lazily when a harvest starts; null = untouched
+var _readout: Readout = null
+var hits_left: int = NORMAL_HITS
+## Found by a Sweep ring this spawn. Until then it looks and acts like debris.
+var revealed := false
+var _reveal_tween: Tween = null
+
+const _SHAPE_SCENES := [
+	preload("res://entities/resources/ScrapShapes/ScrapShape0.tscn"),
+	preload("res://entities/resources/ScrapShapes/ScrapShape1.tscn"),
+	preload("res://entities/resources/ScrapShapes/ScrapShape2.tscn"),
+	preload("res://entities/resources/ScrapShapes/ScrapShape3.tscn"),
+	preload("res://entities/resources/ScrapShapes/ScrapShape4.tscn"),
+	preload("res://entities/resources/ScrapShapes/ScrapShape5.tscn"),
+]
+
+func _ready() -> void:
+	_uses_harvest_detection = true  # keeps monitorable toggled on sleep/wake for HarvestCone
+	revealed = not _hides_until_pinged()
+	monitoring = false  # HarvestCone detects us via area_entered; we don't body-detect the ship
+	_load_shape()  # before super so OrbitalNode caches CollisionArea from the shape sub-scene
+	super._ready()
+	# Only scrap that hides is read this way; a container or a derelict says what it is by shape
+	if _hides_until_pinged():
+		_add_readout()
+
+	health_component = HealthComponent.new()
+	health_component.name = "HealthComponent"
+	health_component.max_hp = base_hp
+	add_child(health_component)
+
+	add_to_group("resource_nodes")
+	add_to_group("sonar_listeners")
+	if not revealed:
+		_go_dark()
+
+	# Register with EventBus
+	EventBus.register_resource_node(self)
+
+	# Initialize max_amount if not set
+	if max_amount == 0:
+		max_amount = amount
+
+	# Trophy roll for pre-placed (non-pooled) nodes. Pooled nodes roll in on_spawn().
+	if not has_meta("pool_variant") and _rolls_trophy():
+		is_trophy = RNG.rng.randi() % 10 == 0
+
+	# Build state machine programmatically — no scene changes required
+	var sm := StateMachine.new()
+	sm.name = "StateMachine"
+	sm.initial_state_name = "ScrapIdleState"
+	var s_idle := ScrapIdleState.new()
+	s_idle.name = "ScrapIdleState"
+	var s_in_range := ScrapInRangeState.new()
+	s_in_range.name = "ScrapInRangeState"
+	var s_harvesting := ScrapHarvestingState.new()
+	s_harvesting.name = "ScrapHarvestingState"
+	var s_depleted := ScrapDepletedState.new()
+	s_depleted.name = "ScrapDepletedState"
+	sm.add_child(s_idle)
+	sm.add_child(s_in_range)
+	sm.add_child(s_harvesting)
+	sm.add_child(s_depleted)
+	add_child(sm)
+	_state_machine = sm
+
+
+func _load_shape() -> void:
+	# Remove old inline shape nodes (legacy Scrap1-5 scene structure)
+	for node_name: String in ["Polygon2D", "CollisionArea"]:
+		var old := get_node_or_null(node_name)
+		if old:
+			old.free()
+	# Also handle Node2D wrapper pattern (some old scenes wrap CollisionArea in a Node2D)
+	for child: Node in get_children():
+		if child is Node2D and child.get_node_or_null("CollisionArea"):
+			child.free()
+			break
+
+	var scenes := _shape_scenes()
+	var packed: PackedScene = scenes[RNG.rng.randi() % scenes.size()]
+	_shape_instance = packed.instantiate() as Node2D
+	if not _shape_instance:
+		return
+	add_child(_shape_instance)
+
+	var cshape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if cshape and cshape.shape is CircleShape2D:
+		(cshape.shape as CircleShape2D).radius = _shape_instance.get("collision_radius")
+
+
+## Whether a trophy breathes to draw the eye. Off for anything whose shape is the point:
+## a rare lump of scrap wants noticing, a sealed container wants to look sealed.
+func _pulses_when_trophy() -> bool:
+	return true
+
+## Whether this hides as debris until a Sweep finds it. Off for anything whose shape already
+## says what it is: a sealed container, a derelict hull.
+func _hides_until_pinged() -> bool:
+	return true
+
+func _add_readout() -> void:
+	Readout.register_kind("scrap", "SCRAP", "", "SALVAGE", [
+		ReadoutRow.make("HITS", "%d TO BREAK" % NORMAL_HITS), ReadoutRow.make("YIELD", "MOSTLY SHARDS")])
+	Readout.register_kind("scrap_trophy", "SCRAP", "TROPHY", "SALVAGE", [
+		ReadoutRow.make("HITS", "%d TO BREAK" % TROPHY_HITS), ReadoutRow.make("YIELD", "GEM OR BETTER")])
+	_readout = Readout.new()
+	_readout.name = "Readout"
+	_readout.heading = "SCRAP"
+	_readout.category = "SALVAGE"
+	_readout.reach = READOUT_REACH
+	_readout.discoverable = true
+	add_child(_readout)
+	_sync_readout()
+
+## A trophy is filed as its own kind.
+func _sync_readout() -> void:
+	if _readout:
+		_readout.key = "scrap_trophy" if is_trophy else "scrap"
+		_readout.title = "TROPHY" if is_trophy else ""
+
+## Readable (Readout.discoverable) once a Sweep has found it, until it is cut apart.
+func is_found() -> bool:
+	return revealed and not _is_depleted and is_in_group("resource_nodes")
+
+## What found scrap reads as up close: whether it has been cut into, how many hits are left,
+## and what it tends to give (GemData.roll: a trophy rolls no shards on a clean hit).
+func readout_rows() -> Array[ReadoutRow]:
+	var full := TROPHY_HITS if is_trophy else NORMAL_HITS
+	return [ReadoutRow.make("STATE", "INTACT" if hits_left >= full else "CUT"),
+		ReadoutRow.make("HITS", "%d TO BREAK" % hits_left),
+		ReadoutRow.make("YIELD", "GEM OR BETTER" if is_trophy else "MOSTLY SHARDS")]
+
+## A ring has to reach the scrap itself.
+func sonar_point() -> Vector2:
+	return global_position
+
+func on_sonar_touched(_strength := 1.0) -> void:
+	# Pooled nodes keep the group but drop out of resource_nodes
+	if revealed or _is_depleted or not is_in_group("resource_nodes"):
+		return
+	reveal()
+
+## A Sweep (the ship's own ring, not SR-7's dish) got here: found just now or long since,
+## the ship has been shown a live chunk of scrap, whether or not it can cut it.
+func on_swept() -> void:
+	if not _is_depleted and is_in_group("resource_nodes"):
+		EventBus.scrap_swept.emit()
+
+## Light up: flash bright and settle to its own colour, sparkles fading in, and one cream ring
+## goes back out to say it was found (animated reveals only). From here on it
+## is on the minimap and takes a cut. `animate` false snaps straight to lit.
+func reveal(animate := true) -> void:
+	revealed = true
+	if _reveal_tween:
+		_reveal_tween.kill()
+		_reveal_tween = null
+	var sparkles := get_node_or_null("SparkleParticles") as CanvasItem
+	if animate:
+		var echo := SonarEcho.answer(self, Vector2.ZERO, Colors.CREAM, 1)
+		echo.end_radius = REVEAL_ECHO_RADIUS
+		echo.lifetime = REVEAL_ECHO_TIME
+		echo.max_alpha = REVEAL_ECHO_ALPHA
+		echo.width = REVEAL_ECHO_WIDTH
+		_reveal_tween = create_tween().set_parallel()
+		if _shape_instance:
+			_shape_instance.modulate = Color(REVEAL_FLASH, REVEAL_FLASH, REVEAL_FLASH)
+			_reveal_tween.tween_property(_shape_instance, "modulate", Color.WHITE, REVEAL_TIME) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		if sparkles:
+			_reveal_tween.tween_property(sparkles, "modulate:a", 1.0, REVEAL_TIME)
+	else:
+		if _shape_instance:
+			_shape_instance.modulate = Color.WHITE
+		if sparkles:
+			sparkles.modulate.a = 1.0
+	if is_trophy:
+		_start_trophy_pulse()
+	if _state_machine and _state_machine.current_state is ScrapInRangeState:
+		_hold_lock()
+
+## Pass for debris: tinted down to DORMANT_COLOR, sparkles hidden. (Sparkles go by alpha,
+## not `visible`: _find_visual_node() turns every Node2D child visible.)
+func _go_dark() -> void:
+	revealed = false
+	if _reveal_tween:
+		_reveal_tween.kill()
+		_reveal_tween = null
+	if _shape_instance:
+		_shape_instance.modulate = _dormant_tint()
+	var sparkles := get_node_or_null("SparkleParticles") as CanvasItem
+	if sparkles:
+		sparkles.modulate.a = 0.0
+
+## The modulate that takes this shape's main colour to DORMANT_COLOR.
+func _dormant_tint() -> Color:
+	for child in _shape_instance.get_children():
+		if child is Polygon2D:
+			var c := (child as Polygon2D).color
+			return Color(
+				minf(DORMANT_COLOR.r / maxf(c.r, 0.01), 1.0),
+				minf(DORMANT_COLOR.g / maxf(c.g, 0.01), 1.0),
+				minf(DORMANT_COLOR.b / maxf(c.b, 0.01), 1.0))
+	return DORMANT_COLOR
+
+## The shapes this node can be built from, one picked at random. Subclasses override it
+## to look like something in particular rather than like generic wreckage.
+func _shape_scenes() -> Array:
+	return _SHAPE_SCENES
+
+func _register_with_minimap() -> void:
+	if skip_minimap_registration:
+		return
+	var minimap = Minimap.get_instance(get_tree())
+	if minimap:
+		# Unregister any existing target first to prevent orphaned targets
+		if minimap_target:
+			minimap.unregister_target(minimap_target)
+		minimap_target = ResourceMinimapTarget.new(self)
+		minimap.register_target(minimap_target)
+	# Until a Sweep finds it, it echoes as debris
+	_register_debris_echo()
+
+func _process(delta: float) -> void:
+	if _state_machine and _state_machine.current_state:
+		_state_machine.current_state.process(delta)
+
+func is_harvesting() -> bool:
+	return _state_machine != null and _state_machine.current_state is ScrapHarvestingState
+
+## The sweep the meter draws, or null before the first press. (An ore seam answers the
+## same three, so HarvestMeter follows either one.)
+func harvest_timing() -> HarvestTiming:
+	return timing
+
+## True once there is nothing left to take and the meter should stop following it.
+func harvest_spent() -> bool:
+	return _is_depleted or amount <= 0
+
+func _update_visual() -> void:
+	if _is_depleted:
+		return
+
+	var visual = _find_visual_node()
+	if not visual:
+		return
+
+	var depletion_ratio = health_component.get_hp_ratio() if health_component else 1.0
+
+	if visual is ColorRect:
+		var color_rect = visual as ColorRect
+		var base_size = color_rect.custom_minimum_size if color_rect.custom_minimum_size != Vector2.ZERO else Vector2(30, 30)
+		var new_size = base_size * depletion_ratio
+		color_rect.size = new_size
+		color_rect.offset_left = -new_size.x / 2.0
+		color_rect.offset_top = -new_size.y / 2.0
+		color_rect.offset_right = new_size.x / 2.0
+		color_rect.offset_bottom = new_size.y / 2.0
+		var alpha = lerp(0.3, 1.0, depletion_ratio)
+		color_rect.modulate = Color(color.r, color.g, color.b, alpha)
+		return
+
+	if visual is Polygon2D:
+		var polygon = visual as Polygon2D
+		if not polygon.has_meta("original_scale"):
+			polygon.set_meta("original_scale", polygon.scale)
+
+		var original_scale = polygon.get_meta("original_scale") as Vector2
+		var scale_factor = max(depletion_ratio, min_scale)
+		polygon.scale = original_scale * scale_factor
+
+		var original_color = polygon.color
+		var alpha = lerp(0.3, 1.0, depletion_ratio)
+		polygon.color = Color(original_color.r, original_color.g, original_color.b, alpha)
+		return
+
+	if "scale" in visual:
+		if not visual.has_meta("original_scale"):
+			visual.set_meta("original_scale", visual.scale)
+
+		var original_scale = visual.get_meta("original_scale") as Vector2
+		visual.scale = original_scale * depletion_ratio
+
+	if "modulate" in visual:
+		var alpha = lerp(0.3, 1.0, depletion_ratio)
+		visual.modulate = Color(color.r, color.g, color.b, alpha)
+
+func _deplete_resource() -> void:
+	if _is_depleted:
+		return
+
+	_is_depleted = true
+	resource_depleted.emit()
+	_release_lock()
+
+	# Disable all collision so ship can't interact.
+	# Also disconnect body_shape_entered — Godot can fire it during reparent even with monitoring=false,
+	# which would trigger the bounce code and kick the ship.
+	monitoring = false
+	monitorable = false
+	if _collision_area_cached:
+		_collision_area_cached.monitoring = false
+		_collision_area_cached.monitorable = false
+		if _collision_area_cached.body_shape_entered.is_connected(_on_collision_area_entered):
+			_collision_area_cached.body_shape_entered.disconnect(_on_collision_area_entered)
+
+	EventBus.unregister_resource_node(self)
+
+	_unregister_from_minimap()
+
+	# Visual is already hidden by the pop animation — return to pool immediately
+	returned_to_pool.emit()
+
+
+func on_spawn() -> void:
+	super.on_spawn()  # OrbitalNode.on_spawn() restores monitorable = true
+
+	# Reconnect collision handler (disconnected on depletion to prevent reparent physics artifacts)
+	if _collision_area_cached and not _collision_area_cached.body_shape_entered.is_connected(_on_collision_area_entered):
+		_collision_area_cached.body_shape_entered.connect(_on_collision_area_entered)
+
+	if not is_in_group("resource_nodes"):
+		add_to_group("resource_nodes")
+
+	EventBus.register_resource_node(self)
+
+	timing = null
+	hits_left = NORMAL_HITS
+	if _hides_until_pinged():
+		_go_dark()
+
+	# Trophy roll for pooled nodes
+	is_trophy = RNG.rng.randi() % 10 == 0
+
+	# Reset state machine for new spawn cycle
+	if _state_machine:
+		_state_machine.change_state("ScrapIdleState")
+
+func on_despawn() -> void:
+	# Reset state machine first — triggers state cleanup (beam stop, lock, ship state, etc.)
+	if _state_machine and not (_state_machine.current_state is ScrapIdleState):
+		_state_machine.change_state("ScrapIdleState")
+
+	# Unregister from EventBus
+	EventBus.unregister_resource_node(self)
+
+	_release_lock()
+
+	# Remove from group
+	if is_in_group("resource_nodes"):
+		remove_from_group("resource_nodes")
+
+	# Reset state variables
+	_is_depleted = false
+	_ship_in_range = null
+
+	if _reveal_tween:
+		_reveal_tween.kill()
+		_reveal_tween = null
+
+	# Reset trophy state
+	if _trophy_pulse_tween:
+		_trophy_pulse_tween.kill()
+		_trophy_pulse_tween = null
+	if sparkle_particles:
+		sparkle_particles.is_trophy = false
+		sparkle_particles = null
+	is_trophy = false
+
+	# Reset resource amounts and HP
+	amount = 0
+	max_amount = 0
+	timing = null
+	hits_left = NORMAL_HITS
+	health_component.max_hp = base_hp
+	health_component.reset()
+
+	super.on_despawn()
+
+## While the ship is in range to cut it, found scrap holds its lock (ReadoutLock), so the
+## player sees which piece a harvest press will cut.
+func _hold_lock() -> void:
+	if _readout and is_found():
+		get_tree().call_group("readout_lock", "hold", _readout, true)
+
+func _release_lock() -> void:
+	if _readout and is_inside_tree():
+		get_tree().call_group("readout_lock", "hold", _readout, false)
+
+func max_hits() -> int:
+	return TROPHY_HITS if is_trophy else NORMAL_HITS
+
+func _rolls_trophy() -> bool:
+	return true
+
+## Gem ids knocked loose by a hit (called after hits_left is decremented).
+func drops_for_hit(grade: HarvestTiming.Grade, final: bool) -> Array[String]:
+	return GemData.drops_for_hit(grade, final, is_trophy, RNG.rng)
+
+func _pop_and_deplete() -> void:
+	var visual = _find_visual_node()
+	if visual:
+		var pop_tween = create_tween()
+		pop_tween.tween_property(visual, "scale", visual.scale * 1.2, 0.1).set_ease(Tween.EASE_OUT)
+		pop_tween.tween_property(visual, "scale", Vector2.ZERO, 0.2).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+		pop_tween.tween_callback(_finish_depletion)
+	else:
+		_finish_depletion()
+
+func _finish_depletion() -> void:
+	if not _is_depleted:
+		_deplete_resource()
+
+## Mirror hits left (minus the current hit's progress) into HP, which drives
+## shrink/fade and sparkles, and shake the shape harder as the bar fills.
+func sync_harvest_visual() -> void:
+	var progress := timing.progress if timing else 0.0
+	health_component.current_hp = health_component.max_hp * (hits_left - progress) / max_hits()
+	_update_visual()
+	var visual := _find_visual_node()
+	if not visual:
+		return
+	if not visual.has_meta("base_position"):
+		visual.set_meta("base_position", visual.position)
+	var base: Vector2 = visual.get_meta("base_position")
+	var amp := 2.5 * progress * progress
+	visual.position = base + Vector2(randf_range(-amp, amp), randf_range(-amp, amp))
+
+func _activate_trophy() -> void:
+	timing = null
+	sparkle_particles = get_node_or_null("SparkleParticles") as SparkleParticles
+	if not sparkle_particles:
+		return
+
+	sparkle_particles.is_trophy = true
+
+	# Trophies take more hits (and drop more gems)
+	hits_left = TROPHY_HITS
+	health_component.reset()
+
+	# Hidden scrap doesn't give itself away; reveal() starts the pulse
+	if revealed:
+		_start_trophy_pulse()
+
+## Subtle scale pulse to catch the eye.
+func _start_trophy_pulse() -> void:
+	if _trophy_pulse_tween:
+		return
+	var visual = _find_visual_node() if _pulses_when_trophy() else null
+	if visual:
+		_trophy_pulse_tween = create_tween().set_loops()
+		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale * 1.15, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+		_trophy_pulse_tween.tween_property(visual, "scale", visual.scale, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)

@@ -1,0 +1,253 @@
+extends GdUnitTestSuite
+
+## The dev panel's state edits (ui/DevPanel.gd). The panel itself is only keys and
+## rows; what matters is that a row lands the game in the state it says it does, so
+## these drive the rows directly rather than through the keyboard.
+
+var _gs: GameState
+var _panel: DevPanel
+
+
+func before_test() -> void:
+	_gs = auto_free(GameState.new()) as GameState
+	_gs.set_process(false)
+	add_child(_gs)
+
+
+func after_test() -> void:
+	RobotRadio.silence()
+	InventoryManager.clear_inventory()
+
+
+## The panel, built after whatever world the test wants it to read.
+func _panel_in_tree() -> DevPanel:
+	_panel = auto_free(DevPanel.new()) as DevPanel
+	add_child(_panel)
+	return _panel
+
+
+func _planet(planet_name: String, type := Planet.PlanetType.ROCKY) -> Planet:
+	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	planet.name = planet_name
+	planet.radius = 400.0
+	planet.planet_type = type
+	planet.enable_orbiting = false
+	add_child(planet)
+	for grown in planet.get_ore_deposits():
+		grown.free()
+	return planet
+
+
+func _gate(planet: Planet, core := false) -> Gate:
+	var gate := auto_free(load("res://entities/structures/Gate.tscn").instantiate()) as Gate
+	gate.is_core = core
+	gate.enable_orbiting = false
+	planet.add_child(gate)
+	return gate
+
+
+## Run the row named `label` in `section` with `direction` (-1 / +1, or 0 for ENTER).
+func _run(section: String, label: String, direction: int) -> void:
+	for i in _panel._sections.size():
+		if _panel._sections[i]["name"] != section:
+			continue
+		for row in _panel._sections[i]["build"].call():
+			if row["label"] == label:
+				row["act"].call(direction)
+				return
+	fail("no row '%s' in section '%s'" % [label, section])
+
+
+func _read(section: String, label: String) -> String:
+	for i in _panel._sections.size():
+		if _panel._sections[i]["name"] != section:
+			continue
+		for row in _panel._sections[i]["build"].call():
+			if row["label"] == label:
+				return str(row["value"].call())
+	return ""
+
+
+# --- Modules -----------------------------------------------------------------
+
+## The count maps onto Gates in save-key order, so the same number always brings the
+## same Modules online, and the Core's Gate is never one of them.
+func test_modules_online_powers_gates_in_order() -> void:
+	_gate(_planet("Veld"))
+	_gate(_planet("Crom"))
+	_gate(_planet("Sun", Planet.PlanetType.SUN), true)
+	_panel_in_tree()
+
+	_run("PROGRESS", "MODULES ONLINE", 1)
+	assert_int(_gs.titan_influence()).is_equal(1)
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Crom")).is_true()  # sorts before Veld
+
+	_run("PROGRESS", "MODULES ONLINE", 1)
+	assert_int(_gs.titan_influence()).is_equal(2)
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Veld")).is_true()
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Sun")).is_false()
+
+	# Nothing goes backwards: LEFT takes no Module offline
+	_run("PROGRESS", "MODULES ONLINE", -1)
+	assert_int(_gs.titan_influence()).is_equal(2)
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Veld")).is_true()
+
+
+## A Module the player powered themselves counts, and RIGHT brings the next one after it
+## online rather than powering one that is already up.
+func test_modules_online_skips_a_gate_already_powered() -> void:
+	_gate(_planet("Veld"))
+	_gate(_planet("Crom"))
+	_gs.progress.mark(Progress.POWERED_GATES, "Crom")
+	_panel_in_tree()
+	_run("PROGRESS", "MODULES ONLINE", 1)
+	assert_int(_gs.titan_influence()).is_equal(2)
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Veld")).is_true()
+
+
+## ENTER tops the row out, so the last Module's worth of Titan influence can be
+## looked at without five Gates to fly to. The Core's Gate is still not a Module.
+func test_enter_brings_every_module_online() -> void:
+	for planet_name in ["TERRA-0", "Roke", "Sonder", "Crom", "Veld"]:
+		_gate(_planet(planet_name))
+	_gate(_planet("Sun", Planet.PlanetType.SUN), true)
+	_panel_in_tree()
+	_run("PROGRESS", "MODULES ONLINE", 0)
+	assert_int(_gs.titan_influence()).is_equal(Gate.MODULE_COUNT)
+	assert_bool(_gs.progress.holds(Progress.POWERED_GATES, "Sun")).is_false()
+
+
+func test_modules_row_never_goes_below_zero() -> void:
+	_gate(_planet("Veld"))
+	_panel_in_tree()
+	_run("PROGRESS", "MODULES ONLINE", -1)
+	assert_int(_gs.titan_influence()).is_equal(0)
+
+
+# --- Gates and planets -------------------------------------------------------
+
+## Naming is all-or-nothing, the Core's Gate is named along with the rest, and it is for good.
+func test_naming_gates_covers_the_core_too() -> void:
+	_gate(_planet("Veld"))
+	_gate(_planet("Sun", Planet.PlanetType.SUN), true)
+	_panel_in_tree()
+
+	_run("PROGRESS", "GATES NAMED", 0)
+	assert_int(_gs.progress.list(Progress.IDENTIFIED_GATES).size()).is_equal(2)
+	assert_str(_read("PROGRESS", "GATES NAMED")).is_equal("2 / 2")
+
+	# Nothing goes backwards: a named Gate stays named
+	_run("PROGRESS", "GATES NAMED", -1)
+	assert_str(_read("PROGRESS", "GATES NAMED")).is_equal("2 / 2")
+
+
+## A running core stays running: LEFT on SR-7 CORE puts nothing back cold.
+func test_sr7_core_is_never_put_back_cold() -> void:
+	_gs.progress.flag(Progress.CORE_STARTED)
+	_panel_in_tree()
+	_run("PROGRESS", "SR-7 CORE", -1)
+	assert_bool(_gs.progress.flagged(Progress.CORE_STARTED)).is_true()
+	assert_str(_read("PROGRESS", "SR-7 CORE")).is_equal("ON")
+
+
+func test_refill_ore_seams_clears_every_regrow_timer() -> void:
+	_gs.spend_ore("Veld:0", 120.0)
+	_panel_in_tree()
+	_run("PROGRESS", "REFILL ORE SEAMS", 0)
+	assert_float(_gs.ore_regrow_left("Veld:0")).is_equal(0.0)
+
+
+func test_death_count_steps_and_floors_at_zero() -> void:
+	_panel_in_tree()
+	_run("PROGRESS", "DEATHS", 1)
+	_run("PROGRESS", "DEATHS", 1)
+	assert_int(_gs.death_count).is_equal(2)
+	_run("PROGRESS", "DEATHS", -1)
+	_run("PROGRESS", "DEATHS", -1)
+	_run("PROGRESS", "DEATHS", -1)
+	assert_int(_gs.death_count).is_equal(0)
+
+
+# --- Ship --------------------------------------------------------------------
+
+func test_hold_row_fills_to_capacity_and_dumps() -> void:
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	ship.add_to_group("ship")
+	add_child(ship)
+	ship.max_cargo_weight = 20.0
+	_panel_in_tree()
+
+	_run("SHIP", "HOLD", 1)
+	assert_float(InventoryManager.get_total_weight()).is_equal(20.0)
+	assert_str(_read("SHIP", "HOLD")).is_equal("20 / 20")
+
+	# A second fill has no room left to use, and must not overfill.
+	_run("SHIP", "HOLD", 1)
+	assert_float(InventoryManager.get_total_weight()).is_equal(20.0)
+
+	_run("SHIP", "HOLD", -1)
+	assert_float(InventoryManager.get_total_weight()).is_equal(0.0)
+
+
+func test_no_damage_flag_stops_the_hull_taking_hits() -> void:
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	ship.add_to_group("ship")
+	add_child(ship)
+	_panel_in_tree()
+
+	_run("SHIP", "NO DAMAGE", 1)
+	ship.take_damage(500.0)
+	assert_float(ship.hull_strength).is_equal(ship.max_hull)
+
+	_run("SHIP", "NO DAMAGE", -1)
+	ship.take_damage(10.0)
+	assert_float(ship.hull_strength).is_less(ship.max_hull)
+
+
+func test_infinite_fuel_flag_leaves_the_tank_alone() -> void:
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	ship.add_to_group("ship")
+	add_child(ship)
+	_panel_in_tree()
+
+	_run("SHIP", "INFINITE FUEL", 1)
+	var before := ship.drive.fuel
+	ship.drive.tick(0.0, true)  # boost held with thrust on
+	assert_bool(ship.drive.try_burn(1.0)).is_true()  # the engine still fires
+	assert_float(ship.drive.fuel).is_equal(before)
+
+	_run("SHIP", "INFINITE FUEL", -1)
+	ship.drive.try_burn(1.0)
+	assert_float(ship.drive.fuel).is_equal(before - ship.drive.burn_rate)
+
+
+func test_stores_row_steps_and_floors_at_zero() -> void:
+	var ship := auto_free(load("res://entities/Ship/Ship.tscn").instantiate()) as Ship
+	ship.add_to_group("ship")
+	add_child(ship)
+	_panel_in_tree()
+
+	_run("SHIP", "STORES", 0)
+	assert_int(_gs.stores).is_equal(DevPanel.STORES_JUMP)
+	_run("SHIP", "STORES", -1)
+	assert_int(_gs.stores).is_equal(DevPanel.STORES_JUMP - DevPanel.STORES_STEP)
+
+	_gs.stores = 10
+	_run("SHIP", "STORES", -1)
+	assert_int(_gs.stores).is_equal(0)
+
+
+# --- Guards ------------------------------------------------------------------
+
+## No ship in the tree (the start menu, a respawn in flight): the ship and warp
+## sections come back empty instead of reaching through a null.
+func test_sections_are_empty_without_a_ship() -> void:
+	_panel_in_tree()
+	assert_array(_panel._ship_rows()).is_empty()
+	assert_array(_panel._warp_rows()).is_empty()
+
+
+## It only opens during play, so it can't pause over the start menu.
+func test_will_not_open_without_a_running_game() -> void:
+	_panel_in_tree()
+	assert_bool(_panel.can_open()).is_false()

@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://entities/resources/ContainerNode.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://cllg0id2e6pvy" path="res://entities/resources/SparkleParticles.tscn" id="2"]
+
+[sub_resource type="CircleShape2D" id="1"]
+radius = 26.0
+
+[node name="Container" type="Area2D"]
+script = ExtResource("1")
+kind = "Container"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1")
+
+[node name="SparkleParticles" parent="." instance=ExtResource("2")]

@@ -1,0 +1,82 @@
+# Readouts: coming close to one of SR-7's empty Mounts reads it, every row at once, with
+# nothing on screen - the read files a Hardware Record in the Log, under SR-7. Reading a
+# Mount does not put its Section on the minimap (finding it does: ship_log.play). Only the
+# readout nearest the ship reads, and a read survives a reload. A Gate - part of the Titan -
+# reads back as nothing the Log can keep. Scrap is found by a Sweep first, then read up close
+# the same way, and the first piece files one SCRAP Record; scrap in reach to cut is bracketed.
+# Run: tools/play.sh playtests/readout.play   (add --headless to skip screenshots)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+# A new game, adrift by a dead SR-7: past the diagnostic so the Sweep is the pilot's
+eval get_tree().call_group("boot_log", "forget")
+eval pt.remember("station", pt.mount("fuel_tank").get_parent())
+
+# Where a new game starts is out of every Mount's reach
+wait 1
+assert not pt.mount("fuel_tank").get_node("Readout").is_read() "the start is out of reach"
+
+# Out beside the fuel tank's cut: close enough, and it reads by itself, silently
+eval pt.warp_to(pt.recall("station").to_global(Vector2(280, 19)))
+eval ship.set("linear_velocity", pt.recall("station").linear_velocity)
+wait_until pt.mount("fuel_tank").get_node("Readout").is_read() 3
+assert not pt.node("readout_lock").is_locked(pt.mount("fuel_tank").get_node("Readout")) "a read draws no lock"
+assert not pt.mount("fuel_tank").marks_section() "reading the Mount does not find its Section"
+assert not pt.mount("solar_array").get_node("Readout").is_read() "the array's Mount was not read"
+screenshot readout_1_close
+
+# The read is kept
+eval pt.save_now()
+reload
+assert pt.mount("fuel_tank").get_node("Readout").is_read() "still read after a reload"
+
+# The Log keeps a Hardware Record of it
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+press tab
+assert pt.node("log_ui").active_tab_title() == "RECORDS" "on Records"
+assert pt.node("log_ui")._tabs[3]._read.size() == 1 "one Mount read"
+assert str(pt.screen_text()).contains("H A R D W A R E") "the Hardware section"
+assert str(pt.screen_text()).contains("SR-7") "filed under the station"
+assert str(pt.screen_text()).contains("TORCH CUT") "the tank's Record holds every row"
+screenshot readout_3_records
+press i
+wait_until pt.visible_ui().is_empty() 2
+
+# A Gate is part of the Titan: read, but nothing in it can be made out
+eval pt.park_at_gate("Veld", 120.0)
+wait_until pt.gate("Veld").get_node("Readout").is_read() 3
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+assert pt.node("log_ui")._tabs[3]._read.size() == 1 "nothing learned from it for the Log"
+press i
+wait_until pt.visible_ui().is_empty() 2
+
+# Scrap: found by a Sweep, then read up close like a Mount
+eval pt.warp_to(pt.nearest_kind("Scrap").global_position + Vector2(220, 0))
+frames 30
+eval pt.set("staged", pt.nearest_kind("Scrap"))
+assert not pt.staged.get_node("Readout").readable() "unfound scrap passes for debris"
+press action
+wait_until pt.staged.revealed 3
+wait 0.5
+assert not pt.staged.get_node("Readout").is_read() "found from range is not read"
+eval pt.warp_to(pt.staged.global_position + Vector2(50, 0))
+wait_until pt.staged.get_node("Readout").is_read() 3
+wait_until pt.node("readout_lock").is_locked(pt.staged.get_node("Readout")) 3
+screenshot readout_5_scrap
+press i
+wait_until pt.visible_ui().has("LogUI") 2
+press tab
+press tab
+assert pt.node("log_ui").active_tab_title() == "RECORDS" "on Records"
+assert pt.node("log_ui")._tabs[3]._read.size() == 2 "the Mount and one Record for scrap"
+assert str(pt.screen_text()).contains("SALVAGE") "filed under salvage"
+screenshot readout_6_records
+press i
+state

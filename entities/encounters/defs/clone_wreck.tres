@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WreckDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/encounters/WreckDef.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"clone_wreck"
+contact_label = "DERELICT"
+weight = 0.04
+budget = 3
+min_radius = 40000.0
+max_radius = 0.0
+min_loot = 1
+max_loot = 3
+loot_tiers = Array[String](["shard", "gem"])
+max_spin = 0.12

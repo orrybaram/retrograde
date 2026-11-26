@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="RadioConversation" format=3]
+
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioConversation.gd" id="1_conv"]
+[ext_resource type="Script" path="res://entities/Robot/radio/RadioLine.gd" id="2_line"]
+
+[sub_resource type="Resource" id="line_1"]
+script = ExtResource("2_line")
+text = "There. Bolted on, sealed, holding pressure. That is a hold!"
+expression = &"happy"
+
+[sub_resource type="Resource" id="line_2"]
+script = ExtResource("2_line")
+text = "Fifty units. Everything out there will cut now, and whatever you bring home goes into the Stores."
+expression = &"talking"
+
+[sub_resource type="Resource" id="line_3"]
+script = ExtResource("2_line")
+text = "And the Stores keep you flying. Go on, then. Fill it."
+expression = &"wink"
+
+[resource]
+script = ExtResource("1_conv")
+id = &"cargo_bay_fitted"
+priority = 1
+once = true
+pause_game = false
+lines = Array[ExtResource("2_line")]([SubResource("line_1"), SubResource("line_2"), SubResource("line_3")])

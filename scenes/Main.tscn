@@ -1,0 +1,152 @@
+[gd_scene load_steps=26 format=3 uid="uid://fwg0xs6xishl"]
+
+[ext_resource type="Script" uid="uid://urrcn52ni20b" path="res://scripts/Main.gd" id="1"]
+[ext_resource type="Script" uid="uid://cecim8w208xji" path="res://scripts/GameState.gd" id="2"]
+[ext_resource type="PackedScene" uid="uid://oyfitqvfp7d7" path="res://scenes/StarField.tscn" id="2_nfivy"]
+[ext_resource type="Script" uid="uid://crtq45kcwhvve" path="res://scripts/Economy.gd" id="3"]
+[ext_resource type="Script" uid="uid://b807jsq0mf0a0" path="res://scripts/ResourceManager.gd" id="5"]
+[ext_resource type="PackedScene" uid="uid://b051ln2ytsesm" path="res://entities/Ship/Ship.tscn" id="7"]
+[ext_resource type="PackedScene" uid="uid://btfs0vii8ixiq" path="res://ui/HUD.tscn" id="8"]
+[ext_resource type="PackedScene" uid="uid://bq8x7vj3k2m4n" path="res://ui/StartMenu.tscn" id="11"]
+[ext_resource type="PackedScene" uid="uid://d5613qx52u80" path="res://ui/indicators/IndicatorManager.tscn" id="13"]
+[ext_resource type="PackedScene" uid="uid://ck61aimutf7gk" path="res://ui/SpacePortDialogue.tscn" id="14"]
+[ext_resource type="PackedScene" path="res://ui/log/LogUI.tscn" id="16"]
+[ext_resource type="PackedScene" uid="uid://cwp82l3asrkgc" path="res://scenes/HomeSystem.tscn" id="18"]
+[ext_resource type="Script" uid="uid://b4chiaxpicref" path="res://scripts/ShipSpawner.gd" id="20"]
+[ext_resource type="PackedScene" uid="uid://c2o4vbaw813u0" path="res://ui/LoadingScreen.tscn" id="21"]
+[ext_resource type="PackedScene" path="res://ui/PauseMenu.tscn" id="22"]
+[ext_resource type="Script" path="res://scenes/SpaceDust.gd" id="23_dust"]
+[ext_resource type="Script" path="res://entities/encounters/EncounterField.gd" id="24_enc"]
+[ext_resource type="Resource" path="res://entities/encounters/tables/deep_space.tres" id="25_enct"]
+[ext_resource type="Script" path="res://scenes/VoidShroud.gd" id="24_void"]
+[ext_resource type="Script" path="res://scenes/HullAlarm.gd" id="25_hull"]
+[ext_resource type="Script" path="res://ui/GateTerminal.gd" id="26_gate"]
+[ext_resource type="Script" path="res://ui/CoreTerminal.gd" id="26_core"]
+[ext_resource type="Theme" uid="uid://vgcpttx0od0i" path="res://assets/themes/terminal.tres" id="27_term"]
+[ext_resource type="Script" path="res://ui/DevPanel.gd" id="28_dev"]
+[ext_resource type="Script" path="res://ui/IntroScreen.gd" id="29_intro"]
+[ext_resource type="PackedScene" path="res://scenes/PixelPass.tscn" id="30_pixel"]
+[ext_resource type="PackedScene" path="res://scenes/CRT.tscn" id="31_crt"]
+[ext_resource type="Script" path="res://ui/UIGlow.gd" id="32_glow"]
+
+[node name="Main" type="Node2D" unique_id=1692069879]
+script = ExtResource("1")
+
+[node name="StarField" parent="." unique_id=1511894753 instance=ExtResource("2_nfivy")]
+
+[node name="GameState" type="Node" parent="." unique_id=621192847]
+script = ExtResource("2")
+
+[node name="Economy" type="Node" parent="." unique_id=117678289]
+script = ExtResource("3")
+
+[node name="ResourceManager" type="Node" parent="." unique_id=1279271584]
+script = ExtResource("5")
+
+[node name="HomeSystem" parent="." unique_id=1870575369 instance=ExtResource("18")]
+
+[node name="ShipSpawner" type="Node" parent="." unique_id=1609137174]
+script = ExtResource("20")
+
+[node name="Ship" parent="." unique_id=87103561 instance=ExtResource("7")]
+mass = 3.0
+angular_damp_mode = 1
+fuel_consumption_rate = 2.0
+
+[node name="SpaceDust" type="Node2D" parent="."]
+script = ExtResource("23_dust")
+
+[node name="EncounterField" type="Node2D" parent="."]
+script = ExtResource("24_enc")
+table = ExtResource("25_enct")
+
+[node name="PixelPass" parent="." instance=ExtResource("30_pixel")]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=649798074]
+layer = 2
+
+[node name="Glow" type="CanvasGroup" parent="CanvasLayer"]
+script = ExtResource("32_glow")
+
+[node name="UI" type="Control" parent="CanvasLayer/Glow"]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="HUD" parent="CanvasLayer/Glow/UI" unique_id=466394536 instance=ExtResource("8")]
+unique_name_in_owner = true
+offset_left = 13.0
+offset_top = 12.0
+mouse_filter = 0
+
+[node name="StartMenu" parent="CanvasLayer/Glow/UI" unique_id=669522817 instance=ExtResource("11")]
+unique_name_in_owner = true
+
+[node name="IndicatorManager" parent="CanvasLayer/Glow/UI" unique_id=627728021 instance=ExtResource("13")]
+unique_name_in_owner = true
+
+[node name="SpacePortDialogue" parent="CanvasLayer/Glow/UI" unique_id=1695530301 instance=ExtResource("14")]
+unique_name_in_owner = true
+
+[node name="LogUI" parent="CanvasLayer/Glow/UI" unique_id=215892337 instance=ExtResource("16")]
+unique_name_in_owner = true
+
+[node name="GateTerminal" type="Control" parent="CanvasLayer/Glow/UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("27_term")
+script = ExtResource("26_gate")
+
+[node name="CoreTerminal" type="Control" parent="CanvasLayer/Glow/UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("27_term")
+script = ExtResource("26_core")
+
+[node name="PauseMenu" parent="CanvasLayer/Glow/UI" unique_id=125140598 instance=ExtResource("22")]
+unique_name_in_owner = true
+
+[node name="LoadingScreen" parent="CanvasLayer/Glow/UI" unique_id=63229698 instance=ExtResource("21")]
+unique_name_in_owner = true
+
+[node name="IntroScreen" type="Control" parent="CanvasLayer/Glow/UI"]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("27_term")
+script = ExtResource("29_intro")
+
+[node name="DevPanel" type="Control" parent="CanvasLayer/Glow/UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("27_term")
+script = ExtResource("28_dev")
+
+[node name="VoidShroud" type="CanvasLayer" parent="."]
+layer = 40
+script = ExtResource("24_void")
+
+[node name="HullAlarm" type="CanvasLayer" parent="."]
+layer = 35
+script = ExtResource("25_hull")
+
+[node name="CRT" parent="." instance=ExtResource("31_crt")]

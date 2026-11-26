@@ -1,0 +1,745 @@
+extends RigidBody2D
+class_name Ship
+
+## Player ship entity. Owns the Drive (fuel and the boost), hull (via HealthComponent),
+## cargo weight, and input intent flags. Behavior is delegated to states via StateMachine:
+## FlyingState → LandedState (docked) / PlanetLandedState (on a landing site) /
+## HarvestingState / DestroyedState.
+## Signals: cargo_changed (fuel's are on `drive`).
+
+@export var thrust_power: float = 262.5
+@export var turn_speed: float = 5
+@export var fuel_consumption_rate: float = 5.0  # Fuel per second, before the boost's multiplier
+@export var boost_power_multiplier: float = 2.667  # Multiplier for boost thrust power (keeps the boost at ~700)
+@export var boost_fuel_multiplier: float = 3.0  # Multiplier for boost fuel consumption
+## Ordinary thrust stops adding speed past this (px/s). It still steers and brakes up
+## there; only the boost (or gravity) takes the ship faster. Keeps short hops around a
+## debris field untouched while making the long haul between planets a slow cruise.
+@export var cruise_speed: float = 300.0
+
+@export var max_hull: float = 100.0
+@export var crash_damage_multiplier: float = 0.5  # Damage per unit of collision velocity
+@export var damage_threshold: float = 50.0  # Minimum impact speed to take damage
+
+@export var max_cargo_weight: float = 0.0  # Hold space (gems take 1-3 units each); the ship starts with none
+
+# Base stats (stored at initialization). The ship's limits are fixed: nothing is bought.
+var base_max_hull: float = 100.0
+var base_max_cargo_weight: float = 0.0
+@export var base_mass: float = 1.0  # Base mass of the ship (set in _ready from initial mass)
+@export var cargo_mass_multiplier: float = 0.01  # How much cargo weight affects physics mass
+
+## The tip of the hull, where Freight is clamped (local space).
+const NOSE := Vector2(10, 0)
+## A clamped load slows turning by the ratio of the ship's own inertia to the combined
+## inertia. Taken honestly that leaves a long piece all but unturnable, so the ratio is
+## softened by this power: 1.0 is physical, 0.5 its square root.
+const FREIGHT_TURN_EXPONENT := 0.5
+
+## Freight clamped to the nose, or null. Set only through the verbs below
+## (carry, let_go, surrender_to_void, hand_over, discard_freight): non-null exactly while
+## the ship is in CarryingState.
+var freight: Freight = null
+var _freight_collider: CollisionPolygon2D = null
+var _turn_ratio := 1.0
+## The Components on the hull (GameState.fitted, as of the last refit).
+var _fitted := PackedStringArray()
+## How far aft of the bare hull's tail the fitted parts reach, px (0 bare). The engines ride
+## on the furthest part's tail, so the exhaust, a dock's stand-off and the height the ship
+## lands at all move back with it.
+var aft_overhang := 0.0
+## Where the exhausts sit on the bare hull.
+const THRUSTER_AT := Vector2(-14, 0)
+const BOOST_AT := Vector2(-10, 0)
+
+signal cargo_changed(current_weight: float, max_weight: float)
+
+var want_turn_left := false
+var want_turn_right := false
+var want_thrust := false
+var want_reverse_thrust := false
+## Side thrust (Q/E): slides the ship sideways without turning it.
+var want_strafe_left := false
+var want_strafe_right := false
+## A slow tumble the ship keeps, rad/s, until the player first turns or thrusts: how a new game opens,
+## the ship adrift outside SR-7. 0 is under control.
+var drift_spin := 0.0
+var want_boost := false
+var gs: GameState = null
+var health_component: HealthComponent
+var hull_strength: float:
+	get:
+		return health_component.current_hp if health_component else 0.0
+	set(value):
+		if health_component:
+			health_component.current_hp = clamp(value, 0.0, health_component.max_hp)
+			# A repair or a save being restored all land here rather than
+			# in take_damage, so this is where the readouts have to be told.
+			health_component.hp_changed.emit(health_component.current_hp, health_component.max_hp)
+## The Aux and the Burn: the tank, the free half, the cough, and
+## whether the boost is lit. Every fuel read and write goes through it.
+var drive := Drive.new()
+## Dev-panel overrides (ui/DevPanel.gd), off in normal play. Nothing but that panel
+## writes them, and it only exists in a debug build.
+var dev_invulnerable := false
+var low_fuel_effect: LowFuelEffect = null  # vapor + the backfire when the tank runs low
+var low_hull_effect: LowHullEffect = null  # venting smoke, sparks and a strobe when the hull fails
+var sonar: SonarPulse = null
+## The Marks a Sweep lays down near hardware that listens.
+var resonance: Resonance = null
+var _sonar_blocked := false  # this hold of `action` began or passed somewhere it couldn't ping  # sonar resonance rings while `action` is held (see wants_sonar)
+
+# Landing lock system
+var landing_lock_distance: float = 5.0  # Distance threshold for landing lock (pixels above surface)
+
+# State machine reference
+@onready var state_machine: StateMachine = $"StateMachine"
+@onready var harvest_cone: HarvestCone = $"HarvestCone"
+
+@onready var thruster_particles: GPUParticles2D = $"ThrusterParticles"
+@onready var boost_particles: GPUParticles2D = $"BoostParticles"
+@onready var side_thruster_particles: GPUParticles2D = $"SideThrusterParticles"
+@onready var ship_polygon: Node2D = $"Body"
+@onready var camera: ShipCamera = $"Camera2D"
+
+@export var camera_shake_intensity: float = 1.2  # How much the camera shakes
+@export var camera_shake_speed: float = 25.0  # How fast the shake oscillates
+@export var damage_shake_intensity: float = 2.0  # How much the camera shakes when taking damage
+@export var damage_shake_duration: float = 0.3  # How long damage shake lasts (seconds)
+## Damage that counts as a full-strength hit; anything more shakes and glitches no harder.
+const DAMAGE_REFERENCE := 20.0
+@export var explosion_shake_intensity: float = 5.0  # How much the camera shakes on explosion
+@export var explosion_shake_duration: float = 1.0  # How long explosion shake lasts (seconds)
+@export var harvest_shake_intensity: float = 1.5  # How much the camera shakes on harvest success
+@export var harvest_shake_duration: float = 0.5  # How long harvest shake lasts (seconds)
+@export var harvest_lockon_shake_intensity: float = 0.8  # Camera bump on harvest lock-on
+@export var harvest_lockon_shake_duration: float = 0.3  # Duration of lock-on bump
+## Clamping Freight: the camera bump, the particle burst (x the base clunk) and the hitstop.
+const CLAMP_SHAKE_INTENSITY := 1.5
+const CLAMP_SHAKE_DURATION := 0.3
+const CLAMP_BURST := 1.7
+## How many times more particles than the burst's strength alone gives, clamping and letting go.
+const CLAMP_DENSITY := 2.5
+const RELEASE_DENSITY := 2.0
+## How opaque the shockwave rings start.
+const CLAMP_RING_ALPHA := 0.4
+const CLAMP_HITSTOP := 0.04
+## Letting go: a lighter version of the same, no hitstop.
+const RELEASE_SHAKE_INTENSITY := 1.0
+const RELEASE_SHAKE_DURATION := 0.25
+const RELEASE_BURST := 1.3
+## Released Freight drifts off the nose this fast (px/s) on top of the ship's velocity, so
+## the two slowly part instead of hanging together.
+const RELEASE_DRIFT := 6.0
+
+var camera_shake_time: float = 0.0
+var damage_shake_time: float = 0.0  # Time remaining for damage shake
+var damage_shake_current_intensity: float = 0.0  # Current intensity (can be overridden for explosions)
+var camera_base_offset: Vector2 = Vector2.ZERO
+
+# Store original boost particle material properties for reset
+var original_boost_direction: Vector3 = Vector3(-1, 0, 0)
+var original_boost_spread: float = 20.0
+var original_boost_velocity_min: float = 100.0
+var original_boost_velocity_max: float = 250.0
+var original_boost_scale_min: float = 5.0
+var original_boost_scale_max: float = 10.0
+var original_boost_color: Color = Color(Colors.CREAM_SOFT, 0.5568628)
+var original_boost_amount: int = 100
+var original_boost_lifetime: float = 1.5
+
+func _ready() -> void:
+	add_to_group("ship")
+	z_index = 2  # over planets, stations and landing pads it sits on
+	contact_monitor = true
+	max_contacts_reported = 4
+	can_sleep = false  # keep body awake while testing input; turn back on later if you like
+	# Try to get GameState, with fallback
+	gs = get_tree().get_first_node_in_group("game_state")
+	
+	# Store base stats from @export values (these are the unmodified base values)
+	base_max_hull = max_hull
+	base_max_cargo_weight = max_cargo_weight
+	_set_overhang()
+
+	# Create HealthComponent
+	health_component = HealthComponent.new()
+	health_component.name = "HealthComponent"
+	health_component.max_hp = max_hull
+	health_component.damage_cooldown = 0.1
+	add_child(health_component)
+	health_component.died.connect(explode)
+	# Hull news goes out on the bus so the dashboard, the overlay and the robot can
+	# each react without any of them reaching into the ship for it.
+	health_component.damaged.connect(_on_damaged)
+	health_component.hp_changed.connect(func(current: float, max_hp: float) -> void:
+		EventBus.ship_hull_changed.emit(current, max_hp))
+
+	# Initialize fuel
+	drive.burn_rate = fuel_consumption_rate * boost_fuel_multiplier
+	drive.fuel = drive.max_fuel
+	low_fuel_effect = LowFuelEffect.new()
+	low_fuel_effect.name = "LowFuelEffect"
+	add_child(low_fuel_effect)
+
+	low_hull_effect = LowHullEffect.new()
+	low_hull_effect.name = "LowHullEffect"
+	add_child(low_hull_effect)
+
+	sonar = SonarPulse.new()
+	sonar.name = "SonarPulse"
+	add_child(sonar)
+	resonance = Resonance.new()
+	resonance.name = "Resonance"
+	add_child(resonance)
+
+	var magnet := GemMagnet.new()
+	magnet.name = "GemMagnet"
+	add_child(magnet)
+
+	# Visiting a Body works from the first minute.
+	var planet_log := PlanetLog.new()
+	planet_log.name = "PlanetLog"
+	add_child(planet_log)
+
+	# Store initial mass as base_mass for cargo calculations
+	base_mass = mass
+	
+	# Connect to InventoryManager for cargo weight changes
+	InventoryManager.cargo_weight_changed.connect(_on_cargo_weight_changed)
+	update_mass_from_cargo()
+	
+	# Store initial camera offset for shake calculations
+	if camera:
+		camera_base_offset = camera.offset
+	
+	# Duplicate particle materials so we can modify them at runtime
+	if thruster_particles and thruster_particles.process_material:
+		thruster_particles.process_material = thruster_particles.process_material.duplicate()
+	if boost_particles and boost_particles.process_material:
+		boost_particles.process_material = boost_particles.process_material.duplicate()
+		# Store original boost particle properties
+		var boost_material = boost_particles.process_material as ParticleProcessMaterial
+		if boost_material:
+			original_boost_direction = boost_material.direction
+			original_boost_spread = boost_material.spread
+			original_boost_velocity_min = boost_material.initial_velocity_min
+			original_boost_velocity_max = boost_material.initial_velocity_max
+			original_boost_scale_min = boost_material.scale_min
+			original_boost_scale_max = boost_material.scale_max
+			original_boost_color = boost_material.color
+		original_boost_amount = boost_particles.amount
+		original_boost_lifetime = boost_particles.lifetime
+	if side_thruster_particles and side_thruster_particles.process_material:
+		side_thruster_particles.process_material = side_thruster_particles.process_material.duplicate()
+
+var _last_frame_usec := 0
+
+func _process(_dt: float) -> void:
+	# Hitstop slows physics, but orbits keep wall-clock time: keep pace so the ship
+	# doesn't fall behind the scrap it's harvesting.
+	var now := Time.get_ticks_usec()
+	var real_dt := (now - _last_frame_usec) / 1_000_000.0 if _last_frame_usec > 0 else 0.0
+	_last_frame_usec = now
+	if real_dt < 0.1 and not is_gone():
+		var catch_up := HarvestJuice.hitstop_catch_up(linear_velocity, real_dt)
+		if catch_up != Vector2.ZERO:
+			global_position += catch_up
+
+func _physics_process(dt: float) -> void:
+	# Delegate to current state
+	if state_machine and state_machine.current_state:
+		state_machine.current_state.physics_process(dt)
+	# The flight states tick the Drive themselves, straight after sampling the stick
+	if not _in_flight():
+		drive.rest()
+	if sonar:
+		_drive_sonar()
+		resonance.tick(dt, sonar.charging, Resonance.available_for(self))
+
+## `action` held charges a ping, let go sends it. A hold that was ever somewhere a ping
+## isn't allowed (docked, a menu, a load clamped - including the hold that lets the load
+## go) belongs to that, not the sonar: any charge is dropped, and the rest of the hold is
+## ignored until the key comes up.
+func _drive_sonar() -> void:
+	var down := Input.is_action_pressed("action")
+	if not down:
+		_sonar_blocked = false
+	elif not wants_sonar():
+		_sonar_blocked = true
+	if down and not _sonar_blocked:
+		sonar.charging = true
+	elif sonar.charging:
+		if down:
+			sonar.cancel()
+		else:
+			# Near hardware that listens the hold is also a Mark, or the Commit that
+			# carries them all out on this ring
+			var marks: Array[int] = []
+			if Resonance.available_for(self):
+				marks = resonance.release(sonar.held())
+			sonar.fire(marks)
+
+## Sonar resonance: `action` pings from anywhere the ship is free to act. It is not tied
+## to harvesting; a scrap or a seam in the rings is what makes a ping a harvest. The state
+## decides (ShipState.allows_sonar), and a menu over the game takes the key.
+func wants_sonar() -> bool:
+	if not Input.is_action_pressed("action") or not ControlLock.allows(ControlLock.SWEEP):
+		return false
+	var state := state_machine.current_state as ShipState if state_machine else null
+	if state == null or not state.allows_sonar():
+		return false
+	var flying := state_machine.states.get("FlyingState") as FlyingState
+	return flying == null or not flying._is_ui_blocking_input()
+
+## One flight step of the Drive, from the wants just sampled: a Burn is tried when the
+## boost is held with thrust on. The flight states call it before anything reads is_lit.
+func tick_drive(dt: float) -> void:
+	drive.tick(dt, want_boost and (want_thrust or want_reverse_thrust))
+
+## Free flight or harvesting: the only states the engines run in.
+func _in_flight() -> bool:
+	var current := state_machine.current_state if state_machine else null
+	return current is FlyingState or current is HarvestingState
+
+func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	# Delegate to current state
+	if state_machine and state_machine.current_state:
+		state_machine.current_state.integrate_forces(state)
+
+
+func take_damage(amount: float) -> void:
+	if is_gone() or dev_invulnerable:
+		return
+	health_component.take_damage(amount)
+
+## The hit that actually landed — hits the damage cooldown swallowed never reach here,
+## so the kick and the glitch fire once per wound instead of once per graze.
+func _on_damaged(amount: float) -> void:
+	var ratio := health_component.get_hp_ratio()
+	# A scratch rattles the frame; a real hit throws it. Held back from the explosion
+	# band so FlyingState never mistakes a bad landing for the ship coming apart.
+	var severity := clampf(amount / DAMAGE_REFERENCE, 0.35, 1.0)
+	if damage_shake_current_intensity < damage_shake_intensity * severity or damage_shake_time <= 0.0:
+		damage_shake_time = damage_shake_duration
+		damage_shake_current_intensity = damage_shake_intensity * severity
+	EventBus.ship_damaged.emit(amount, ratio)
+
+func explode() -> void:
+	# Trigger intense camera shake on explosion
+	damage_shake_time = explosion_shake_duration
+	damage_shake_current_intensity = explosion_shake_intensity
+	
+	# Transition to DestroyedState
+	if state_machine and state_machine.has_state("DestroyedState"):
+		state_machine.change_state("DestroyedState")
+
+## Helper method to check if ship is destroyed
+func is_destroyed() -> bool:
+	return state_machine and state_machine.current_state is DestroyedState
+
+## Destroyed or taken by the Void: either way the hull is gone and nothing —
+## damage, hitstop catch-up, harvesting — should still be acting on it.
+func is_gone() -> bool:
+	return state_machine and (state_machine.current_state is DestroyedState or state_machine.current_state is ConsumedState)
+
+## Helper method to check if ship is locked to planet
+func is_locked_to_planet() -> bool:
+	return state_machine and state_machine.current_state is LandedState
+
+## True while sitting on a planet's landing site.
+func is_landed_on_planet() -> bool:
+	return state_machine and state_machine.current_state is PlanetLandedState
+
+## Reset boost particles to original state (after explosion)
+func reset_boost_particles() -> void:
+	if not boost_particles or not boost_particles.process_material:
+		return
+	
+	var boost_material = boost_particles.process_material as ParticleProcessMaterial
+	if boost_material:
+		boost_material.direction = original_boost_direction
+		boost_material.spread = original_boost_spread
+		boost_material.initial_velocity_min = original_boost_velocity_min
+		boost_material.initial_velocity_max = original_boost_velocity_max
+		boost_material.scale_min = original_boost_scale_min
+		boost_material.scale_max = original_boost_scale_max
+		boost_material.color = original_boost_color
+	
+	boost_particles.amount = original_boost_amount
+	boost_particles.lifetime = original_boost_lifetime
+	boost_particles.one_shot = false
+	boost_particles.emitting = false
+	boost_particles.position = BOOST_AT - Vector2(aft_overhang, 0)  # Reset position
+
+## Update the ship's physics mass based on current cargo weight, plus any Freight on the nose
+func update_mass_from_cargo() -> void:
+	var cargo_weight = InventoryManager.get_total_weight()
+	_apply_mass(base_mass + (cargo_weight * cargo_mass_multiplier))
+	cargo_changed.emit(cargo_weight, max_cargo_weight)
+
+## Set the body's mass, centre of mass and inertia from the ship's own mass, its fitted
+## Components and whatever is clamped to it. Bare and unladen this is exactly the ship as it
+## always was: its own mass, its centre at the origin, and inertia left to the engine.
+func _apply_mass(own_mass: float) -> void:
+	if not is_carrying() and _fitted.is_empty():
+		mass = own_mass
+		center_of_mass = Vector2.ZERO
+		inertia = 0.0
+		_turn_ratio = 1.0
+		return
+	var c := _combined(own_mass, _fitted, is_carrying())
+	mass = c["mass"]
+	center_of_mass = c["com"]
+	inertia = c["inertia"]
+	_turn_ratio = turn_ratio_for(c["own_inertia"], c["inertia"])
+
+## The ship's hull at `own_mass` plus fitted Components `ids` (and the clamped load, with
+## `laden`), as one body: its mass, centre of mass, inertia about that centre, and the
+## bare hull's own inertia to compare against. The hull counts as centred on the origin.
+func _combined(own_mass: float, ids: PackedStringArray, laden: bool) -> Dictionary:
+	var hull := _hull_outline()
+	var own_i := Freight.box_inertia(hull, own_mass)
+	var total := own_mass
+	var moment := Vector2.ZERO
+	var i := own_i
+	var pieces: Array = []
+	for id in ids:
+		pieces.append([Components.fitted_outline(id), Components.fitted_mass(id)])
+	if laden:
+		pieces.append([freight.transform * freight.outline, freight.mass])
+	for piece in pieces:
+		var outline: PackedVector2Array = piece[0]
+		var m: float = piece[1]
+		if outline.is_empty() or m <= 0.0:
+			continue
+		total += m
+		moment += Freight.bounds(outline).get_center() * m
+		i += Freight.box_inertia(outline, m)
+	var com := moment / total
+	return {"mass": total, "com": com, "inertia": i - total * com.length_squared(), "own_inertia": own_i}
+
+## How well the ship handles with Components `ids` fitted, empty and unladen: 1.0 bare,
+## less as parts add mass (slower to speed up) and inertia (slower to turn). SHIP draws
+## it as a bar.
+func handling(ids: PackedStringArray = _fitted) -> float:
+	var c := _combined(base_mass, ids, false)
+	return turn_ratio_for(c["own_inertia"], c["inertia"]) * base_mass / c["mass"]
+
+## How much of its unladen turn a ship keeps with a load: the inertia ratio, softened.
+static func turn_ratio_for(own_inertia: float, combined_inertia: float) -> float:
+	if combined_inertia <= own_inertia or combined_inertia <= 0.0:
+		return 1.0
+	return pow(own_inertia / combined_inertia, FREIGHT_TURN_EXPONENT)
+
+## 1.0 unladen; less with Freight clamped (FlyingState.turned_spin reads it).
+func turn_ratio() -> float:
+	return _turn_ratio
+
+func is_carrying() -> bool:
+	return freight != null and is_instance_valid(freight)
+
+# --- Verbs: Freight and docking ----------------------------------------------------------
+# What other modules ask of the ship. Each verb owns its state change and hands the next
+# state what it needs, so the ship is in CarryingState exactly while it holds Freight.
+
+## Carry `f`: the magnet has it, so clamp it to the nose and fly laden (CarryingState).
+## The only way into CarryingState. `quiet` skips the clunk (a load put back on the nose
+## from a save or a scenario). False, doing nothing, if a load is already on or `f` is gone.
+func carry(f: Freight, quiet := false) -> bool:
+	if is_carrying() or f == null or not is_instance_valid(f) or state_machine == null:
+		return false
+	var carrying := state_machine.states.get("CarryingState") as CarryingState
+	if carrying == null:
+		return false
+	carrying.stage(f, quiet)
+	state_machine.change_state("CarryingState")
+	return is_carrying()
+
+## Let go of the load where it is (see _release_freight) and fly on unladen. Returns the
+## piece, or null if nothing was clamped.
+func let_go() -> Freight:
+	if not is_carrying():
+		return null
+	var f := freight
+	state_machine.change_state("FlyingState")  # leaving CarryingState lets go
+	return f
+
+## The Void takes the ship (ConsumedState) but never its load: that is put back inside
+## the edge first (see _surrender_freight_to_void). Returns the piece, or null.
+func surrender_to_void() -> Freight:
+	var f := _surrender_freight_to_void()
+	if state_machine and state_machine.has_state("ConsumedState"):
+		state_machine.change_state("ConsumedState")
+	return f
+
+## Hand the load, still clamped and out of physics, to `holder` (an abandoned hull), and
+## fly on unladen. Returns the piece, or null if nothing was clamped.
+func hand_over(holder: Node2D) -> Freight:
+	if not is_carrying() or holder == null:
+		return null
+	var f := _hand_freight_to(holder)
+	state_machine.change_state("FlyingState")
+	return f
+
+## Forget the clamped load without letting it go anywhere (it is about to be freed: a load
+## or a new game replaces every piece, Freight.clear_all), and fly on unladen.
+func discard_freight() -> void:
+	_detach_freight()
+	update_mass_from_cargo()
+	if state_machine and state_machine.current_state is CarryingState:
+		state_machine.change_state("FlyingState")
+
+## Dock at `dockable` (see Dockable): the state it belongs in - LandedState at a port,
+## GateDockedState at a Gate - is handed the berth and takes it from there. `instant`
+## skips the approach (spawning, a Gate transit). False, doing nothing, if `dockable` is
+## not something the ship can dock at.
+func dock_at(dockable: Node2D, instant := false) -> bool:
+	if not Dockable.is_dockable(dockable) or state_machine == null:
+		return false
+	var docked := state_machine.states.get(Dockable.docked_state_for(dockable)) as DockingState
+	if docked == null:
+		return false
+	docked.stage(dockable, instant)
+	state_machine.change_state(docked.name)
+	return true
+
+# --- What the verbs do to the hull (CarryingState and the verbs only) --------------------
+
+## Take hold of `f` at its Lug. It stops being a body of its own: it rides on the nose in
+## the pose its Lug fixes, its outline becomes part of the hull, and its mass joins the
+## ship's. Momentum is shared, so clamping a piece at rest drags the ship a little.
+## Its mark comes off the Chart and the ship tracks where it is headed instead. `quiet`
+## skips the clunk (a load being put back on the nose from a save).
+func _clamp_freight(f: Freight, quiet := false) -> void:
+	drift_spin = 0.0  # a load on the nose is a ship under control
+	if is_carrying() or f == null or not is_instance_valid(f):
+		return
+	var own_mass := mass
+	var shared := (linear_velocity * own_mass + f.linear_velocity * f.mass) / (own_mass + f.mass)
+	var pose := Freight.clamped_pose(f.lug_position, f.lug_facing, NOSE)
+	freight = f
+	f.handled = true
+	f.process_mode = Node.PROCESS_MODE_DISABLED  # out of the physics space while it rides
+	f.reparent(self, false)
+	f.transform = pose
+	_freight_collider = CollisionPolygon2D.new()
+	_freight_collider.name = "FreightCollision"
+	_freight_collider.polygon = f.outline
+	_freight_collider.transform = pose
+	add_child(_freight_collider)
+	update_mass_from_cargo()
+	linear_velocity = shared
+	NavSystem.track(f.destination())
+	if not quiet:
+		clamp_fx(f)
+
+## Let go of whatever is clamped, where it is. It carries on as the ship was moving - the
+## ship's velocity, the ship's heading, no spin - plus a nudge of RELEASE_DRIFT straight off
+## the nose, so the two very slowly part. It is marked on the Chart and becomes the
+## tracked target at once. Returns the piece (null if nothing was clamped).
+func _release_freight() -> Freight:
+	if not is_carrying():
+		# Freed out from under the clamp (a scenario or a lab clearing it): nothing to let
+		# go of, but the hull still wears its outline and mass
+		if freight != null or _freight_collider != null:
+			_detach_freight()
+			update_mass_from_cargo()
+		return null
+	var f := freight
+	var carried := global_transform * f.transform
+	var hull_velocity := _velocity_at(global_position, to_global(center_of_mass))
+	_detach_freight()
+	f.reparent(get_parent(), false)
+	f.global_transform = carried
+	f.process_mode = Node.PROCESS_MODE_INHERIT
+	var forward := (to_global(NOSE) - global_position).normalized()
+	f.linear_velocity = hull_velocity + forward * RELEASE_DRIFT
+	f.angular_velocity = 0.0
+	update_mass_from_cargo()
+	linear_velocity = hull_velocity
+	# It was touching the nose: let the two drift apart before they can collide again.
+	f.part_from(self)
+	release_fx(f)
+	NavSystem.track(f.tracking_target())
+	return f
+
+## The Void takes the ship but never its load: the piece turns up on the same bearing
+## from the sun, Freight.VOID_RETURN_DISTANCE inside the edge, at rest, marked and
+## tracked. Returns it, or null if nothing was clamped.
+func _surrender_freight_to_void() -> Freight:
+	if not is_carrying():
+		return null
+	var f := freight
+	var carried := global_transform * f.transform
+	_detach_freight()
+	f.reparent(get_parent(), false)
+	var at := Freight.void_return_point(carried.origin, VoidZone.sun_position())
+	f.global_transform = Transform2D(carried.get_rotation(), at)
+	f.process_mode = Node.PROCESS_MODE_INHERIT
+	f.linear_velocity = Vector2.ZERO
+	f.angular_velocity = 0.0
+	update_mass_from_cargo()
+	NavSystem.track(f.tracking_target())
+	return f
+
+## Hand the clamped load, still clamped and out of physics, to `holder`, where it is.
+## Returns it, or null if nothing was clamped.
+func _hand_freight_to(holder: Node2D) -> Freight:
+	if not is_carrying():
+		return null
+	var f := freight
+	_detach_freight()
+	f.reparent(holder, true)
+	update_mass_from_cargo()
+	return f
+
+func _detach_freight() -> void:
+	freight = null
+	if _freight_collider:
+		remove_child(_freight_collider)
+		_freight_collider.queue_free()
+		_freight_collider = null
+
+## Letting go: smoke and sparks where the Lug leaves the nose, one cream ring, the Lug
+## glints and the piece jolts, and the camera takes a small bump.
+func release_fx(f: Freight) -> void:
+	var nose := to_global(NOSE)
+	ClampFX.burst(get_parent(), nose, linear_velocity, RELEASE_BURST, RELEASE_DENSITY)
+	HarvestJuice.ring(get_parent(), nose, Color(Colors.CREAM, CLAMP_RING_ALPHA), 50.0, linear_velocity)
+	f.punch(0.1)
+	f.flash_released()
+	damage_shake_time = RELEASE_SHAKE_DURATION
+	damage_shake_current_intensity = RELEASE_SHAKE_INTENSITY
+
+## Taking hold is the big moment, bigger than letting go: a beat of hitstop, two
+## shockwaves off the nose, a heavier spray of sparks, a harder camera bump, and the piece
+## lights up and jolts.
+## `hitstop` off for a latch onto something riding an orbit (a buried Section): orbits keep
+## wall-clock time through a hitstop, and the pair would be torn apart for its length.
+func clamp_fx(f: Freight, hitstop := true) -> void:
+	var nose := to_global(NOSE)
+	var world := get_parent()
+	ClampFX.burst(world, nose, linear_velocity, CLAMP_BURST, CLAMP_DENSITY)
+	HarvestJuice.ring(world, nose, Color(Colors.CREAM, CLAMP_RING_ALPHA), 45.0, linear_velocity)
+	HarvestJuice.ring(world, nose, Color(Colors.PRIMARY, CLAMP_RING_ALPHA), 80.0, linear_velocity)
+	if hitstop:
+		HarvestJuice.hitstop(get_tree(), CLAMP_HITSTOP)
+	f.punch(0.14)
+	f.flash_clamped()
+	damage_shake_time = CLAMP_SHAKE_DURATION
+	damage_shake_current_intensity = CLAMP_SHAKE_INTENSITY
+
+## Is `shape_index` (a contact's local shape) part of the clamped load rather than the hull?
+func is_freight_shape(shape_index: int) -> bool:
+	if _freight_collider == null or shape_index < 0:
+		return false
+	return shape_owner_get_owner(shape_find_owner(shape_index)) == _freight_collider
+
+## Where the clamped load's middle is, in world space (the ship's own position if none).
+func freight_center() -> Vector2:
+	return freight.global_transform * freight.own_center() if is_carrying() else global_position
+
+func _velocity_at(point: Vector2, com: Vector2) -> Vector2:
+	var r := point - com
+	return linear_velocity + Vector2(-angular_velocity * r.y, angular_velocity * r.x)
+
+func _hull_outline() -> PackedVector2Array:
+	var hull := get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+	return hull.transform * hull.polygon if hull else PackedVector2Array([Vector2(-12, -9), Vector2(10, 9)])
+
+## Callback when cargo weight changes in InventoryManager
+func _on_cargo_weight_changed(_total_weight: float) -> void:
+	update_mass_from_cargo()
+
+## Get current cargo weight
+func get_cargo_weight() -> float:
+	return InventoryManager.get_total_weight()
+
+## Check if cargo is at capacity. A ship with no hold isn't full; it has nothing to fill.
+func is_cargo_full() -> bool:
+	return has_hold() and InventoryManager.get_total_weight() >= max_cargo_weight
+
+## A new game starts with no hold at all: until one is fitted,
+## nothing harvests and the hold readouts stay hidden.
+func has_hold() -> bool:
+	return max_cargo_weight > 0.0
+
+## Size the ship to what `gs` has fitted: the hold is the Cargo Bay's, or none at all.
+## Runs on fitting and on every load.
+func refit(state: GameState) -> void:
+	_fitted = state.fitted() if state else PackedStringArray()
+	max_cargo_weight = base_max_cargo_weight + Components.hold(Array(_fitted))
+	FittedParts.build(self, _fitted)
+	_set_overhang()
+	update_mass_from_cargo()
+
+## The Components on the hull, as of the last refit.
+func fitted() -> PackedStringArray:
+	return _fitted
+
+func _set_overhang() -> void:
+	var tail := Freight.bounds(_hull_outline()).position.x
+	var reach := tail
+	for id in _fitted:
+		reach = minf(reach, Components.fitted_tail(id))
+	aft_overhang = tail - reach
+	if thruster_particles == null:
+		return  # refit before _ready: _ready places the exhausts
+	thruster_particles.position = THRUSTER_AT - Vector2(aft_overhang, 0)
+	boost_particles.position = BOOST_AT - Vector2(aft_overhang, 0)
+
+# --- Coming back: a new clone in this hull ----------------------------------------------
+# Nothing outside the ship writes its hull, motion, shake, spin or boost particles to reset
+# it; a new game and a relaunch both come through here (Session runs the rest).
+
+## A new game: the ship as the scene builds it. Stats back to base, hull full, tank dry - a
+## new game wakes with no FUEL TANK seated, so fuel is something the
+## player has to go and get.
+func reset_to_initial_state() -> void:
+	max_hull = base_max_hull
+	max_cargo_weight = base_max_cargo_weight
+	_fitted = PackedStringArray()
+	FittedParts.clear(self)
+	_set_overhang()
+	_apply_mass(base_mass)
+	drive.fuel = 0.0
+	_reset_flight()
+	if ship_polygon:
+		ship_polygon.visible = true
+	cargo_changed.emit(0.0, max_cargo_weight)
+
+## A relaunch after a loss (destroyed, or taken by the Void): the next clone comes up in
+## this hull. Fitted upgrades persist (the cloning bay prints the ship's spec),
+## the hull is whole, and SR-7 tops the tank up to its free half once its core runs. A
+## load still on the nose stays out here, where the ship was lost.
+func relaunch(state: GameState) -> void:
+	let_go()
+	_reset_flight()
+	drive.top_up_to_free_floor(state)
+
+## Every flight field back to a ship under control: hull full, at rest, level, no tumble,
+## no shake, the boost plume as built, flying, and processing again (DestroyedState stops
+## it). Where the ship then comes up is the spawner's business.
+func _reset_flight() -> void:
+	health_component.max_hp = max_hull
+	health_component.reset()
+
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+	rotation = 0.0
+	drift_spin = 0.0
+
+	camera_shake_time = 0.0
+	damage_shake_time = 0.0
+	damage_shake_current_intensity = 0.0
+
+	reset_boost_particles()
+
+	if state_machine and state_machine.has_state("FlyingState"):
+		state_machine.change_state("FlyingState")
+	set_process(true)
+	set_physics_process(true)
+
+	update_mass_from_cargo()
+	drive.changed.emit()

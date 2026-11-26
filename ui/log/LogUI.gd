@@ -1,0 +1,187 @@
+class_name LogUI
+extends Control
+
+## The Log: the player's own screen, kept by the ship, not by the Titan. A tabbed
+## terminal window: the Map tab carries the star chart, then the ship's log (ShipLogTab),
+## which "I" opens on, then the Hold; the Records tab holds one entry per thing the player
+## has reached. Opens and closes
+## with "I", or with "M" straight onto the chart (ESC also closes; see Main).
+##
+## No Automaton speaks from inside the Log — it is the player's own instrument, read
+## alone. UNIT-7 is met at SR-7 and heard on the radio, never carried around in a menu.
+##
+## Built in code from TerminalWindow + LogTab subclasses; the .tscn is just the root.
+## Adding a tab is one LogTab subclass plus one entry in TABS.
+
+signal dialogue_closed
+
+## Sized for the star chart, which used to fill the screen inside a margin.
+const WINDOW_SIZE := Vector2(1160, 640)
+## The tabs, in notch order.
+const TABS := [
+	preload("res://ui/log/MapTab.gd"),
+	preload("res://ui/log/ShipLogTab.gd"),
+	preload("res://ui/log/ShipTab.gd"),
+	preload("res://ui/log/RecordsTab.gd"),
+]
+## Where the star chart sits in TABS, for "M" to open straight onto it.
+const MAP_TAB := 0
+## The ship's log: what "I" opens on.
+const LOG_TAB := 1
+const SHIP_TAB := 2
+const RECORDS_TAB := 3
+
+var gs: GameState = null
+var inventory_manager: InventoryManager = null
+
+var _frame: TerminalWindow
+var _tabs: Array[LogTab] = []
+var _active := 0
+var _ship: Ship = null
+
+
+func _ready() -> void:
+	visible = false
+	add_to_group("log_ui")
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build()
+	gs = get_tree().get_first_node_in_group("game_state") as GameState
+	inventory_manager = get_node_or_null("/root/InventoryManager") as InventoryManager
+
+	# Key names in the hint follow the device in hand.
+	Controls.device_changed.connect(_on_device_changed)
+	Controls.bindings_changed.connect(_on_device_changed)
+
+	# Live updates while open
+	if gs:
+		gs.stores_changed.connect(_refresh)
+	if inventory_manager:
+		inventory_manager.inventory_changed.connect(_refresh)
+	# A survey landing while the Log is up fills that Body's Record where the player can
+	# see it, without closing and reopening.
+	EventBus.planet_scanned.connect(_refresh)
+	_connect_ship()
+	# The Log and its chart are instruments too: out in the Void they glitch with the HUD
+	add_child(VoidGlitch.new())
+
+
+func open_log(tab := LOG_TAB) -> void:
+	_connect_ship()
+	visible = true
+	_show_tab(tab)
+	_frame.animate_in()
+
+
+## Onto the star chart: open the Log there, or switch to it if the Log is already up.
+func open_map() -> void:
+	if visible:
+		_show_tab(MAP_TAB)
+	else:
+		open_log(MAP_TAB)
+
+
+func is_on_map() -> bool:
+	return visible and _active == MAP_TAB
+
+
+func close_log() -> void:
+	visible = false
+	if _tabs.is_empty():
+		return
+	_tabs[_active].visible = false
+	_tabs[_active].on_hidden()
+	dialogue_closed.emit()
+
+
+## Title of the tab currently up, e.g. "SHIP". For tests and playtests.
+func active_tab_title() -> String:
+	return _tabs[_active].tab_title() if not _tabs.is_empty() else ""
+
+
+# --- Layout ------------------------------------------------------------------
+
+func _build() -> void:
+	_frame = TerminalWindow.new(WINDOW_SIZE, TerminalWindow.spaced_title("LOG"), LogTab.shell_keys())
+	add_child(_frame)
+
+	var titles: Array[String] = []
+	for script in TABS:
+		var tab: LogTab = script.new()
+		tab.visible = false
+		_tabs.append(tab)
+		_frame.body.add_child(tab)
+		titles.append(tab.tab_title())
+	_frame.add_tabs(titles)
+
+
+## Open `index`'s tab: light its notch, hide the tab that was up, and hand the bottom
+## border's hint over to the one now in front.
+func _show_tab(index: int) -> void:
+	if _tabs.is_empty():
+		return
+	var previous := _active
+	_active = clampi(index, 0, _tabs.size() - 1)
+	if previous != _active and _tabs[previous].visible:
+		_tabs[previous].visible = false
+		_tabs[previous].on_hidden()
+	for i in _tabs.size():
+		_tabs[i].visible = i == _active
+	_frame.select_tab(_active)
+	var tab := _tabs[_active]
+	tab.refresh()
+	tab.on_shown()
+	_frame.set_hint(tab.hint())
+
+
+# --- Content -----------------------------------------------------------------
+
+## Signal args vary; ignore them.
+func _refresh(_a: Variant = null, _b: Variant = null) -> void:
+	if not visible or _tabs.is_empty():
+		return
+	_tabs[_active].refresh()
+
+
+## The ship respawns on death, so re-resolve it whenever the Log opens.
+func _connect_ship() -> void:
+	var current := get_tree().get_first_node_in_group("ship") as Ship
+	if current == _ship:
+		return
+	_ship = current
+	if _ship and not _ship.drive.changed.is_connected(_refresh):
+		_ship.drive.changed.connect(_refresh)
+
+
+# --- Input -------------------------------------------------------------------
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	# The Log and chart shortcuts and BACK stay with Main, which owns opening and closing.
+	for owned in [&"open_log", &"open_map", &"menu_back"]:
+		if event.is_action_pressed(owned):
+			return
+	var action := Controls.menu_action(event)
+	if action == &"":
+		return
+	if action == &"menu_tab_prev" or action == &"menu_tab_next":
+		if not event.is_echo():
+			_cycle_tab(-1 if action == &"menu_tab_prev" else 1)
+		get_viewport().set_input_as_handled()
+		return
+	# Everything else is the active tab's to take. An action it takes can change what its
+	# hint offers (the chart's CLEAR comes and goes with a tracking point).
+	if not _tabs.is_empty() and _tabs[_active].handle_action(action):
+		_frame.set_hint(_tabs[_active].hint())
+		get_viewport().set_input_as_handled()
+
+
+func _on_device_changed(_pad: bool = false) -> void:
+	if visible and not _tabs.is_empty():
+		_frame.set_hint(_tabs[_active].hint())
+
+
+func _cycle_tab(direction: int) -> void:
+	if _tabs.is_empty():
+		return
+	_show_tab((_active + direction + _tabs.size()) % _tabs.size())

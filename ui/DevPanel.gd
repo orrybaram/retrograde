@@ -1,0 +1,865 @@
+extends Control
+class_name DevPanel
+
+## Developer state editor: put the game in the state a change needs to be seen in,
+## without flying there first. Debug builds only — in an export template `_ready`
+## drops the node and nothing else in the game refers to it.
+##
+## F1 (or `) opens it during play and pauses the tree. Sections run down the left,
+## rows down the right:
+##   TAB / SHIFT+TAB   next / previous section
+##   UP / DOWN         pick a row
+##   LEFT / RIGHT      nudge a value
+##   ENTER             run the row (on a value row: jump it to the top)
+##   ESC               close
+##
+## Warps unpause before they move the ship, so the physics server takes the new
+## transform on the next step instead of holding a frozen one.
+##
+## Built in code from TerminalWindow; the node in Main.tscn is just the root.
+
+signal closed
+
+const WINDOW_SIZE := Vector2(820, 460)
+const TEXT_SIZE := TerminalWindow.TEXT_SIZE
+const SMALL_SIZE := TerminalWindow.SMALL_SIZE
+const ROW_HEIGHT := 22.0
+const SECTION_WIDTH := 140.0
+const VALUE_WIDTH := 150.0
+
+## LEFT/RIGHT on a gauge moves it this fraction of its maximum.
+const GAUGE_STEP := 0.1
+## LEFT/RIGHT on the Stores row.
+const STORES_STEP := 1000
+## ENTER on the Stores row.
+const STORES_JUMP := 25000
+## LEFT/RIGHT on a gravity row multiplies or divides by this. Gravity runs from a tenth of
+## a G to ten G, so it steps by ratio - a fixed nudge would be lost at one end and wild at
+## the other.
+const GRAVITY_STEP := 1.25
+## How far a gravity row can be pushed either way, so a slip can always be walked back.
+const GRAVITY_LIMIT := Vector2(0.01, 100.0)
+## LEFT/RIGHT on the minimap range multiplies or divides it by this, so each step is the
+## same amount of zoom whether the scope is close in or far out.
+const MINIMAP_STEP := 1.25
+## World units across the minimap's radius, either way.
+const MINIMAP_LIMIT := Vector2(1_000.0, 200_000.0)
+## LEFT/RIGHT on the HUD size moves it by this much, between these limits.
+const HUD_SCALE_STEP := 0.05
+const HUD_SCALE_LIMIT := Vector2(0.5, 2.0)
+## How far off a planet's centre an orbit warp parks, as a multiple of its scan radius.
+const ORBIT_DISTANCE := 1.0
+## Warping to the Void parks this far inside its edge, so the clock is already running.
+const VOID_OVERSHOOT := 2_000.0
+
+var gs: GameState = null
+
+var _sections: Array[Dictionary] = []
+var _section_index := 0
+var _rows: Array[Dictionary] = []
+var _selected := 0
+
+var _frame: TerminalWindow
+var _section_box: VBoxContainer
+var _section_title: Label
+var _row_box: VBoxContainer
+var _scroll: ScrollContainer
+var _note: Label
+var _row_nodes: Array[Control] = []
+
+
+func _ready() -> void:
+	visible = false
+	if not OS.is_debug_build():
+		queue_free()
+		return
+	add_to_group("dev_panel")
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gs = get_tree().get_first_node_in_group("game_state") as GameState
+	_build_ui()
+	_build_sections()
+
+
+# --- Layout ------------------------------------------------------------------
+
+func _build_ui() -> void:
+	_frame = TerminalWindow.new(
+		WINDOW_SIZE,
+		TerminalWindow.spaced_title("DEV"),
+		"[TAB] SECTION   [<>] ADJUST   [ENTER] APPLY   [ESC] CLOSE"
+	)
+	add_child(_frame)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	_frame.body.add_child(row)
+
+	var left := VBoxContainer.new()
+	left.custom_minimum_size.x = SECTION_WIDTH
+	left.add_theme_constant_override("separation", 10)
+	left.add_child(TerminalWindow.header("S E C T I O N"))
+	_section_box = VBoxContainer.new()
+	_section_box.add_theme_constant_override("separation", 2)
+	left.add_child(_section_box)
+	left.add_child(TerminalWindow.filler())
+	row.add_child(left)
+	row.add_child(TerminalWindow.rule(true))
+
+	var right := VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.add_theme_constant_override("separation", 10)
+	_section_title = TerminalWindow.header("")
+	right.add_child(_section_title)
+
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_row_box = VBoxContainer.new()
+	_row_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_row_box.add_theme_constant_override("separation", 2)
+	_scroll.add_child(_row_box)
+	right.add_child(_scroll)
+
+	right.add_child(TerminalWindow.rule())
+	_note = TerminalWindow.label("", SMALL_SIZE, Colors.PRIMARY_DIM)
+	_note.custom_minimum_size.y = 30
+	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	right.add_child(_note)
+	row.add_child(right)
+
+
+## One row: `> LABEL ............ value`, highlighted when selected.
+func _make_row(row: Dictionary, selected: bool) -> Control:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size.y = ROW_HEIGHT
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg := TerminalWindow.box(Colors.PRIMARY_GHOST if selected else Color.TRANSPARENT, Colors.PRIMARY_DIM, 0)
+	if selected:
+		bg.border_width_left = 2
+		bg.border_color = Colors.PRIMARY
+	bg.content_margin_left = 8
+	bg.content_margin_right = 8
+	panel.add_theme_stylebox_override("panel", bg)
+
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 10)
+	panel.add_child(line)
+
+	var caret := TerminalWindow.label(">" if selected else " ", TEXT_SIZE, Colors.PRIMARY)
+	caret.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(caret)
+	var name_label := TerminalWindow.label(row["label"], TEXT_SIZE, Colors.PRIMARY)
+	name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(name_label)
+	line.add_child(TerminalWindow.spacer())
+
+	var value: Callable = row.get("value", Callable())
+	var text := str(value.call()) if value.is_valid() else ("<>" if row["arrows"] else "RUN")
+	var value_label := TerminalWindow.label(text, TEXT_SIZE, Colors.TEXT if value.is_valid() else Colors.PRIMARY_DIM)
+	value_label.custom_minimum_size.x = VALUE_WIDTH
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(value_label)
+	return panel
+
+
+# --- Open / close ------------------------------------------------------------
+
+func open() -> void:
+	gs = get_tree().get_first_node_in_group("game_state") as GameState
+	visible = true
+	get_tree().paused = true
+	_build_sections()
+	_frame.animate_in()
+
+
+func close() -> void:
+	if not visible:
+		return
+	visible = false
+	# A pausing transmission, or the pause menu behind us, owns the pause instead.
+	# (Untyped on purpose: PauseMenu names DevPanel, and two class_names that name
+	# each other break the script class cache.)
+	var pause_menu := get_tree().get_first_node_in_group("pause_menu") as CanvasItem
+	var held: bool = RobotRadio.is_pausing() or (pause_menu != null and pause_menu.visible)
+	if not held:
+		get_tree().paused = false
+	closed.emit()
+
+
+## Only openable mid-flight: the menus have no state worth editing, and pausing
+## over the start menu would wedge it.
+func can_open() -> bool:
+	var main := get_tree().get_first_node_in_group("main")
+	return main != null and main.has_method("is_playing") and main.is_playing()
+
+
+# --- Input -------------------------------------------------------------------
+
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	var key := (event as InputEventKey).keycode
+
+	if not visible:
+		if (key == KEY_F1 or key == KEY_QUOTELEFT) and can_open():
+			open()
+			get_viewport().set_input_as_handled()
+		return
+
+	match key:
+		KEY_F1, KEY_QUOTELEFT, KEY_ESCAPE:
+			close()
+		KEY_TAB:
+			_cycle_section(-1 if event.shift_pressed else 1)
+		KEY_UP:
+			_move_selection(-1)
+		KEY_DOWN:
+			_move_selection(1)
+		KEY_LEFT:
+			_activate(-1)
+		KEY_RIGHT:
+			_activate(1)
+		KEY_ENTER, KEY_KP_ENTER:
+			_activate(0)
+		_:
+			return
+	get_viewport().set_input_as_handled()
+
+
+func _cycle_section(direction: int) -> void:
+	if _sections.is_empty():
+		return
+	_section_index = (_section_index + direction + _sections.size()) % _sections.size()
+	_selected = 0
+	_rebuild_rows()
+
+
+func _move_selection(direction: int) -> void:
+	if _rows.is_empty():
+		return
+	_selected = (_selected + direction + _rows.size()) % _rows.size()
+	_refresh()
+
+
+## `direction` is -1/+1 from the arrows, 0 from ENTER. Rows that take no arrows
+## (plain actions) only answer to ENTER.
+func _activate(direction: int) -> void:
+	if _selected < 0 or _selected >= _rows.size():
+		return
+	var row := _rows[_selected]
+	if direction != 0 and not row["arrows"]:
+		return
+	row["act"].call(direction)
+	if is_instance_valid(self) and visible:
+		_rebuild_rows()
+
+
+# --- Sections ----------------------------------------------------------------
+
+func _build_sections() -> void:
+	_sections = [
+		{"name": "SHIP", "build": _ship_rows},
+		{"name": "GRAVITY", "build": _gravity_rows},
+		{"name": "PROGRESS", "build": _progress_rows},
+		{"name": "WARP", "build": _warp_rows},
+		{"name": "LOOK", "build": _look_rows},
+		{"name": "SAVE", "build": _save_rows},
+	]
+	_section_index = clampi(_section_index, 0, _sections.size() - 1)
+	_rebuild_rows()
+
+
+func _rebuild_rows() -> void:
+	_rows = _sections[_section_index]["build"].call()
+	_selected = clampi(_selected, 0, maxi(_rows.size() - 1, 0))
+	_refresh()
+
+
+func _refresh() -> void:
+	_section_title.text = TerminalWindow.spaced(_sections[_section_index]["name"])
+
+	for child in _section_box.get_children():
+		child.queue_free()
+	for i in _sections.size():
+		var picked := i == _section_index
+		var name_text: String = _sections[i]["name"]
+		var label := TerminalWindow.label(
+			("> " if picked else "  ") + name_text,
+			TEXT_SIZE,
+			Colors.PRIMARY if picked else Colors.PRIMARY_DIM
+		)
+		_section_box.add_child(label)
+
+	for child in _row_box.get_children():
+		child.queue_free()
+	_row_nodes.clear()
+	for i in _rows.size():
+		var node := _make_row(_rows[i], i == _selected)
+		_row_box.add_child(node)
+		_row_nodes.append(node)
+
+	var note: String = _rows[_selected].get("note", "") if not _rows.is_empty() else ""
+	_note.text = note
+	_scroll_to_selection()
+
+
+func _scroll_to_selection() -> void:
+	if _selected < 0 or _selected >= _row_nodes.size():
+		return
+	var node := _row_nodes[_selected]
+	await get_tree().process_frame
+	if is_instance_valid(node) and is_instance_valid(_scroll):
+		_scroll.ensure_control_visible(node)
+
+
+# --- Row builders ------------------------------------------------------------
+
+## A row the arrows nudge and ENTER tops out. `act` takes -1 / +1 / 0 (ENTER).
+func _value_row(label: String, note: String, value: Callable, act: Callable) -> Dictionary:
+	return {"label": label, "note": note, "value": value, "act": act, "arrows": true}
+
+
+## A row that only runs on ENTER.
+func _action_row(label: String, note: String, act: Callable) -> Dictionary:
+	return {"label": label, "note": note, "act": func(_d: int) -> void: act.call(), "arrows": false}
+
+
+## An on/off flag: either arrow or ENTER flips it.
+func _toggle_row(label: String, note: String, read: Callable, write: Callable) -> Dictionary:
+	return _value_row(
+		label,
+		note,
+		func() -> String: return "ON" if read.call() else "OFF",
+		func(direction: int) -> void:
+			write.call(not read.call() if direction == 0 else direction > 0)
+	)
+
+
+func _ship() -> Ship:
+	return get_tree().get_first_node_in_group("ship") as Ship
+
+
+# --- SHIP --------------------------------------------------------------------
+
+func _ship_rows() -> Array[Dictionary]:
+	var ship := _ship()
+	if ship == null:
+		return [] as Array[Dictionary]
+	var rows: Array[Dictionary] = []
+
+	rows.append(_value_row(
+		"FUEL",
+		"Arrows move the tank a tenth at a time, ENTER fills it.",
+		func() -> String: return "%d / %d" % [roundi(ship.drive.fuel), roundi(ship.drive.max_fuel)],
+		func(direction: int) -> void:
+			ship.drive.fuel = ship.drive.max_fuel if direction == 0 \
+				else ship.drive.fuel + direction * ship.drive.max_fuel * GAUGE_STEP
+	))
+
+	rows.append(_value_row(
+		"HULL",
+		"Arrows take or give back a tenth of the plating, ENTER repairs it.",
+		func() -> String: return "%d / %d" % [roundi(ship.hull_strength), roundi(ship.max_hull)],
+		func(direction: int) -> void:
+			ship.hull_strength = ship.max_hull if direction == 0 \
+				else clampf(ship.hull_strength + direction * ship.max_hull * GAUGE_STEP, 0.0, ship.max_hull)
+	))
+
+	rows.append(_value_row(
+		"HOLD",
+		"RIGHT or ENTER packs the hold with gems; LEFT dumps it.",
+		func() -> String: return "%d / %d" % [roundi(InventoryManager.get_total_weight()), roundi(ship.max_cargo_weight)],
+		func(direction: int) -> void:
+			if direction < 0:
+				InventoryManager.clear_inventory()
+			else:
+				_fill_hold(ship)
+			ship.update_mass_from_cargo()
+	))
+
+	rows.append(_toggle_row(
+		"CARGO BAY",
+		"Fits the Cargo Bay to the hull, or stows it back in SR-7's Cradle.",
+		func() -> bool: return gs != null and Components.CARGO_BAY in gs.fitted(),
+		func(on: bool) -> void:
+			var cradle := Cradle.find(get_tree())
+			if gs == null or cradle == null:
+				return
+			if on:
+				if not Components.CARGO_BAY in gs.cradled and not Components.CARGO_BAY in gs.fitted():
+					var waiting := gs.cradled
+					waiting.append(Components.CARGO_BAY)
+					gs.cradled = waiting
+				cradle.fit(Components.CARGO_BAY)
+				# One of a kind: the copy still loose in the world goes
+				get_tree().call_group("hauler_wrecks", "ensure_cargo_bay")
+			else:
+				cradle.stow(Components.CARGO_BAY)
+	))
+
+	rows.append(_value_row(
+		"STORES",
+		"Arrows move the balance by %d; ENTER adds %d." % [STORES_STEP, STORES_JUMP],
+		func() -> String: return str(gs.stores) if gs else "-",
+		func(direction: int) -> void:
+			if gs:
+				gs.stores = maxi(0, gs.stores + (STORES_JUMP if direction == 0 else direction * STORES_STEP))
+	))
+
+	rows.append(_toggle_row(
+		"NO DAMAGE",
+		"The hull stops taking hits, so a landing can be got wrong on purpose.",
+		func() -> bool: return ship.dev_invulnerable,
+		func(on: bool) -> void: ship.dev_invulnerable = on
+	))
+
+	rows.append(_toggle_row(
+		"INFINITE FUEL",
+		"The boost stops drawing on the tank. The readout stays where it is.",
+		func() -> bool: return ship.drive.infinite,
+		func(on: bool) -> void: ship.drive.infinite = on
+	))
+
+	rows.append(_action_row(
+		"SPAWN FREIGHT",
+		"A test piece of Freight with its Lug just ahead of the nose. SPACE clamps it.",
+		func() -> void:
+			Freight.spawn_ahead_of(ship)
+			close()
+	))
+
+	rows.append(_action_row(
+		"STRAND SHIP",
+		"Empties the tank, which is what puts the abandon-ship call on the radio.",
+		func() -> void:
+			ship.drive.fuel = 0.0
+			ship.drive.depleted.emit()
+			close()
+	))
+
+	rows.append(_action_row(
+		"DESTROY SHIP",
+		"Blows the ship up, straight to the game-over call.",
+		func() -> void:
+			ship.dev_invulnerable = false
+			ship.explode()
+			close()
+	))
+	return rows
+
+
+## Pack the hold to capacity with plain gems (one hold unit each).
+func _fill_hold(ship: Ship) -> void:
+	var room := ship.max_cargo_weight - InventoryManager.get_total_weight()
+	var id := GemData.item_id(GemData.Tier.GEM)
+	var each := InventoryManager.get_item_weight(id)
+	if each <= 0.0 or room < each:
+		return
+	InventoryManager.add_item(id, floori(room / each))
+
+
+# --- PROGRESS ----------------------------------------------------------------
+
+func _progress_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	if gs == null:
+		return rows
+
+	rows.append(_value_row(
+		"MODULES ONLINE",
+		"RIGHT powers the next Gate in order, free; ENTER all of them. This is the number the Titan reads, and a Module never goes back offline (RESET ALL STATE).",
+		func() -> String: return "%d / %d" % [gs.titan_influence(), Gate.MODULE_COUNT],
+		func(direction: int) -> void:
+			if direction >= 0:
+				_power_modules(Gate.MODULE_COUNT if direction == 0 else 1)
+	))
+
+	rows.append(_action_row(
+		"SR-7 WHOLE",
+		"Seats every Section and pushes the wing true: the station whole and dark, the core listening.",
+		func() -> void: Playtest.seat_sr7()
+	))
+
+	rows.append(_value_row(
+		"SR-7 CORE",
+		"RIGHT or ENTER cold-starts it: the station powered and UNIT-7 awake, for good (RESET ALL STATE).",
+		func() -> String: return "ON" if gs.progress.flagged(Progress.CORE_STARTED) else "OFF",
+		func(direction: int) -> void:
+			if direction < 0:
+				return
+			# A running core means every piece is home: it does not listen until the station
+			# is whole (CoreHousing.listens), so starting it seats them too. Otherwise the
+			# save keeps a lit station with its Sections still floating outside it.
+			Playtest.seat_sr7()
+			gs.progress.flag(Progress.CORE_STARTED)
+			RobotRadio.guide_awake = true
+			get_tree().call_group("core_housing", "refresh")
+			get_tree().call_group("station_power", "refresh")
+			get_tree().call_group("dock_arms", "refresh")
+	))
+
+	rows.append(_value_row(
+		"GATES NAMED",
+		"RIGHT or ENTER names every Gate, for good: a name is never taken back (RESET ALL STATE).",
+		func() -> String: return "%d / %d" % [gs.progress.list(Progress.IDENTIFIED_GATES).size(), get_tree().get_nodes_in_group("gates").size()],
+		func(direction: int) -> void:
+			if direction >= 0:
+				for gate in get_tree().get_nodes_in_group("gates"):
+					gs.progress.mark(Progress.IDENTIFIED_GATES, (gate as Gate).save_key())
+	))
+
+	rows.append(_value_row(
+		"DEATHS",
+		"The death counter. Nothing shows it, but the save carries it.",
+		func() -> String: return str(gs.death_count),
+		func(direction: int) -> void:
+			gs.death_count = maxi(0, gs.death_count + (0 if direction == 0 else direction))
+	))
+
+	rows.append(_action_row(
+		"REFILL ORE SEAMS",
+		"Clears every seam's regrow timer, so all of them can be harvested again.",
+		func() -> void: gs.spent_ore.clear()
+	))
+
+	rows.append(_action_row(
+		"RESET RADIO TIPS",
+		"Forgets the show-once transmissions, so the tutorial lines play again.",
+		func() -> void: RobotRadio.reset()
+	))
+
+	rows.append(_action_row(
+		"RESET VOID CLOCK",
+		"Puts the Void's depth and shroud back to zero.",
+		func() -> void: VoidZone.reset()
+	))
+	return rows
+
+
+## Every Gate that stands for a Module, in save-key order so the panel always brings
+## the same Gates online next. The Core's Gate is not a Module.
+func _module_gates() -> Array[Gate]:
+	var gates: Array[Gate] = []
+	for node in get_tree().get_nodes_in_group("gates"):
+		var gate := node as Gate
+		if gate and not gate.is_core:
+			gates.append(gate)
+	gates.sort_custom(func(a: Gate, b: Gate) -> bool: return a.save_key() < b.save_key())
+	return gates
+
+
+## Brings up to `count` more Modules online: the first Gates in order not yet powered.
+func _power_modules(count: int) -> void:
+	for gate in _module_gates():
+		if count <= 0:
+			return
+		if gs.progress.mark(Progress.POWERED_GATES, gate.save_key()):
+			count -= 1
+
+
+func _orbit_planets() -> Array[Planet]:
+	var planets: Array[Planet] = []
+	for node in get_tree().get_nodes_in_group("planets"):
+		var planet := node as Planet
+		if planet and planet.planet_type != Planet.PlanetType.SUN:
+			planets.append(planet)
+	return planets
+
+
+# --- GRAVITY -----------------------------------------------------------------
+
+## Tune gravity by feel: the whole system at once, or one Body at a time. Every row moves
+## `Planet.dev_gravity_scale` or a Body's `density_trim` and then recomputes its mass, so
+## the Record and the pull the ship flies against stay the same number.
+## Nothing here is saved - it is for finding a number to put in the scene, not for keeping.
+func _gravity_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var bodies := _bodies_by_size()
+	if bodies.is_empty():
+		return rows
+
+	rows.append(_value_row(
+		"ALL BODIES",
+		"Arrows scale every Body's pull by %.2fx a step; ENTER puts it back to 1.00." % GRAVITY_STEP,
+		func() -> String: return "x%.2f" % Planet.dev_gravity_scale,
+		func(direction: int) -> void:
+			Planet.dev_gravity_scale = 1.0 if direction == 0 \
+				else _gravity_step(Planet.dev_gravity_scale, direction)
+			for body in _bodies_by_size():
+				body.refresh_mass()
+	))
+
+	for node in bodies:
+		var planet := node
+		rows.append(_value_row(
+			planet.planet_name.to_upper(),
+			"%s, %d px across. Arrows move this Body alone; ENTER puts it back to its class weight. Trim x%.2f." % [
+				PlanetScan.type_name(planet.planet_type), roundi(planet.radius), planet.density_trim],
+			func() -> String: return "%s  %d%%" % [PlanetScan.gravity(planet), roundi(_surface_pull_percent(planet))],
+			func(direction: int) -> void:
+				planet.density_trim = 1.0 if direction == 0 \
+					else _gravity_step(planet.density_trim, direction)
+				planet.refresh_mass()
+		))
+
+	rows.append(_action_row(
+		"RESET ALL",
+		"Puts the scale and every Body back to the weight the scene ships with.",
+		func() -> void:
+			Planet.dev_gravity_scale = 1.0
+			for body in _bodies_by_size():
+				body.density_trim = 1.0
+				body.refresh_mass()
+	))
+	return rows
+
+
+func _gravity_step(value: float, direction: int) -> float:
+	var moved := value * (GRAVITY_STEP if direction > 0 else 1.0 / GRAVITY_STEP)
+	return clampf(moved, GRAVITY_LIMIT.x, GRAVITY_LIMIT.y)
+
+
+## Every Body, widest first, so the list reads down the way the gravity rule does.
+func _bodies_by_size() -> Array[Planet]:
+	var bodies: Array[Planet] = []
+	for node in get_tree().get_nodes_in_group("planets"):
+		var planet := node as Planet
+		if planet:
+			bodies.append(planet)
+	bodies.sort_custom(func(a: Planet, b: Planet) -> bool: return a.radius > b.radius)
+	return bodies
+
+
+## Pull at the surface as a percentage of the ship's base thrust. G says what the Record
+## reads; this says whether the Body will actually feel heavy to fly against.
+func _surface_pull_percent(planet: Planet) -> float:
+	var ship := _ship()
+	if ship == null or ship.thrust_power <= 0.0:
+		return 0.0
+	var pull: float = planet._get_gravity_strength() / (planet.radius * planet.radius)
+	return 100.0 * pull / ship.thrust_power
+
+
+# --- WARP --------------------------------------------------------------------
+
+func _warp_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	if _ship() == null:
+		return rows
+
+	rows.append(_action_row(
+		"HOME PORT (DOCK)",
+		"Warps to Rook's port and docks, as if the ship had flown in and landed.",
+		func() -> void: _warp(func() -> void: Playtest.redock())
+	))
+
+	for node in get_tree().get_nodes_in_group("gates"):
+		var gate := node as Gate
+		if gate == null or gate.parent_planet == null:
+			continue
+		var planet_name := gate.parent_planet.name
+		rows.append(_action_row(
+			"CORE GATE" if gate.is_core else "GATE: %s" % planet_name.to_upper(),
+			"Parks on the approach to that Gate's berth, lined up and matched to its orbit.",
+			func() -> void: _warp(func() -> void: Playtest.park_at_gate(planet_name))
+		))
+
+	for planet in _orbit_planets():
+		var planet_name := planet.name
+		var distance := planet.scan_radius() * ORBIT_DISTANCE
+		rows.append(_action_row(
+			"ORBIT: %s" % planet_name.to_upper(),
+			"Drops the ship into a circular orbit just clear of the surface.",
+			func() -> void: _warp(func() -> void: Playtest.park_near_planet(planet_name, distance, 180.0, true))
+		))
+
+	rows.append(_action_row(
+		"VOID EDGE",
+		"Warps just past the last orbit, where the Void starts its clock.",
+		func() -> void: _warp(_warp_to_void)
+	))
+	return rows
+
+
+## Close first: the tree has to be running for the physics server to take the new
+## transform, rather than sitting on a frozen one until the panel is dismissed.
+func _warp(move: Callable) -> void:
+	close()
+	move.call()
+
+
+func _warp_to_void() -> void:
+	var sun: Node2D = null
+	for node in get_tree().get_nodes_in_group("planets"):
+		var planet := node as Planet
+		if planet and planet.planet_type == Planet.PlanetType.SUN:
+			sun = planet
+			break
+	var origin := sun.global_position if sun else Vector2.ZERO
+	var ship := _ship()
+	var direction := (ship.global_position - origin).normalized() if ship else Vector2.RIGHT
+	if direction == Vector2.ZERO:
+		direction = Vector2.RIGHT
+	Playtest.warp_to(origin + direction * (VoidZone.EDGE_RADIUS + VOID_OVERSHOOT))
+
+
+# --- LOOK --------------------------------------------------------------------
+
+func _look_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var pixel := get_tree().get_first_node_in_group("pixel_pass") as PixelPass
+	var crt := get_tree().get_first_node_in_group("crt") as CRT
+	var ui := get_tree().get_first_node_in_group("ui_glow") as UIGlow
+	var minimap := get_tree().get_first_node_in_group("minimap") as Minimap
+	var hud = get_tree().get_first_node_in_group("hud") # untyped: HUD has no class_name
+
+	if hud:
+		rows.append(_value_row(
+			"HUD SIZE",
+			"Scales the dashboard - minimap, boost gauge and readouts - from the bottom-left corner, %.2fx a step. ENTER puts it back to %.2fx." % [
+				HUD_SCALE_STEP, hud.DEFAULT_DASHBOARD_SCALE],
+			func() -> String: return "%.2fx" % hud.dashboard_scale,
+			func(direction: int) -> void:
+				# Snapped to the step, so repeated nudges don't drift off the round numbers
+				var moved := snappedf(hud.dashboard_scale + direction * HUD_SCALE_STEP, HUD_SCALE_STEP)
+				hud.dashboard_scale = hud.DEFAULT_DASHBOARD_SCALE if direction == 0 \
+					else clampf(moved, HUD_SCALE_LIMIT.x, HUD_SCALE_LIMIT.y)
+		))
+
+	var boot_log := get_tree().get_first_node_in_group("boot_log") as BootLog
+	if boot_log:
+		rows.append(_value_row(
+			"DIAGNOSTIC SIZE",
+			"Font size of the opening's manual diagnostic log, 1pt a step (%d-%d). ENTER puts it back to %d." % [
+				BootLog.SIZE_LIMIT.x, BootLog.SIZE_LIMIT.y, BootLog.DEFAULT_SIZE],
+			func() -> String: return "%dpt" % boot_log.text_size,
+			func(direction: int) -> void:
+				boot_log.text_size = BootLog.DEFAULT_SIZE if direction == 0 else boot_log.text_size + direction
+		))
+
+	if minimap:
+		rows.append(_value_row(
+			"MINIMAP RANGE",
+			"World units from the minimap's centre to its rim. RIGHT zooms out, LEFT in, %.2fx a step; ENTER puts it back to %d." % [
+				MINIMAP_STEP, roundi(Minimap.DEFAULT_WORLD_RANGE)],
+			func() -> String: return "%d" % roundi(minimap.world_range),
+			func(direction: int) -> void:
+				var moved := minimap.world_range * (MINIMAP_STEP if direction > 0 else 1.0 / MINIMAP_STEP)
+				minimap.world_range = Minimap.DEFAULT_WORLD_RANGE if direction == 0 \
+					else clampf(moved, MINIMAP_LIMIT.x, MINIMAP_LIMIT.y)
+		))
+
+	if pixel == null or crt == null or ui == null:
+		return rows
+
+	rows.append(_toggle_row(
+		"PIXEL PASS",
+		"Re-draws the world as low-res pixel art. The UI stays sharp.",
+		func() -> bool: return pixel.enabled,
+		func(on: bool) -> void: pixel.enabled = on
+	))
+	rows.append(_value_row(
+		"PIXEL SIZE",
+		"Screen px per art pixel. 1 is full res; 2 is 640x360; 4 is Animal Well's 320x180. ENTER puts it back to %dx." % PixelPass.DEFAULTS.pixel_size,
+		func() -> String:
+			return "%dx  %dx%d" % [pixel.pixel_size, 1280 / int(pixel.pixel_size), 720 / int(pixel.pixel_size)],
+		func(direction: int) -> void:
+			var sizes := PixelPass.PIXEL_SIZES
+			var i := sizes.find(pixel.pixel_size)
+			pixel.pixel_size = PixelPass.DEFAULTS.pixel_size if direction == 0 else sizes[clampi(i + direction, 0, sizes.size() - 1)]
+	))
+	rows.append(_toggle_row(
+		"PALETTE",
+		"Snaps every world pixel to the nearest Violet Signal color.",
+		func() -> bool: return pixel.quantize,
+		func(on: bool) -> void: pixel.quantize = on
+	))
+	rows.append(_tune_row("DITHER", "Ordered dithering under the palette snap, so gradients band less.", pixel, &"dither", 0.1, _percent))
+
+	rows.append(_toggle_row(
+		"CRT",
+		"Scanlines and bloom over the whole picture, the UI included.",
+		func() -> bool: return crt.enabled,
+		func(on: bool) -> void: crt.enabled = on
+	))
+	rows.append(_tune_row("SCANLINES", "How dark the gap between lines runs.", crt, &"scanlines", 0.01, _percent))
+	rows.append(_tune_row("LINE HEIGHT", "Screen px per scanline, beam and gap together.", crt, &"line_height", 1.0,
+		func(v: float) -> String: return "%dpx" % v))
+	rows.append(_toggle_row(
+		"GLOW",
+		"Bloom off the bright spots: windows, stars, engines, text.",
+		func() -> bool: return crt.glow,
+		func(on: bool) -> void: crt.glow = on
+	))
+	rows.append(_tune_row("GLOW STRENGTH", "How hard the bloom pushes.", crt, &"glow_strength", 0.1,
+		func(v: float) -> String: return "%.1f" % v))
+	rows.append(_tune_row("GLOW THRESHOLD", "How bright a pixel must be before it blooms. Lower spreads it to hulls.", crt, &"glow_threshold", 0.05,
+		func(v: float) -> String: return "%.2f" % v))
+
+	rows.append(_tune_row("TEXT GLOW", "Bloom on the UI alone, on top of the CRT's.", ui, &"text_glow", 0.1,
+		func(v: float) -> String: return "%.1f" % v))
+	rows.append(_tune_row("TEXT GLOW SIZE", "How far the UI bloom reaches; each step doubles it.", ui, &"text_glow_size", 1,
+		func(v: int) -> String: return "%d" % v))
+	rows.append(_tune_row("UI GLITCH", "How often a strip of the UI slips sideways.", ui, &"glitch", 0.05, _percent))
+	return rows
+
+
+## A number on one of the LOOK nodes: arrows step it (its setter clamps), ENTER puts back
+## the value in the node's DEFAULTS. `step` matches the property's type, int or float.
+func _tune_row(label: String, note: String, target: Node, property: StringName, step: Variant, show: Callable) -> Dictionary:
+	var default: Variant = target.get("DEFAULTS")[property]
+	return _value_row(
+		label,
+		"%s ENTER puts it back to %s." % [note, show.call(default)],
+		func() -> String: return show.call(target.get(property)),
+		func(direction: int) -> void:
+			target.set(property, default if direction == 0 else target.get(property) + direction * step)
+	)
+
+
+static func _percent(v: float) -> String:
+	return "%d%%" % roundi(v * 100.0)
+
+
+# --- SAVE --------------------------------------------------------------------
+
+func _save_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	rows.append(_action_row(
+		"SAVE NOW",
+		"Writes the full save, the same one docking writes.",
+		func() -> void:
+			if gs:
+				Save.save(gs, _ship())
+	))
+	rows.append(_action_row(
+		"RELOAD SAVE",
+		"Reloads the world from the save, as CONTINUE does from the start menu.",
+		func() -> void:
+			close()
+			var main := get_tree().get_first_node_in_group("main")
+			if main and main.has_method("load_game") and Save.save_exists():
+				main.load_game()
+	))
+	rows.append(_action_row(
+		"DELETE SAVE",
+		"Removes the save file. The run in front of you keeps going.",
+		func() -> void: DirAccess.remove_absolute(Playtest.save_path())
+	))
+	rows.append(_action_row(
+		"RESET ALL STATE",
+		"Stores, hold and every flag back to a fresh run.",
+		func() -> void:
+			if gs:
+				gs.reset_all_state()
+			var ship := _ship()
+			if ship:
+				ship.reset_to_initial_state()
+			RobotRadio.reset()
+			VoidZone.reset()
+	))
+	return rows

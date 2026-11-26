@@ -1,0 +1,650 @@
+extends ShipState
+class_name FlyingState
+
+## Handles normal ship movement and controls.
+## This is the default state when the ship is flying freely.
+
+var ALIGNMENT_ANGLE_THRESHOLD_DEGREES: float = 30.0
+var DOCK_MESSAGE_COOLDOWN: float = 2.0  # Seconds to suppress dock message after entering state
+## A ship breaking ground is released still touching the surface, so the ground rules are
+## held off this long - otherwise it would be judged as landing again the same instant.
+const LIFTOFF_GRACE := 0.9
+## With a load clamped, how long (s) a turn takes to wind up to speed at a turn ratio of
+## one half; it grows with the load, to at most twice this (see turned_spin). Unladen
+## there is no wind-up.
+const TURN_LAG := 0.3
+## Strafing pushes at this share of `ship.thrust_power`: side jets, weaker than the main engine.
+const STRAFE_POWER := 0.6
+
+var _state_enter_time: float = 0.0
+var _touchdown_pending := false
+var _ground_grace := 0.0
+## `action` must be seen up once in this state before a press counts, so the press that
+## brought the ship here (a release, a clamp) is never read twice.
+var _action_armed := false
+## The piece marked in reach of the clamp (_update_reach), if any.
+var _reach: Freight = null
+
+func enter() -> void:
+	super.enter()
+	_state_enter_time = Time.get_ticks_msec() / 1000.0
+	_touchdown_pending = false
+	_action_armed = false
+	_magnet_target = null
+	# _ground_grace is deliberately left alone: PlanetLandedState sets it on the way out,
+	# before this runs.
+
+## Hold off the ground rules (touchdown and crash damage) for `seconds`.
+func ignore_ground_for(seconds: float) -> void:
+	_ground_grace = maxf(_ground_grace, seconds)
+
+func is_ignoring_ground() -> bool:
+	return _ground_grace > 0.0
+
+func physics_process(delta: float) -> void:
+	if not is_ship_valid():
+		return
+	_ground_grace = maxf(_ground_grace - delta, 0.0)
+
+	# Don't process ship input if any blocking UI is open
+	if _is_ui_blocking_input():
+		ship.want_turn_left = false
+		ship.want_turn_right = false
+		ship.want_strafe_left = false
+		ship.want_strafe_right = false
+		ship.want_thrust = false
+		ship.want_reverse_thrust = false
+		ship.want_boost = false
+		ship.tick_drive(delta)
+		return
+	
+	# Sample input here (physics rate, thread-safe for our purposes)
+	read_stick(ship)
+	ship.tick_drive(delta)
+	
+	# If any input, ensure the body is awake
+	if has_stick_input(ship) or ship.want_boost:
+		ship.sleeping = false
+	
+	# Update particle systems
+	_update_particles()
+	
+	# Update camera shake
+	_update_camera_shake(delta)
+	
+	if not Input.is_action_pressed("action"):
+		_action_armed = true
+	_update_action()
+	_update_reach()
+
+## Sample the flight keys into `ship`'s wants.
+static func read_stick(ship: Ship) -> void:
+	ship.want_turn_left = _stick("turn_left")
+	ship.want_turn_right = _stick("turn_right")
+	ship.want_strafe_left = _stick("strafe_left")
+	ship.want_strafe_right = _stick("strafe_right")
+	ship.want_boost = Input.is_action_pressed("boost")
+	ship.want_thrust = _stick("thrust")
+	ship.want_reverse_thrust = _stick("reverse_thrust")
+
+## Held, and not locked by the manual diagnostic (ControlLock).
+static func _stick(action: StringName) -> bool:
+	return Input.is_action_pressed(action) and ControlLock.allows(action)
+
+## Is the player working the stick at all (turning, strafing or thrusting)?
+static func has_stick_input(ship: Ship) -> bool:
+	return ship.want_turn_left or ship.want_turn_right or ship.want_strafe_left \
+		or ship.want_strafe_right or ship.want_thrust or ship.want_reverse_thrust
+
+## -1 strafing left (to port), 1 right, 0 neither or both.
+static func strafe_axis(ship: Ship) -> float:
+	return (1.0 if ship.want_strafe_right else 0.0) - (1.0 if ship.want_strafe_left else 0.0)
+
+func integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	if not is_ship_valid():
+		return
+	
+	# Handle collision damage
+	if state.get_contact_count() > 0:
+		for i in state.get_contact_count():
+			var collider := state.get_contact_collider_object(i)
+			var collision_normal = state.get_contact_local_normal(i)
+
+			if collider == null or collider == ship:
+				continue
+			if not (collider is RigidBody2D):
+				continue
+			# A clamped load collides, but its knocks don't reach the hull (yet)
+			if ship.is_freight_shape(state.get_contact_local_shape(i)):
+				continue
+
+			var ship_speed = state.get_contact_local_velocity_at_position(i)
+			# Ground near an ore seam has its own rules (touch down, or a hard landing)
+			if collider is Planet and _ground_contact(state, collider, ship_speed):
+				break
+
+			var collider_speed = collider.linear_velocity
+			var relative_velocity = ship_speed - collider_speed
+			var speed_along_normal = relative_velocity.dot(collision_normal)
+			var impact_speed: int = abs(speed_along_normal)
+
+			var threshold := knock_threshold(collider, ship.damage_threshold)
+			if impact_speed > threshold:
+				var damage: float = (impact_speed - threshold) * ship.crash_damage_multiplier
+				ship.take_damage(damage)
+				break
+	
+	# Handle movement controls
+	var turn := 0.0
+	if ship.want_turn_left:
+		turn = -1.0
+	elif ship.want_turn_right:
+		turn = 1.0
+	# Waking adrift, the ship turns slowly over until the player first takes the stick
+	if has_stick_input(ship):
+		ship.drift_spin = 0.0
+	if ship.drift_spin != 0.0:
+		state.angular_velocity = ship.drift_spin
+	else:
+		state.angular_velocity = turned_spin(state.angular_velocity, turn, ship.turn_speed, ship.turn_ratio(), state.step)
+
+	if ship.want_thrust:
+		_apply_thrust(state, Vector2.RIGHT)
+	
+	if ship.want_reverse_thrust:
+		_apply_thrust(state, Vector2.LEFT)
+
+	# Strafe: ordinary side thrust, held to cruise speed; the boost never touches it, so it
+	# never burns fuel. Ship nose is +X, so its right side is +Y.
+	var strafe := strafe_axis(ship)
+	if strafe != 0.0:
+		var side := Vector2(0.0, strafe).rotated(ship.rotation) * ship.thrust_power * STRAFE_POWER
+		state.linear_velocity = _held(state.linear_velocity, side * state.inverse_mass * state.step)
+
+	if _coupled and is_instance_valid(_coupled):
+		_hold_coupled(state)
+
+## The closing speed above which bumping into `collider` hurts the hull: the ship's own
+## threshold, or far higher for loose Freight, which the player is meant to nudge about.
+static func knock_threshold(collider: Object, ship_threshold: float) -> float:
+	if collider is Freight:
+		return maxf(ship_threshold, Freight.KNOCK_DAMAGE_SPEED)
+	return ship_threshold
+
+## Spin after one step of turn input `turn` (-1, 0 or 1). Unladen (`ratio` 1) the ship
+## turns at exactly `turn_speed` and stops the instant the key is let go, as it always has.
+## With Freight clamped `ratio` < 1: it turns slower, and winds up to that and back down at
+## a rate that shrinks with the load, so a heavy piece carries the turn on a little.
+static func turned_spin(spin: float, turn: float, turn_speed: float, ratio: float, dt: float) -> float:
+	var target := turn * turn_speed * ratio
+	if ratio >= 1.0:
+		return target
+	var wind_up := 2.0 * TURN_LAG * (1.0 - ratio)
+	return move_toward(spin, target, turn_speed * ratio / wind_up * dt)
+
+## Thrust in `local_direction`. Ordinary thrust is free and always available; the boost is
+## the only thing fuel is ever spent on, and the only thing a dry tank or a low-fuel cough
+## can take away. One helper for both directions, so forward and reverse cannot drift apart.
+## Ordinary thrust is held to `ship.cruise_speed` (see cruise_velocity); the boost is not.
+func _apply_thrust(state: PhysicsDirectBodyState2D, local_direction: Vector2) -> void:
+	var force := local_direction.rotated(ship.rotation) * ship.thrust_power
+	if not ControlLock.is_capped() and ship.drive.try_burn(state.step):
+		state.apply_central_force(force * ship.boost_power_multiplier)
+		return
+	var dv := force * state.inverse_mass * state.step
+	state.linear_velocity = _held(state.linear_velocity, dv)
+
+## Ordinary thrust's velocity: held to cruise speed, or - while the diagnostic holds
+## control (ControlLock) - to its slower cap, counted relative to SR-7's frame.
+func _held(velocity: Vector2, dv: Vector2) -> Vector2:
+	if ControlLock.is_capped():
+		var frame := ControlLock.frame_velocity
+		return cruise_velocity(velocity - frame, dv, ControlLock.speed_cap) + frame
+	return cruise_velocity(velocity, dv, ship.cruise_speed)
+
+## Velocity after ordinary thrust adds `dv` to `velocity`, held to `cap`: it may speed the
+## ship up to the cap, but never past it, and never faster than it already was once over
+## it (after a boost or a gravity slingshot). Steering and braking always go through.
+static func cruise_velocity(velocity: Vector2, dv: Vector2, cap: float) -> Vector2:
+	var next := velocity + dv
+	var limit := maxf(cap, velocity.length())
+	if next.length() <= limit:
+		return next
+	return next.normalized() * limit
+
+## Is the boost actually lit? The Drive decides (key, thrust, fuel, no cough); failing
+## any of those drops the throttle back to ordinary thrust - it never takes the thrust away.
+func _boosting() -> bool:
+	return ship.drive.is_lit()
+
+## Contact with a planet within reach of one of its revealed ore seams: touch down
+## gently, or take damage and bounce. Returns true when the ship is over a seam (the
+## ordinary crash damage doesn't apply there).
+func _ground_contact(state: PhysicsDirectBodyState2D, planet: Planet, contact_velocity: Vector2) -> bool:
+	var ore := Touchdown.ore_under(planet, state.transform.origin)
+	if not ore:
+		return false
+	# Just broke ground: still scraping the surface on the way up, so no touchdown and no
+	# crash damage until the ship has had a moment to climb clear.
+	if _ground_grace > 0.0:
+		return true
+	if _touchdown_pending:
+		return true
+	var up := planet.global_position.direction_to(state.transform.origin)
+	var rel := contact_velocity - planet.linear_velocity
+	match Touchdown.judge(rel, state.transform.get_rotation(), up):
+		Touchdown.Result.LAND:
+			_touchdown_pending = true
+			ship.set_meta("pending_ore", ore)
+			ship.state_machine.change_state.call_deferred("PlanetLandedState")
+		Touchdown.Result.HARD:
+			ship.take_damage(Touchdown.hard_damage(rel.length(), ship.crash_damage_multiplier))
+			state.linear_velocity = Touchdown.bounce_velocity(rel, up, planet.linear_velocity)
+			EventBus.action_message_changed.emit("TOO FAST TO LAND")
+	return true
+
+func _update_particles() -> void:
+	if not is_ship_valid() or not ship.thruster_particles or not ship.boost_particles:
+		return
+	
+	# Determine if we're thrusting (forward or reverse)
+	# Thrust costs no fuel, so the plume shows whenever the throttle is on, dry tank or not.
+	var is_thrusting = ship.want_thrust or ship.want_reverse_thrust
+	
+	if is_thrusting:
+		# Update particle direction based on thrust direction
+		var material_normal = ship.thruster_particles.process_material as ParticleProcessMaterial
+		var material_boost = ship.boost_particles.process_material as ParticleProcessMaterial
+		
+		if material_normal and material_boost:
+			# Ship points RIGHT (0°), so back is LEFT
+			# For forward thrust, particles go LEFT (opposite ship direction)
+			# For reverse thrust, particles go RIGHT (same as ship direction)
+			var local_direction = Vector2.LEFT if ship.want_thrust else Vector2.RIGHT
+			var dir_vec3 = Vector3(local_direction.x, local_direction.y, 0)
+			material_normal.direction = dir_vec3
+			material_boost.direction = dir_vec3
+		
+		# Switch between normal and boost particles (the boost only lights if it is lit)
+		if _boosting():
+			ship.thruster_particles.emitting = false
+			ship.boost_particles.emitting = true
+		else:
+			ship.thruster_particles.emitting = true
+			ship.boost_particles.emitting = false
+	else:
+		# Stop emitting when not thrusting
+		ship.thruster_particles.emitting = false
+		ship.boost_particles.emitting = false
+	
+	# Update side thruster particles for turning
+	# Ship points RIGHT (0°), so 90° left = UP (90°), 90° right = DOWN (270° or -90°)
+	if ship.side_thruster_particles:
+		var is_turning = ship.want_turn_left or ship.want_turn_right
+		var strafe := strafe_axis(ship)
+		ship.side_thruster_particles.emitting = is_turning or strafe != 0.0
+
+		if strafe != 0.0:
+			var strafe_material = ship.side_thruster_particles.process_material as ParticleProcessMaterial
+			if strafe_material:
+				# Jet fires from the side opposite the slide, blowing away from it
+				ship.side_thruster_particles.position = Vector2(0, -7 * strafe)
+				strafe_material.direction = Vector3(0, -strafe, 0)
+		elif is_turning:
+			var material = ship.side_thruster_particles.process_material as ParticleProcessMaterial
+			if material:
+				# Ship points RIGHT (0°) in local space
+				# In 2D: Y increases downward
+				# Ship polygon: Y=-7 (left side), Y=7 (right side)
+				# Physics: To turn left (CCW), need thrust from RIGHT side (Y=7)
+				#         To turn right (CW), need thrust from LEFT side (Y=-7)
+				if ship.want_turn_left:
+					# Position on RIGHT side of ship (Y=7) - particles go 90° left of ship (UP)
+					ship.side_thruster_particles.position = Vector2(0, -7)
+					material.direction = Vector3(0, 1, 0)
+				elif ship.want_turn_right:
+					# Position on LEFT side of ship (Y=-7) - particles go 90° right of ship (DOWN)
+					ship.side_thruster_particles.position = Vector2(0, 7)
+					material.direction = Vector3(0, -1, 0)
+
+func _update_camera_shake(dt: float) -> void:
+	if not is_ship_valid() or not ship.camera:
+		return
+	
+	var shake_offset = Vector2.ZERO
+	
+	# Update damage shake (decay over time)
+	if ship.damage_shake_time > 0.0:
+		ship.damage_shake_time -= dt
+		ship.damage_shake_time = max(0.0, ship.damage_shake_time)
+		
+		# Calculate damage shake intensity (decay as time remaining decreases)
+		# Use current intensity (set by damage or explosion) and appropriate duration
+		var shake_duration = ship.damage_shake_duration
+		if ship.damage_shake_current_intensity >= ship.explosion_shake_intensity * 0.9:
+			# This is an explosion shake
+			shake_duration = ship.explosion_shake_duration
+		var damage_shake_progress = ship.damage_shake_time / shake_duration
+		var current_damage_intensity = ship.damage_shake_current_intensity * damage_shake_progress
+		
+		# Damage shake uses faster oscillation for impact feel
+		var damage_shake_phase = (shake_duration - ship.damage_shake_time) * 30.0
+		shake_offset += Vector2(
+			sin(damage_shake_phase * 2.1) * current_damage_intensity,
+			cos(damage_shake_phase * 1.9) * current_damage_intensity
+		)
+	
+	# Add boost shake on top of damage shake (only while the boost is actually lit)
+	if _boosting() and ship.want_thrust:
+		# Apply camera shake during boost
+		ship.camera_shake_time += dt * ship.camera_shake_speed
+		shake_offset += Vector2(
+			sin(ship.camera_shake_time * 1.3) * ship.camera_shake_intensity,
+			cos(ship.camera_shake_time * 1.7) * ship.camera_shake_intensity
+		)
+	else:
+		# Reset boost shake time when not boosting
+		ship.camera_shake_time = 0.0
+	
+	# Apply combined shake offset
+	if shake_offset != Vector2.ZERO:
+		ship.camera.offset = ship.camera_base_offset + shake_offset
+	elif ship.camera.offset != ship.camera_base_offset:
+		# Smoothly return to base position when no shake
+		ship.camera.offset = ship.camera.offset.lerp(ship.camera_base_offset, dt * 5.0)
+
+var _nearby_dockable: Node2D = null
+
+## What `action` does in open flight: press to dock at a port; hold with a piece of
+## Freight in reach and the magnet pulls it onto the nose. CarryingState overrides this
+## with the one thing it does there - hold to let go.
+func _update_action() -> void:
+	_check_dockable_proximity()
+	_update_magnet()
+	if _magnet_target == null:
+		_attempt_dock()
+
+var _magnet_target: Freight = null
+## This hold of `action` has already coupled onto a buried piece, or let go of one: it
+## doesn't couple (again) until the key comes up.
+var _tugged := false
+## Coupled onto a buried piece's Lug (Freight.is_buried): the magnet has hold of it but it
+## won't come. A hold of `action` couples on, like any clamp, and it stays coupled with the
+## key let go. Flying away from the ground pulls at it (pull_force): short of the piece's
+## threshold it only strains; held past it long enough it tears free (Freight.pull). A
+## fresh press of `action` lets go.
+var _coupled: Freight = null
+## Ripped free of the ground: the magnet keeps pulling it in without the key held.
+var _magnet_locked := false
+var _was_holding := false
+var _couple_base := Vector2.ZERO
+## The nose has closed onto the Lug and taken hold: only now does pulling strain it.
+var _latched := false
+## Coupling, the ship is drawn nose-onto the Lug this stiffly; once it is on, it latches
+## with the same clunk as any clamp and is held there, rigid, until it lets go.
+const COUPLE_GAIN := 9.0
+
+func _update_magnet() -> void:
+	var holding := _action_armed and Input.is_action_pressed("action") and not EventBus.is_harvest_available() \
+		and ControlLock.allows(ControlLock.CLAMP)
+	var fresh_press := holding and not _was_holding
+	_was_holding = holding
+	if not holding:
+		_tugged = false
+	if _coupled:
+		if not is_instance_valid(_coupled) or not _coupled.is_buried():
+			_decouple()
+		elif fresh_press and not _tugged:
+			_decouple()  # a fresh press lets go
+			_tugged = true  # and doesn't couple straight back on
+		return
+	if _magnet_target and not is_instance_valid(_magnet_target):
+		_magnet_target = null
+	var nose := ship.to_global(Ship.NOSE)
+	if _magnet_target and (not (holding or _magnet_locked) or not Freight.in_reach(nose, _magnet_target.lug_global(), Freight.MAGNET_HOLD_RANGE)):
+		_drop_magnet()
+	if _magnet_target == null:
+		var near := freight_in_reach()
+		if near == null:
+			return
+		if not holding:
+			return
+		if near.is_buried():
+			# Stuck in the ground: a hold couples on for one pull
+			if not _tugged:
+				_couple(near)
+			return
+		_magnet_target = near
+		near.add_collision_exception_with(ship)
+	var pose := ship.global_transform * Freight.clamped_pose(_magnet_target.lug_position, _magnet_target.lug_facing, Ship.NOSE)
+	if _magnet_target.magnet_step(pose, ship.linear_velocity):
+		var f := _magnet_target
+		_magnet_target = null
+		_magnet_locked = false
+		ship.carry(f)
+
+## How far the magnet has drawn a piece in, 0 to 1: the Lug's gap to the nose against the
+## magnet's reach. 0 with nothing in its pull (the manual check's CLAMP row, BootLog).
+func magnet_progress() -> float:
+	if _magnet_target == null or not is_instance_valid(_magnet_target):
+		return 0.0
+	var gap := ship.to_global(Ship.NOSE).distance_to(_magnet_target.lug_global())
+	return clampf(1.0 - gap / Freight.MAGNET_RANGE, 0.0, 1.0)
+
+## A hold of `action` that is working the magnet - pulling a piece in, coupled onto a
+## buried one, or the press that coupled on or let go - belongs to that, not the Sweep:
+## the same as a clamp, where CarryingState takes the key.
+func allows_sonar() -> bool:
+	return _coupled == null and _magnet_target == null and not _tugged
+
+## Take hold of a buried piece's Lug: a clunk, and the ship is held off it from here.
+func _couple(f: Freight) -> void:
+	_tugged = true  # the press that coupled on is not also the press that lets go
+	_coupled = f
+	_latched = false
+	_couple_base = f.lodged_offset
+	f.add_collision_exception_with(ship)
+
+## Let go of the Lug without a snap: the key came up. What the pull won stays won.
+func _decouple() -> void:
+	var f := _coupled
+	_coupled = null
+	if is_instance_valid(f):
+		f.strain(0.0)
+	if is_instance_valid(f) and _latched:
+		ship.release_fx(f)
+	_latched = false
+	if is_instance_valid(f):
+		ship.get_tree().create_timer(0.6).timeout.connect(func() -> void:
+			if is_instance_valid(f) and is_instance_valid(ship):
+				f.remove_collision_exception_with(ship))
+
+## How hard a ship pulls a buried piece out of the ground: its thrust along `outward`, as
+## a share of the Aux's full thrust (Freight.pull_threshold). `heading` is the nose, `push`
+## +1 thrusting, -1 in reverse; the Burn pulls `boost` times harder than the Aux.
+static func pull_force(heading: Vector2, push: float, outward: Vector2, boost := 1.0) -> float:
+	return maxf((heading * push).dot(outward), 0.0) * boost
+
+## One physics step coupled: the ship is held off the Lug, nose on it; thrust away from the
+## ground pulls at the piece, strains it, leans it and draws it up as the pull builds.
+func _hold_coupled(state: PhysicsDirectBodyState2D) -> void:
+	var f := _coupled
+	var planet := f.lodged_in as RigidBody2D
+	if planet == null:
+		return
+	var outward := (f.ground_point() - planet.global_position).normalized()
+	var heading := Vector2.RIGHT.rotated(ship.rotation)
+	var push := (1.0 if ship.want_thrust else 0.0) - (1.0 if ship.want_reverse_thrust else 0.0)
+	var force := pull_force(heading, push, outward, ship.boost_power_multiplier if _boosting() else 1.0) if _latched else 0.0
+	var free := f.pull(force, state.step)
+	f.strain(f.strain_of(force), state.step, ship)
+	# The ship's pose on the Lug, the same pose a clamped piece takes on the nose
+	var face := (-f.lug_facing_global()).angle()
+	var nose := ship.to_global(Ship.NOSE)
+	var gap := f.lug_global() - nose
+	var turn := angle_difference(ship.rotation, face)
+	if not _latched:
+		state.linear_velocity = planet.linear_velocity + (gap * COUPLE_GAIN * 1.5).limit_length(Freight.MAGNET_SPEED)
+		state.angular_velocity = clampf(turn * Freight.MAGNET_GAIN, -Freight.MAGNET_SPIN, Freight.MAGNET_SPIN)
+		if Freight.is_seated(gap, turn):
+			_latched = true
+			_latch_fx.call_deferred(f)
+		return
+	state.linear_velocity = planet.linear_velocity + gap / maxf(state.step, 0.0001) * 0.5
+	state.angular_velocity = turn / maxf(state.step, 0.0001) * 0.5
+	if free:
+		_tear_free.call_deferred()
+
+## The nose takes hold of the Lug: the clamp's own clunk, hitstop and all.
+func _latch_fx(f: Freight) -> void:
+	if is_instance_valid(f) and f == _coupled:
+		ship.clamp_fx(f, false)
+
+## The pull has held past the threshold long enough: the piece tears out of the ground and
+## the magnet that had hold of it pulls it straight onto the nose.
+func _tear_free() -> void:
+	var f := _coupled
+	if f == null or not is_instance_valid(f):
+		return
+	_coupled = null
+	_latched = false
+	ship.release_fx(f)
+	ClampFX.burst(ship.get_parent(), f.lug_global(), ship.linear_velocity, 1.6, 2.0)
+	f.break_free(ship)
+	_magnet_target = f
+	_magnet_locked = true
+
+## Let go of a piece mid-pull: it stops closing and moves with the ship, and the two can
+## touch again once it has had a moment to clear.
+func _drop_magnet() -> void:
+	var f := _magnet_target
+	_magnet_target = null
+	_magnet_locked = false
+	if not is_instance_valid(f):
+		return
+	f.linear_velocity = ship.linear_velocity
+	f.angular_velocity = 0.0
+	ship.get_tree().create_timer(0.6).timeout.connect(func() -> void:
+		if is_instance_valid(f) and is_instance_valid(ship):
+			f.remove_collision_exception_with(ship))
+
+## The nearest loose Freight whose Lug is within the magnet's reach of the nose; null if none.
+func freight_in_reach() -> Freight:
+	var nose := ship.to_global(Ship.NOSE)
+	var best: Freight = null
+	var best_d := INF
+	for node in ship.get_tree().get_nodes_in_group("freight"):
+		var f := node as Freight
+		if f == null or not f.is_loose():
+			continue
+		var d := nose.distance_to(f.lug_global())
+		if d <= Freight.MAGNET_RANGE and d < best_d:
+			best = f
+			best_d = d
+	return best
+
+## Mark the piece the clamp would take now (Freight.reach_lit) - only while the clamp is the
+## pilot's to use and nothing is already in its pull.
+func _update_reach() -> void:
+	var f: Freight = null
+	if _magnet_target == null and _coupled == null and ControlLock.allows(ControlLock.CLAMP):
+		f = freight_in_reach()
+	_show_reach(f)
+
+func _show_reach(f: Freight) -> void:
+	if f == _reach:
+		return
+	if is_instance_valid(_reach):
+		_reach.reach_lit = false
+	_reach = f
+	if f:
+		f.reach_lit = true
+
+func exit() -> void:
+	_show_reach(null)
+	if _magnet_target:
+		_drop_magnet()
+	if _coupled:
+		_decouple()
+	super.exit()
+
+func _check_dockable_proximity() -> void:
+	if not is_ship_valid():
+		_nearby_dockable = null
+		EventBus.action_message_changed.emit("")
+		return
+	
+	# Suppress dock message during cooldown (after taking off)
+	var current_time = Time.get_ticks_msec() / 1000.0
+	var in_cooldown = (current_time - _state_enter_time) < DOCK_MESSAGE_COOLDOWN
+	
+	_nearby_dockable = Dockable.nearest(ship.get_tree(), ship.global_position)
+	
+	# Slow enough relative to the berth, and lined up with it (within the threshold)
+	if _nearby_dockable and _lined_up_with(_nearby_dockable) and not in_cooldown:
+		# Show docking prompt (only if harvest isn't available)
+		if not EventBus.is_harvest_available():
+			EventBus.action_message_changed.emit(EventBus.action_prompt("DOCK"))
+	else:
+		# Nothing in reach, moving too fast, not aligned, or in cooldown - clear message
+		# (unless harvest is available)
+		if not EventBus.is_harvest_available():
+			EventBus.action_message_changed.emit("")
+
+func _lined_up_with(dockable: Node2D) -> bool:
+	return Dockable.approach_ok(dockable, ship.rotation, ship.linear_velocity, deg_to_rad(ALIGNMENT_ANGLE_THRESHOLD_DEGREES))
+
+func _attempt_dock() -> void:
+	if not is_ship_valid() or not Dockable.is_dockable(_nearby_dockable):
+		return
+	
+	# Don't allow docking during cooldown (after taking off)
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if (current_time - _state_enter_time) < DOCK_MESSAGE_COOLDOWN:
+		return
+	
+	# Check if action key is pressed
+	if not Input.is_action_just_pressed("action"):
+		return
+	
+	# Close enough, slow enough and lined up
+	if ship.global_position.distance_to(_nearby_dockable.get_dock_position()) > _nearby_dockable.get_dock_distance():
+		return
+	if not _lined_up_with(_nearby_dockable):
+		return
+	
+	ship.dock_at(_nearby_dockable)
+
+func _is_ui_blocking_input() -> bool:
+	if not ship or not is_instance_valid(ship):
+		return false
+	var tree = ship.get_tree()
+	if not tree:
+		return false
+
+	# Check SystemMap
+	var system_map = tree.get_first_node_in_group("system_map") as SystemMap
+	if system_map and system_map.visible:
+		return true
+
+	# Check SpacePortDialogue
+	var spaceport_dialogue = tree.get_first_node_in_group("spaceport_dialogue") as SpacePortDialogue
+	if spaceport_dialogue and spaceport_dialogue.visible:
+		return true
+
+	# Check StartMenu
+	var start_menu = tree.get_first_node_in_group("start_menu") as StartMenu
+	if start_menu and start_menu.visible:
+		return true
+
+	# Check PauseMenu
+	var pause_menu = tree.get_first_node_in_group("pause_menu") as PauseMenu
+	if pause_menu and pause_menu.visible:
+		return true
+
+	# Check the Log
+	var log_ui = tree.get_first_node_in_group("log_ui") as LogUI
+	if log_ui and log_ui.visible:
+		return true
+
+	return false

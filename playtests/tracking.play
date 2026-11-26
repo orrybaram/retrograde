@@ -1,0 +1,39 @@
+# The tracking HUD: nothing is tracked until asked for, then the indicator follows.
+# Run: tools/play.sh playtests/tracking.play
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+# A new game opens adrift outside SR-7. This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
+wait_until pt.state_name() == "LandedState" 5
+assert get_node("/root/NavSystem").get_target() == null "nothing is tracked until the player asks"
+eval get_node("/root/NavSystem").track_home()
+assert get_node("/root/NavSystem").is_tracking_home() "home is a target the player can pick"
+wait 0.5
+screenshot track_01_docked
+
+hold thrust 3
+wait 4
+assert pt.snapshot().tracking.label == "HOME" "snapshot exposes tracking"
+assert pt.snapshot().tracking.distance > 300 "flew away from home"
+screenshot track_02_away
+
+face space_stations 5
+hold thrust 4
+wait_until pt.snapshot().tracking.closing_speed > 0 5
+screenshot track_03_returning
+
+# Waypoints swap the single tracked target (set from the chart in waypoint.play).
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(-4000, 1400))
+wait 0.2
+assert pt.snapshot().tracking.label == "WAYPOINT" "waypoint replaces home"
+screenshot track_04_waypoint
+eval get_node("/root/NavSystem").track(null)
+wait 0.2
+assert get_node("/root/NavSystem").get_target() == null "clearing stops tracking, it does not fall back"
+state

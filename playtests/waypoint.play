@@ -1,0 +1,102 @@
+# Setting tracking points on the star chart: the arrow keys drive a mark around,
+# ENTER hands it to the nav system as a fixed waypoint or as the body under it,
+# DEL drops it back to home base.
+# Run: tools/play.sh playtests/waypoint.play   (frames land in .playtest/mark_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+# A new game opens adrift outside SR-7. This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
+wait_until pt.state_name() == "LandedState" 5
+assert get_node("/root/NavSystem").get_target() == null "nothing is tracked on a new game"
+
+press m
+wait 0.6
+assert pt.node("log_ui").is_on_map() "map open"
+# The dock rides its orbit, so the ship has drifted a little since the map opened
+assert pt.node("system_map").cursor_world.distance_to(ship.global_position) < 500 "the mark starts on the ship"
+screenshot mark_1_open
+
+# Left alone, the mark holds its spot: nothing but the arrow keys moves it
+eval pt.node("system_map").set("cursor_world", Vector2(-100000, -100000))
+wait 1.5
+assert pt.node("system_map").cursor_world.distance_to(Vector2(-100000, -100000)) < 1.0 "the mark holds still on its own"
+
+# Drive the mark off into empty space and take it as a waypoint
+hold right 0.7
+hold up 0.4
+wait 0.2
+assert pt.node("system_map").cursor_world.distance_to(ship.global_position) > 2000 "arrow keys move the mark"
+press enter
+wait 0.3
+assert pt.snapshot().tracking.label == "WAYPOINT" "ENTER sets a tracking point"
+assert get_node("/root/NavSystem").get_target().get_position().distance_to(pt.node("system_map").cursor_world) < 1.0 "the waypoint sits where the mark was"
+screenshot mark_2_waypoint
+
+# Sitting on a body, the mark locks onto it instead, so the target rides the orbit
+eval pt.node("system_map").set("cursor_world", pt.planet("Rook").global_position)
+wait 0.2
+press enter
+wait 0.3
+assert pt.snapshot().tracking.label == "ROOK" "the mark locks onto the body under it"
+assert get_node("/root/NavSystem").get_target().get_position().distance_to(pt.planet("Rook").global_position) < 1.0 "tracking the planet itself"
+screenshot mark_3_body
+
+# Rook keeps moving, and the target goes with it
+eval pt.planet("Rook").set("global_position", pt.planet("Rook").global_position + Vector2(5000, 0))
+wait 0.2
+assert get_node("/root/NavSystem").get_target().get_position().distance_to(pt.planet("Rook").global_position) < 1.0 "the target follows the body"
+
+# DEL drops the point and home base takes over again
+press delete
+wait 0.3
+assert get_node("/root/NavSystem").get_target() == null "DEL drops the point and tracks nothing"
+screenshot mark_4_cleared
+
+press m
+wait_until not pt.node("log_ui").is_on_map() 2
+
+# Dying with the chart up used to be a dead end: the radio panel steps aside for
+# menus, so a transmission that pauses the game got stuck behind the map with no
+# way to answer it. The chart gets out of the way instead.
+hold thrust 1.2
+wait_until pt.state_name() == "FlyingState" 3
+press m
+wait 0.6
+assert pt.node("log_ui").is_on_map() "map open"
+eval ship.explode()
+wait_until main.current_game_state == 2 10
+# The next clone comes up on its own; the guide's call after it pauses the game
+wait_until main.current_game_state == 1 30
+wait_until get_tree().root.get_node("RobotRadio").queue.current.id == "ship_destroyed" 5
+wait_until not pt.node("log_ui").is_on_map() 3
+wait_until pt.node("radio_panel").visible 3
+assert pt.node("radio_panel").visible "the robot's call is readable, not hidden behind the chart"
+screenshot mark_5_game_over
+wait_until not pt.node("radio_panel").is_typing() 5
+press enter
+wait 0.2
+wait_until not pt.node("radio_panel").is_typing() 5
+press enter
+wait_until not get_tree().root.get_node("RobotRadio").is_active() 3
+wait_until not get_tree().paused 3
+assert not get_tree().paused "the pause clears once the call is answered"
+state
+
+# Reaching a waypoint clears it: tracking falls back to home
+wait_until pt.state_name() == "LandedState" 10
+hold thrust 1.2
+wait_until pt.state_name() == "FlyingState" 3
+eval get_node("/root/NavSystem").track_point(ship.global_position + Vector2(0, -3000), "WAYPOINT")
+wait 0.1
+assert get_node("/root/NavSystem").get_target().get_label() == "WAYPOINT" "a waypoint set out ahead"
+eval pt.warp_to(get_node("/root/NavSystem").get_target().get_position() + Vector2(20, 0))
+wait 0.2
+assert get_node("/root/NavSystem").get_target() == null "arriving at the waypoint clears it"

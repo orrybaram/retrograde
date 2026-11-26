@@ -1,0 +1,32 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/resources/ScrapShapes/ScrapShape.gd" id="1"]
+
+[node name="ContainerShape" type="Node2D"]
+script = ExtResource("1")
+collision_radius = 26.0
+
+[node name="CollisionArea" type="Area2D" parent="."]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="CollisionArea"]
+polygon = PackedVector2Array(-22, -11, -18, -14, 18, -14, 22, -11, 22, 11, 18, 14, -18, 14, -22, 11)
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+color = Color(0.8, 0.765, 0.69, 1)
+polygon = PackedVector2Array(-22, -11, -18, -14, 18, -14, 22, -11, 22, 11, 18, 14, -18, 14, -22, 11)
+
+[node name="RibLeft" type="Polygon2D" parent="."]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-13, -13.5, -10, -13.5, -10, 13.5, -13, 13.5)
+
+[node name="RibRight" type="Polygon2D" parent="."]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(10, -13.5, 13, -13.5, 13, 13.5, 10, 13.5)
+
+[node name="Seam" type="Polygon2D" parent="."]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-10, -1, 10, -1, 10, 1, -10, 1)
+
+[node name="Latch" type="Polygon2D" parent="."]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-2, -4, 2, -4, 2, 4, -2, 4)

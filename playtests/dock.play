@@ -1,0 +1,89 @@
+# Docking at a port: gems fly out of the hold into the port while the HUD Stores count
+# rolls up, and SR-7 tops the tank up to its free half (~2.5s from empty) for nothing.
+# Dialogue opens after the Deposit; then Stores go to the hull
+# first and the tank past half, with no menu, until they run out (issue #137).
+# Run: tools/play.sh playtests/dock.play   (frames land in .playtest/dock_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_low_fuel")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_cargo_full")
+# A new game opens adrift outside SR-7. This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+
+# Full-ish hold, empty tank, a holed hull, then redock
+eval inv.add_item("shard", 30)
+eval inv.add_item("gem", 12)
+eval inv.add_item("crystal", 4)
+eval inv.add_item("artifact", 2)
+eval ship.drive.set("fuel", 0.0)
+eval ship.set("hull_strength", 40.0)
+assert gs.stores == 0 "no Stores yet"
+# The hold emptying and the Stores rolling up both change how many digits the cargo row
+# carries; the meters must not stretch with it
+eval pt.remember("hull_bar_w", pt.node("hud").get_node("DashboardAnchor/HBox/LeftColumn/MinimapDial/HullSegmentBar").size.x)
+eval ship.dock_at(pt.node("space_ports"))
+wait 0.9
+burst dock_1_deposit 6 0.05
+wait_until gs.stores > 0 2
+assert inv.get_total_value() > 0 "hold still draining while Stores count up"
+assert ship.drive.fuel > 0.0 "tank refilling"
+assert ship.hull_strength == 40.0 "nothing is spent until the Deposit is in"
+assert not pt.visible_ui().has("SpacePortDialogue") "dialogue waits for the Deposit"
+wait 0.8
+screenshot dock_2_deposit
+wait_until is_equal_approx(ship.drive.fuel, ship.drive.max_fuel * 0.5) 2
+wait_until inv.get_total_value() == 0 3
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+# 456 ST in: the hull is patched first, with no menu, while the tank waits at half
+wait_until ship.hull_strength > 40.0 1
+assert gs.stores < 60 + 96 + 100 + 200 "the patch is paid out of Stores"
+assert is_equal_approx(ship.drive.fuel, ship.drive.max_fuel * 0.5) "the tank waits for the hull"
+screenshot dock_3_repair
+wait_until ship.hull_strength == ship.max_hull 3
+# ...then the tank fills past half
+wait_until ship.drive.fuel > ship.drive.max_fuel * 0.5 1
+screenshot dock_4_topup
+wait_until ship.drive.fuel == ship.drive.max_fuel 5
+# 60 hull at 3 ST, 75 fuel at 2 ST
+assert gs.stores == 456 - 180 - 150 "hull and tank bought out of the Deposit"
+assert pt.node("hud").get_node("DashboardAnchor/HBox/LeftColumn/MinimapDial/HullSegmentBar").size.x == pt.recall("hull_bar_w") "hull meter keeps its width through the spend"
+screenshot dock_5_serviced
+
+# Too few Stores: part of the hull, nothing past half, and the Stores run dry
+press escape
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+eval gs.set("stores", 30)
+eval ship.drive.set("fuel", 0.0)
+eval ship.set("hull_strength", 50.0)
+eval ship.dock_at(pt.node("space_ports"))
+wait_until gs.stores == 0 3
+wait 1.5
+assert is_equal_approx(ship.hull_strength, 60.0) "30 ST patched ten points"
+wait_until is_equal_approx(ship.drive.fuel, ship.drive.max_fuel * 0.5) 3
+wait 0.5
+assert is_equal_approx(ship.drive.fuel, ship.drive.max_fuel * 0.5) "nothing left for the tank past half"
+
+# With no Stores, a redock above half leaves the tank as it was
+press escape
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+eval ship.drive.set("fuel", ship.drive.max_fuel * 0.6)
+eval ship.dock_at(pt.node("space_ports"))
+wait 1.5
+assert is_equal_approx(ship.drive.fuel, ship.drive.max_fuel * 0.6) "above half SR-7 adds nothing for free"
+state

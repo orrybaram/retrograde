@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+; A wrecked hauler: longer and boxier than the player's arrowhead, with its spine broken
+; open amidships. DerelictShip copies these polygons for its visual and takes the one
+; named "Polygon2D" for its collision outline, so that name matters. Colours are
+; Colors.gd values (CREAM, HULL_MID, HULL_DARK, HULL_LIGHT); DerelictShip tints the lot
+; down to a powered-off hull.
+
+[node name="SmallFreighter" type="Node2D"]
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+color = Color(0.949, 0.91, 0.824, 1)
+polygon = PackedVector2Array(32, -3, 27, -11, -16, -14, -27, -10, -21, -4, -29, 0, -25, 8, -15, 14, 27, 11, 32, 4)
+
+[node name="Hold" type="Polygon2D" parent="."]
+color = Color(0.29, 0.275, 0.231, 1)
+polygon = PackedVector2Array(-13, -9, 15, -7, 15, 7, -13, 9)
+
+[node name="Breach" type="Polygon2D" parent="."]
+color = Color(0.184, 0.173, 0.145, 1)
+polygon = PackedVector2Array(-7, -14, 3, -14, 0, -8, 5, -3, -2, -1, -9, -6)
+
+[node name="Rib" type="Polygon2D" parent="."]
+color = Color(0.58, 0.545, 0.451, 1)
+polygon = PackedVector2Array(18, -12, 22, -11.5, 22, 11, 18, 11.5)
+
+[node name="Engine" type="Polygon2D" parent="."]
+color = Color(0.58, 0.545, 0.451, 1)
+polygon = PackedVector2Array(-27, -10, -21, -4, -29, 0, -25, 8, -30, 6, -32, -2)

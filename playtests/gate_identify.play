@@ -1,0 +1,56 @@
+# A Gate goes unnamed until the player flies up to it and the guide says what it is.
+# Run: tools/play.sh playtests/gate_identify.play   (frames land in .playtest/identify_*.png)
+
+press enter
+wait_until main.current_game_state == 1 and not get_tree().paused 15
+# The controls and scrap tutorials pause the game; this scenario isn't about them
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_scrap")
+eval get_tree().root.get_node("RobotRadio").mark_seen("first_departure")
+# A new game opens adrift outside SR-7. This scenario is not about
+# the opening: skip it, and start docked at a running station.
+eval pt.skip_opening()
+# Skipping Act 1 leaves UNIT-7 off (it reboots at the core's cold start): wake it by hand
+eval get_tree().root.get_node("RobotRadio").set("guide_awake", true)
+wait_until pt.state_name() == "LandedState" 5
+press action
+wait_until pt.visible_ui().has("SpacePortDialogue") 2
+press down
+press enter
+wait_until pt.visible_ui().is_empty() 2
+hold thrust 0.4
+wait_until pt.state_name() == "FlyingState" 3
+
+assert gs.progress.list("identified_gates").is_empty() "a new game knows none of the Gates"
+
+# In scanner range but nowhere near it: a ring on the minimap and nothing else
+eval pt.park_at_gate("Veld", 3000.0)
+frames 2
+assert not pt.gate("Veld").is_identified() "3000px out is too far to make it out"
+assert not get_tree().root.get_node("RobotRadio").is_active() "the guide says nothing from out here"
+screenshot identify_0_unknown
+
+# Fly in. Inside a thousand pixels the guide names it
+eval pt.park_at_gate("Veld", 900.0)
+frames 2
+assert pt.gate("Veld").is_identified() "reaching a Gate is what names it"
+assert get_tree().root.get_node("RobotRadio").is_active() "the guide comes on the radio"
+assert get_tree().root.get_node("RobotRadio").queue.current.id == "gate_identified" "and it is the naming call"
+assert not get_tree().paused "the call doesn't stop the ship mid-flight"
+wait 0.6
+screenshot identify_1_named
+
+# Every later Gate is named without a word: the call is show-once for the save
+eval get_tree().root.get_node("RobotRadio").silence()
+eval pt.park_at_gate("Crom", 900.0)
+frames 2
+assert pt.gate("Crom").is_identified() "Crom's Gate is named by being reached too"
+assert not get_tree().root.get_node("RobotRadio").is_active() "but the guide has said its piece"
+
+# Named Gates survive a reload, with no dock in between to hang a full save off
+reload
+wait_until main.current_game_state == 1 10
+assert pt.gate("Veld").is_identified() "Veld's Gate is still named after a reload"
+assert pt.gate("Crom").is_identified() "so is Crom's"
+assert gs.progress.list("identified_gates").size() == 2 "and nothing else got named"
+assert gs.titan_influence() == 0 "naming a Gate leaves its Module offline"
+state

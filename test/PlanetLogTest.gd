@@ -1,0 +1,315 @@
+extends GdUnitTestSuite
+
+## Visited: a Body whose inner orbit the ship has entered earns its Record in the Log.
+## Covers the marking reach, the moon and sun
+## keys, the save round trip, and the Records tab that reads it back.
+
+const SAVE_FILE := "user://visit_test_save.cfg"
+
+var _gs: GameState
+
+
+func before_test() -> void:
+	_gs = auto_free(GameState.new()) as GameState
+	_gs.set_process(false)
+	add_child(_gs)
+
+
+func after_test() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_FILE))
+
+
+func _planet(pos: Vector2, radius := 100.0, type := Planet.PlanetType.ROCKY, body_name := "") -> Planet:
+	var planet := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	planet.radius = radius
+	planet.planet_type = type
+	if body_name != "":
+		planet.name = body_name
+		planet.planet_name = body_name
+	add_child(planet)
+	planet.global_position = pos
+	return planet
+
+
+## A moon is a Planet parented to a Planet, which is what makes its key "Parent/Name".
+func _moon(parent: Planet, offset: Vector2, radius := 50.0, body_name := "") -> Planet:
+	var moon := auto_free(load("res://entities/Planet/Planet.tscn").instantiate()) as Planet
+	moon.radius = radius
+	moon.planet_type = Planet.PlanetType.BARREN
+	moon.enable_orbiting = false
+	if body_name != "":
+		moon.name = body_name
+		moon.planet_name = body_name
+	parent.add_child(moon)
+	moon.global_position = parent.global_position + offset
+	return moon
+
+
+func _planet_log() -> PlanetLog:
+	var planet_log := auto_free(PlanetLog.new()) as PlanetLog
+	add_child(planet_log)
+	return planet_log
+
+
+# --- Marking -----------------------------------------------------------------
+
+## Inner orbit is the whole of the reach: the same distance the scanner needs.
+func test_a_body_is_visited_at_inner_orbit_and_no_further_out() -> void:
+	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
+	var planet_log := _planet_log()
+	var inner := planet.scan_radius()
+	assert_object(planet_log.mark_at(Vector2(inner + 1.0, 0))).is_null()
+	assert_object(planet_log.mark_at(Vector2(planet.field_radius() - 1.0, 0))).is_null()
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Crom")).is_false()
+	assert_object(planet_log.mark_at(Vector2(inner - 1.0, 0))).is_same(planet)
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Crom")).is_true()
+	assert_bool(planet.is_visited()).is_true()
+
+
+## The Record is earned once; flying back through does not earn it again.
+func test_a_record_is_earned_once() -> void:
+	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
+	var planet_log := _planet_log()
+	var inside := Vector2(planet.scan_radius() - 1.0, 0)
+	assert_object(planet_log.mark_at(inside)).is_same(planet)
+	assert_object(planet_log.mark_at(inside)).is_null()
+	assert_int(_gs.progress.count(Progress.VISITED_BODIES)).is_equal(1)
+
+
+## Visiting works from the first minute and surveys nothing.
+func test_visiting_does_not_survey() -> void:
+	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
+	var planet_log := _planet_log()
+	assert_object(planet_log.mark_at(Vector2(planet.scan_radius() - 1.0, 0))).is_same(planet)
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Crom")).is_true()
+	assert_bool(_gs.is_planet_scanned("Crom")).is_false()
+
+
+## The sun and a moon are Bodies like any planet, and a moon's key is "Parent/Name".
+func test_the_sun_and_a_moon_earn_records_by_the_same_rule() -> void:
+	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")
+	var veld := _planet(Vector2(100000, 0), 400.0, Planet.PlanetType.ROCKY, "Veld")
+	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
+	var planet_log := _planet_log()
+	assert_object(planet_log.mark_at(Vector2(sun.scan_radius() - 1.0, 0))).is_same(sun)
+	assert_object(planet_log.mark_at(rook.global_position)).is_same(rook)
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Sun")).is_true()
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Veld/Rook")).is_true()
+	assert_str(rook.save_key()).is_equal("Veld/Rook")
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Veld")).is_false()
+
+
+## A moon wins inside its parent's field: the deepest Body takes the Record.
+func test_the_deepest_body_earns_the_record() -> void:
+	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
+	var rook := _moon(veld, Vector2(300, 0), 50.0, "Rook")
+	var planet_log := _planet_log()
+	assert_object(planet_log.mark_at(rook.global_position)).is_same(rook)
+
+
+# --- Save --------------------------------------------------------------------
+
+## A continue brings every Visited Body back, in visit order.
+func test_visited_bodies_come_back_on_a_continue_in_visit_order() -> void:
+	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")
+	var crom := _planet(Vector2(100000, 0), 100.0, Planet.PlanetType.ROCKY, "Crom")
+	var planet_log := _planet_log()
+	planet_log.mark_at(crom.global_position)
+	planet_log.mark_at(Vector2(sun.scan_radius() - 1.0, 0))
+	_gs.progress = _gs.progress.resumed()
+	assert_array(Array(_gs.progress.list(Progress.VISITED_BODIES))).is_equal(["Crom", "Sun"])
+
+
+## Reaching a Body in open flight writes it into the save straight away, where saves
+## before the ledger kept it - there is no dock to hang a full save off.
+func test_a_visit_is_written_into_the_save_file_on_the_spot() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("stats", "stores", 12)
+	cfg.set_value("visited", "planets", PackedStringArray(["Veld/Rook"]))
+	cfg.save(SAVE_FILE)
+	_gs.progress = Progress.new(Progress.FileStore.new(SAVE_FILE)).resumed()
+	var planet := _planet(Vector2.ZERO, 100.0, Planet.PlanetType.ROCKY, "Crom")
+	_planet_log().mark_at(Vector2(planet.scan_radius() - 1.0, 0))
+	cfg.load(SAVE_FILE)
+	assert_array(Array(cfg.get_value("visited", "planets"))).is_equal(["Veld/Rook", "Crom"])
+	assert_int(cfg.get_value("stats", "stores")).is_equal(12)
+
+
+func test_a_new_game_forgets_every_visit() -> void:
+	_gs.progress.mark(Progress.VISITED_BODIES, "Veld/Rook")
+	_gs.reset_all_state()
+	assert_bool(_gs.progress.holds(Progress.VISITED_BODIES, "Veld/Rook")).is_false()
+
+
+# --- Records tab -------------------------------------------------------------
+
+func _records_tab() -> RecordsTab:
+	var tab := auto_free(RecordsTab.new()) as RecordsTab
+	add_child(tab)
+	tab.refresh()
+	return tab
+
+
+## Every Label's text under `node`, in tree order.
+func _text(node: Node) -> PackedStringArray:
+	var out := PackedStringArray()
+	if node is Label:
+		out.append((node as Label).text)
+	for child in node.get_children():
+		out.append_array(_text(child))
+	return out
+
+
+## A player who has stayed home gets the empty state, not a list of somewhere to go.
+func test_no_visits_leaves_the_bodies_list_empty() -> void:
+	var tab := _records_tab()
+	assert_bool(tab._empty.visible).is_true()
+	assert_bool(tab._bodies.visible).is_false()
+	assert_str("\n".join(_text(tab))).not_contains("? ? ?")
+	assert_str(tab.hint()).is_equal(LogTab.shell_keys())
+
+
+## A Body reached with no survey gets a row, and the row says so.
+func test_an_unsurveyed_body_reads_no_survey() -> void:
+	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
+	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
+	_gs.progress.mark(Progress.VISITED_BODIES, rook.save_key())
+	var tab := _records_tab()
+	var text := "\n".join(_text(tab))
+	assert_bool(tab._bodies.visible).is_true()
+	assert_str(text).contains("B O D I E S")
+	assert_str(text).contains("ROOK")
+	assert_str(text).contains(RecordsTab.NO_SURVEY)
+	# The detail pane names the Body and what it orbits.
+	var detail := "\n".join(_text(tab._detail))
+	assert_str(detail).contains("DESIGNATION")
+	assert_str(detail).contains("ROOK")
+	assert_str(detail).contains("ORBITS")
+	assert_str(detail).contains("VELD")
+
+
+## A survey fills the Record in: the row drops UNSURVEYED for the survey in one line,
+## and the detail pane holds the full readout.
+func test_a_surveyed_body_carries_its_survey() -> void:
+	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
+	planet.habitability = 0.25
+	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
+	_gs.mark_planet_scanned(planet.save_key())
+	var tab := _records_tab()
+	assert_str("\n".join(_text(tab))).not_contains(RecordsTab.NO_SURVEY)
+	# The row itself carries the class and the pull, not just the fact of a survey.
+	var row := "\n".join(_text(tab._body_rows))
+	assert_str(row).contains(PlanetScan.summary_line(planet))
+	assert_str(row).contains("ICE GIANT")
+	assert_str(row).contains(PlanetScan.gravity(planet))
+	assert_str("\n".join(_text(tab._detail))).contains("ICE GIANT")
+
+## There is one survey format in the game: the Record holds exactly
+## PlanetScan.readout_lines.
+func test_the_detail_pane_is_the_survey_readout() -> void:
+	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
+	planet.habitability = 0.25
+	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
+	_gs.mark_planet_scanned(planet.save_key())
+	var tab := _records_tab()
+	assert_array(Array(_text(tab._detail))) \
+			.contains_exactly(Array(PlanetScan.readout_lines(planet)))
+
+## The unscanned Record holds the rows a Record carries either way and says plainly
+## that nothing has surveyed the Body — never `? ? ?`.
+func test_scanning_swaps_the_no_survey_line_for_the_readout() -> void:
+	var planet := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
+	_gs.progress.mark(Progress.VISITED_BODIES, planet.save_key())
+	var tab := _records_tab()
+	assert_array(Array(_text(tab._detail))).contains_exactly(
+			Array(PlanetScan.identity_lines("CROM", "")) + ["", RecordsTab.NO_SURVEY])
+	_gs.mark_planet_scanned(planet.save_key())
+	tab.refresh()
+	var detail := Array(_text(tab._detail))
+	assert_array(detail).contains_exactly(Array(PlanetScan.readout_lines(planet)))
+	assert_str("\n".join(_text(tab._detail))).not_contains(RecordsTab.NO_SURVEY)
+
+## A moon keeps its ORBITS row once it is surveyed — the survey adds rows, it does not
+## replace the ones the Record already carried.
+func test_a_surveyed_moon_still_names_what_it_orbits() -> void:
+	var veld := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Veld")
+	var rook := _moon(veld, Vector2(2000, 0), 50.0, "Rook")
+	_gs.progress.mark(Progress.VISITED_BODIES, rook.save_key())
+	_gs.mark_planet_scanned(rook.save_key())
+	var tab := _records_tab()
+	var detail := "\n".join(_text(tab._detail))
+	assert_str(detail).contains("ORBITS")
+	assert_str(detail).contains("VELD")
+	assert_str(detail).contains("BARREN")
+
+## The sun reads honestly through the same instrument as everything else: its own class,
+## no habitability and no ore, with no row left empty and no special case.
+## It is not a moon, so it carries no ORBITS row.
+func test_the_suns_record_reads_honestly() -> void:
+	var sun := _planet(Vector2.ZERO, 5000.0, Planet.PlanetType.SUN, "Sun")
+	_gs.progress.mark(Progress.VISITED_BODIES, sun.save_key())
+	_gs.mark_planet_scanned(sun.save_key())
+	var tab := _records_tab()
+	var rows := _text(tab._detail)
+	assert_array(Array(rows)).contains_exactly(Array(PlanetScan.readout_lines(sun)))
+	var detail := "\n".join(rows)
+	assert_str(detail).contains("DESIGNATION  SUN")
+	assert_str(detail).contains("CLASS        SUN")
+	assert_str(detail).contains("HABITABLE    0%")
+	assert_str(detail).contains("GRAVITY      %s" % PlanetScan.gravity(sun))
+	assert_str(detail).contains("ORE          NONE FOUND")
+	assert_str(detail).not_contains("ORBITS")
+	# No row is a label with nothing after it.
+	for row in rows:
+		assert_str(row.substr(PlanetScan.LABEL_COLUMN).strip_edges()).is_not_empty()
+
+
+## No row for a Body the player has not reached, and never `? ? ?`.
+func test_only_visited_bodies_get_a_row() -> void:
+	var reached := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
+	_planet(Vector2(100000, 0), 400.0, Planet.PlanetType.ROCKY, "Sonder")
+	_gs.progress.mark(Progress.VISITED_BODIES, reached.save_key())
+	var tab := _records_tab()
+	var text := "\n".join(_text(tab))
+	assert_str(text).contains("CROM")
+	assert_str(text).not_contains("SONDER")
+	assert_str(text).not_contains("? ? ?")
+	assert_int(tab._body_rows.get_child_count()).is_equal(1)
+
+
+## UP / DOWN move the one cursor and the detail pane follows it.
+func test_up_and_down_move_the_cursor_and_the_detail_follows() -> void:
+	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
+	var sonder := _planet(Vector2(100000, 0), 400.0, Planet.PlanetType.ICE_GIANT, "Sonder")
+	_gs.progress.mark(Progress.VISITED_BODIES, crom.save_key())
+	_gs.progress.mark(Progress.VISITED_BODIES, sonder.save_key())
+	var tab := _records_tab()
+	assert_int(tab._cursor).is_equal(0)
+	assert_str("\n".join(_text(tab._detail))).contains("CROM")
+	assert_bool(tab.handle_action(&"menu_down")).is_true()
+	assert_int(tab._cursor).is_equal(1)
+	assert_str("\n".join(_text(tab._detail))).contains("SONDER")
+	assert_bool(tab.handle_action(&"menu_up")).is_true()
+	assert_int(tab._cursor).is_equal(0)
+	assert_str("\n".join(_text(tab._detail))).contains("CROM")
+	# and the cursor wraps rather than sticking at the ends
+	tab.handle_action(&"menu_up")
+	assert_int(tab._cursor).is_equal(1)
+
+
+## The bottom border only offers the cursor keys once there is a list to move through.
+func test_the_cursor_keys_appear_with_the_first_record() -> void:
+	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
+	_gs.progress.mark(Progress.VISITED_BODIES, crom.save_key())
+	var tab := _records_tab()
+	assert_str(tab.hint()).contains(RecordsTab.cursor_keys())
+	assert_str(tab.hint()).contains(LogTab.shell_keys())
+
+
+## Nothing to move through, nothing to swallow: LEFT / RIGHT stay unclaimed either way.
+func test_unclaimed_keys_pass_through() -> void:
+	var crom := _planet(Vector2.ZERO, 400.0, Planet.PlanetType.ROCKY, "Crom")
+	_gs.progress.mark(Progress.VISITED_BODIES, crom.save_key())
+	var tab := _records_tab()
+	assert_bool(tab.handle_action(&"menu_left")).is_false()
+	assert_bool(tab.handle_action(&"menu_right")).is_false()
