@@ -72,9 +72,20 @@ var _held := 0.0
 var _recharge := 0.0
 ## Live rings (SonarRing: age, lifetime, radius, color, ...).
 var _rings: Array[SonarRing] = []
+## Rings draw on their own layer above the station and planets (z RINGS_Z, absolute), so a
+## ring is seen breaking against a hull rather than hidden under its art. The charge and
+## recharge glows stay on the pulse itself, under the ship.
+const RINGS_Z := 2
+var _ring_layer: Node2D
 
 func _ready() -> void:
 	z_index = -1
+	_ring_layer = Node2D.new()
+	_ring_layer.name = "Rings"
+	_ring_layer.z_as_relative = false
+	_ring_layer.z_index = RINGS_Z
+	_ring_layer.draw.connect(_draw_rings)
+	add_child(_ring_layer)
 
 func _process(delta: float) -> void:
 	if charging:
@@ -96,6 +107,8 @@ func _process(delta: float) -> void:
 	for pair in heard:
 		_deliver(pair[0], pair[1])
 	queue_redraw()
+	if _ring_layer:
+		_ring_layer.queue_redraw()
 
 ## Every SonarSurface taking part, brought up to date with where things are now.
 static func active_surfaces(tree: SceneTree) -> Array[SonarSurface]:
@@ -209,10 +222,17 @@ func _draw() -> void:
 		if done > 0.0:
 			draw_arc(Vector2.ZERO, CHARGE_GLOW_RADIUS, top, top + TAU * done, maxi(2, ceili(24 * done)),
 				Color(Colors.HULL_LIGHT, RECHARGE_ARC_ALPHA), WIDTH, true)
+	if _ring_layer == null:
+		_draw_rings_on(self)
+
+func _draw_rings() -> void:
+	_draw_rings_on(_ring_layer)
+
+func _draw_rings_on(canvas: CanvasItem) -> void:
 	if _rings.is_empty():
 		return
 	# Rings stay where they were sent, in the world, whatever the ship does since
-	draw_set_transform_matrix(get_global_transform().affine_inverse())
+	canvas.draw_set_transform_matrix(canvas.get_global_transform().affine_inverse())
 	for ring in _rings:
-		ring.draw(self)
-	draw_set_transform_matrix(Transform2D.IDENTITY)
+		ring.draw(canvas)
+	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
