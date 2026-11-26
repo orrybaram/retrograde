@@ -32,6 +32,10 @@ class_name SonarPulse
 ## the ring then - and gets `on_sonar_touched(strength, clarity)` with a strength that
 ## carries its answer back to the ship.
 ##
+## After the ship fires (fire), it can't start charging again for RECHARGE_TIME: a dim arc
+## closes round the hull meanwhile. Ship skips it near a Procedure device, where Marks are
+## laid down in quick taps, and SR-7's dish (send) never has one.
+##
 ## A Commit (Resonance) is a ring that carries Marks. Listeners with `on_procedure(marks)`
 ## get those instead of `on_sonar_touched` when it reaches them; the rest hear an ordinary ring.
 
@@ -49,6 +53,9 @@ const WIDTH := 1.0
 ## The glow at the hull while charging: its radius, and how bright it gets.
 const CHARGE_GLOW_RADIUS := 14.0
 const CHARGE_GLOW_ALPHA := 0.3
+## After firing, how long before a new charge can start, and the arc that shows it.
+const RECHARGE_TIME := 0.8
+const RECHARGE_ARC_ALPHA := 0.5
 
 ## A Sweep: the ship's own search. SR-7's dish sends rings through a pulse of its own with
 ## this off - they light scrap up like any ring, but nobody was looking (ScrapNode.on_swept).
@@ -61,6 +68,8 @@ var charging := false:
 		if not charging:
 			_held = 0.0  # fire() reads it first; anything else is a cancel
 var _held := 0.0
+## Seconds of recharge left (0: ready).
+var _recharge := 0.0
 ## Live rings (SonarRing: age, lifetime, radius, color, ...).
 var _rings: Array[SonarRing] = []
 
@@ -70,6 +79,9 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if charging:
 		_held += delta
+		queue_redraw()
+	if _recharge > 0.0:
+		_recharge = maxf(_recharge - delta, 0.0)
 		queue_redraw()
 	if _rings.is_empty():
 		return
@@ -101,10 +113,16 @@ static func active_surfaces(tree: SceneTree) -> Array[SonarSurface]:
 func held() -> float:
 	return _held
 
+## Whether a new charge has to wait: the last ring fired less than RECHARGE_TIME ago.
+func is_recharging() -> bool:
+	return _recharge > 0.0
+
 ## Let the charge go as one ring, as strong as it got, carrying `marks` if it is a Commit.
-func fire(marks: Array[int] = []) -> void:
+## Then RECHARGE_TIME before the next charge, unless `recharges` is off (Marks).
+func fire(marks: Array[int] = [], recharges := true) -> void:
 	var strength := strength_for(_held)
 	charging = false
+	_recharge = RECHARGE_TIME if recharges else 0.0
 	send(strength, MAX_ALPHA, WIDTH, Colors.PRIMARY, marks)
 
 ## Send one ring worth `strength` ordinary rings, drawn at `alpha` and `width` - the ship's
@@ -184,6 +202,13 @@ func _draw() -> void:
 		var glow := Colors.PRIMARY
 		glow.a = CHARGE_GLOW_ALPHA * (1.0 - 1.0 / strength_for(_held))
 		draw_arc(Vector2.ZERO, CHARGE_GLOW_RADIUS, 0.0, TAU, 24, glow, WIDTH, true)
+	elif _recharge > 0.0:
+		# From 12 o'clock on screen, clockwise, whichever way the ship is turned
+		var done := 1.0 - _recharge / RECHARGE_TIME
+		var top := -PI / 2.0 - global_rotation
+		if done > 0.0:
+			draw_arc(Vector2.ZERO, CHARGE_GLOW_RADIUS, top, top + TAU * done, maxi(2, ceili(24 * done)),
+				Color(Colors.HULL_LIGHT, RECHARGE_ARC_ALPHA), WIDTH, true)
 	if _rings.is_empty():
 		return
 	# Rings stay where they were sent, in the world, whatever the ship does since

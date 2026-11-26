@@ -260,15 +260,19 @@ func _physics_process(dt: float) -> void:
 ## `action` held charges a ping, let go sends it. A hold that was ever somewhere a ping
 ## isn't allowed (docked, a menu, a load clamped - including the hold that lets the load
 ## go) belongs to that, not the sonar: any charge is dropped, and the rest of the hold is
-## ignored until the key comes up.
+## ignored until the key comes up. After a ping a new charge waits out the recharge
+## (SonarPulse.RECHARGE_TIME); a key held through it starts charging when it ends. Near a
+## Procedure device there is no recharge, so Marks can be tapped out quickly.
 func _drive_sonar() -> void:
 	var down := Input.is_action_pressed("action")
 	if not down:
 		_sonar_blocked = false
 	elif not wants_sonar():
 		_sonar_blocked = true
+	var marking := Resonance.available_for(self)
 	if down and not _sonar_blocked:
-		sonar.charging = true
+		if sonar.charging or marking or not sonar.is_recharging():
+			sonar.charging = true
 	elif sonar.charging:
 		if down:
 			sonar.cancel()
@@ -276,9 +280,9 @@ func _drive_sonar() -> void:
 			# Near hardware that listens the hold is also a Mark, or the Commit that
 			# carries them all out on this ring
 			var marks: Array[int] = []
-			if Resonance.available_for(self):
+			if marking:
 				marks = resonance.release(sonar.held())
-			sonar.fire(marks)
+			sonar.fire(marks, not marking)
 
 ## Sonar resonance: `action` pings from anywhere the ship is free to act. It is not tied
 ## to harvesting; a scrap or a seam in the rings is what makes a ping a harvest. The state
