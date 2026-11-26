@@ -301,7 +301,7 @@ func test_a_reactive_outline_hears_where_the_ring_touched_it() -> void:
 	holder.add_child(s)
 	s.set_polygons([PackedVector2Array([Vector2(-20, -20), Vector2(20, -20), Vector2(20, 20), Vector2(-20, 20)])])
 	var hits: Array[int] = []
-	s.touched.connect(func(i: int, _a: float, _o: Vector2) -> void: hits.append(i))
+	s.touched.connect(func(i: int, _a: float, _o: Vector2, _r: int) -> void: hits.append(i))
 	await get_tree().process_frame
 	var pulse := _pulse(Vector2.ZERO)
 	pulse.send(1.0)
@@ -327,6 +327,18 @@ func _post(at: Vector2, radius: float) -> Node2D:
 	post.add_child(shape)
 	SonarSurface.attach(post, shape, SonarSurface.Preset.PLATE)
 	return post
+
+func test_the_ring_is_read_along_the_bearing_asked() -> void:
+	# A shadow at 100 degrees is there, and only there: 60 degrees is open (bearings are not
+	# rounded to whole radians)
+	_post(Vector2.from_angle(deg_to_rad(100.0)) * 110.0, 30.0)
+	var pulse := _pulse(Vector2.ZERO)
+	pulse.send(1.0)
+	_run(pulse, SonarPulse.LIFETIME * 0.8)
+	var ring: SonarRing = pulse._rings[0]
+	assert_float(ring.amp_at(deg_to_rad(100.0), 170.0)).is_less(SonarRing.FIND)
+	assert_float(ring.amp_at(deg_to_rad(60.0), 170.0)).is_greater_equal(SonarRing.FIND)
+	assert_float(ring.amp_toward(Vector2.from_angle(deg_to_rad(60.0)) * 170.0)).is_greater_equal(SonarRing.FIND)
 
 func test_a_small_shadow_fills_back_in_with_distance() -> void:
 	_post(Vector2(100, 0), 12.0)

@@ -225,7 +225,7 @@ func _gather(surfaces: Array[SonarSurface], big_e: float) -> void:
 	var dtheta := TAU / RAYS
 	for s in surfaces:
 		var sid := s.get_instance_id()
-		if _ignore.has(sid):
+		if _ignore.has(sid) or not s.blocks():
 			continue
 		var r := s.bound_radius
 		var dc := origin.distance_to(s.center)
@@ -434,7 +434,7 @@ func _diffuse(d_e: float) -> void:
 ## The amplitude the ring had at `d` px out along `angle` as it went past; -1 if it has not
 ## got there yet (and may still).
 func amp_at(angle: float, d: float, tol := TOL) -> float:
-	var f := posmod(angle, TAU) / TAU * RAYS
+	var f := fposmod(angle, TAU) / TAU * RAYS
 	var i0 := int(f) % RAYS
 	var i1 := (i0 + 1) % RAYS
 	var w := f - floorf(f)
@@ -460,7 +460,7 @@ func _ray_amp_at(i: int, d: float, tol: float) -> float:
 ## A ray that ran out inside rock never came out the far side, so it carries nothing: a far
 ## listener behind thick rock goes quiet as it would behind a solid.
 func amp_toward(p: Vector2) -> float:
-	var f := posmod((p - origin).angle(), TAU) / TAU * RAYS
+	var f := fposmod((p - origin).angle(), TAU) / TAU * RAYS
 	var i0 := int(f) % RAYS
 	var i1 := (i0 + 1) % RAYS
 	return lerpf(_carried(i0), _carried(i1), f - floorf(f))
@@ -537,8 +537,8 @@ func _touch_reactive(surfaces: Array[SonarSurface]) -> void:
 			if a < 0.0:
 				continue
 			lit[i] = 1
-			if a >= SEE:
-				s.touch(i, minf(a, 1.0), origin)
+			if a >= SEE and s.faces(i, origin):
+				s.touch(i, minf(a, 1.0), origin, get_instance_id())
 		_lit[sid] = lit
 
 ## Draw the ring as a polyline through the ray fronts, in global space, on `ci`.

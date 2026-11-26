@@ -18,11 +18,17 @@ class_name SonarSurface
 ##
 ## A `reactive` material samples the outline every SAMPLE px and reports each ring's touch
 ## (`touched`): which sample, and with what amplitude the ring got there. Nothing is drawn
-## here; the glow belongs to whoever listens.
+## here; the glow belongs to whoever listens (SonarGlow).
+##
+## An outline can also be a set of open lines (set_polylines): something a ring only touches,
+## never enters - the cut edges round a Mount's gap. It has no inside, so it blocks nothing.
+## One-sided lines are faces: a ring only touches them from the side they face. A closed
+## outline faces outward the same way, so a ring bending round a solid never lights its back.
 
-## A ring reached outline sample `sample_index` (sample_global) with `amplitude` (0..1),
-## sent from `origin`. Reactive materials only, once per ring per sample.
-signal touched(sample_index: int, amplitude: float, origin: Vector2)
+## A ring reached outline sample `sample_index` (global_samples) with `amplitude` (0..1),
+## sent from `origin`; `ring` tells one ring from the next. Reactive materials only, once per
+## ring per sample.
+signal touched(sample_index: int, amplitude: float, origin: Vector2, ring: int)
 
 const GROUP := &"sonar_surfaces"
 ## Spacing of a reactive outline's samples, px.
@@ -46,6 +52,8 @@ var _manual := false
 var _polys: Array[PackedVector2Array] = []
 var _rects: Array[Rect2] = []
 var _circle := false
+## The outline is open lines, not polygons: touched, never entered.
+var _open := false
 var _circle_radius := 0.0
 var _local_center := Vector2.ZERO
 var _local_radius := 0.0
@@ -58,8 +66,13 @@ var _src_poly := PackedVector2Array()
 var _src_pieces: Array = []
 var _src_disabled := false
 var _src_radius := -1.0
-## Reactive outline samples, in the target's space.
+## Reactive outline samples, in the target's space, and the sample that follows each one
+## along the outline (-1 at the end of an open line).
 var _samples := PackedVector2Array()
+var _next := PackedInt32Array()
+## The way each sample faces, outward (empty: every side is touched - two-sided lines).
+var _facing := PackedVector2Array()
+var _one_sided := false
 
 ## A surface of `mat` (a preset if null) on `collision`, added under `parent`.
 static func attach(parent: Node, collision: Node2D, mat_preset := Preset.PLATE, mat: SonarMaterial = null) -> SonarSurface:
@@ -99,6 +112,8 @@ func get_sonar_material() -> SonarMaterial:
 func set_target(node: Node2D) -> void:
 	_target = node
 	_manual = false
+	_open = false
+	_one_sided = false
 	_has_xform = false
 	_src_radius = -1.0
 	_src_poly = PackedVector2Array()
@@ -108,7 +123,24 @@ func set_polygons(polys: Array[PackedVector2Array]) -> void:
 	_target = self
 	_manual = true
 	_has_xform = false
+	_open = false
+	_one_sided = false
 	_set_outline(polys)
+
+## Use these open lines (in this node's own space) as the outline: a ring touches them where
+## it reaches them, and passes on as if they were not there. `one_sided`: each line is a face,
+## touched only from the side `(b - a).orthogonal()` points to along it.
+func set_polylines(lines: Array[PackedVector2Array], one_sided := false) -> void:
+	_target = self
+	_manual = true
+	_has_xform = false
+	_open = true
+	_one_sided = one_sided
+	_set_outline(lines)
+
+## Whether a ring is stopped, slowed or shadowed by it at all: an open outline has no inside.
+func blocks() -> bool:
+	return not _open
 
 ## Whether it takes part at all: in the tree, visible, and with something to meet.
 func is_active() -> bool:
@@ -140,6 +172,8 @@ func refresh() -> void:
 
 ## Whether global `p` is inside (call refresh() first in a frame).
 func contains(p: Vector2) -> bool:
+	if _open:
+		return false
 	var q := _inv * p
 	if _circle:
 		return q.length_squared() <= _circle_radius * _circle_radius
@@ -207,9 +241,21 @@ func global_samples() -> PackedVector2Array:
 func sample_count() -> int:
 	return _samples.size()
 
-## A ring reached sample `i` with `amplitude` (SonarRing). The hook for a glow or trace.
-func touch(i: int, amplitude: float, origin: Vector2) -> void:
-	touched.emit(i, amplitude, origin)
+## Whether sample `i` can be touched by a ring from global `from`: not from behind the face
+## it is on (except on two-sided lines).
+func faces(i: int, from: Vector2) -> bool:
+	if _facing.is_empty():
+		return true
+	return _xform.basis_xform(_facing[i]).dot(from - _xform * _samples[i]) > 0.0
+
+## The sample after `i` along the outline: round a closed outline, -1 at an open line's end.
+func next_sample(i: int) -> int:
+	return _next[i] if i >= 0 and i < _next.size() else -1
+
+## A ring (`ring`, any id that tells rings apart) reached sample `i` with `amplitude`
+## (SonarRing). The hook for a glow or trace.
+func touch(i: int, amplitude: float, origin: Vector2, ring := 0) -> void:
+	touched.emit(i, amplitude, origin, ring)
 
 func _find_target() -> Node2D:
 	if not target.is_empty():
@@ -262,10 +308,14 @@ func _rebuild() -> void:
 		_local_center = Vector2.ZERO
 		_local_radius = _circle_radius
 		_samples = PackedVector2Array()
+		_next = PackedInt32Array()
+		_facing = PackedVector2Array()
 		if get_sonar_material().reactive:
 			var n := maxi(8, ceili(TAU * _circle_radius / SAMPLE))
 			for i in n:
 				_samples.append(Vector2.from_angle(TAU * i / n) * _circle_radius)
+				_next.append((i + 1) % n)
+				_facing.append(Vector2.from_angle(TAU * i / n))
 		return
 	_src_radius = 0.0
 	if shape is RectangleShape2D:
@@ -296,12 +346,50 @@ func _set_outline(polys: Array[PackedVector2Array]) -> void:
 		for p in poly:
 			_local_radius = maxf(_local_radius, _local_center.distance_to(p))
 	_samples = PackedVector2Array()
+	_next = PackedInt32Array()
+	_facing = PackedVector2Array()
+	var faced := _one_sided or not _open
 	if get_sonar_material().reactive:
 		for poly in _polys:
+			var start := _samples.size()
 			var count := poly.size()
-			for i in count:
+			var edges := count - 1 if _open else count
+			# A closed outline faces out, whichever way round it was drawn
+			var turn := 1.0 if _open or _faces_out(poly) else -1.0
+			var before := Vector2.ZERO
+			if not _open and count > 1:
+				before = (poly[0] - poly[count - 1]).orthogonal().normalized() * turn
+			for i in edges:
 				var a := poly[i]
 				var b := poly[(i + 1) % count]
+				var face := (b - a).orthogonal().normalized() * turn
 				var n := maxi(1, roundi(a.distance_to(b) / SAMPLE))
 				for k in n:
 					_samples.append(a.lerp(b, float(k) / n))
+					if faced:
+						# A corner faces both ways it is a corner of
+						_facing.append((face + before).normalized() if k == 0 else face)
+				before = face
+			if _open and count > 0:
+				_samples.append(poly[count - 1])  # an open line ends on its last point
+				if faced:
+					_facing.append(before)
+			for i in range(start, _samples.size()):
+				_next.append(i + 1)
+			if _samples.size() > start:
+				_next[_samples.size() - 1] = -1 if _open else start
+
+## Whether `(b - a).orthogonal()` along closed `poly` points out of it (tested off its
+## longest edge).
+static func _faces_out(poly: PackedVector2Array) -> bool:
+	var best := -1.0
+	var mid := Vector2.ZERO
+	var face := Vector2.ZERO
+	for i in poly.size():
+		var a := poly[i]
+		var b := poly[(i + 1) % poly.size()]
+		if a.distance_squared_to(b) > best:
+			best = a.distance_squared_to(b)
+			mid = (a + b) * 0.5
+			face = (b - a).orthogonal().normalized()
+	return not Geometry2D.is_point_in_polygon(mid + face * 0.5, poly)

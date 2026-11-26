@@ -80,6 +80,11 @@ var alarm: CutAlarm
 var _readout: Readout
 ## Calling its Section (call_section): the ring is out, or the answer is on its way back.
 var _calling := false
+## What a Sweep finds of the empty Mount: its cut edges, which glow where a ring reaches them
+## and answer with the found trace (SonarGlow). It blocks nothing - the hull round the gap
+## does that. Hidden while seated.
+var _sonar: SonarSurface
+var _glow: SonarGlow
 
 ## A Sweep that reaches an empty Mount makes it call its Section: a hull-grey ring of its own
 ## at CALL_SPEED, out past the Section, far beyond the screen. The Section answers with a
@@ -103,6 +108,7 @@ func _ready() -> void:
 	if _part:
 		_gaps = exposed_regions(_part.polygon, _covers())
 		_build_alarm()
+		_build_sonar()
 	EventBus.planets_restored.connect(refresh)
 	var gs := get_tree().get_first_node_in_group("game_state") as GameState
 	_show_seated(gs != null and gs.progress.holds(Progress.SEATED_SECTIONS, section))
@@ -356,6 +362,9 @@ func _show_seated(on: bool) -> void:
 		_part.visible = on
 	if alarm:
 		alarm.active = not on
+	if _sonar:
+		_sonar.visible = not on
+		_glow.clear()
 	Mount.recut.call_deferred(_collision, get_tree())
 	queue_redraw()
 
@@ -476,6 +485,74 @@ func _build_alarm() -> void:
 		if not longest.is_empty():
 			alarm.lamps.append((longest[0] + longest[1]) * 0.5 - longest[2] * ALARM_LAMP_SETBACK)
 	add_child(alarm)
+
+## The cut edges as a Sweep meets them: a reactive, discoverable outline of open lines along
+## the torch line of each gap's cuts, and the glow that answers a ring.
+func _build_sonar() -> void:
+	var mat := SonarMaterial.make(0.0, 1.0, false)
+	mat.reactive = true
+	mat.discoverable = true
+	_sonar = SonarSurface.new()
+	_sonar.name = "CutSonar"
+	_sonar.sonar_material = mat
+	add_child(_sonar)
+	_sonar.set_polylines(cut_lines(), true)
+	_glow = SonarGlow.on(_sonar)
+	var to_me := global_transform.affine_inverse() * _part.global_transform
+	for gap in _gaps:
+		_glow.fill_polygons.append(to_me * gap)
+
+## Each gap's cut edges joined end to end where they meet, along the torch line (CUT_LIP in
+## from the cut), in the Mount's space: the outline a Sweep lights. Each faces into its gap
+## (SonarSurface.set_polylines, one-sided): a cut face is only seen from the gap side.
+func cut_lines() -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	if _part == null:
+		return out
+	var to_me := global_transform.affine_inverse() * _part.global_transform
+	var covers := _covers()
+	for gap in _gaps:
+		for line in join_edges(cut_edges(Freight.bounds(gap), covers), CUT_LIP):
+			out.append(to_me * line)
+	return out
+
+## `edges` ([from, to, inward], as cut_edges gives them) joined into lines where they share
+## a corner, each point moved `inset` px in along the edges it lies on. Each line runs so that
+## `(b - a).orthogonal()` along it points inward.
+static func join_edges(edges: Array, inset := 0.0) -> Array[PackedVector2Array]:
+	var left := edges.duplicate()
+	var out: Array[PackedVector2Array] = []
+	while not left.is_empty():
+		var first: Array = left.pop_front()
+		var pts: Array[Vector2] = [first[0], first[1]]
+		var shifts: Array[Vector2] = [first[2], first[2]]
+		var grew := true
+		while grew:
+			grew = false
+			for e in left:
+				var a: Vector2 = e[0]
+				var b: Vector2 = e[1]
+				var inward: Vector2 = e[2]
+				if a.is_equal_approx(pts[-1]) or b.is_equal_approx(pts[-1]):
+					pts.append(b if a.is_equal_approx(pts[-1]) else a)
+					shifts[-1] += inward
+					shifts.append(inward)
+				elif a.is_equal_approx(pts[0]) or b.is_equal_approx(pts[0]):
+					pts.push_front(b if a.is_equal_approx(pts[0]) else a)
+					shifts[0] += inward
+					shifts.push_front(inward)
+				else:
+					continue
+				left.erase(e)
+				grew = true
+				break
+		var line := PackedVector2Array()
+		for i in pts.size():
+			line.append(pts[i] + shifts[i] * inset)
+		if (pts[1] - pts[0]).orthogonal().dot(shifts[0]) < 0.0:
+			line.reverse()
+		out.append(line)
+	return out
 
 func _draw() -> void:
 	if seated or _part == null:
