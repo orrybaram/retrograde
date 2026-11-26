@@ -130,6 +130,18 @@ func test_the_station_surface_follows_the_cut_hull() -> void:
 		whole += 1 if _solid_at(station, at) else 0
 	assert_int(whole).is_greater(0)
 
+func test_the_station_s_art_is_solid_past_its_collision() -> void:
+	var station := _station()
+	await get_tree().process_frame
+	var on_crate := station.to_global(Vector2(-100, -437))  # a crate on the deck, above the hull
+	var hull := station.get_node("SonarSurface") as SonarSurface
+	var art := station.get_node("SonarArt") as SonarSurface
+	hull.refresh()
+	art.refresh()
+	assert_bool(hull.contains(on_crate)).override_failure_message("the collision stops at the deck").is_false()
+	assert_bool(art.contains(on_crate)).is_true()
+	assert_bool(art.is_in_group(SonarSurface.GROUP)).is_true()
+
 func test_pooled_debris_is_rock_only_while_it_is_out() -> void:
 	var debris := ResourceNodePool.get_instance("Debris1", self) as DebrisNode
 	await get_tree().process_frame

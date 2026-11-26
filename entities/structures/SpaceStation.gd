@@ -44,6 +44,46 @@ func _ready() -> void:
 	
 	# Register with minimap
 	_register_with_minimap.call_deferred()
+	_setup_sonar_art()
+
+## A Sweep meets the station's art as well as its collision: crates on the deck, the pods and
+## radiators stand out past the hull's collision polygon and look as solid as the rest. The
+## visible top-level polygons under Visuals are one more PLATE outline, rebuilt whenever one
+## shows or hides (a Mount's missing part is hidden, so its gap stays open).
+var _sonar_art: SonarSurface
+var _sonar_art_queued := false
+
+func _setup_sonar_art() -> void:
+	var visuals := get_node_or_null("Visuals") as Node2D
+	if visuals == null:
+		return
+	_sonar_art = SonarSurface.new()
+	_sonar_art.name = "SonarArt"
+	add_child(_sonar_art)
+	for child in visuals.get_children():
+		if child is Polygon2D:
+			(child as Polygon2D).visibility_changed.connect(_queue_sonar_art)
+	_rebuild_sonar_art()
+
+func _queue_sonar_art() -> void:
+	if _sonar_art_queued:
+		return
+	_sonar_art_queued = true
+	_rebuild_sonar_art.call_deferred()
+
+func _rebuild_sonar_art() -> void:
+	_sonar_art_queued = false
+	var visuals := get_node_or_null("Visuals") as Node2D
+	if visuals == null or _sonar_art == null:
+		return
+	var polys: Array[PackedVector2Array] = []
+	for child in visuals.get_children():
+		var poly := child as Polygon2D
+		if poly == null or not poly.visible or poly.polygon.size() < 3:
+			continue
+		var xf := visuals.transform * poly.transform * Transform2D(0.0, poly.offset)
+		polys.append(xf * poly.polygon)
+	_sonar_art.set_polygons(polys)
 
 func _setup_orbital_motion(body: Node2D) -> void:
 	_orbital_motion = OrbitalMotionClass.new()
