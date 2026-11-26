@@ -303,6 +303,69 @@ func test_a_reactive_outline_hears_where_the_ring_touched_it() -> void:
 		# Only the face toward the ring: x = 130
 		assert_float(pts[i].x).override_failure_message(str(pts[i])).is_less(150.0)
 
+# --- soft shadows and echoes ---
+
+## A solid disc of hull plate, `radius` px, at `at`.
+func _post(at: Vector2, radius: float) -> Node2D:
+	var post: Node2D = auto_free(Node2D.new())
+	add_child(post)
+	post.global_position = at
+	var shape := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = radius
+	shape.shape = circle
+	post.add_child(shape)
+	SonarSurface.attach(post, shape, SonarSurface.Preset.PLATE)
+	return post
+
+func test_a_small_shadow_fills_back_in_with_distance() -> void:
+	_post(Vector2(100, 0), 12.0)
+	var close := _listener(Vector2(120, 0))
+	var far := _listener(Vector2(260, 0))
+	await get_tree().process_frame
+	var pulse := _pulse(Vector2.ZERO)
+	pulse.send(1.0)
+	_run(pulse, SonarPulse.LIFETIME)
+	assert_int(close.touched).override_failure_message("right behind it").is_equal(0)
+	assert_int(far.touched).override_failure_message("well behind it").is_equal(1)
+
+func test_the_ring_fades_into_a_shadow_rather_than_ending() -> void:
+	_post(Vector2(150, 0), 50.0)
+	await get_tree().process_frame
+	var pulse := _pulse(Vector2.ZERO)
+	pulse.send(1.0)
+	_run(pulse, SonarPulse.time_to_reach(260.0))
+	var ring: SonarRing = pulse._rings[0]
+	var graded := 0
+	for i in SonarRing.RAYS:
+		if ring._amp[i] > 0.05 and ring._amp[i] < 0.95:
+			graded += 1
+	assert_int(graded).is_greater(4)
+	assert_float(ring.amp_toward(Vector2(260, 0))).override_failure_message("still dark in the middle").is_less(SonarRing.FIND)
+
+func test_hard_plate_throws_a_faint_arc_back() -> void:
+	_post(Vector2(100, 0), 30.0)
+	await get_tree().process_frame
+	var pulse := _pulse(Vector2.ZERO)
+	pulse.send(1.0)
+	_run(pulse, SonarPulse.time_to_reach(100.0))
+	var ring: SonarRing = pulse._rings[0]
+	assert_int(ring.bounce_count()).is_greater(3)
+	var back := 0
+	for j in ring.bounce_count():
+		back += 1 if ring._bounce_dir[j].x < 0.0 else 0
+		assert_float(ring._bounce_amp[j]).is_less_equal(SonarRing.BOUNCE_KEEP + 0.001)
+		if ring._bounce_ray[j] == 0:
+			# Head on: straight back
+			assert_float(ring._bounce_dir[j].x).is_less(-0.99)
+	assert_int(back).override_failure_message("mostly back toward the ship").is_greater(ring.bounce_count() / 2)
+	_run(pulse, SonarPulse.LIFETIME)
+	assert_int(pulse.ring_count()).is_equal(0)
+
+func test_the_presets_all_echo_and_only_rock_lets_a_ring_through() -> void:
+	assert_bool(SonarMaterial.PLATE.echo and SonarMaterial.ROCK.echo and SonarMaterial.PLANET.echo).is_true()
+	assert_bool(SonarMaterial.ROCK.is_solid()).is_false()
+
 # --- cost ---
 
 func test_a_strong_ring_by_the_station_is_cheap() -> void:
@@ -324,5 +387,54 @@ func test_a_strong_ring_by_the_station_is_cheap() -> void:
 		frames += 1
 	var mean := float(total) / frames / 1000.0
 	print("SonarSurfaceTest: strength-%d ring by the station, %d frames, mean %.3f ms, worst %.3f ms" % [
+		strength, frames, mean, worst / 1000.0])
+	assert_float(mean).is_less(2.0)
+
+## Draws a ring on demand and times it.
+class RingCanvas extends Node2D:
+	var ring: SonarRing
+	var used := -1
+	func _draw() -> void:
+		var t0 := Time.get_ticks_usec()
+		ring.draw(self)
+		used = Time.get_ticks_usec() - t0
+
+func test_drawing_a_strong_ring_is_cheap() -> void:
+	var station := _station()
+	await get_tree().process_frame
+	var pulse := _pulse(station.to_global(Vector2(-500, 15)))
+	pulse.send(5.0)
+	_run(pulse, 2.0)
+	var canvas: RingCanvas = auto_free(RingCanvas.new())
+	canvas.ring = pulse._rings[0]
+	add_child(canvas)
+	canvas.queue_redraw()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	print("SonarSurfaceTest: drawing a strength-5 ring by the station, %.3f ms" % (canvas.used / 1000.0))
+	assert_int(canvas.used).is_greater_equal(0)
+	assert_int(canvas.used).is_less(2000)
+
+func test_a_strong_ring_in_a_debris_field_is_cheap() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in 60:
+		_rock(Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(120.0, 1300.0), rng.randf_range(20.0, 70.0))
+	await get_tree().process_frame
+	var strength := 5.0
+	var pulse := _pulse(Vector2.ZERO)
+	pulse.send(strength)
+	var worst := 0
+	var total := 0
+	var frames := 0
+	while pulse.ring_count() > 0:
+		var t0 := Time.get_ticks_usec()
+		pulse._process(FRAME)
+		var used := Time.get_ticks_usec() - t0
+		worst = maxi(worst, used)
+		total += used
+		frames += 1
+	var mean := float(total) / frames / 1000.0
+	print("SonarSurfaceTest: strength-%d ring among 60 rocks, %d frames, mean %.3f ms, worst %.3f ms" % [
 		strength, frames, mean, worst / 1000.0])
 	assert_float(mean).is_less(2.0)
