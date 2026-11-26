@@ -13,8 +13,9 @@ class_name SonarPulse
 ## in flight finish on their own.
 ##
 ## The ring is a set of rays (SonarRing) stepped every frame against whatever carries a
-## SonarSurface - the station's hull, wrecks, planets, debris - so it is cut, drained and
-## shadowed by what is really there. A ring ignores its emitter's own body: a surface it starts
+## SonarSurface - only big things: the station's hull and art, planets - so it is cut and
+## shadowed by what is really there. Debris, scrap and wrecks the size of the ship are too
+## small to shape it; the ring passes straight through them. A ring ignores its emitter's own body: a surface it starts
 ## inside, or the one on whatever the pulse is mounted on (the dish's station).
 ##
 ## Things that answer a Sweep join the `sonar_listeners` group with `sonar_point()` (where

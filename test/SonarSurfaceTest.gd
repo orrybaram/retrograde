@@ -84,7 +84,7 @@ func _listener(at: Vector2, parent: Node = self) -> Listener:
 
 # --- the surfaces ---
 
-func test_a_planet_station_and_debris_carry_surfaces() -> void:
+func test_a_planet_and_the_station_carry_surfaces() -> void:
 	var planet := _planet(Vector2(5000, 0), 200.0)
 	var station := _station(Vector2(-5000, 0))
 	await get_tree().process_frame
@@ -142,14 +142,34 @@ func test_the_station_s_art_is_solid_past_its_collision() -> void:
 	assert_bool(art.contains(on_crate)).is_true()
 	assert_bool(art.is_in_group(SonarSurface.GROUP)).is_true()
 
-func test_pooled_debris_is_rock_only_while_it_is_out() -> void:
+## Only big things shape a ring: planets, stations, ships. Debris is too small to cut it.
+func test_debris_does_not_shape_a_ring() -> void:
 	var debris := ResourceNodePool.get_instance("Debris1", self) as DebrisNode
 	await get_tree().process_frame
-	var s := debris.get_node("SonarSurface") as SonarSurface
-	assert_object(s.get_sonar_material()).is_same(SonarMaterial.ROCK)
-	assert_bool(s.is_in_group(SonarSurface.GROUP)).is_true()
+	assert_object(debris.get_node_or_null("SonarSurface")).is_null()
+	var pulse := _pulse(debris.global_position + Vector2(-120, 0))
+	pulse.send(1.0)
+	_run(pulse, 0.6)
+	var ring := pulse._rings[0]
+	assert_float(ring.amp_at(0.0, 200.0)).override_failure_message("the ring goes straight through").is_equal_approx(1.0, 0.01)
 	ResourceNodePool.return_instance(debris)
-	assert_bool(s.is_in_group(SonarSurface.GROUP)).is_false()
+
+# --- smooth ---
+
+## Rays step STEP px at a time, but the front is drawn where it really is: it moves on every
+## frame by what the easing says, never in STEP-sized jumps.
+func test_the_front_glides_rather_than_stepping() -> void:
+	var pulse := _pulse(Vector2.ZERO)
+	pulse.send(1.0)
+	var ring := pulse._rings[0]
+	var last := 0.0
+	for n in 50:
+		pulse._process(FRAME)
+		var want := ring.front(ring.age)
+		assert_float(ring.front_dist(0)).is_equal_approx(want, 0.01)
+		assert_float(ring.front_dist(90)).is_equal_approx(want, 0.01)
+		assert_float(ring.front_dist(0)).is_greater(last)
+		last = ring.front_dist(0)
 
 # --- shadows ---
 

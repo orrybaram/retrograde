@@ -21,7 +21,8 @@ class_name SonarMaterial
 
 ## Solid hull plate: the station, wrecks.
 static var PLATE := make(INF, 1.0, true)
-## Debris rock: drains reach, so only a strong ring gets through.
+## Rock: drains reach, so only a strong ring gets through. (Nothing in the world carries
+## it yet: debris is too small to shape a ring.)
 static var ROCK := make(3.0, 0.8, true)
 ## A Body's ground: solid.
 static var PLANET := make(INF, 1.0, true)

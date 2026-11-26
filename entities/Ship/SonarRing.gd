@@ -61,8 +61,22 @@ var strength := 1.0
 var marks: Array[int] = []
 var sweep := true
 
+## Ray directions, and the directions a third, a half and two thirds of the way to the next
+## ray (drawing): the same for every ring, so worked out once.
+static var _DIR := PackedVector2Array()
+static var _DIR_SUB: Array[PackedVector2Array] = []
+## Each ray's neighbours round the ring.
+static var _LEFT := PackedInt32Array()
+static var _RIGHT := PackedInt32Array()
+
 var _dir := PackedVector2Array()
 var _dist := PackedFloat32Array()
+## How far (px) each ray stepped past the front this frame: rays move STEP at a time, but
+## the ring is drawn where the front really is (_dist - _over), so it glides rather than
+## jumping 4 px at a go.
+var _over := PackedFloat32Array()
+## What the ray's last step cost per px (1 in the open; more in rock).
+var _cost := PackedFloat32Array()
 var _e := PackedFloat32Array()
 var _amp := PackedFloat32Array()
 var _alive := PackedByteArray()
@@ -77,6 +91,8 @@ var _prev_e := 0.0
 var _max_dist := 0.0
 var _min_dist := 0.0
 var _alive_count := 0
+## Nothing has met the ring yet: every ray is where every other is, so it is stepped as one.
+var _coherent := true
 ## Surfaces (instance ids) the ring started inside: open to it.
 var _ignore := {}
 ## Per-frame candidates: surfaces near the stepped annulus.
@@ -97,14 +113,6 @@ var _pending: Array[Dictionary] = []
 var _far: Array[Dictionary] = []
 ## Reactive surfaces' samples already decided this ring: surface id -> PackedByteArray.
 var _lit := {}
-## Diffusion scratch: per-ray rate, the two amplitude buffers, which neighbours count, and
-## which rays can change this frame.
-var _k := PackedFloat32Array()
-var _a := PackedFloat32Array()
-var _b := PackedFloat32Array()
-var _left_open := PackedByteArray()
-var _right_open := PackedByteArray()
-var _active := PackedByteArray()
 ## Reflected points: where, which way, how strong, how far they have gone, which ray threw them.
 var _bounce_at := PackedVector2Array()
 var _bounce_dir := PackedVector2Array()
@@ -119,28 +127,47 @@ func _init(at: Vector2, ring_strength: float, reach: float, life: float, start: 
 	lifetime = maxf(life, 0.001)
 	start_radius = start
 	_cells = int(radius / CELL) + 3
-	_dir.resize(RAYS)
+	if _DIR.is_empty():
+		_build_dirs()
+	_dir = _DIR
 	_dist.resize(RAYS)
+	_over.resize(RAYS)
+	_cost.resize(RAYS)
+	_cost.fill(1.0)
 	_e.resize(RAYS)
 	_amp.resize(RAYS)
 	_alive.resize(RAYS)
 	_solid.resize(RAYS)
 	_inside.resize(RAYS)
 	_bucket.resize(RAYS)
-	_k.resize(RAYS)
-	_a.resize(RAYS)
-	_b.resize(RAYS)
-	_left_open.resize(RAYS)
-	_right_open.resize(RAYS)
-	_active.resize(RAYS)
+	_amp.fill(1.0)
+	_alive.fill(1)
 	for i in RAYS:
-		_dir[i] = Vector2.from_angle(TAU * i / RAYS)
-		_amp[i] = 1.0
-		_alive[i] = 1
 		_bucket[i] = PackedInt32Array()
 	_hist.resize(RAYS * _cells)
 	_hist.fill(-1.0)
 	_alive_count = RAYS
+
+static func _build_dirs() -> void:
+	_DIR.resize(RAYS)
+	for i in RAYS:
+		_DIR[i] = Vector2.from_angle(TAU * i / RAYS)
+	_LEFT.resize(RAYS)
+	_RIGHT.resize(RAYS)
+	for i in RAYS:
+		_LEFT[i] = (i + RAYS - 1) % RAYS
+		_RIGHT[i] = (i + 1) % RAYS
+	_DIR_SUB.clear()
+	for f in [1.0 / 3.0, 0.5, 2.0 / 3.0]:
+		var dirs := PackedVector2Array()
+		dirs.resize(RAYS)
+		for i in RAYS:
+			dirs[i] = Vector2.from_angle(TAU * (i + f) / RAYS)
+		_DIR_SUB.append(dirs)
+
+## Where ray `i`'s front is drawn: where the front really is along it, not the last step.
+func front_dist(i: int) -> float:
+	return maxf(_dist[i] - _over[i], 0.0)
 
 ## The front's effective distance `at` s after leaving.
 func front(at: float) -> float:
@@ -189,6 +216,10 @@ func advance(surfaces: Array[SonarSurface]) -> void:
 	if big_e <= _prev_e or _alive_count == 0:
 		return
 	_gather(surfaces, big_e)
+	if _cand.is_empty() and _coherent:
+		_glide_all(big_e)
+		return
+	_coherent = false
 	var max_d := 0.0
 	var min_d := INF
 	for i in RAYS:
@@ -200,6 +231,9 @@ func advance(surfaces: Array[SonarSurface]) -> void:
 				_march(i, big_e, bucket)
 		if _alive[i] == 1:
 			min_d = minf(min_d, _dist[i])
+			_over[i] = clampf((_e[i] - big_e) / _cost[i], 0.0, STEP)
+		else:
+			_over[i] = clampf((_e[i] - radius) / _cost[i], 0.0, STEP)
 		max_d = maxf(max_d, _dist[i])
 	_max_dist = max_d
 	_min_dist = min_d if min_d < INF else max_d
@@ -258,6 +292,33 @@ func _gather(surfaces: Array[SonarSurface], big_e: float) -> void:
 			bucket.append(k)
 			_bucket[i] = bucket
 
+## Every ray in the open, all alike: step them as one (the open-space common case).
+func _glide_all(big_e: float) -> void:
+	var e0 := _e[0]
+	var d0 := _dist[0]
+	var n := ceili((big_e - e0) / STEP)
+	var d1 := d0 + n * STEP
+	var e1 := e0 + n * STEP
+	var c_lo := int((d0 + STEP) / CELL)
+	var c_hi := mini(int(d1 / CELL), _cells - 1)
+	if c_hi >= c_lo:
+		for i in RAYS:
+			var base := i * _cells
+			for c in range(c_lo, c_hi + 1):
+				if _hist[base + c] < 0.0:
+					_hist[base + c] = 1.0
+	_dist.fill(d1)
+	_e.fill(e1)
+	_max_dist = d1
+	_min_dist = d1
+	if e1 >= radius:
+		_alive.fill(0)
+		_alive_count = 0
+		_over.fill(clampf(e1 - radius, 0.0, STEP))
+	else:
+		_over.fill(clampf(e1 - big_e, 0.0, STEP))
+	_prev_e = big_e
+
 ## A ray with nothing in its way this frame: straight on to the front.
 func _glide(i: int, big_e: float) -> void:
 	var n := ceili((big_e - _e[i]) / STEP)
@@ -270,6 +331,7 @@ func _glide(i: int, big_e: float) -> void:
 			_hist[base + c] = a
 	_dist[i] = d1
 	_e[i] += n * STEP
+	_cost[i] = 1.0
 	_solid[i] = 0
 	_inside[i] = 0
 	if _e[i] >= radius:
@@ -287,6 +349,7 @@ func _march(i: int, big_e: float, bucket: PackedInt32Array) -> void:
 	var base := i * _cells
 	var last_cell := _cells - 1
 	var guard := 4096
+	var last_cost := _cost[i]
 	while e < big_e and guard > 0:
 		guard -= 1
 		var mid := origin + dir * (d + STEP * 0.5)
@@ -319,6 +382,7 @@ func _march(i: int, big_e: float, bucket: PackedInt32Array) -> void:
 				inside = 1
 		e += STEP * cost
 		d += STEP
+		last_cost = cost
 		var c := mini(int(d / CELL), last_cell)
 		if _hist[base + c] < 0.0:
 			_hist[base + c] = a
@@ -328,6 +392,7 @@ func _march(i: int, big_e: float, bucket: PackedInt32Array) -> void:
 			break
 	_dist[i] = d
 	_e[i] = e
+	_cost[i] = last_cost
 	_amp[i] = a
 	_solid[i] = in_solid
 	_inside[i] = inside
@@ -377,59 +442,77 @@ func _diffuse(d_e: float) -> void:
 	if d_e <= 0.0:
 		return
 	var dtheta := TAU / RAYS
-	var diffusion := WAVELENGTH / TAU
+	var rate := WAVELENGTH / TAU * d_e / (dtheta * dtheta)
+	var left := _LEFT
+	var right := _RIGHT
+	var amp := _amp
+	var dist := _dist
+	var solid := _solid
+	# Scratch: each ray's rate, whether each neighbour counts, the amplitude being worked
+	var ks := PackedFloat32Array()
+	ks.resize(RAYS)
+	var lopen := PackedByteArray()
+	lopen.resize(RAYS)
+	var ropen := PackedByteArray()
+	ropen.resize(RAYS)
+	var av := PackedFloat32Array()
+	av.resize(RAYS)
+	# One pass: each ray's rate, whether its neighbours count, and the rays at a step
 	var k_max := 0.0
-	var lo := INF
-	var hi := -INF
+	var steps := PackedInt32Array()
 	for i in RAYS:
+		var l := left[i]
+		var r := right[i]
 		var k := 0.0
-		if _solid[i] == 0:
-			var a := _amp[i]
-			lo = minf(lo, a)
-			hi = maxf(hi, a)
-			var d := _dist[i]
+		var lo := 0
+		var ro := 0
+		var ai := amp[i]
+		if solid[i] == 0:
+			var d := dist[i]
 			if d >= DIFFUSE_FROM:
-				var spacing := d * dtheta
-				k = diffusion * d_e / (spacing * spacing)
-		_k[i] = k
+				k = rate / (d * d)
+			if solid[l] == 0 and absf(dist[l] - d) < NEIGHBOUR_GAP:
+				lo = 1
+				if absf(amp[l] - ai) > 1e-4:
+					steps.append(i)
+			if solid[r] == 0 and absf(dist[r] - d) < NEIGHBOUR_GAP:
+				ro = 1
+				if lo == 0 or absf(amp[l] - ai) <= 1e-4:
+					if absf(amp[r] - ai) > 1e-4:
+						steps.append(i)
+		ks[i] = k
+		lopen[i] = lo
+		ropen[i] = ro
+		av[i] = ai
 		k_max = maxf(k_max, k)
-	if k_max <= 0.0 or hi - lo < 1e-4:
+	if k_max <= 0.0 or steps.is_empty():
 		return
 	var n := mini(MAX_SUBSTEPS, maxi(1, ceili(k_max / SUBSTEP_RATE)))
-	_active.fill(0)
-	var any := false
-	for i in RAYS:
-		var l := (i + RAYS - 1) % RAYS
-		var r := (i + 1) % RAYS
-		_left_open[i] = 1 if _solid[l] == 0 and absf(_dist[l] - _dist[i]) < NEIGHBOUR_GAP else 0
-		_right_open[i] = 1 if _solid[r] == 0 and absf(_dist[r] - _dist[i]) < NEIGHBOUR_GAP else 0
-		_k[i] = minf(MAX_RATE, _k[i] / n)
-		_a[i] = _amp[i]
-		_b[i] = _amp[i]
-	for i in RAYS:
-		var step_here := (_left_open[i] == 1 and absf(_amp[(i + RAYS - 1) % RAYS] - _amp[i]) > 1e-4) \
-			or (_right_open[i] == 1 and absf(_amp[(i + 1) % RAYS] - _amp[i]) > 1e-4)
-		if step_here:
-			any = true
-			for j in range(i - n, i + n + 1):
-				_active[posmod(j, RAYS)] = 1
-	if not any:
-		return
+	# Only rays within n of a step can change in n substeps
+	var active := PackedByteArray()
+	active.resize(RAYS)
+	active.fill(0)
+	for i in steps:
+		for j in range(i - n, i + n + 1):
+			active[posmod(j, RAYS)] = 1
+	var bv := av.duplicate()
 	var work := PackedInt32Array()
 	for i in RAYS:
-		if _active[i] == 1 and _k[i] > 0.0:
+		if active[i] == 1 and ks[i] > 0.0:
+			ks[i] = minf(MAX_RATE, ks[i] / n)
 			work.append(i)
+	if work.is_empty():
+		return
 	for it in n:
 		for i in work:
-			var ai := _a[i]
-			var al := _a[(i + RAYS - 1) % RAYS] if _left_open[i] == 1 else ai
-			var ar := _a[(i + 1) % RAYS] if _right_open[i] == 1 else ai
-			_b[i] = ai + _k[i] * (al + ar - 2.0 * ai)
+			var ai := av[i]
+			var al := av[left[i]] if lopen[i] == 1 else ai
+			var ar := av[right[i]] if ropen[i] == 1 else ai
+			bv[i] = ai + ks[i] * (al + ar - 2.0 * ai)
 		for i in work:
-			_a[i] = _b[i]
+			av[i] = bv[i]
 	for i in work:
-		if _solid[i] == 0:
-			_amp[i] = clampf(_a[i], 0.0, 1.0)
+		_amp[i] = clampf(av[i], 0.0, 1.0)
 
 ## The amplitude the ring had at `d` px out along `angle` as it went past; -1 if it has not
 ## got there yet (and may still).
@@ -544,42 +627,87 @@ func _touch_reactive(surfaces: Array[SonarSurface]) -> void:
 				s.touch(i, minf(a, 1.0), origin, get_instance_id())
 		_lit[sid] = lit
 
-## Draw the ring as a polyline through the ray fronts, in global space, on `ci`.
+## Draw the ring as a polyline through the ray fronts, in global space, on `ci`. A ring
+## nothing has touched yet (every ray the same) is one plain arc.
 func draw(ci: CanvasItem) -> void:
 	var t := clampf(age / lifetime, 0.0, 1.0)
 	var base := alpha * (1.0 - t)
 	if base <= 0.001:
 		return
+	# Each ray's drawn front and brightness, and which segments are drawn
+	var fd := PackedFloat32Array()
+	fd.resize(RAYS)
+	var amp := PackedFloat32Array()
+	amp.resize(RAYS)
+	var uniform := true
+	var d0 := maxf(_dist[0] - _over[0], 0.0)
+	var a0 := _amp[0] * (0.45 if _inside[0] == 1 else 1.0)
+	for i in RAYS:
+		var d := maxf(_dist[i] - _over[i], 0.0)
+		var a := _amp[i] * (0.45 if _inside[i] == 1 else 1.0)
+		fd[i] = d
+		amp[i] = a
+		if uniform and (absf(d - d0) > 0.05 or absf(a - a0) > 0.002):
+			uniform = false
+	if uniform:
+		if d0 >= 4.0 and a0 >= 0.02:
+			var c := color
+			c.a = base * a0
+			ci.draw_arc(origin, d0, 0.0, TAU, clampi(ceili(TAU * d0 / 8.0), 32, 1024), c, width, true)
+		_draw_bounces(ci, base)
+		return
 	var dtheta := TAU / RAYS
+	var ok := PackedByteArray()
+	ok.resize(RAYS)
+	var start := 0
+	var broken := false
+	for i in RAYS:
+		var j := (i + 1) % RAYS
+		var good := fd[i] >= 4.0 and fd[j] >= 4.0 and absf(fd[i] - fd[j]) <= NEIGHBOUR_GAP \
+			and (amp[i] + amp[j]) * 0.5 >= 0.02
+		ok[i] = 1 if good else 0
+		if not good and not broken:
+			# Start the walk at a break, if there is one, so each run is drawn whole
+			broken = true
+			start = j
+	var sub1 := _DIR_SUB[0]
+	var sub2 := _DIR_SUB[1]
+	var sub3 := _DIR_SUB[2]
 	var pts := PackedVector2Array()
 	var cols := PackedColorArray()
-	# Start the walk at a break, if there is one, so each run is drawn whole
-	var start := 0
-	for i in RAYS:
-		if not _segment_ok(i):
-			start = (i + 1) % RAYS
-			break
+	var c := color
 	for n in RAYS:
 		var i := (start + n) % RAYS
-		var j := (i + 1) % RAYS
-		if not _segment_ok(i):
+		if ok[i] == 0:
 			_flush(ci, pts, cols)
 			pts.clear()
 			cols.clear()
 			continue
-		var ca := _front_color(i, base)
-		var cb := _front_color(j, base)
-		var chord := maxf(_dist[i], _dist[j]) * dtheta
-		# Today's ring was at most 512 points round: a couple per ray on a big one
-		var pieces := clampi(ceili(chord / 16.0), 1, 3)
+		var j := (i + 1) % RAYS
+		var di := fd[i]
+		var dj := fd[j]
+		var ai := base * amp[i]
+		var aj := base * amp[j]
 		if pts.is_empty():
-			pts.append(origin + _dir[i] * _dist[i])
-			cols.append(ca)
-		for k in range(1, pieces + 1):
-			var f := float(k) / pieces
-			var ang := (i + f) * dtheta
-			pts.append(origin + Vector2.from_angle(ang) * lerpf(_dist[i], _dist[j], f))
-			cols.append(ca.lerp(cb, f))
+			pts.append(origin + _DIR[i] * di)
+			c.a = ai
+			cols.append(c)
+		# Today's ring was at most 512 points round: a couple per ray on a big one
+		var chord := maxf(di, dj) * dtheta
+		if chord > 32.0:
+			pts.append(origin + sub1[i] * lerpf(di, dj, 1.0 / 3.0))
+			c.a = lerpf(ai, aj, 1.0 / 3.0)
+			cols.append(c)
+			pts.append(origin + sub3[i] * lerpf(di, dj, 2.0 / 3.0))
+			c.a = lerpf(ai, aj, 2.0 / 3.0)
+			cols.append(c)
+		elif chord > 16.0:
+			pts.append(origin + sub2[i] * (di + dj) * 0.5)
+			c.a = (ai + aj) * 0.5
+			cols.append(c)
+		pts.append(origin + _DIR[j] * dj)
+		c.a = aj
+		cols.append(c)
 	_flush(ci, pts, cols)
 	_draw_bounces(ci, base)
 
@@ -597,17 +725,6 @@ func _draw_bounces(ci: CanvasItem, base: float) -> void:
 			ci.draw_line(at, _bounce_at[j + 1], c, width, true)
 		else:
 			ci.draw_rect(Rect2(at - Vector2.ONE, Vector2(2, 2)), c)
-
-func _segment_ok(i: int) -> bool:
-	var j := (i + 1) % RAYS
-	if _dist[i] < 4.0 or _dist[j] < 4.0 or absf(_dist[i] - _dist[j]) > NEIGHBOUR_GAP:
-		return false
-	return (_amp[i] + _amp[j]) * 0.5 >= 0.02
-
-func _front_color(i: int, base: float) -> Color:
-	var c := color
-	c.a = base * _amp[i] * (0.45 if _inside[i] == 1 else 1.0)
-	return c
 
 func _flush(ci: CanvasItem, pts: PackedVector2Array, cols: PackedColorArray) -> void:
 	if pts.size() >= 2:

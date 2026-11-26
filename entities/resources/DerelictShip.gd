@@ -260,8 +260,6 @@ func _load_shape() -> void:
 			hit.polygon = body.polygon
 			hit.transform = body.transform
 			area.add_child(hit)
-			# The hull is plate: a Sweep ring stops at it
-			SonarSurface.attach(self, hit, SonarSurface.Preset.PLATE)
 	var sparkles := _SPARKLES.instantiate()
 	sparkles.name = "SparkleParticles"
 	add_child(sparkles)
